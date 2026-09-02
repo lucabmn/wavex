@@ -9,8 +9,18 @@ import {
 } from "react";
 import { ChatComposer, type ChatComposerHandle } from "../chrome/ChatComposer";
 import { ModeSwitch } from "../chrome/ModeSwitch";
+import { DevModeSlot, IconButton, TabVisitNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
-import { MessageSquare, PenLine, Plus, Search, Settings, Trash2, X } from "../chrome/icons";
+import {
+  MessageSquare,
+  PanelLeft,
+  PenLine,
+  Plus,
+  Search,
+  Settings,
+  Trash2,
+  X,
+} from "../chrome/icons";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { IS_MAC, MOD } from "../lib/platform";
 import type { AppMode } from "../lib/workspace/appMode";
@@ -55,6 +65,7 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
   const state = useSyncExternalStore(subscribeWorkChats, getWorkChatState);
   const [query, setQuery] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(true);
   const composer = useRef<ChatComposerHandle>(null);
   const searchField = useRef<HTMLInputElement>(null);
   const listLock = useLockOverscroll<HTMLDivElement>();
@@ -157,54 +168,75 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
       {/* Work replaces the project rail rather than sitting beside it, so this
           column owns the traffic lights and carries the mode switch itself.
           `sidebar-glass` is what makes it opaque — without it the window's
-          macOS vibrancy shows whatever is behind wavex. */}
-      <aside className="sidebar-glass flex w-64 shrink-0 flex-col border-r border-content/10">
+          macOS vibrancy shows whatever is behind wavex.
+          The header repeats the rail's row exactly so switching modes does not
+          move the traffic lights, the dev badge, or the nav icons. */}
+      <aside
+        className={`sidebar-glass ${
+          listOpen ? "flex w-64" : "flex w-auto"
+        } shrink-0 flex-col border-r border-content/10`}
+      >
         <div
-          className="flex h-10 shrink-0 select-none items-center gap-2 px-1.5"
+          className="flex h-10 shrink-0 select-none items-center pr-1.5"
           data-tauri-drag-region="deep"
         >
-          {IS_MAC ? <div className="w-[70px] shrink-0" /> : null}
-          <div className="min-w-0 flex-1">
-            <ModeSwitch mode={mode} onChange={onModeChange} stretch />
-          </div>
+          {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
+          <DevModeSlot />
+          {/* Work has no tab-visit history, so back and forward stay disabled;
+              they are here to keep the row identical across a mode switch. */}
+          <TabVisitNav
+            onTogglePanel={() => setListOpen((open) => !open)}
+            panelActive={listOpen}
+            panelLabel="Toggle Chats"
+          />
         </div>
 
-        <div className="flex items-center gap-1 px-2 pb-2">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2">
-            <Search className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />
-            <input
-              ref={searchField}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={`Search chats (${MOD}F)`}
-              aria-label="Search chats"
-              className="min-w-0 flex-1 bg-transparent py-1.5 text-[12px] outline-none placeholder:text-content/35"
-            />
-            {query ? (
+        {listOpen ? (
+          <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
+            <div className="pb-1.5">
+              <ModeSwitch mode={mode} onChange={onModeChange} stretch />
+            </div>
+
+            <div className="flex items-center gap-1">
+              <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2">
+                <Search className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />
+                <input
+                  ref={searchField}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={`Search chats (${MOD}F)`}
+                  aria-label="Search chats"
+                  className="h-full min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-content/35"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setQuery("")}
+                    className="shrink-0 text-content/40 hover:text-content"
+                  >
+                    <X className="size-3" strokeWidth={2} />
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
-                aria-label="Clear search"
-                onClick={() => setQuery("")}
-                className="shrink-0 text-content/40 hover:text-content"
+                title={`New chat (${MOD}T)`}
+                aria-label="New chat"
+                onClick={onNewChat}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
               >
-                <X className="size-3" strokeWidth={2} />
+                <Plus className="size-3.5" strokeWidth={1.75} />
               </button>
-            ) : null}
+            </div>
           </div>
-          <button
-            type="button"
-            title={`New chat (${MOD}T)`}
-            aria-label="New chat"
-            onClick={onNewChat}
-            className="grid size-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
-          >
-            <Plus className="size-3.5" strokeWidth={1.75} />
-          </button>
-        </div>
+        ) : null}
 
         <div
           ref={listLock}
-          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-none px-2 pb-2"
+          className={`min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-none px-2 pb-2 ${
+            listOpen ? "flex" : "hidden"
+          }`}
         >
           {state.loading && items.length === 0 ? (
             <p className="px-1 py-2 text-[12px] text-content/45">Loading…</p>
@@ -236,7 +268,7 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
           ))}
         </div>
 
-        {onOpenSettings ? (
+        {onOpenSettings && listOpen ? (
           <div className="shrink-0 border-t border-content/10 p-2">
             <button
               type="button"
@@ -253,9 +285,17 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
 
       <section className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
         <div
-          className="flex h-10 shrink-0 select-none items-center px-3"
+          className="flex h-10 shrink-0 select-none items-center gap-2 px-3"
           data-tauri-drag-region="deep"
         >
+          {listOpen ? null : (
+            <>
+              <IconButton label="Toggle Chats" onClick={() => setListOpen(true)}>
+                <PanelLeft className="size-3.5" strokeWidth={1.75} />
+              </IconButton>
+              <ModeSwitch mode={mode} onChange={onModeChange} />
+            </>
+          )}
           <span className="min-w-0 flex-1 truncate text-[13px] text-content/70">
             {active ? active.title : "Work"}
           </span>
