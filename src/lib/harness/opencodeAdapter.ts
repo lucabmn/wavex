@@ -9,14 +9,11 @@ import {
   stopOpenCodeSession,
 } from "./opencode";
 import { refreshOpenCodeCatalog } from "./opencodeCatalog";
-import {
-  generateOpenCodeBranchName,
-  generateOpenCodeCommitMessage,
-  generateOpenCodePrContent,
-} from "./opencodeGit";
-import { generateOpenCodeSessionTitle } from "./opencodeTitle";
-import { warmupOpenCodeText } from "./opencodeText";
+import { runOpenCodeTextPrompt, warmupOpenCodeText } from "./opencodeText";
+import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
+
+const gitText = createGitTextGenerators(runOpenCodeTextPrompt, "OpenCode");
 
 export const openCodeAdapter: HarnessAdapter = {
   id: "opencode",
@@ -30,10 +27,10 @@ export const openCodeAdapter: HarnessAdapter = {
   forgetSession: forgetOpenCodeSession,
   bindSession: bindOpenCodeSession,
   refreshCatalog: refreshOpenCodeCatalog,
-  generateTitle: generateOpenCodeSessionTitle,
-  generateCommitMessage: generateOpenCodeCommitMessage,
-  generatePrContent: generateOpenCodePrContent,
-  generateBranchName: generateOpenCodeBranchName,
+  generateTitle: createSessionTitleGenerator(runOpenCodeTextPrompt),
+  generateCommitMessage: gitText.generateCommitMessage,
+  generatePrContent: gitText.generatePrContent,
+  generateBranchName: gitText.generateBranchName,
   warmupText: warmupOpenCodeText,
 };
 

@@ -7,15 +7,12 @@ import {
   steerCodexTurn,
   stopCodexSession,
 } from "./codex";
-import {
-  generateCodexBranchName,
-  generateCodexCommitMessage,
-  generateCodexPrContent,
-} from "./codexGit";
 import { refreshCodexCatalog } from "./codexCatalog";
-import { generateCodexSessionTitle } from "./codexTitle";
-import { warmupCodexText } from "./codexText";
+import { runCodexTextPrompt, warmupCodexText } from "./codexText";
+import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
+
+const gitText = createGitTextGenerators(runCodexTextPrompt, "Codex");
 
 export const codexAdapter: HarnessAdapter = {
   id: "codex",
@@ -28,10 +25,10 @@ export const codexAdapter: HarnessAdapter = {
   forgetSession: forgetCodexSession,
   bindSession: bindCodexSession,
   refreshCatalog: refreshCodexCatalog,
-  generateTitle: generateCodexSessionTitle,
-  generateCommitMessage: generateCodexCommitMessage,
-  generatePrContent: generateCodexPrContent,
-  generateBranchName: generateCodexBranchName,
+  generateTitle: createSessionTitleGenerator(runCodexTextPrompt),
+  generateCommitMessage: gitText.generateCommitMessage,
+  generatePrContent: gitText.generatePrContent,
+  generateBranchName: gitText.generateBranchName,
   warmupText: warmupCodexText,
 };
 

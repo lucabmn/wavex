@@ -4,7 +4,6 @@ import { promptBlocks } from "../attachments";
 import { AcpClient, type AcpHandlers } from "./acp";
 import { killChild, resolveCursorBinary, spawnChild, unwatchChild, watchChild } from "./child";
 import { readStoredCursorToolCalls, type StoredCursorToolCall } from "./cursorStore";
-import { stopCursorTitleGeneration } from "./cursorTitle";
 import type { ApprovalDecision, HarnessEvent, SendTurnInput, SteerTurnInput } from "./types";
 import {
   CUSTOM_OPTION_ID,
@@ -180,7 +179,6 @@ export async function stopCursorSession(sessionId: string): Promise<void> {
 export async function forgetCursorSession(sessionId: string): Promise<void> {
   resumeByThread.delete(sessionId);
   await stopCursorSession(sessionId);
-  await stopCursorTitleGeneration(sessionId);
 }
 
 /** Seed ACP resume state for a restored wavex session. */
