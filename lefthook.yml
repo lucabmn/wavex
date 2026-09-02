@@ -1,0 +1,15 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: oxlint
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs}"
+      run: pnpm oxlint --fix {staged_files}
+      stage_fixed: true
+    - name: oxfmt
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs,json,css}"
+      run: pnpm oxfmt --write {staged_files}
+      stage_fixed: true
+    - name: rustfmt
+      glob: "*.rs"
+      run: cargo fmt -- {staged_files}
+      stage_fixed: true

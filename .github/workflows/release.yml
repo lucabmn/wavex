@@ -2,231 +2,42 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
 
 permissions:
   contents: write
 
 jobs:
   release:
-    needs: linux
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-
+          node-version: 22
+          cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Write Apple API key
-        env:
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
-        run: |
-          mkdir -p "$HOME/private_keys"
-          printf '%s\n' "$APPLE_API_KEY_P8" > "$HOME/private_keys/AuthKey_${APPLE_API_KEY}.p8"
-          echo "APPLE_API_KEY_PATH=$HOME/private_keys/AuthKey_${APPLE_API_KEY}.p8" >> "$GITHUB_ENV"
-
-      - run: npm ci
-
-      - name: Check tag matches app version
-        run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF_NAME#v}"
-          CONF=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          PKG=$(node -p "require('./package.json').version")
-          CARGO=$(awk '/^\[workspace.package\]/{f=1} f && /^version = /{gsub(/"/, "", $3); print $3; exit}' Cargo.toml)
-          if [ "$TAG" != "$CONF" ] || [ "$TAG" != "$PKG" ] || [ "$TAG" != "$CARGO" ]; then
-            echo "Tag v$TAG does not match package.json ($PKG), Cargo.toml ($CARGO), or tauri.conf.json ($CONF)"
-            exit 1
-          fi
-          node - "$TAG" <<'NODE'
-          const { readFileSync } = require("node:fs");
-          const version = process.argv[2];
-          const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const heading = new RegExp(
-            `^## \\[${escaped}\\](?: - \\d{4}-\\d{2}-\\d{2})?$`,
-            "m",
-          );
-          if (!heading.test(readFileSync("CHANGELOG.md", "utf8"))) {
-            console.error(`CHANGELOG.md has no valid release section for ${version}`);
-            process.exit(1);
-          }
-          NODE
-
-      - name: Write release config
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          TAURI_UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
-          TAURI_UPDATER_ENDPOINT: ${{ secrets.TAURI_UPDATER_ENDPOINT }}
-          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
-        run: |
-          node <<'NODE'
-          const { writeFileSync } = require("node:fs");
-          const identity = (process.env.APPLE_SIGNING_IDENTITY || "").trim();
-          if (!identity || identity === "-") {
-            console.error("APPLE_SIGNING_IDENTITY is required and must not be ad-hoc '-'");
-            process.exit(1);
-          }
-          const pubkey = process.env.TAURI_UPDATER_PUBKEY || "";
-          const endpoint =
-            process.env.TAURI_UPDATER_ENDPOINT ||
-            (process.env.R2_PUBLIC_BASE_URL
-              ? `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/latest.json`
-              : "");
-          writeFileSync(
-            process.env.RUNNER_TEMP + "/tauri.release.conf.json",
-            JSON.stringify(
-              {
-                bundle: { macOS: { signingIdentity: identity } },
-                plugins: {
-                  updater: {
-                    pubkey,
-                    endpoints: endpoint ? [endpoint] : [],
-                  },
-                },
-              },
-              null,
-              2,
-            ),
-          );
-          NODE
-
-      - name: Build, sign, and notarize
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npx tauri build --bundles app,dmg --config "$RUNNER_TEMP/tauri.release.conf.json"
-
-      - name: Upload to R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
-        run: |
-          set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-          BUNDLE="target/release/bundle"
-          TAR=$(find "$BUNDLE/macos" -maxdepth 1 -type f -name '*.app.tar.gz' -print -quit)
-          SIG="${TAR}.sig"
-          DMG=$(find "$BUNDLE/dmg" -maxdepth 1 -type f -name '*.dmg' -print -quit)
-          BASE="${R2_PUBLIC_BASE_URL%/}"
-          ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          RELEASE_PREFIX="releases/${VERSION}"
-          TAR_KEY="${RELEASE_PREFIX}/wavex.app.tar.gz"
-          SIG_KEY="${TAR_KEY}.sig"
-          DMG_KEY="${RELEASE_PREFIX}/wavex_${VERSION}_aarch64.dmg"
-
-          VERSION="$VERSION" SIG="$SIG" TAR_URL="$BASE/$TAR_KEY" node <<'NODE'
-          const fs = require("fs");
-          fs.writeFileSync(
-            "latest.json",
-            JSON.stringify(
-              {
-                version: process.env.VERSION,
-                notes: `wavex ${process.env.VERSION}`,
-                pub_date: new Date().toISOString(),
-                platforms: {
-                  "darwin-aarch64": {
-                    signature: fs.readFileSync(process.env.SIG, "utf8").trim(),
-                    url: process.env.TAR_URL,
-                  },
-                },
-              },
-              null,
-              2,
-            ) + "\n",
-          );
-          NODE
-
-          brew list awscli >/dev/null 2>&1 || brew install awscli
-          IMMUTABLE_CACHE="public,max-age=31536000,immutable"
-          NO_CACHE="no-store,max-age=0,must-revalidate"
-          aws s3 cp "$DMG" "s3://${R2_BUCKET_NAME}/${DMG_KEY}" --cache-control "$IMMUTABLE_CACHE" --endpoint-url "$ENDPOINT"
-          aws s3 cp "$TAR" "s3://${R2_BUCKET_NAME}/${TAR_KEY}" --cache-control "$IMMUTABLE_CACHE" --endpoint-url "$ENDPOINT"
-          aws s3 cp "$SIG" "s3://${R2_BUCKET_NAME}/${SIG_KEY}" --cache-control "$IMMUTABLE_CACHE" --endpoint-url "$ENDPOINT"
-          # Keep the website's stable DMG link, but never let the CDN retain an
-          # older release under this mutable name.
-          aws s3 cp "$DMG" "s3://${R2_BUCKET_NAME}/wavex.dmg" --cache-control "$NO_CACHE" --endpoint-url "$ENDPOINT"
-          aws s3 cp latest.json "s3://${R2_BUCKET_NAME}/latest.json" --content-type "application/json" --cache-control "$NO_CACHE" --endpoint-url "$ENDPOINT"
-
-      - name: Download Linux packages
-        uses: actions/download-artifact@v4
+      - uses: Swatinem/rust-cache@v2
         with:
-          name: linux-packages
-          path: target/release/bundle/linux
+          workspaces: "src-tauri -> target"
 
-      - name: GitHub Release
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches manifests and CHANGELOG
+        run: node scripts/verify-release.mjs "${GITHUB_REF_NAME#v}"
+
+      - run: pnpm exec tauri build --bundles app,dmg
+
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-          BUNDLE="target/release/bundle"
-          TAR=$(find "$BUNDLE/macos" -maxdepth 1 -type f -name '*.app.tar.gz' -print -quit)
-          SIG="${TAR}.sig"
-          DMG=$(find "$BUNDLE/dmg" -maxdepth 1 -type f -name '*.dmg' -print -quit)
-          shopt -s nullglob
-          DEB=("$BUNDLE"/linux/*.deb)
-          APPIMAGE=("$BUNDLE"/linux/*.AppImage)
-          if (( ${#DEB[@]} != 1 || ${#APPIMAGE[@]} != 1 )); then
-            echo "Expected exactly one .deb and one AppImage" >&2
-            exit 1
-          fi
+          DMG=$(find target/release/bundle/dmg -maxdepth 1 -name '*.dmg' -print -quit)
+          [ -n "$DMG" ] || { echo "No .dmg produced" >&2; exit 1; }
+          node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/notes.md"
           gh release create "$GITHUB_REF_NAME" \
-            --title "wavex $VERSION" \
-            --notes "See CHANGELOG.md for details." \
-            "$DMG" "$TAR" "$SIG" "${DEB[0]}" "${APPIMAGE[0]}"
-
-  linux:
-    name: Linux packages
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Linux system dependencies
-        run: bash scripts/install-linux-deps-debian.sh
-
-      - run: npm ci
-
-      - name: Build Linux packages
-        run: npm run build:linux
-
-      - name: Stage Linux packages
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          deb=(target/release/bundle/deb/*.deb)
-          appimage=(target/release/bundle/appimage/*.AppImage)
-          if (( ${#deb[@]} != 1 || ${#appimage[@]} != 1 )); then
-            echo "Expected exactly one .deb and one AppImage" >&2
-            exit 1
-          fi
-          mkdir -p release-artifacts
-          cp "${deb[0]}" "${appimage[0]}" release-artifacts/
-
-      - name: Upload Linux packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-packages
-          path: release-artifacts/
-          if-no-files-found: error
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            "$DMG"
