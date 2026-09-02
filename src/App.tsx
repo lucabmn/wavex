@@ -227,6 +227,7 @@ import {
 } from "./lib/sessions/sessionStore";
 import { syncDockBadge } from "./lib/dockBadge";
 import { liveAgentsFromSessions } from "./lib/liveAgents";
+import { MENU_BAR_FOCUS_SESSION, publishMenuBarAgents } from "./lib/menuBar";
 import { hiddenApprovalNotices } from "./lib/approvalToast";
 import { nextUnseenFinishedSessions } from "./lib/sessions/sessionDone";
 import { playCue } from "./lib/sounds";
@@ -663,10 +664,15 @@ export default function App({
   }
   const unseenFinishedIds = unseenFinishedRef.current;
 
-  const liveAgents = useMemo(
-    () => (liveAgentsEnabled ? liveAgentsFromSessions(sessions, unseenFinishedIds) : []),
-    [liveAgentsEnabled, sessions, unseenFinishedIds],
+  const menuBarAgents = useMemo(
+    () => liveAgentsFromSessions(sessions, unseenFinishedIds),
+    [sessions, unseenFinishedIds],
   );
+  const liveAgents = liveAgentsEnabled ? menuBarAgents : [];
+
+  useEffect(() => {
+    publishMenuBarAgents(menuBarAgents);
+  }, [menuBarAgents]);
 
   const hiddenApprovalToasts = useMemo(
     () => hiddenApprovalNotices(sessions, activeTabId, tabs, composerFocused),
@@ -3213,6 +3219,7 @@ export default function App({
     onOpenInbox,
     onOpenNotes,
     onOpenUsage,
+    onSelectLiveAgent,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3236,6 +3243,7 @@ export default function App({
     onOpenInbox,
     onOpenNotes,
     onOpenUsage,
+    onSelectLiveAgent,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3370,6 +3378,9 @@ export default function App({
       listen("open_inbox", () => actions.current.onOpenInbox()),
       listen("open_notes", () => actions.current.onOpenNotes()),
       listen("open_usage", () => actions.current.onOpenUsage()),
+      listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
+        actions.current.onSelectLiveAgent(payload),
+      ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
         void runUpdateFlow(true);

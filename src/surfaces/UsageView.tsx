@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { LoaderCircle, RefreshCw } from "../chrome/icons";
 import { PlanLimitCards } from "../chrome/PlanLimitCards";
@@ -8,11 +8,7 @@ import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { IS_MAC } from "../lib/platform";
 import { HARNESS_LABEL } from "../lib/session";
-import {
-  fetchModelRates,
-  fetchUsageSummary,
-  type ModelRatesSnapshot,
-} from "../lib/usage/usageFetch";
+import type { ModelRatesSnapshot } from "../lib/usage/usageFetch";
 import {
   formatCount,
   formatDayRange,
@@ -21,12 +17,9 @@ import {
   formatTokens,
   formatUsd,
 } from "../lib/usage/usageFormat";
-import { loadingPlanLimits, PLAN_LIMIT_PROVIDERS, type PlanLimits } from "../lib/usage/planLimits";
-import { fetchClaudePlanLimits, fetchCodexPlanLimits } from "../lib/usage/planLimitsFetch";
-import { EMPTY_RATE_TABLE } from "../lib/usage/usagePricing";
+import { PLAN_LIMIT_PROVIDERS } from "../lib/usage/planLimits";
 import { USAGE_PROVIDER_COLOR } from "../lib/usage/usageProviders";
 import {
-  buildUsageReport,
   totalsValue,
   type UsageModelEntry,
   type UsageProviderEntry,
@@ -37,14 +30,9 @@ import {
   USAGE_PROVIDERS,
   type UsageProvider,
   type UsageSource,
-  type UsageSummary,
 } from "../lib/usage/usageTypes";
-import {
-  makeUsageWindow,
-  USAGE_WINDOW_DAYS,
-  type UsageWindow,
-  type UsageWindowDays,
-} from "../lib/usage/usageWindow";
+import { USAGE_WINDOW_DAYS, type UsageWindowDays } from "../lib/usage/usageWindow";
+import { useUsageData } from "../lib/usage/useUsageData";
 
 /** Survives a close and reopen, so the view comes back where it was left. */
 let rememberedDays: UsageWindowDays = 30;
@@ -56,11 +44,6 @@ type Props = {
   onToggleSidebar?: () => void;
 };
 
-type Loaded = {
-  summary: UsageSummary;
-  scannedAtMs: number;
-};
-
 export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Props) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
@@ -68,17 +51,18 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
 
   const [days, setDays] = useState<UsageWindowDays>(rememberedDays);
   const [metric, setMetric] = useState<UsageMetric>(rememberedMetric);
-  const [window_, setWindow] = useState<UsageWindow>(() => makeUsageWindow(rememberedDays));
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
-  const [rates, setRates] = useState<ModelRatesSnapshot | null>(null);
-  const [planLimits, setPlanLimits] = useState<PlanLimits[]>(() =>
-    PLAN_LIMIT_PROVIDERS.map(loadingPlanLimits),
-  );
-  // Reset countdowns are only useful if they tick.
-  const [now, setNow] = useState(() => Date.now());
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(true);
-  const requestId = useRef(0);
+  const {
+    window: window_,
+    summary,
+    scannedAtMs,
+    rates,
+    planLimits,
+    now,
+    error,
+    busy,
+    report,
+    refresh,
+  } = useUsageData(days);
 
   useEffect(() => {
     rememberedDays = days;
@@ -98,83 +82,9 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
     return () => globalThis.removeEventListener("keydown", onKey, true);
   }, []);
 
-  // Plan limits are the one part that does talk to the providers, so they are
-  // read on their own rather than on the scan's path: a slow or signed-out
-  // provider must not hold up the history.
-  const loadPlanLimits = useCallback(() => {
-    setPlanLimits(PLAN_LIMIT_PROVIDERS.map(loadingPlanLimits));
-    for (const [index, read] of [fetchClaudePlanLimits, fetchCodexPlanLimits].entries()) {
-      void read().then((result) => {
-        setPlanLimits((current) =>
-          current.map((entry, position) => (position === index ? result : entry)),
-        );
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    loadPlanLimits();
-  }, [loadPlanLimits]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const load = useCallback(async (next: UsageWindow) => {
-    const id = (requestId.current += 1);
-    setBusy(true);
-    try {
-      const summary = await fetchUsageSummary(next);
-      if (requestId.current !== id) return;
-      setLoaded({ summary, scannedAtMs: Date.now() });
-      setError(null);
-    } catch (err: unknown) {
-      if (requestId.current !== id) return;
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      if (requestId.current === id) setBusy(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load(window_);
-  }, [load, window_]);
-
-  // The rate table is fetched apart from the scan on purpose. It is memoised
-  // after the first run, but that first run may go to the network, and the
-  // scan is the part the view exists to show — waiting on pricing to render
-  // anything would stall the first open of the day behind a request.
-  useEffect(() => {
-    let live = true;
-    void fetchModelRates().then((snapshot) => {
-      if (live) setRates(snapshot);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-
   const selectDays = (next: UsageWindowDays) => {
     setDays(next);
-    setWindow(makeUsageWindow(next));
   };
-
-  const refresh = () => {
-    loadPlanLimits();
-    // Rebuilding the window also rolls it forward when the day has turned
-    // while the view sat open.
-    setWindow(makeUsageWindow(days));
-  };
-
-  const report = useMemo<UsageReport | null>(() => {
-    if (!loaded) return null;
-    return buildUsageReport({
-      summary: loaded.summary,
-      window: window_,
-      rates: rates?.table ?? EMPTY_RATE_TABLE,
-    });
-  }, [loaded, rates, window_]);
 
   const chartProviders = useMemo(
     () => (report?.providers ?? []).map((entry) => entry.provider),
@@ -184,19 +94,19 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
   // A provider with no usage is only worth a note when nothing went wrong; a
   // failed read is a different statement and gets its own line.
   const quiet = useMemo(() => {
-    if (!loaded) return [];
+    if (!summary) return [];
     const active = new Set(chartProviders);
-    return loaded.summary.sources.filter(
+    return summary.sources.filter(
       (source) =>
         isUsageProvider(source.provider) &&
         !active.has(source.provider) &&
         source.status !== "failed",
     );
-  }, [chartProviders, loaded]);
+  }, [chartProviders, summary]);
 
   const failed = useMemo(
-    () => (loaded?.summary.sources ?? []).filter((source) => source.status === "failed"),
-    [loaded],
+    () => (summary?.sources ?? []).filter((source) => source.status === "failed"),
+    [summary],
   );
 
   const empty = report !== null && report.overall.totalTokens === 0;
@@ -288,8 +198,8 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
                 quiet={quiet.map((source) => source.provider)}
                 failed={failed}
                 rates={rates}
-                scannedAtMs={loaded?.scannedAtMs ?? 0}
-                scanDurationMs={loaded?.summary.scanDurationMs ?? 0}
+                scannedAtMs={scannedAtMs}
+                scanDurationMs={summary?.scanDurationMs ?? 0}
               />
             </>
           )}

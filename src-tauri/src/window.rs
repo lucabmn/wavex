@@ -9,6 +9,10 @@ static ALLOW_EXIT: AtomicBool = AtomicBool::new(false);
 
 const QUIT_REQUESTED: &str = "quit_requested";
 
+pub fn is_app_window(label: &str) -> bool {
+    label != crate::menu_bar::WINDOW_LABEL
+}
+
 pub fn open_new_window(app: &AppHandle) -> Result<(), String> {
     let mut config = app
         .config()
@@ -69,7 +73,11 @@ pub fn destroy_window(window: WebviewWindow) -> Result<(), String> {
 
 /// Dock click / Cmd-click with no visible windows: bring hidden ones back.
 pub fn show_hidden_or_open_new(app: &AppHandle) -> Result<(), String> {
-    let mut windows: Vec<WebviewWindow> = app.webview_windows().into_values().collect();
+    let mut windows: Vec<WebviewWindow> = app
+        .webview_windows()
+        .into_values()
+        .filter(|window| is_app_window(window.label()))
+        .collect();
     if windows.is_empty() {
         return open_new_window(app);
     }
@@ -85,9 +93,19 @@ pub fn show_hidden_or_open_new(app: &AppHandle) -> Result<(), String> {
         .map_err(|err| err.to_string())
 }
 
+pub fn show_app_window(window: &WebviewWindow) -> Result<(), String> {
+    window.unminimize().map_err(|err| err.to_string())?;
+    window.show().map_err(|err| err.to_string())?;
+    window.set_focus().map_err(|err| err.to_string())
+}
+
 /// window-state can restore a window as hidden after a quit-while-hidden.
 pub fn ensure_launch_window_visible(app: &AppHandle) {
-    let windows: Vec<WebviewWindow> = app.webview_windows().into_values().collect();
+    let windows: Vec<WebviewWindow> = app
+        .webview_windows()
+        .into_values()
+        .filter(|window| is_app_window(window.label()))
+        .collect();
     if windows.is_empty() {
         return;
     }
@@ -109,10 +127,21 @@ pub fn request_quit(app: &AppHandle) {
     let windows = app.webview_windows();
     let target = windows
         .values()
+        .filter(|window| is_app_window(window.label()))
         .find(|window| window.is_focused().unwrap_or(false))
         .cloned()
-        .or_else(|| windows.get("main").cloned())
-        .or_else(|| windows.values().next().cloned());
+        .or_else(|| {
+            windows
+                .get("main")
+                .filter(|window| is_app_window(window.label()))
+                .cloned()
+        })
+        .or_else(|| {
+            windows
+                .values()
+                .find(|window| is_app_window(window.label()))
+                .cloned()
+        });
     match target {
         Some(window) => {
             if window.emit(QUIT_REQUESTED, ()).is_err() {
@@ -127,7 +156,11 @@ pub fn request_quit(app: &AppHandle) {
 #[tauri::command]
 pub fn confirm_quit(app: AppHandle) {
     ALLOW_EXIT.store(true, Ordering::SeqCst);
-    for window in app.webview_windows().values() {
+    for window in app
+        .webview_windows()
+        .values()
+        .filter(|window| is_app_window(window.label()))
+    {
         let _ = window.show();
     }
     // Belt and braces. `RunEvent::Exit` reaps too, and it also runs before the
