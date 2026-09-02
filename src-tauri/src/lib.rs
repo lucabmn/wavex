@@ -18,6 +18,7 @@ mod skills;
 mod usage;
 mod window;
 mod window_transfer;
+mod worktree;
 
 // Phase 1 seam: spawn / kill harness children per wavex thread.
 // Adapters own the protocol; this host only supervises processes.
@@ -195,6 +196,10 @@ pub fn run() {
             fs::git_checkout,
             fs::git_create_branch,
             fs::git_stash,
+            worktree::git_worktree_list,
+            worktree::git_worktree_create,
+            worktree::git_worktree_remove,
+            worktree::git_worktree_prune,
             fs::create_path,
             fs::rename_path,
             fs::delete_path,

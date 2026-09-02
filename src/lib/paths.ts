@@ -11,6 +11,14 @@ export function prettyCwd(cwd: string): string {
   return trimmed;
 }
 
+/**
+ * Project path without a trailing slash. The rail, the session store and the
+ * worktree index all key projects on this, so it has to agree everywhere.
+ */
+export function normalizeProjectPath(path: string): string {
+  return path.replace(/\/+$/, "") || "/";
+}
+
 export function parentPath(path: string): string {
   const trimmed = path.replace(/\/+$/, "") || "/";
   const i = trimmed.lastIndexOf("/");

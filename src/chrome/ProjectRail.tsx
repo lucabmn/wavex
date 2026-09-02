@@ -6,6 +6,7 @@ import {
   CircleAlert,
   FolderOpen,
   BarChart,
+  GitBranch,
   Inbox,
   MoreHorizontal,
   Pin,
@@ -16,12 +17,21 @@ import {
   Settings,
   Trash2,
 } from "./icons";
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useDragResize } from "../hooks/useDragResize";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useProjectDiffStats } from "../hooks/useProjectDiffStats";
 import { useSortable } from "../hooks/useSortable";
 import { useTabGroupLogos } from "../hooks/useTabGroupLogos";
+import { useWorktrees } from "../hooks/useWorktrees";
 import {
   loadProjectRailWidth,
   PROJECT_RAIL_WIDTH_DEFAULT,
@@ -60,6 +70,9 @@ import {
   saveTabGroupMascot,
 } from "../lib/workspace/tabGroups";
 import { formatLiveElapsed, type LiveAgent } from "../lib/liveAgents";
+import { worktreeRepo } from "../lib/worktrees/worktreeIndex";
+import { CreateWorktreeDialog } from "./CreateWorktreeDialog";
+import { WorktreeList } from "./WorktreeList";
 import { HarnessIcon } from "./HarnessIcon";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 import { ProjectMascot } from "./ProjectMascot";
@@ -82,6 +95,7 @@ const REVEAL_LABEL = IS_MAC
 
 function projectMenuExtraItems(pinned: boolean, canRemove: boolean): TabGroupMenuExtraItem[] {
   const items: TabGroupMenuExtraItem[] = [
+    { id: "worktree", label: "New worktree…", icon: GitBranch },
     pinned
       ? { id: "unpin", label: "Unpin project", icon: PinOff }
       : { id: "pin", label: "Pin project", icon: Pin },
@@ -188,6 +202,7 @@ export function ProjectRail({
     path: string;
     name: string;
   } | null>(null);
+  const [creatingWorktreeFor, setCreatingWorktreeFor] = useState<string | null>(null);
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const scrollRef = useRef<HTMLDivElement>(null);
   const groupLogos = useTabGroupLogos();
@@ -201,6 +216,10 @@ export function ProjectRail({
     for (const path of busyPaths ?? []) set.add(path);
     return set;
   }, [busyPaths]);
+  // A worktree is listed under the repository it belongs to, so opening one
+  // expands that repository rather than adding a project beside it.
+  const activeRepo = useMemo(() => worktreeRepo(cwd) ?? cwd, [cwd]);
+  const { worktrees } = useWorktrees(activeRepo, true);
 
   useEffect(() => {
     setRailOrder((prev) => {
@@ -306,7 +325,8 @@ export function ProjectRail({
   const onProjectMenuPick = (action: string) => {
     if (!projectMenu) return;
     const { path, projectKey } = projectMenu;
-    if (action === "pin" || action === "unpin") onTogglePin(path);
+    if (action === "worktree") setCreatingWorktreeFor(path);
+    else if (action === "pin" || action === "unpin") onTogglePin(path);
     else if (action === "reveal") void revealPath(path);
     else if (action === "archive") {
       onRemoveProject?.(path, { purgeData: false });
@@ -323,6 +343,22 @@ export function ProjectRail({
     onRemoveProject?.(removing.path, { purgeData: true });
     setRemoving(null);
   };
+
+  /** Only the open repository expands: every row polls git for its own stats. */
+  const renderWorktrees = (path: string): ReactNode =>
+    sameProjectPath(path, activeRepo) && worktrees.length > 0 ? (
+      <WorktreeList
+        repoPath={activeRepo}
+        worktrees={worktrees}
+        cwd={cwd}
+        isBusy={(candidate) => isBusyPath(candidate, busy)}
+        onSelect={onSelectProject}
+        onCreate={() => setCreatingWorktreeFor(activeRepo)}
+        onRemoved={(removed) => {
+          if (sameProjectPath(removed, cwd)) onSelectProject(activeRepo);
+        }}
+      />
+    ) : null;
 
   const pinnedIds = sections.pinned.map((item) => item.path);
   const projectIds = sections.projects.map((item) => item.path);
@@ -412,6 +448,7 @@ export function ProjectRail({
                 label="Pinned"
                 items={sections.pinned}
                 cwd={cwd}
+                activeRepo={activeRepo}
                 busy={busy}
                 sortable={pinnedSortable}
                 pinned
@@ -425,6 +462,7 @@ export function ProjectRail({
                 groupCustomColors={groupCustomColors}
                 groupLogos={groupLogos}
                 groupMascots={groupMascots}
+                renderAfter={renderWorktrees}
               />
             ) : null}
 
@@ -434,6 +472,7 @@ export function ProjectRail({
               emptyLabel="No projects yet"
               onAdd={onOpenProject}
               cwd={cwd}
+              activeRepo={activeRepo}
               busy={busy}
               sortable={projectSortable}
               pinned={false}
@@ -447,6 +486,7 @@ export function ProjectRail({
               groupCustomColors={groupCustomColors}
               groupLogos={groupLogos}
               groupMascots={groupMascots}
+              renderAfter={renderWorktrees}
             />
           </div>
           <LiveAgentsPreview
@@ -513,6 +553,20 @@ export function ProjectRail({
             Boolean(onRemoveProject),
           )}
           onExtraPick={onProjectMenuPick}
+        />
+      ) : null}
+      {creatingWorktreeFor ? (
+        <CreateWorktreeDialog
+          repoPath={creatingWorktreeFor}
+          onCancel={() => setCreatingWorktreeFor(null)}
+          onCreated={(worktree, open) => {
+            setCreatingWorktreeFor(null);
+            if (open) onSelectProject(worktree.path);
+          }}
+          onOpenWorktree={(path) => {
+            setCreatingWorktreeFor(null);
+            onSelectProject(path);
+          }}
         />
       ) : null}
       {removing ? (
@@ -654,7 +708,12 @@ function LiveAgentCard({
   groupCustomColors: Record<string, string>;
   groupMascots: Record<string, string>;
 }) {
-  const projectKey = projectName(agent.cwd);
+  // An agent in a worktree still belongs to its repository: keying on the
+  // folder would give every branch its own color, mascot and name, and drop the
+  // project's own label.
+  const repo = worktreeRepo(agent.cwd);
+  const projectKey = projectName(repo ?? agent.cwd);
+  const worktree = repo ? basename(agent.cwd) : null;
   const project = resolveTabGroupLabel(projectKey, groupLabels, projectKey);
   const color = resolveTabGroupColor(projectKey, groupColors, groupCustomColors, projectKey);
   const elapsed = agent.done
@@ -666,13 +725,14 @@ function LiveAgentCard({
       : "";
   const activity = agent.needsApproval ? "Need approval" : agent.done ? "Done" : agent.activity;
   const live = !agent.needsApproval && !agent.done;
-  const title = [agent.title, project, activity, elapsed].filter(Boolean).join("\n");
+  const where = worktree ? `${project} · ${worktree}` : project;
+  const title = [agent.title, where, activity, elapsed].filter(Boolean).join("\n");
 
   return (
     <button
       type="button"
       title={title}
-      aria-label={[agent.title, project, activity, elapsed].filter(Boolean).join(", ")}
+      aria-label={[agent.title, where, activity, elapsed].filter(Boolean).join(", ")}
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect?.(agent.id)}
       className={`relative flex w-full flex-col rounded-md px-2 py-1.5 text-left ${
@@ -717,7 +777,10 @@ function LiveAgentCard({
       </span>
       <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11px] leading-tight text-content/45">
         <HarnessIcon harness={agent.harness} className="size-3 shrink-0" />
-        <span className="min-w-0 flex-1 truncate">{project}</span>
+        <span className="min-w-0 flex-1 truncate">
+          {project}
+          {worktree ? <span className="text-content/35"> · {worktree}</span> : null}
+        </span>
         {elapsed ? <span className="shrink-0 tabular-nums">{elapsed}</span> : null}
       </span>
     </button>
@@ -730,6 +793,7 @@ function ProjectSection({
   emptyLabel,
   onAdd,
   cwd,
+  activeRepo,
   busy,
   sortable,
   pinned,
@@ -743,12 +807,16 @@ function ProjectSection({
   groupCustomColors,
   groupLogos,
   groupMascots,
+  renderAfter,
 }: {
   label: string;
   items: RecentProject[];
   emptyLabel?: string;
   onAdd?: () => void;
   cwd: string;
+  /** Repository the open folder belongs to — the repository itself, or the one
+   *  behind the open worktree. */
+  activeRepo: string;
   busy: Set<string>;
   sortable: SortableHandle;
   pinned: boolean;
@@ -762,6 +830,8 @@ function ProjectSection({
   groupCustomColors: Record<string, string>;
   groupLogos: ReturnType<typeof useTabGroupLogos>;
   groupMascots: Record<string, string>;
+  /** Extra rows under one project — the repository's worktrees. */
+  renderAfter?: (path: string) => ReactNode;
 }) {
   return (
     <div className="shrink-0 mb-2">
@@ -784,24 +854,27 @@ function ProjectSection({
       ) : null}
       <div className="flex flex-col gap-px px-2">
         {items.map((item, index) => (
-          <ProjectCard
-            key={item.path}
-            item={item}
-            selected={!searchActive && sameProjectPath(item.path, cwd)}
-            busy={isBusyPath(item.path, busy)}
-            pinned={pinned}
-            sortable={sortable}
-            index={index}
-            onSelect={onSelect}
-            onTogglePin={onTogglePin}
-            onContextMenu={onContextMenu}
-            onOpenMenu={onOpenMenu}
-            groupLabels={groupLabels}
-            groupColors={groupColors}
-            groupCustomColors={groupCustomColors}
-            groupLogos={groupLogos}
-            groupMascots={groupMascots}
-          />
+          <Fragment key={item.path}>
+            <ProjectCard
+              item={item}
+              selected={!searchActive && sameProjectPath(item.path, cwd)}
+              expanded={!searchActive && sameProjectPath(item.path, activeRepo)}
+              busy={isBusyPath(item.path, busy)}
+              pinned={pinned}
+              sortable={sortable}
+              index={index}
+              onSelect={onSelect}
+              onTogglePin={onTogglePin}
+              onContextMenu={onContextMenu}
+              onOpenMenu={onOpenMenu}
+              groupLabels={groupLabels}
+              groupColors={groupColors}
+              groupCustomColors={groupCustomColors}
+              groupLogos={groupLogos}
+              groupMascots={groupMascots}
+            />
+            {renderAfter?.(item.path)}
+          </Fragment>
         ))}
       </div>
     </div>
@@ -813,6 +886,7 @@ const nameClassName = "min-w-0 flex-1 truncate text-sm font-medium leading-tight
 function ProjectCard({
   item,
   selected,
+  expanded,
   busy,
   pinned,
   sortable,
@@ -829,6 +903,8 @@ function ProjectCard({
 }: {
   item: RecentProject;
   selected: boolean;
+  /** One of this project's worktrees is the open folder. */
+  expanded: boolean;
   busy: boolean;
   pinned: boolean;
   sortable: SortableHandle;
@@ -872,7 +948,11 @@ function ProjectCard({
     <div
       ref={(el) => sortable.setItemRef(item.path, el)}
       className={`group relative flex touch-none items-stretch rounded-md px-2 h-8 ${
-        selected ? "bg-content/12 text-content" : "opacity-65 hover:bg-content/5 hover:text-content"
+        selected
+          ? "bg-content/12 text-content"
+          : expanded
+            ? "text-content hover:bg-content/5"
+            : "opacity-65 hover:bg-content/5 hover:text-content"
       } ${dragging ? "opacity-40" : ""} cursor-default`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
