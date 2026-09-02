@@ -7,7 +7,7 @@ import {
   seedInboxSeenIfNeeded,
 } from "./inboxSeen";
 
-const KEY = "wavecode.inboxSeen";
+const KEY = "wavex.inboxSeen";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();

@@ -5,7 +5,7 @@ import { normalizeProjectPath } from "./recents";
 import { orderByIds } from "./reorder";
 import { TAB_GROUP_COLORS } from "./tabGroups";
 
-const KEY = "wavecode.sessionFolders";
+const KEY = "wavex.sessionFolders";
 
 export type SessionFolder = {
   id: string;

@@ -37,7 +37,7 @@ export type HarnessAdapter = {
   stopSession(sessionId: string): Promise<void>;
   /** Drop resume state and kill the child (delete, harness switch, idle detach). */
   forgetSession(sessionId: string): Promise<void>;
-  /** Seed resume state from a restored wavecode session. */
+  /** Seed resume state from a restored wavex session. */
   bindSession(
     threadId: string,
     providerSessionId: string,
@@ -219,7 +219,7 @@ export async function refreshHarnessCatalogs(
       .map(async (adapter) => {
         if (!adapter.refreshCatalog || hasLiveCatalog(adapter.id)) return;
         await adapter.refreshCatalog().catch((error: unknown) => {
-          console.debug(`[wavecode] ${adapter.id} catalog`, error);
+          console.debug(`[wavex] ${adapter.id} catalog`, error);
         });
       }),
   );

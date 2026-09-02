@@ -182,7 +182,7 @@ describe("injectSkillPrompt", () => {
 });
 
 describe("mergeCatalog", () => {
-  it("lets .agents win, then wavecode create-skill, then provider skills", () => {
+  it("lets .agents win, then wavex create-skill, then provider skills", () => {
     const catalog = mergeCatalog([
       {
         name: "review-pr",

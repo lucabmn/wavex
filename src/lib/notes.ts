@@ -49,7 +49,7 @@ export function noteCardMeta(card: NoteComposerCard): NoteCardMeta {
   };
 }
 
-export const ADD_NOTE_TO_CHAT_EVENT = "wavecode:add-note-to-chat";
+export const ADD_NOTE_TO_CHAT_EVENT = "wavex:add-note-to-chat";
 
 const MAX_TITLE = 200;
 const MAX_NOTE_PICKER = 8;

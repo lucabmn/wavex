@@ -59,17 +59,17 @@ describe("historyWithLiveSessions", () => {
   });
 
   it("stamps composer git onto a live session that is not persisted yet", () => {
-    const session = newSession("cursor", "/tmp/wavecode");
+    const session = newSession("cursor", "/tmp/wavex");
     session.blocks = [{ id: "u1", role: "user", text: "hello" }];
     session.busy = true;
 
-    const rows = historyWithLiveSessions([], [session], "/tmp/wavecode", {
-      repo: "wavecode",
+    const rows = historyWithLiveSessions([], [session], "/tmp/wavex", {
+      repo: "wavex",
       branch: "main",
     });
     expect(rows[0]).toMatchObject({
       id: session.id,
-      repo: "wavecode",
+      repo: "wavex",
       branch: "main",
     });
   });
@@ -78,7 +78,7 @@ describe("historyWithLiveSessions", () => {
     const history = [
       {
         ...summary("a1", "/tmp/agent-terminal"),
-        repo: "wavecode",
+        repo: "wavex",
         branch: "main",
       },
     ];
@@ -94,7 +94,7 @@ describe("historyWithLiveSessions", () => {
     );
     const live = rows.find((row) => row.id === session.id);
     expect(live).toMatchObject({
-      repo: "wavecode",
+      repo: "wavex",
       branch: "fix-gutter",
     });
   });
@@ -109,11 +109,11 @@ describe("historyWithLiveSessions", () => {
       [],
       [session],
       "/tmp/agent-terminal",
-      { repo: "wavecode", branch: "main" },
+      { repo: "wavex", branch: "main" },
     );
     expect(rows[0]).toMatchObject({
       id: session.id,
-      repo: "wavecode",
+      repo: "wavex",
       branch: "feat/picker",
     });
   });

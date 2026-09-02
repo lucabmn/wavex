@@ -197,20 +197,20 @@ describe("dedupeInboxItems", () => {
         number: 10,
         updatedAt: "2026-08-27T10:00:00Z",
         projectPath: "/tmp/agent-terminal",
-        repo: "hardbeat920/wavecode",
+        repo: "hardbeat920/wavex",
       }),
       item({
         number: 10,
         updatedAt: "2026-08-27T10:00:00Z",
-        projectPath: "/tmp/wavecode",
-        repo: "HardBeat920/wavecode",
+        projectPath: "/tmp/wavex",
+        repo: "HardBeat920/wavex",
       }),
     ];
-    const deduped = dedupeInboxItems(rows, ["/tmp/wavecode", "/tmp/agent-terminal"]);
+    const deduped = dedupeInboxItems(rows, ["/tmp/wavex", "/tmp/agent-terminal"]);
     expect(deduped).toHaveLength(1);
-    expect(deduped[0]?.projectPath).toBe("/tmp/wavecode");
+    expect(deduped[0]?.projectPath).toBe("/tmp/wavex");
     expect(inboxItemKey(deduped[0]!)).toBe(
-      "github:hardbeat920/wavecode:issue:10",
+      "github:hardbeat920/wavex:issue:10",
     );
   });
 });
@@ -219,11 +219,11 @@ describe("groupProjectsByRepo", () => {
   it("fetches each GitHub remote once", () => {
     expect(
       groupProjectsByRepo([
-        { path: "/tmp/wavecode", repo: "hardbeat920/wavecode" },
-        { path: "/tmp/agent-terminal", repo: "HardBeat920/wavecode" },
+        { path: "/tmp/wavex", repo: "hardbeat920/wavex" },
+        { path: "/tmp/agent-terminal", repo: "HardBeat920/wavex" },
         { path: "/tmp/docs", repo: "acme/docs" },
       ]).map((project) => project.path),
-    ).toEqual(["/tmp/wavecode", "/tmp/docs"]);
+    ).toEqual(["/tmp/wavex", "/tmp/docs"]);
   });
 });
 

@@ -60,8 +60,8 @@ export type LinearStatus = {
   connected: boolean;
 };
 
-const TEAM_IDS_KEY = "wavecode.linearHiddenTeams";
-export const LINEAR_CHANGE_EVENT = "wavecode:linear-change";
+const TEAM_IDS_KEY = "wavex.linearHiddenTeams";
+export const LINEAR_CHANGE_EVENT = "wavex:linear-change";
 
 const detailsById = new Map<string, LinearIssueDetails>();
 const threadById = new Map<string, LinearIssueThread>();

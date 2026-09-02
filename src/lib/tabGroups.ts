@@ -21,15 +21,15 @@ export function tabGroupColor(project: string): string {
   return TAB_GROUP_COLORS[(hash % (TAB_GROUP_COLORS.length - 1)) + 1];
 }
 
-const COLOR_KEY = "wavecode:tab-group:colors";
-const CUSTOM_COLOR_KEY = "wavecode:tab-group:custom-colors";
-const LABEL_KEY = "wavecode:tab-group:labels";
-const LOGO_KEY = "wavecode:tab-group:logos";
-const MASCOT_KEY = "wavecode:tab-group:mascots";
+const COLOR_KEY = "wavex:tab-group:colors";
+const CUSTOM_COLOR_KEY = "wavex:tab-group:custom-colors";
+const LABEL_KEY = "wavex:tab-group:labels";
+const LOGO_KEY = "wavex:tab-group:logos";
+const MASCOT_KEY = "wavex:tab-group:mascots";
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
-export const TAB_GROUP_LOGOS_CHANGED = "wavecode:tab-group-logos-changed";
+export const TAB_GROUP_LOGOS_CHANGED = "wavex:tab-group-logos-changed";
 
 let logoDisplayRevision = 0;
 
@@ -599,7 +599,7 @@ export function insertTabInGroup<T extends GroupedTab>(
   return addTabToGroup([...without, tab], tab.id, groupId);
 }
 
-const COLLAPSED_KEY = "wavecode:tab-groups:collapsed";
+const COLLAPSED_KEY = "wavex:tab-groups:collapsed";
 
 export function loadCollapsedTabGroups(): Set<string> {
   try {

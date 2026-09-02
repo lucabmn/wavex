@@ -56,7 +56,7 @@ beforeEach(() => {
 });
 
 describe("provider-aware skill catalog", () => {
-  it("uses Pi discovery without adding wavecode's built-in row", async () => {
+  it("uses Pi discovery without adding wavex's built-in row", async () => {
     const catalog = await loadSkills({ harness: "pi", cwd: "/repo/" });
 
     expect(mocks.discoverPiSkills).toHaveBeenCalledWith("/repo");

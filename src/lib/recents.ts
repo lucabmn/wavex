@@ -1,10 +1,10 @@
 import { prettyCwd } from "./paths";
 
-const KEY = "wavecode.recentProjects";
-const RAIL_ORDER_KEY = "wavecode.projectRailOrder";
-const RAIL_PINNED_KEY = "wavecode.projectRailPinned";
-const ARCHIVED_KEY = "wavecode.archivedProjects";
-const ARCHIVED_CHANGED = "wavecode:archived-projects-changed";
+const KEY = "wavex.recentProjects";
+const RAIL_ORDER_KEY = "wavex.projectRailOrder";
+const RAIL_PINNED_KEY = "wavex.projectRailPinned";
+const ARCHIVED_KEY = "wavex.archivedProjects";
+const ARCHIVED_CHANGED = "wavex:archived-projects-changed";
 const MAX = 20;
 
 export type RecentProject = {

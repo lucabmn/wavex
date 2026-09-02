@@ -245,7 +245,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       emit({ type: "session.ended", code });
     },
     (line) => {
-      console.debug("[wavecode] grok stderr", line);
+      console.debug("[wavex] grok stderr", line);
       if (/not authenticated|Authentication required|XAI_API_KEY/i.test(line)) {
         emit({ type: "session.error", message: `${line.trim()}\n\n${AUTH_HELP}` });
       }
@@ -271,7 +271,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         {
           protocolVersion: 1,
           clientCapabilities: CLIENT_CAPABILITIES,
-          clientInfo: { name: "wavecode", version: "0.1.0" },
+          clientInfo: { name: "wavex", version: "0.1.0" },
         },
         INIT_TIMEOUT_MS,
       );
@@ -288,7 +288,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
           AUTH_TIMEOUT_MS,
         )
         .catch((error: unknown) => {
-          console.debug("[wavecode] grok authenticate", error);
+          console.debug("[wavex] grok authenticate", error);
         });
     }
 
@@ -439,7 +439,7 @@ async function prompt(live: Live, input: SendTurnInput): Promise<void> {
 }
 
 function ignoreUnsupportedControl(method: string, error: unknown): void {
-  console.debug(`[wavecode] grok ${method} failed`, error);
+  console.debug(`[wavex] grok ${method} failed`, error);
   const detail = error instanceof Error ? error.message : String(error);
   if (/timed out|not running|exited|closed|pipe/i.test(detail)) throw error;
 }

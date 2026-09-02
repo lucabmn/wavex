@@ -15,7 +15,7 @@ import {
 import { asRecord, stringField } from "./codexProtocol";
 import { JsonRpcClient } from "./jsonRpc";
 
-const PROBE_ID = "wavecode-codex-probe";
+const PROBE_ID = "wavex-codex-probe";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 
@@ -39,7 +39,7 @@ export function refreshCodexCatalog(): Promise<void> {
       if (models.length > 0) setHarnessModels("codex", models);
     })
     .catch((error: unknown) => {
-      console.debug("[wavecode] codex catalog", error);
+      console.debug("[wavex] codex catalog", error);
     })
     .finally(() => {
       inflight = null;
@@ -79,8 +79,8 @@ async function discoverCodexModels(): Promise<AgentModel[]> {
         "initialize",
         {
           clientInfo: {
-            name: "wavecode",
-            title: "wavecode",
+            name: "wavex",
+            title: "wavex",
             version: "0.1.0",
           },
           capabilities: { experimentalApi: true },

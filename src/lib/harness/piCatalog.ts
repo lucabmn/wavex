@@ -22,7 +22,7 @@ function refreshCatalog(flavor: PiFlavor): Promise<void> {
       if (models.length > 0) setHarnessModels(flavor.id, models);
     })
     .catch((error: unknown) => {
-      console.debug(`[wavecode] ${flavor.id} catalog`, error);
+      console.debug(`[wavex] ${flavor.id} catalog`, error);
     })
     .finally(() => {
       inflight.delete(flavor.id);

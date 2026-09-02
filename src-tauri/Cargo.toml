@@ -1,15 +1,15 @@
 [package]
-name = "wavecode"
+name = "wavex"
 version.workspace = true
 edition.workspace = true
-description = "wavecode — one UI for every agent harness"
+description = "wavex — one UI for every agent harness"
 authors = ["Nick"]
-repository = "https://github.com/hardbeat920/wavecode"
+repository = "https://github.com/hardbeat920/wavex"
 homepage = "https://usemono.dev"
 license.workspace = true
 
 [lib]
-name = "wavecode_lib"
+name = "wavex_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

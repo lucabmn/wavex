@@ -30,7 +30,7 @@ export type SkillSource =
   | "omp"
   | "fx"
   | "grok"
-  | "wavecode";
+  | "wavex";
 
 type SkillCommon = {
   name: string;
@@ -48,7 +48,7 @@ export type FileSkill = SkillCommon & {
 export type BuiltinSkill = SkillCommon & {
   kind: "builtin";
   scope: "builtin";
-  source: "wavecode";
+  source: "wavex";
 };
 
 export type NativeSkill = SkillCommon & {
@@ -70,7 +70,7 @@ export const BUILTIN_CREATE_SKILL: BuiltinSkill = {
   description: CREATE_SKILL_DESCRIPTION,
   invocation: CREATE_SKILL_NAME,
   scope: "builtin",
-  source: "wavecode",
+  source: "wavex",
 };
 
 const SKILL_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -258,7 +258,7 @@ function asSkill(skill: DiscoveredSkill): FileSkill {
     invocation: skill.name,
     path: skill.path,
     scope: skill.scope === "user" ? "user" : "project",
-    source: skill.source === "wavecode" ? "wavecode" : skill.source,
+    source: skill.source === "wavex" ? "wavex" : skill.source,
   };
 }
 

@@ -23,7 +23,7 @@ async function generateSessionTitle(
     });
     return parseGeneratedThreadTitle(output);
   } catch (error) {
-    console.debug("[wavecode] session title", error);
+    console.debug("[wavex] session title", error);
     return null;
   }
 }

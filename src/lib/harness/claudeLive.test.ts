@@ -63,7 +63,7 @@ async function startTurn(sessionId: string) {
   emit({ type: "system", subtype: "init", session_id: "sess_1" });
   emit({
     type: "control_response",
-    response: { subtype: "success", request_id: "wavecode_1" },
+    response: { subtype: "success", request_id: "wavex_1" },
   });
   await waitFor(
     () => parse().some((m) => m.type === "user"),

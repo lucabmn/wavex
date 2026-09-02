@@ -13,7 +13,7 @@ import {
 } from "./grokProtocol";
 import { mergeStream } from "./streamText";
 
-const TEXT_CHILD_ID = "wavecode-grok-text";
+const TEXT_CHILD_ID = "wavex-grok-text";
 const INIT_TIMEOUT_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -151,7 +151,7 @@ async function startLive(cwd: string): Promise<LiveText> {
       {
         protocolVersion: 1,
         clientCapabilities: CLIENT_CAPABILITIES,
-        clientInfo: { name: "wavecode-text", version: "0.1.0" },
+        clientInfo: { name: "wavex-text", version: "0.1.0" },
       },
       INIT_TIMEOUT_MS,
     );

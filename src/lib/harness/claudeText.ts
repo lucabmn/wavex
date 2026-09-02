@@ -17,7 +17,7 @@ import {
 } from "./claudeProtocol";
 import { mergeStream } from "./streamText";
 
-const TEXT_CHILD_ID = "wavecode-claude-text";
+const TEXT_CHILD_ID = "wavex-claude-text";
 const INIT_TIMEOUT_MS = 8_000;
 const REQUEST_TIMEOUT_MS = 45_000;
 const TEXT_MODEL = "claude-haiku-4-5";

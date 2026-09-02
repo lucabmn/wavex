@@ -125,9 +125,9 @@ jobs:
           BASE="${R2_PUBLIC_BASE_URL%/}"
           ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
           RELEASE_PREFIX="releases/${VERSION}"
-          TAR_KEY="${RELEASE_PREFIX}/wavecode.app.tar.gz"
+          TAR_KEY="${RELEASE_PREFIX}/wavex.app.tar.gz"
           SIG_KEY="${TAR_KEY}.sig"
-          DMG_KEY="${RELEASE_PREFIX}/wavecode_${VERSION}_aarch64.dmg"
+          DMG_KEY="${RELEASE_PREFIX}/wavex_${VERSION}_aarch64.dmg"
 
           VERSION="$VERSION" SIG="$SIG" TAR_URL="$BASE/$TAR_KEY" node <<'NODE'
           const fs = require("fs");
@@ -136,7 +136,7 @@ jobs:
             JSON.stringify(
               {
                 version: process.env.VERSION,
-                notes: `wavecode ${process.env.VERSION}`,
+                notes: `wavex ${process.env.VERSION}`,
                 pub_date: new Date().toISOString(),
                 platforms: {
                   "darwin-aarch64": {
@@ -159,7 +159,7 @@ jobs:
           aws s3 cp "$SIG" "s3://${R2_BUCKET_NAME}/${SIG_KEY}" --cache-control "$IMMUTABLE_CACHE" --endpoint-url "$ENDPOINT"
           # Keep the website's stable DMG link, but never let the CDN retain an
           # older release under this mutable name.
-          aws s3 cp "$DMG" "s3://${R2_BUCKET_NAME}/wavecode.dmg" --cache-control "$NO_CACHE" --endpoint-url "$ENDPOINT"
+          aws s3 cp "$DMG" "s3://${R2_BUCKET_NAME}/wavex.dmg" --cache-control "$NO_CACHE" --endpoint-url "$ENDPOINT"
           aws s3 cp latest.json "s3://${R2_BUCKET_NAME}/latest.json" --content-type "application/json" --cache-control "$NO_CACHE" --endpoint-url "$ENDPOINT"
 
       - name: Download Linux packages
@@ -186,7 +186,7 @@ jobs:
             exit 1
           fi
           gh release create "$GITHUB_REF_NAME" \
-            --title "wavecode $VERSION" \
+            --title "wavex $VERSION" \
             --notes "See CHANGELOG.md for details." \
             "$DMG" "$TAR" "$SIG" "${DEB[0]}" "${APPIMAGE[0]}"
 

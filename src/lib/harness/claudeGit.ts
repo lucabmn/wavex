@@ -53,7 +53,7 @@ export async function generateClaudePrContent(
     });
     parsed = parsePrContent(output);
   } catch (error) {
-    console.debug("[wavecode] pr content", error);
+    console.debug("[wavex] pr content", error);
   }
   const title =
     parsed?.title ||
@@ -79,7 +79,7 @@ export async function generateClaudeBranchName(
     });
     return parseBranchName(output);
   } catch (error) {
-    console.debug("[wavecode] branch name", error);
+    console.debug("[wavex] branch name", error);
     return null;
   }
 }

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "wavecode",
+  "productName": "wavex",
   "version": "0.0.1",
-  "identifier": "com.wavecode.desktop",
+  "identifier": "com.wavex.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "wavecode",
+        "title": "wavex",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

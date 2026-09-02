@@ -1,4 +1,4 @@
-export const ADD_TO_CHAT_EVENT = "wavecode:add-to-chat";
+export const ADD_TO_CHAT_EVENT = "wavex:add-to-chat";
 
 export type AddToChatMode = "quote" | "plain";
 

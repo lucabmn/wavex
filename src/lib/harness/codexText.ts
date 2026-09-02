@@ -15,7 +15,7 @@ import {
 import { JsonRpcClient, type JsonRpcId } from "./jsonRpc";
 import { mergeStream, streamTextDelta } from "./streamText";
 
-const TEXT_CHILD_ID = "wavecode-codex-text";
+const TEXT_CHILD_ID = "wavex-codex-text";
 const INIT_TIMEOUT_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 45_000;
 const TEXT_RUNTIME_MODE = "supervised" as const;
@@ -210,8 +210,8 @@ async function startLive(cwd: string): Promise<LiveText> {
       "initialize",
       {
         clientInfo: {
-          name: "wavecode-text",
-          title: "wavecode",
+          name: "wavex-text",
+          title: "wavex",
           version: "0.1.0",
         },
         capabilities: { experimentalApi: true },

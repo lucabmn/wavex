@@ -30,7 +30,7 @@ export async function discoverPiSkills(
 ): Promise<PiSkillCommand[]> {
   const { path } = await PI_FLAVOR.resolveBinary();
   const releaseBridge = await acquireHarnessBridge();
-  const childId = `wavecode-pi-skills-${crypto.randomUUID()}`;
+  const childId = `wavex-pi-skills-${crypto.randomUUID()}`;
   const replyToUi = (record: Record<string, unknown>) => {
     const request = parseExtensionUiRequest(record);
     if (!request || !needsExtensionUiReply(request)) return;

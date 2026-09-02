@@ -134,7 +134,7 @@ export function setPiBinaryResolver(
 /**
  * Live Pi adapter. Spawns `pi --mode rpc` with the user's config and extensions
  * loaded (no `--no-extensions`). Todos/subagents packages in `~/.pi/agent`
- * keep working; TUI-only widgets do not appear in wavecode.
+ * keep working; TUI-only widgets do not appear in wavex.
  */
 export async function sendTurn(
   flavor: PiFlavor,

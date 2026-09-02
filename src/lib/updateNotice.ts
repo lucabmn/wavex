@@ -1,4 +1,4 @@
-const INSTALLED_UPDATE_KEY = "wavecode.installedUpdate";
+const INSTALLED_UPDATE_KEY = "wavex.installedUpdate";
 
 export type UpdateNoticeStore = Pick<
   Storage,

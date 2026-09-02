@@ -765,7 +765,7 @@ async function assertOpenCodeVersion(path: string, cwd: string): Promise<void> {
   const version = parseOpenCodeVersion(output);
   if (!version) {
     throw new Error(
-      `Unable to determine OpenCode version. wavecode requires v${MINIMUM_OPENCODE_VERSION} or newer.`,
+      `Unable to determine OpenCode version. wavex requires v${MINIMUM_OPENCODE_VERSION} or newer.`,
     );
   }
   if (compareSemver(version, MINIMUM_OPENCODE_VERSION) < 0) {

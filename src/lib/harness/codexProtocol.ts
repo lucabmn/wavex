@@ -189,7 +189,7 @@ export type MappedCodexNotification = {
 };
 
 /**
- * Translate a Codex app-server notification into wavecode HarnessEvents.
+ * Translate a Codex app-server notification into wavex HarnessEvents.
  * Unknown methods return empty events (non-fatal).
  */
 export function mapCodexNotification(
@@ -306,7 +306,7 @@ export function mapCodexNotification(
   return { events: [] };
 }
 
-/** Codex thread items wavecode already renders elsewhere or that are internal metadata. */
+/** Codex thread items wavex already renders elsewhere or that are internal metadata. */
 const SILENT_ITEM_TYPES = new Set([
   "userMessage",
   "contextCompaction",

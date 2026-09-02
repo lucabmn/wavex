@@ -34,7 +34,7 @@ export type DiscoveredSkill = {
     | "omp"
     | "fx"
     | "grok"
-    | "wavecode";
+    | "wavex";
 };
 
 export function listSkills(cwd: string): Promise<DiscoveredSkill[]> {
@@ -238,7 +238,7 @@ export function restoreSessionCheckout<
   };
 }
 
-const GIT_CHANGED = "wavecode-git-changed";
+const GIT_CHANGED = "wavex-git-changed";
 
 /** Tell git UIs (diff pane, branch picker) to reload after a local git mutation. */
 export function notifyGitChanged() {

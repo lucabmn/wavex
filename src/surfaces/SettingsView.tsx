@@ -608,7 +608,7 @@ function UpdateRow({
             ? "You're on the latest version."
             : snapshot.phase === "error"
               ? (snapshot.error ?? "Update check failed.")
-              : "wavecode updates itself from the release feed.";
+              : "wavex updates itself from the release feed.";
 
   return (
     <Row

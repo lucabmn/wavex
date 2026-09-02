@@ -1059,7 +1059,7 @@ function waitForInit(live: Live, timeoutMs: number): Promise<void> {
 
 function nextControlId(live: Live): string {
   live.nextControlId += 1;
-  return `wavecode_${live.nextControlId}`;
+  return `wavex_${live.nextControlId}`;
 }
 
 function writeJson(

@@ -58,7 +58,7 @@ export async function runUpdateFlow(
       const current: UpdaterSnapshot = { phase: "current", currentVersion };
       onProgress?.(current);
       if (manual) {
-        await message("You're on the latest version.", { title: "wavecode" });
+        await message("You're on the latest version.", { title: "wavex" });
       }
       return current;
     }
@@ -77,7 +77,7 @@ export async function runUpdateFlow(
     const notes = update.body?.trim();
     const detail = notes ? `\n\n${notes}` : "";
     const yes = await ask(
-      `wavecode ${update.version} is available (you have ${currentVersion}).${detail}\n\nInstall now?`,
+      `wavex ${update.version} is available (you have ${currentVersion}).${detail}\n\nInstall now?`,
       { title: "Update available", kind: "info" },
     );
     if (!yes) return available;
@@ -90,8 +90,8 @@ export async function runUpdateFlow(
       onProgress?.(idle);
       if (manual) {
         await message(
-          "Automatic updates aren't configured for this build.\n\nDownload releases at https://github.com/hardbeat920/wavecode/releases/latest",
-          { title: "wavecode" },
+          "Automatic updates aren't configured for this build.\n\nDownload releases at https://github.com/hardbeat920/wavex/releases/latest",
+          { title: "wavex" },
         );
       }
       return idle;
@@ -102,7 +102,7 @@ export async function runUpdateFlow(
     onProgress?.(failed);
     if (manual) {
       await message(`Couldn't check for updates.\n\n${error}`, {
-        title: "wavecode",
+        title: "wavex",
       });
     }
     return failed;
@@ -169,7 +169,7 @@ export async function installPendingUpdate(
       error,
     };
     onProgress?.(failed);
-    await message(`Couldn't install the update.\n\n${error}`, { title: "wavecode" });
+    await message(`Couldn't install the update.\n\n${error}`, { title: "wavex" });
     return failed;
   }
 }

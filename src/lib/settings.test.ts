@@ -14,10 +14,10 @@ import {
   saveNotesEnabled,
 } from "./settings";
 
-const KEY = "wavecode.composerRunner";
-const NOTES_KEY = "wavecode.notesEnabled";
-const LIVE_AGENTS_KEY = "wavecode.liveAgentsEnabled";
-const GRID_ARCADE_KEY = "wavecode.gridArcadeEnabled";
+const KEY = "wavex.composerRunner";
+const NOTES_KEY = "wavex.notesEnabled";
+const LIVE_AGENTS_KEY = "wavex.liveAgentsEnabled";
+const GRID_ARCADE_KEY = "wavex.gridArcadeEnabled";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();

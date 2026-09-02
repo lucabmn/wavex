@@ -57,7 +57,7 @@ export async function generateCursorPrContent(
     });
     parsed = parsePrContent(output);
   } catch (error) {
-    console.debug("[wavecode] pr content", error);
+    console.debug("[wavex] pr content", error);
   }
   const title =
     parsed?.title ||
@@ -83,7 +83,7 @@ export async function generateCursorBranchName(
     });
     return parseBranchName(output);
   } catch (error) {
-    console.debug("[wavecode] branch name", error);
+    console.debug("[wavex] branch name", error);
     return null;
   }
 }

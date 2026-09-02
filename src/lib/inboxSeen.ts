@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-const KEY = "wavecode.inboxSeen";
-const LEGACY_KEY = "wavecode.inboxSeenAt";
+const KEY = "wavex.inboxSeen";
+const LEGACY_KEY = "wavex.inboxSeenAt";
 
 export type InboxSeenEntry = {
   key: string;

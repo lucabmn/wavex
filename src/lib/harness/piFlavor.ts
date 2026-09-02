@@ -28,8 +28,8 @@ export const PI_FLAVOR: PiFlavor = {
   resolveBinary: resolvePiBinary,
   resumeFlag: "--session",
   isolateFlags: ["--no-tools", "--no-skills", "--no-context-files"],
-  probeChildId: "wavecode-pi-probe",
-  textChildId: "wavecode-pi-text",
+  probeChildId: "wavex-pi-probe",
+  textChildId: "wavex-pi-text",
 };
 
 /**
@@ -43,6 +43,6 @@ export const OMP_FLAVOR: PiFlavor = {
   resolveBinary: resolveOmpBinary,
   resumeFlag: "--resume",
   isolateFlags: ["--no-tools", "--no-skills", "--no-rules"],
-  probeChildId: "wavecode-omp-probe",
-  textChildId: "wavecode-omp-text",
+  probeChildId: "wavex-omp-probe",
+  textChildId: "wavex-omp-text",
 };

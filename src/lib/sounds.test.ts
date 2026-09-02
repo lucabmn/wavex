@@ -21,7 +21,7 @@ import {
   SOUNDS_VOLUME,
 } from "./sounds";
 
-const KEY = "wavecode.sounds";
+const KEY = "wavex.sounds";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();

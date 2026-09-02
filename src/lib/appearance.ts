@@ -1,17 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import { IS_MAC } from "./platform";
 
-const THEME_HUE_KEY = "wavecode.themeHue";
-const THEME_SATURATION_KEY = "wavecode.themeSaturation";
-const OPACITY_KEY = "wavecode.sidebarOpacity";
-const BLUR_KEY = "wavecode.sidebarBlur";
-const PROJECT_RAIL_OPEN_KEY = "wavecode.projectRailOpen";
-const BODY_KEY = "wavecode.bodyGlass";
-const SCHEME_KEY = "wavecode.colorScheme";
-const SIDEBAR_TAB_ORDER_KEY = "wavecode.sidebarTabOrder";
-const PROJECT_RAIL_WIDTH_KEY = "wavecode.projectRailWidth";
-const TRANSCRIPT_LAYOUT_KEY = "wavecode.transcriptLayout";
-const TRANSCRIPT_ANCHOR_KEY = "wavecode.transcriptAnchor";
+const THEME_HUE_KEY = "wavex.themeHue";
+const THEME_SATURATION_KEY = "wavex.themeSaturation";
+const OPACITY_KEY = "wavex.sidebarOpacity";
+const BLUR_KEY = "wavex.sidebarBlur";
+const PROJECT_RAIL_OPEN_KEY = "wavex.projectRailOpen";
+const BODY_KEY = "wavex.bodyGlass";
+const SCHEME_KEY = "wavex.colorScheme";
+const SIDEBAR_TAB_ORDER_KEY = "wavex.sidebarTabOrder";
+const PROJECT_RAIL_WIDTH_KEY = "wavex.projectRailWidth";
+const TRANSCRIPT_LAYOUT_KEY = "wavex.transcriptLayout";
+const TRANSCRIPT_ANCHOR_KEY = "wavex.transcriptAnchor";
 
 export type ColorScheme = "dark" | "light";
 export type ThemePreference = ColorScheme | "system";
@@ -20,17 +20,17 @@ export type TranscriptLayout = "full" | "chat";
 export const THEME_PREFERENCE_DEFAULT: ThemePreference = "dark";
 
 /** Fired on `window` whenever the color scheme flips (detail: ColorScheme). */
-export const SCHEME_CHANGE_EVENT = "wavecode:schemechange";
+export const SCHEME_CHANGE_EVENT = "wavex:schemechange";
 
 export const TRANSCRIPT_LAYOUT_DEFAULT: TranscriptLayout = "full";
 
 export const TRANSCRIPT_ANCHOR_DEFAULT = true;
 
 /** Fired on `window` whenever prompt-to-top anchoring flips (detail: boolean). */
-export const TRANSCRIPT_ANCHOR_CHANGE_EVENT = "wavecode:transcriptanchorchange";
+export const TRANSCRIPT_ANCHOR_CHANGE_EVENT = "wavex:transcriptanchorchange";
 
 /** Fired on `window` whenever the transcript layout flips (detail: TranscriptLayout). */
-export const TRANSCRIPT_LAYOUT_CHANGE_EVENT = "wavecode:transcriptlayoutchange";
+export const TRANSCRIPT_LAYOUT_CHANGE_EVENT = "wavex:transcriptlayoutchange";
 
 export type SidebarTabId = "files" | "sessions" | "changes" | "inbox";
 

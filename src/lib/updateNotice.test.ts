@@ -32,9 +32,9 @@ describe("installed update marker", () => {
     "removes malformed marker %j",
     (value) => {
       const store = memoryStore();
-      store.setItem("wavecode.installedUpdate", value);
+      store.setItem("wavex.installedUpdate", value);
       expect(consumeInstalledUpdate(store)).toBeNull();
-      expect(store.getItem("wavecode.installedUpdate")).toBeNull();
+      expect(store.getItem("wavex.installedUpdate")).toBeNull();
     },
   );
 

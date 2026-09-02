@@ -183,12 +183,12 @@ export const DEFAULT_MODEL_ID: Record<HarnessId, string> = {
   fx: "fx:zai/glm-5.2-fast",
 };
 
-const FAVORITES_KEY = "wavecode.favoriteModels";
-const MODEL_PICKER_TAB_KEY = "wavecode.modelPickerTab";
-const HIDDEN_PICKER_PROVIDERS_KEY = "wavecode.hiddenPickerProviders";
-const LAST_MODEL_KEY = "wavecode.lastModel";
-const LAST_MODEL_SETTINGS_KEY = "wavecode.lastModelSettings";
-const DEFAULT_MODELS_KEY = "wavecode.defaultModels";
+const FAVORITES_KEY = "wavex.favoriteModels";
+const MODEL_PICKER_TAB_KEY = "wavex.modelPickerTab";
+const HIDDEN_PICKER_PROVIDERS_KEY = "wavex.hiddenPickerProviders";
+const LAST_MODEL_KEY = "wavex.lastModel";
+const LAST_MODEL_SETTINGS_KEY = "wavex.lastModelSettings";
+const DEFAULT_MODELS_KEY = "wavex.defaultModels";
 
 export type ModelPickerTab = "favorites" | HarnessId;
 

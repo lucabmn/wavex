@@ -4,7 +4,7 @@ import { sessionNeedsInput, type Session } from "./session";
 import { stopStreaming } from "./harness/apply";
 
 export const INTERRUPT_MESSAGE =
-  "Turn interrupted when wavecode quit.";
+  "Turn interrupted when wavex quit.";
 
 export const CONTINUE_PROMPT = "Continue from where you left off.";
 
@@ -58,9 +58,9 @@ export function inFlightRefs(
 
 export function quitWhileBusyMessage(count: number): string {
   if (count === 1) {
-    return "1 chat is still running. Quit anyway? It will resume when you reopen wavecode.";
+    return "1 chat is still running. Quit anyway? It will resume when you reopen wavex.";
   }
-  return `${count} chats are still running. Quit anyway? They will resume when you reopen wavecode.`;
+  return `${count} chats are still running. Quit anyway? They will resume when you reopen wavex.`;
 }
 
 /**

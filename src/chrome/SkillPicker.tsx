@@ -313,8 +313,8 @@ function ScopeButton({
 
 function scopeLabel(skill: Skill): string {
   if (skill.kind === "native") return skill.source;
-  if (skill.kind === "builtin") return "wavecode";
+  if (skill.kind === "builtin") return "wavex";
   if (skill.scope === "user") return "personal";
-  if (skill.source !== "agents" && skill.source !== "wavecode") return skill.source;
+  if (skill.source !== "agents" && skill.source !== "wavex") return skill.source;
   return "project";
 }

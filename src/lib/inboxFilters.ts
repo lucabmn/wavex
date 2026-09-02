@@ -45,8 +45,8 @@ export const DEFAULT_INBOX_FILTERS: InboxFilters = {
 
 export type InboxSource = InboxProvider;
 
-const FILTERS_KEY = "wavecode.inboxFilters";
-const SOURCE_KEY = "wavecode.inboxSource";
+const FILTERS_KEY = "wavex.inboxFilters";
+const SOURCE_KEY = "wavex.inboxSource";
 
 export function loadInboxSource(): InboxSource {
   try {

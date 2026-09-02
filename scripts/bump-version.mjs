@@ -32,12 +32,12 @@ replaceFirst(
 // top-level object repeats the same name/version pair.
 replaceFirst(
   join(root, "package-lock.json"),
-  /^(\{\n\s*"name": "wavecode-desktop",\n\s*"version": ")[^"]+(")/,
+  /^(\{\n\s*"name": "wavex-desktop",\n\s*"version": ")[^"]+(")/,
   `$1${version}$2`,
 );
 replaceFirst(
   join(root, "package-lock.json"),
-  /("packages": \{\n\s*"": \{\n\s*"name": "wavecode-desktop",\n\s*"version": ")[^"]+(")/,
+  /("packages": \{\n\s*"": \{\n\s*"name": "wavex-desktop",\n\s*"version": ")[^"]+(")/,
   `$1${version}$2`,
 );
 replaceFirst(
@@ -52,7 +52,7 @@ replaceFirst(
 );
 replaceFirst(
   join(root, "Cargo.lock"),
-  /(name = "wavecode"\nversion = ")[^"]+(")/,
+  /(name = "wavex"\nversion = ")[^"]+(")/,
   `$1${version}$2`,
 );
 

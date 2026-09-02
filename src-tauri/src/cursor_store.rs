@@ -26,7 +26,7 @@ pub struct CursorToolCall {
 /// Recover tool arguments that Cursor currently omits from its ACP events.
 ///
 /// Cursor persists the complete call in a per-session SQLite store before
-/// sending the corresponding result. wavecode only opens that store read-only.
+/// sending the corresponding result. wavex only opens that store read-only.
 #[tauri::command]
 pub async fn cursor_tool_calls(
     session_id: String,

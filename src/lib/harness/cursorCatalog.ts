@@ -15,7 +15,7 @@ import {
   watchChild,
 } from "./child";
 
-const PROBE_ID = "wavecode-cursor-probe";
+const PROBE_ID = "wavex-cursor-probe";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 
@@ -34,7 +34,7 @@ export function refreshCursorCatalog(): Promise<void> {
       if (models.length > 0) setHarnessModels("cursor", models);
     })
     .catch((error: unknown) => {
-      console.debug("[wavecode] cursor catalog", error);
+      console.debug("[wavex] cursor catalog", error);
     })
     .finally(() => {
       inflight = null;
@@ -44,12 +44,12 @@ export function refreshCursorCatalog(): Promise<void> {
 
 async function discoverCursorModels(): Promise<AgentModel[]> {
   const fromAcp = await discoverViaAcp().catch((error: unknown) => {
-    console.debug("[wavecode] cursor ACP catalog failed", error);
+    console.debug("[wavex] cursor ACP catalog failed", error);
     return [];
   });
   if (fromAcp.length > 0) return fromAcp;
   return discoverViaCli().catch((error: unknown) => {
-    console.debug("[wavecode] cursor CLI catalog failed", error);
+    console.debug("[wavex] cursor CLI catalog failed", error);
     return [];
   });
 }
@@ -83,7 +83,7 @@ async function discoverViaAcp(): Promise<AgentModel[]> {
         {
           protocolVersion: 1,
           clientCapabilities: CURSOR_CLIENT_CAPABILITIES,
-          clientInfo: { name: "wavecode", version: "0.1.0" },
+          clientInfo: { name: "wavex", version: "0.1.0" },
         },
         REQUEST_TIMEOUT_MS,
       );

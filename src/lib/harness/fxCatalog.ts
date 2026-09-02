@@ -16,7 +16,7 @@ export function refreshFxCatalog(): Promise<void> {
       if (models.length > 0) setHarnessModels("fx", models);
     })
     .catch((error: unknown) => {
-      console.debug("[wavecode] fx catalog", error);
+      console.debug("[wavex] fx catalog", error);
     })
     .finally(() => {
       inflight = null;

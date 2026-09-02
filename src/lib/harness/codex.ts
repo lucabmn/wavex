@@ -242,8 +242,8 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
   try {
     await rpc.request("initialize", {
       clientInfo: {
-        name: "wavecode",
-        title: "wavecode",
+        name: "wavex",
+        title: "wavex",
         version: "0.1.0",
       },
       capabilities: {

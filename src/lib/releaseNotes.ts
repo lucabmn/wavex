@@ -10,7 +10,7 @@ export type ReleaseNotesDocument = {
 };
 
 export function releaseNotesTitle(version: string): string {
-  return `What's new in wavecode ${version}`;
+  return `What's new in wavex ${version}`;
 }
 
 export function releaseNotesForVersion(

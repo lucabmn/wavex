@@ -1,6 +1,6 @@
 import { ALT, IS_MAC, MOD, SHIFT } from "./platform";
 
-const SECTION_KEY = "wavecode.settingsSection";
+const SECTION_KEY = "wavex.settingsSection";
 
 export type SettingsSectionId =
   "general" | "appearance" | "keybindings" | "providers" | "archive";
@@ -30,7 +30,7 @@ export const SETTINGS_SECTIONS: {
     id: "providers",
     label: "Providers",
     description:
-      "Agent CLIs wavecode can drive, and the model new sessions start with.",
+      "Agent CLIs wavex can drive, and the model new sessions start with.",
   },
   {
     id: "archive",
@@ -76,12 +76,12 @@ export function saveSettingsSection(id: SettingsSectionId) {
   }
 }
 
-const COMPOSER_RUNNER_KEY = "wavecode.composerRunner";
+const COMPOSER_RUNNER_KEY = "wavex.composerRunner";
 
 export const COMPOSER_RUNNER_DEFAULT = true;
 
 /** Fired on `window` when the composer mascot setting flips. */
-export const COMPOSER_RUNNER_CHANGE_EVENT = "wavecode:composer-runner-change";
+export const COMPOSER_RUNNER_CHANGE_EVENT = "wavex:composer-runner-change";
 
 export function loadComposerRunner(): boolean {
   try {
@@ -105,12 +105,12 @@ export function saveComposerRunner(value: boolean) {
   );
 }
 
-const NOTES_ENABLED_KEY = "wavecode.notesEnabled";
+const NOTES_ENABLED_KEY = "wavex.notesEnabled";
 
 export const NOTES_ENABLED_DEFAULT = true;
 
 /** Fired on `window` when the Notes UI setting flips. */
-export const NOTES_ENABLED_CHANGE_EVENT = "wavecode:notes-enabled-change";
+export const NOTES_ENABLED_CHANGE_EVENT = "wavex:notes-enabled-change";
 
 export function loadNotesEnabled(): boolean {
   try {
@@ -141,13 +141,13 @@ export function subscribeNotesEnabled(onStoreChange: () => void) {
     window.removeEventListener(NOTES_ENABLED_CHANGE_EVENT, onStoreChange);
 }
 
-const LIVE_AGENTS_ENABLED_KEY = "wavecode.liveAgentsEnabled";
+const LIVE_AGENTS_ENABLED_KEY = "wavex.liveAgentsEnabled";
 
 export const LIVE_AGENTS_ENABLED_DEFAULT = true;
 
 /** Fired on `window` when the working-agents rail card setting flips. */
 export const LIVE_AGENTS_ENABLED_CHANGE_EVENT =
-  "wavecode:live-agents-enabled-change";
+  "wavex:live-agents-enabled-change";
 
 export function loadLiveAgentsEnabled(): boolean {
   try {
@@ -180,13 +180,13 @@ export function subscribeLiveAgentsEnabled(onStoreChange: () => void) {
     window.removeEventListener(LIVE_AGENTS_ENABLED_CHANGE_EVENT, onStoreChange);
 }
 
-const GRID_ARCADE_ENABLED_KEY = "wavecode.gridArcadeEnabled";
+const GRID_ARCADE_ENABLED_KEY = "wavex.gridArcadeEnabled";
 
 export const GRID_ARCADE_ENABLED_DEFAULT = true;
 
 /** Fired on `window` when the empty-session games setting flips. */
 export const GRID_ARCADE_ENABLED_CHANGE_EVENT =
-  "wavecode:grid-arcade-enabled-change";
+  "wavex:grid-arcade-enabled-change";
 
 export function loadGridArcadeEnabled(): boolean {
   try {
@@ -219,7 +219,7 @@ export function subscribeGridArcadeEnabled(onStoreChange: () => void) {
     window.removeEventListener(GRID_ARCADE_ENABLED_CHANGE_EVENT, onStoreChange);
 }
 
-const CLAUDE_HOOKS_KEY = "wavecode.claudeHooks";
+const CLAUDE_HOOKS_KEY = "wavex.claudeHooks";
 
 export const CLAUDE_HOOKS_DEFAULT = true;
 

@@ -194,9 +194,9 @@ export const CLAUDE_MODEL_CATALOG: AgentModel[] = [
   },
 ];
 
-const PROBE_ID = "wavecode-claude-probe";
-const LIST_MODELS_REQUEST_ID = "wavecode_list_models";
-const INIT_REQUEST_ID = "wavecode_init";
+const PROBE_ID = "wavex-claude-probe";
+const LIST_MODELS_REQUEST_ID = "wavex_list_models";
+const INIT_REQUEST_ID = "wavex_init";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 
 const EFFORT_LABELS: Record<string, string> = {
@@ -216,7 +216,7 @@ export function refreshClaudeCatalog(): Promise<void> {
       if (models.length > 0) setHarnessModels("claude", models);
     })
     .catch((error: unknown) => {
-      console.debug("[wavecode] claude catalog", error);
+      console.debug("[wavex] claude catalog", error);
     })
     .finally(() => {
       inflight = null;
@@ -226,7 +226,7 @@ export function refreshClaudeCatalog(): Promise<void> {
 
 async function discoverClaudeModels(): Promise<AgentModel[]> {
   const listed = await discoverViaListModels().catch((error: unknown) => {
-    console.debug("[wavecode] claude list_models catalog failed", error);
+    console.debug("[wavex] claude list_models catalog failed", error);
     return [];
   });
   if (listed.length > 0) return listed;

@@ -12,7 +12,7 @@ export type CheckpointStatus = {
   files: CheckpointFile[];
 };
 
-const REVIEW_CHANGED = "wavecode-review-changed";
+const REVIEW_CHANGED = "wavex-review-changed";
 
 export function notifyReviewChanged(sessionId?: string) {
   window.dispatchEvent(

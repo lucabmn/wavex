@@ -1167,7 +1167,7 @@ export default function App({
     if (!document) {
       void message(
         "Release notes for this version are not available in this build.",
-        { title: "wavecode" },
+        { title: "wavex" },
       );
       return;
     }
@@ -3746,7 +3746,7 @@ export default function App({
       if (cmd) {
         const target = e.target instanceof Element ? e.target : null;
         if (
-          target?.closest(".wavecode-terminal") &&
+          target?.closest(".wavex-terminal") &&
           e.ctrlKey &&
           !e.metaKey &&
           (cmd === "back" ||
@@ -3811,7 +3811,7 @@ export default function App({
       }
       if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
         const target = e.target instanceof Element ? e.target : null;
-        if (target?.closest(".wavecode-terminal") && e.ctrlKey && !e.metaKey) {
+        if (target?.closest(".wavex-terminal") && e.ctrlKey && !e.metaKey) {
           return;
         }
         e.preventDefault();

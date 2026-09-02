@@ -13,7 +13,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   ask: (...args: unknown[]) => ask(...args),
 }));
 
-const dialogOptions = { title: "wavecode", kind: "warning" } as const;
+const dialogOptions = { title: "wavex", kind: "warning" } as const;
 
 describe("confirmCloseTerminal", () => {
   afterEach(() => {

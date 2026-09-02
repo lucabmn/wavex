@@ -41,8 +41,8 @@ describe("updater", () => {
       currentVersion: "0.1.23",
     });
     expect(message).toHaveBeenCalledWith(
-      expect.stringContaining("https://github.com/hardbeat920/wavecode/releases/latest"),
-      { title: "wavecode" },
+      expect.stringContaining("https://github.com/hardbeat920/wavex/releases/latest"),
+      { title: "wavex" },
     );
   });
 

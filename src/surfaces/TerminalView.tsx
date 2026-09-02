@@ -291,7 +291,7 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
       cancelAnimationFrame(frame);
       if (raf) cancelAnimationFrame(raf);
       observer.disconnect();
-      outer.classList.remove("wavecode-terminal--alt-screen");
+      outer.classList.remove("wavex-terminal--alt-screen");
       applySizeRef.current = () => {};
       host.removeEventListener("copy", onCopy);
       host.removeEventListener("paste", onPaste);
@@ -360,12 +360,12 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
   return (
     <div
       ref={outerRef}
-      className="wavecode-terminal flex h-full w-full min-h-0 min-w-0 flex-col"
+      className="wavex-terminal flex h-full w-full min-h-0 min-w-0 flex-col"
       onMouseDown={() => termRef.current?.focus()}
     >
       <div
         ref={hostRef}
-        className="wavecode-terminal-host min-h-0 min-w-0 flex-1 overflow-hidden"
+        className="wavex-terminal-host min-h-0 min-w-0 flex-1 overflow-hidden"
       />
     </div>
   );

@@ -147,7 +147,7 @@ describe("discoverPiSkills", () => {
 
     expect(mocks.acquireHarnessBridge).toHaveBeenCalledOnce();
     const [childId, command, args, cwd] = mocks.spawnChild.mock.calls[0]!;
-    expect(childId).toMatch(/^wavecode-pi-skills-/);
+    expect(childId).toMatch(/^wavex-pi-skills-/);
     expect(command).toBe("/bin/pi");
     expect(args).toEqual(["--mode", "rpc", "--no-session"]);
     expect(cwd).toBe("/repo");

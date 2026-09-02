@@ -12,9 +12,9 @@ import {
   THEME_PREFERENCE_DEFAULT,
 } from "./appearance";
 
-const KEY = "wavecode.transcriptLayout";
-const SCHEME_KEY = "wavecode.colorScheme";
-const ANCHOR_KEY = "wavecode.transcriptAnchor";
+const KEY = "wavex.transcriptLayout";
+const SCHEME_KEY = "wavex.colorScheme";
+const ANCHOR_KEY = "wavex.transcriptAnchor";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();
