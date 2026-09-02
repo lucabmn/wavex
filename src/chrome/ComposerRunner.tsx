@@ -60,13 +60,7 @@ const COIN_SVG = `<svg viewBox="0 0 8 8" width="${COIN_SIZE}" height="${COIN_SIZ
 const STAR_SVG = `<svg viewBox="0 0 8 8" width="${STAR_SIZE}" height="${STAR_SIZE}" shape-rendering="crispEdges" fill="#f4e27a" aria-hidden="true"><path class="composer-coin-face" d="${STAR_FACE_PATH}"/><path class="composer-coin-edge" d="${STAR_EDGE_PATH}"/></svg>`;
 
 /** Project pixel mascot running the composer's top ledge while a turn is live. */
-export function ComposerRunner({
-  boxRef,
-  cwd,
-  busy,
-  enabled = true,
-  onExited,
-}: Props) {
+export function ComposerRunner({ boxRef, cwd, busy, enabled = true, onExited }: Props) {
   const layerRef = useRef<HTMLDivElement>(null);
   const spriteRef = useRef<HTMLDivElement>(null);
   const coinsRef = useRef<HTMLDivElement>(null);
@@ -82,11 +76,7 @@ export function ComposerRunner({
   const appearance = useMemo(() => {
     return {
       name: resolveTabGroupMascot(project, loadTabGroupMascots()),
-      color: resolveTabGroupColor(
-        project,
-        loadTabGroupColors(),
-        loadTabGroupCustomColors(),
-      ),
+      color: resolveTabGroupColor(project, loadTabGroupColors(), loadTabGroupCustomColors()),
     };
   }, [project]);
 
@@ -114,9 +104,7 @@ export function ComposerRunner({
     let hitAlong = 0;
     let hitFacing: 1 | -1 = 1;
     const coins: LiveCoin[] = [];
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let learned = reduced;
     const starEls = Array.from({ length: STAR_COUNT }, () => {
       const el = document.createElement("div");
@@ -125,8 +113,7 @@ export function ComposerRunner({
       el.style.height = `${STAR_SIZE}px`;
       el.style.opacity = "0";
       el.style.filter = "drop-shadow(0 1px 0 rgba(0,0,0,0.45))";
-      el.style.transform =
-        "translate3d(var(--star-x, -64px), var(--star-y, -64px), 0)";
+      el.style.transform = "translate3d(var(--star-x, -64px), var(--star-y, -64px), 0)";
       el.innerHTML = STAR_SVG;
       starLayer.append(el);
       return el;
@@ -181,14 +168,8 @@ export function ComposerRunner({
           el.style.opacity = "0";
           continue;
         }
-        el.style.setProperty(
-          "--star-x",
-          `${Math.round(spriteLeft + star.dx)}px`,
-        );
-        el.style.setProperty(
-          "--star-y",
-          `${Math.round(spriteTop + star.dy)}px`,
-        );
+        el.style.setProperty("--star-x", `${Math.round(spriteLeft + star.dx)}px`);
+        el.style.setProperty("--star-y", `${Math.round(spriteTop + star.dy)}px`);
         el.style.opacity = String(star.opacity);
       }
     };
@@ -276,6 +257,8 @@ export function ComposerRunner({
         const t = reduced ? 1 : Math.min(1, (now - exitAt) / EXIT_MS);
         const y = reduced ? -EXIT_SINK : exitJumpY(t);
         placeSprite(track.left, track.top, frozenX, y, frozenFacing);
+        // Snapshot because collected coins are removed during iteration.
+        // oxlint-disable-next-line unicorn/no-useless-spread
         for (const coin of [...coins]) {
           const pop = Math.min(1, (now - (coin.collectedAt ?? now)) / COLLECT_POP_MS);
           coin.el.style.opacity = String(1 - pop);
@@ -331,10 +314,7 @@ export function ComposerRunner({
         learned ? obstacle : null,
         stunning ? [] : coins,
       );
-      if (
-        !stunning &&
-        hitsChevron(pose.x, pose.y, pose.facing, obstacle, learned)
-      ) {
+      if (!stunning && hitsChevron(pose.x, pose.y, pose.facing, obstacle, learned)) {
         stunning = true;
         stunAt = now;
         hitAlong = along;
@@ -343,15 +323,7 @@ export function ComposerRunner({
       }
       const shake = stunning ? stunShake(now - stunAt) : { x: 0, y: 0 };
       if (stunning) {
-        placeStars(
-          track.left,
-          track.top,
-          pose.x,
-          pose.y,
-          now - stunAt,
-          shake.x,
-          shake.y,
-        );
+        placeStars(track.left, track.top, pose.x, pose.y, now - stunAt, shake.x, shake.y);
       } else {
         hideStars();
       }
@@ -364,8 +336,7 @@ export function ComposerRunner({
           el.className = "absolute top-0 left-0";
           el.style.width = `${COIN_SIZE}px`;
           el.style.height = `${COIN_SIZE}px`;
-          el.style.transform =
-            "translate3d(var(--coin-x, -64px), var(--coin-y, -64px), 0)";
+          el.style.transform = "translate3d(var(--coin-x, -64px), var(--coin-y, -64px), 0)";
           el.style.filter = "drop-shadow(0 1px 0 rgba(0,0,0,0.45))";
           el.innerHTML = COIN_SVG;
           coinLayer.append(el);
@@ -381,22 +352,17 @@ export function ComposerRunner({
         }
       }
 
+      // Snapshot because collected coins are spliced out during iteration.
+      // oxlint-disable-next-line unicorn/no-useless-spread
       for (const coin of [...coins]) {
-        if (
-          !stunning &&
-          coin.collectedAt == null &&
-          coinCollected(pose, coin)
-        ) {
+        if (!stunning && coin.collectedAt == null && coinCollected(pose, coin)) {
           coin.collectedAt = now;
           nextCoinAt = now + nextCoinDelay(false);
         }
 
-        const bob =
-          coin.collectedAt == null ? Math.sin(now / 180) * 2 : 0;
+        const bob = coin.collectedAt == null ? Math.sin(now / 180) * 2 : 0;
         const pop =
-          coin.collectedAt == null
-            ? 0
-            : Math.min(1, (now - coin.collectedAt) / COLLECT_POP_MS);
+          coin.collectedAt == null ? 0 : Math.min(1, (now - coin.collectedAt) / COLLECT_POP_MS);
         coin.el.style.setProperty(
           "--coin-x",
           `${Math.round(track.left + coin.x - COIN_SIZE / 2)}px`,
@@ -412,15 +378,7 @@ export function ComposerRunner({
         }
       }
 
-      placeSprite(
-        track.left,
-        track.top,
-        pose.x,
-        pose.y,
-        pose.facing,
-        shake.x,
-        shake.y,
-      );
+      placeSprite(track.left, track.top, pose.x, pose.y, pose.facing, shake.x, shake.y);
     };
 
     apply(last);

@@ -1,7 +1,7 @@
 /**
  * 8×8 pixel mascots used in place of a project's color dot.
  * '#' paints the project color, '.' stays transparent so the surface shows
- * through — eyes and gaps are holes, like the arcade sprites they borrow from.
+ * through — eyes and gaps are holes, like the pixel sprites they borrow from.
  *
  * Each mascot has two frames: `rest`, and `talk` swapped in on a loop while the
  * project has a turn in flight — mouths chew, legs shuffle, flames flicker.
@@ -244,28 +244,23 @@ export function mascotPath(rows: MascotRows): string {
   return path;
 }
 
-export const PROJECT_MASCOTS: readonly ProjectMascot[] = Object.entries(
-  REST,
-).map(([name, rest]) => ({
-  name,
-  rest,
-  talk: TALK[name],
-  restPath: mascotPath(rest),
-  talkPath: mascotPath(TALK[name]),
-}));
+export const PROJECT_MASCOTS: readonly ProjectMascot[] = Object.entries(REST).map(
+  ([name, rest]) => ({
+    name,
+    rest,
+    talk: TALK[name],
+    restPath: mascotPath(rest),
+    talkPath: mascotPath(TALK[name]),
+  }),
+);
 
 export const MASCOT_GRID = GRID;
 
 /** Stable per-project pick — a different mix than the color hash so a project's
  *  mascot and color vary independently. An explicit `name` wins; an unknown one
  *  falls back to the hash. */
-export function projectMascot(
-  project: string,
-  name?: string | null,
-): ProjectMascot {
-  const chosen = name
-    ? PROJECT_MASCOTS.find((mascot) => mascot.name === name)
-    : undefined;
+export function projectMascot(project: string, name?: string | null): ProjectMascot {
+  const chosen = name ? PROJECT_MASCOTS.find((mascot) => mascot.name === name) : undefined;
   if (chosen) return chosen;
 
   let hash = 0;
