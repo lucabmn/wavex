@@ -291,6 +291,8 @@ import {
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
 import { otherAppMode, type AppMode } from "./lib/workspace/appMode";
 import { WorkView } from "./surfaces/WorkView";
+import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
+import { getWorkChatState } from "./lib/sessions/workChatStore";
 import type { InstalledUpdate } from "./lib/updates/updateNotice";
 import {
   bindResumedSessions,
@@ -732,9 +734,12 @@ export default function App({
         // Listening here makes close our job. Letting the default path run
         // calls JS `window.destroy`, which Tauri denies without a permission.
         event.preventDefault();
-        if (hasInFlightSessions(sessionsRef.current)) {
+        // A streaming work chat keeps the window alive too — closing on top of
+        // one would drop the answer being written.
+        const workChats = getWorkChatState().chats;
+        if (hasInFlightSessions(sessionsRef.current) || hasInFlightSessions(workChats)) {
           flushHarnessEvents();
-          void persistLiveTranscripts(sessionsRef.current);
+          void persistLiveTranscripts([...sessionsRef.current, ...workChats]);
           void hideCurrentWindow();
           return;
         }
@@ -3271,13 +3276,32 @@ export default function App({
   }, []);
 
   /**
-   * A menu item that acts on the project workspace, chosen while Work is in
-   * front. The user asked for a coding action, so show them the surface it
-   * happens on instead of running it behind the chat.
+   * A menu item that opens something — a project, a file, Search, Inbox. The
+   * user asked for a coding surface, so bring it forward rather than running
+   * the action behind the chat.
    */
   const runInCoding = useCallback(
     (name: string, fn: () => void) => {
       if (appModeRef.current === "work") setAppMode("coding");
+      run(name, fn);
+    },
+    [run],
+  );
+
+  /**
+   * A menu item that acts on the workspace itself — tabs, panes, terminals.
+   *
+   * The macOS menu owns these accelerators, so the keydown guard never sees
+   * them. Where Work has its own meaning for the key it runs that instead
+   * (⌘T is New Chat there); otherwise the item does nothing, because
+   * mutating tabs the user cannot see is worse than no response.
+   */
+  const runInWorkspace = useCallback(
+    (name: string, fn: () => void, inWork?: WorkChatCommand) => {
+      if (appModeRef.current === "work") {
+        if (inWork) requestWorkChatCommand(inWork);
+        return;
+      }
       run(name, fn);
     },
     [run],
@@ -3394,35 +3418,37 @@ export default function App({
 
   useEffect(() => {
     const unlisten: Array<Promise<() => void>> = [
-      listen("new_tab", () => runInCoding("new", actions.current.onNew)),
-      listen("close_tab", () => runInCoding("close", actions.current.onClosePane)),
-      listen("next_tab", () => runInCoding("next", actions.current.onNext)),
-      listen("prev_tab", () => runInCoding("prev", actions.current.onPrev)),
-      listen("back_tab", () => runInCoding("back", actions.current.onVisitBack)),
-      listen("forward_tab", () => runInCoding("forward", actions.current.onVisitForward)),
+      listen("new_tab", () => runInWorkspace("new", actions.current.onNew, "new")),
+      listen("close_tab", () => runInWorkspace("close", actions.current.onClosePane)),
+      listen("next_tab", () => runInWorkspace("next", actions.current.onNext, "next")),
+      listen("prev_tab", () => runInWorkspace("prev", actions.current.onPrev, "previous")),
+      listen("back_tab", () => runInWorkspace("back", actions.current.onVisitBack)),
+      listen("forward_tab", () => runInWorkspace("forward", actions.current.onVisitForward)),
       listen("split_right", () =>
-        runInCoding("split-right", () => actions.current.onSplit("right")),
+        runInWorkspace("split-right", () => actions.current.onSplit("right")),
       ),
-      listen("split_down", () => runInCoding("split-down", () => actions.current.onSplit("down"))),
-      listen("new_terminal", () => runInCoding("new-terminal", actions.current.onNewTerminal)),
+      listen("split_down", () =>
+        runInWorkspace("split-down", () => actions.current.onSplit("down")),
+      ),
+      listen("new_terminal", () => runInWorkspace("new-terminal", actions.current.onNewTerminal)),
       listen("new_terminal_tab", () =>
-        runInCoding("new-terminal-tab", actions.current.onNewTerminalTab),
+        runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
       ),
       listen("toggle_terminal", () =>
-        runInCoding("toggle-terminal", actions.current.onToggleProjectTerminal),
+        runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
       ),
       listen("focus_left", () =>
-        runInCoding("focus-left", () => actions.current.onFocusDir("left")),
+        runInWorkspace("focus-left", () => actions.current.onFocusDir("left")),
       ),
       listen("focus_right", () =>
-        runInCoding("focus-right", () => actions.current.onFocusDir("right")),
+        runInWorkspace("focus-right", () => actions.current.onFocusDir("right")),
       ),
-      listen("focus_up", () => runInCoding("focus-up", () => actions.current.onFocusDir("up"))),
+      listen("focus_up", () => runInWorkspace("focus-up", () => actions.current.onFocusDir("up"))),
       listen("focus_down", () =>
-        runInCoding("focus-down", () => actions.current.onFocusDir("down")),
+        runInWorkspace("focus-down", () => actions.current.onFocusDir("down")),
       ),
       listen("toggle_sidebar", () =>
-        runInCoding("toggle_sidebar", actions.current.onToggleSidebar),
+        runInWorkspace("toggle_sidebar", actions.current.onToggleSidebar),
       ),
       listen("open_project", () =>
         runInCoding("open_project", () => {
@@ -3450,7 +3476,7 @@ export default function App({
         runInCoding("find_in_project", () => actions.current.onFindInProject()),
       ),
       listen("find", () => {
-        openFindInActiveEditor();
+        runInWorkspace("find", openFindInActiveEditor, "find");
       }),
       listen("open_model_picker", () => {
         window.dispatchEvent(new Event("open_model_picker"));
@@ -3459,7 +3485,7 @@ export default function App({
     return () => {
       void Promise.all(unlisten).then((fns) => fns.forEach((fn) => fn()));
     };
-  }, [run, runInCoding]);
+  }, [run, runInCoding, runInWorkspace]);
 
   const dockGridRef = useRef<HTMLDivElement>(null);
   const dockDragSize = useRef<number | null>(null);

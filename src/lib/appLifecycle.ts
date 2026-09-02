@@ -9,6 +9,7 @@ import {
 import {
   hasInFlightSessions,
   inFlightRefs,
+  isInFlightSession,
   markTurnInterrupted,
   quitWhileBusyMessage,
   wasTurnInterrupted,
@@ -32,6 +33,8 @@ import {
   upsertSession,
   type SessionSummary,
 } from "./sessions/sessionStore";
+import { getWorkChatState } from "./sessions/workChatStore";
+import { isWorkChat } from "./sessions/workChats";
 import type { AppMode } from "./workspace/appMode";
 import {
   collectWorkspaceSnapshot,
@@ -205,7 +208,9 @@ async function loadResumedWorkspaceOnce(): Promise<ResumedWorkspace | null> {
   await Promise.all(
     [...ids].map(async (id) => {
       const record = await getSession(id).catch(() => null);
-      if (record) loaded.set(id, record);
+      // A work chat has no tab. If a stale row ever names one, restoring it
+      // here would open a coding tab on the chat's scratch directory.
+      if (record && !isWorkChat(record)) loaded.set(id, record);
     }),
   );
 
@@ -268,6 +273,15 @@ export async function persistLiveTranscripts(sessions: Session[]): Promise<void>
   );
 }
 
+/**
+ * Busy work chats. They live in their own store rather than in the workspace,
+ * so the quit path has to ask for them: without this a chat mid-answer would
+ * be lost with no warning and no note in its transcript.
+ */
+function inFlightWorkChats(): Session[] {
+  return getWorkChatState().chats.filter(isInFlightSession);
+}
+
 export async function persistQuitState(
   sessions: Session[],
   tabs: WorkspaceTab[],
@@ -279,16 +293,21 @@ export async function persistQuitState(
 ): Promise<void> {
   const refs = inFlightRefs(sessions, tabs);
   const interrupted = new Set(refs.map((ref) => ref.sessionId));
+  const busyWorkChats = new Set(inFlightWorkChats().map((chat) => chat.id));
   await Promise.all(
-    sessions.map(async (session) => {
+    [...sessions, ...getWorkChatState().chats].map(async (session) => {
       if (!shouldPersistSession(session)) return;
-      const payload = interrupted.has(session.id) ? markTurnInterrupted(session) : session;
-      await upsertSession(payload).catch(() => null);
+      const cut = interrupted.has(session.id) || busyWorkChats.has(session.id);
+      await upsertSession(cut ? markTurnInterrupted(session) : session).catch(() => null);
     }),
   );
   await saveWorkspaceSnapshot(
     collectWorkspaceSnapshot(tabs, sessions, activeTabId, projectCwd, projectTerminals, appMode),
   ).catch(() => undefined);
+  // Work chats are deliberately absent from `refs`: that table decides which
+  // tabs a restored workspace reopens, and a chat has no tab. Its interrupt
+  // note is already in the transcript above.
+  //
   // Vite/webview reload must not wipe a restored snapshot: those chats are idle
   // in this process until Continue runs.
   if (mode === "quit" || refs.length > 0) {
@@ -331,9 +350,9 @@ async function confirmQuitAndExit(
   if (quitDialogOpen) return;
   quitDialogOpen = true;
   try {
-    const refs = inFlightRefs(sessions, tabs);
-    if (refs.length > 0) {
-      const ok = await ask(quitWhileBusyMessage(refs.length), {
+    const busy = inFlightRefs(sessions, tabs).length + inFlightWorkChats().length;
+    if (busy > 0) {
+      const ok = await ask(quitWhileBusyMessage(busy), {
         title: "wavex",
         kind: "warning",
         okLabel: "Quit",

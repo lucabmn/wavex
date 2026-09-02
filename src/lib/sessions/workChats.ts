@@ -40,6 +40,14 @@ export function isWorkChat(session: Pick<Session, "scope">): boolean {
   return sessionScope(session) === "work";
 }
 
+/**
+ * When a chat that has no stored row yet first appeared, by id. Sessions are
+ * replaced on every update, so this cannot hang off the object; read from the
+ * clock inside the mapper it would change on every streamed batch and the list
+ * could never memoize.
+ */
+const openedAt = new Map<string, number>();
+
 export function newWorkChat(
   cwd: string,
   harness?: HarnessId,
@@ -105,6 +113,27 @@ export function normalizeWorkChatTitle(title: string): string {
   return trimmed.length > MAX_TITLE ? `${trimmed.slice(0, MAX_TITLE - 1)}…` : trimmed;
 }
 
+export const WORK_CHAT_COMMAND_EVENT = "wavex:work-chat-command";
+
+export type WorkChatCommand = "new" | "find" | "next" | "previous";
+
+let lastCommand = { name: "", at: 0 };
+
+/**
+ * Ask the Work surface to run one of its own commands.
+ *
+ * The macOS menu owns ⌘T, ⌘F, and ⌘⇧[/], so those keystrokes arrive as menu
+ * events rather than as a keydown the surface could handle. Routing both paths
+ * through here keeps the shortcuts working and collapses the pair when a
+ * single press arrives twice.
+ */
+export function requestWorkChatCommand(command: WorkChatCommand): void {
+  const now = performance.now();
+  if (lastCommand.name === command && now - lastCommand.at < 80) return;
+  lastCommand = { name: command, at: now };
+  window.dispatchEvent(new CustomEvent(WORK_CHAT_COMMAND_EVENT, { detail: command }));
+}
+
 export type WorkChatListItem = {
   id: string;
   title: string;
@@ -127,16 +156,26 @@ export function workChatListItems(
   // a brand-new chat has no row at all yet.
   for (const session of open) {
     if (!isWorkChat(session)) continue;
+    let when = items.get(session.id)?.updatedAt;
+    if (when == null) {
+      when = openedAt.get(session.id) ?? Date.now();
+      openedAt.set(session.id, when);
+    }
     items.set(session.id, {
       id: session.id,
       title: workChatDisplayTitle(session.title),
-      updatedAt: items.get(session.id)?.updatedAt ?? Date.now(),
+      updatedAt: when,
     });
   }
   return [...items.values()].sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 /** Fuzzy, like the note and project pickers, and ranked before recency. */
+/** Drop the first-seen stamps for chats that are gone. */
+export function forgetWorkChatOrder(ids: Iterable<string>): void {
+  for (const id of ids) openedAt.delete(id);
+}
+
 export function filterWorkChats(items: WorkChatListItem[], query: string): WorkChatListItem[] {
   const needle = query.trim();
   if (!needle) return items;

@@ -33,6 +33,7 @@ import { deleteSession, getSession, listSessionsByScope, upsertSession } from ".
 import type { SessionSummary } from "./sessionStore";
 import {
   canReplaceWorkChatTitle,
+  forgetWorkChatOrder,
   newWorkChat,
   normalizeWorkChatTitle,
   workChatDir,
@@ -198,6 +199,7 @@ export async function deleteWorkChat(id: string): Promise<void> {
       ? (chats[chats.length - 1]?.id ?? summaries[0]?.id ?? null)
       : state.activeId;
   set({ chats, summaries, activeId });
+  forgetWorkChatOrder([id]);
   await deleteSession(id).catch(() => undefined);
 }
 

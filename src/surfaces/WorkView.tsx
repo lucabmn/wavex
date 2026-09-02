@@ -31,7 +31,13 @@ import {
   stopWorkChat,
   subscribeWorkChats,
 } from "../lib/sessions/workChatStore";
-import { filterWorkChats, workChatListItems } from "../lib/sessions/workChats";
+import {
+  WORK_CHAT_COMMAND_EVENT,
+  filterWorkChats,
+  requestWorkChatCommand,
+  workChatListItems,
+  type WorkChatCommand,
+} from "../lib/sessions/workChats";
 import { AgentTranscript } from "./AgentTranscript";
 
 type Props = {
@@ -81,50 +87,64 @@ export function WorkView({ mode, onModeChange }: Props) {
     [state.activeId, visible],
   );
 
+  const runCommand = useCallback(
+    (command: WorkChatCommand) => {
+      if (command === "new") onNewChat();
+      else if (command === "next") step(1);
+      else if (command === "previous") step(-1);
+      else {
+        searchField.current?.focus();
+        searchField.current?.select();
+      }
+    },
+    [onNewChat, step],
+  );
+
+  useEffect(() => {
+    const onCommand = (event: Event) => {
+      runCommand((event as CustomEvent<WorkChatCommand>).detail);
+    };
+    window.addEventListener(WORK_CHAT_COMMAND_EVENT, onCommand);
+    return () => window.removeEventListener(WORK_CHAT_COMMAND_EVENT, onCommand);
+  }, [runCommand]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.isComposing) return;
       const mod = event.metaKey || event.ctrlKey;
-      if (!mod) return;
+      if (!mod || event.altKey) return;
       const key = event.key.toLowerCase();
-      if (!event.shiftKey && !event.altKey && (key === "t" || key === "n")) {
+      const command: WorkChatCommand | null = event.shiftKey
+        ? event.key === "]" || event.key === "}"
+          ? "next"
+          : event.key === "[" || event.key === "{"
+            ? "previous"
+            : null
+        : key === "t" || key === "n"
+          ? "new"
+          : key === "f"
+            ? "find"
+            : null;
+
+      if (command) {
         event.preventDefault();
         event.stopPropagation();
-        onNewChat();
+        // Through the shared dispatcher, so a keystroke the macOS menu also
+        // reports does not run the command twice.
+        requestWorkChatCommand(command);
         return;
       }
-      if (!event.shiftKey && !event.altKey && key === "l") {
+      if (!event.shiftKey && key === "l") {
         event.preventDefault();
         event.stopPropagation();
         composer.current?.focus();
-        return;
-      }
-      if (!event.shiftKey && !event.altKey && key === "f") {
-        event.preventDefault();
-        event.stopPropagation();
-        searchField.current?.focus();
-        searchField.current?.select();
-        return;
-      }
-      if (event.shiftKey && !event.altKey) {
-        if (event.key === "]" || event.key === "}") {
-          event.preventDefault();
-          event.stopPropagation();
-          step(1);
-          return;
-        }
-        if (event.key === "[" || event.key === "{") {
-          event.preventDefault();
-          event.stopPropagation();
-          step(-1);
-        }
       }
     };
     // Capture, so the coding-mode workspace bindings behind this surface never
     // see a key meant for the chat list.
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onNewChat, step]);
+  }, []);
 
   return (
     <div

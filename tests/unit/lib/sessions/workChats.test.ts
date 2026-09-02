@@ -117,6 +117,28 @@ describe("workChatListItems", () => {
   });
 });
 
+describe("workChatListItems ordering key", () => {
+  /**
+   * A chat with no stored row still needs a sort key. Reading the clock on
+   * every call would change it on every streamed batch and defeat the list's
+   * memo, so the first-seen stamp has to stick.
+   */
+  it("keeps a new chat's position stable across renders", () => {
+    const chat = { ...newWorkChat("/tmp/work-chats", "claude"), id: "new" };
+    const first = workChatListItems([], [chat as Session]);
+    const second = workChatListItems([], [{ ...chat, title: "Renamed" } as Session]);
+    expect(second[0].updatedAt).toBe(first[0].updatedAt);
+    expect(second[0].title).toBe("Renamed");
+  });
+
+  it("prefers the stored row's timestamp once the chat is saved", () => {
+    const chat = { ...newWorkChat("/tmp/work-chats", "claude"), id: "saved" };
+    workChatListItems([], [chat as Session]);
+    const items = workChatListItems([summary({ id: "saved", updatedAt: 99 })], [chat as Session]);
+    expect(items[0].updatedAt).toBe(99);
+  });
+});
+
 describe("filterWorkChats", () => {
   const items = [
     { id: "a", title: "Draft a changelog", updatedAt: 2 },
