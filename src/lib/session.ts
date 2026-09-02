@@ -128,8 +128,6 @@ export type Block = {
  */
 export type SessionScope = "coding" | "work";
 
-export const SESSION_SCOPES: SessionScope[] = ["coding", "work"];
-
 export const DEFAULT_SESSION_SCOPE: SessionScope = "coding";
 
 export function sessionScope(session: { scope?: SessionScope }): SessionScope {

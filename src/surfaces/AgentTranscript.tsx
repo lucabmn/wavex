@@ -15,10 +15,10 @@ import {
   X,
 } from "../chrome/icons";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { AttachmentChip } from "../chrome/AttachmentChip";
 import { Modal } from "../chrome/Modal";
 import { attachmentPreviewSrc, saveAttachmentAs } from "../lib/attachments";
+import { readFileBase64 } from "../lib/fs";
 import { FilePreview } from "../chrome/FilePreview";
 import { FileTypeIcon } from "../chrome/FileTypeIcon";
 import { PlanPreview } from "../chrome/PlanPreview";
@@ -723,7 +723,7 @@ function ResponseImage({ file }: { file: Attachment }) {
     if (!file.path) return;
     let cancelled = false;
     // A stored image keeps only its path; read the bytes back to display it.
-    void invoke<string>("read_file_base64", { path: file.path })
+    void readFileBase64(file.path)
       .then((data) => {
         if (!cancelled) setSrc(`data:${file.mimeType};base64,${data}`);
       })

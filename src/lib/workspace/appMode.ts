@@ -9,8 +9,6 @@
 
 export type AppMode = "coding" | "work";
 
-export const APP_MODES: AppMode[] = ["coding", "work"];
-
 export const DEFAULT_APP_MODE: AppMode = "coding";
 
 export const APP_MODE_LABEL: Record<AppMode, string> = {

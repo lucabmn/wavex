@@ -3270,12 +3270,27 @@ export default function App({
     fn();
   }, []);
 
+  /**
+   * A menu item that acts on the project workspace, chosen while Work is in
+   * front. The user asked for a coding action, so show them the surface it
+   * happens on instead of running it behind the chat.
+   */
+  const runInCoding = useCallback(
+    (name: string, fn: () => void) => {
+      if (appModeRef.current === "work") setAppMode("coding");
+      run(name, fn);
+    },
+    [run],
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Work owns its own bindings. Every shortcut below acts on the project
+      // workspace — tabs, panes, the file picker — which is hidden behind the
+      // chat surface, so none of them may fire while Work is in front. The
+      // mode toggle itself is bound outside this handler.
+      if (appModeRef.current === "work") return;
       const cmd = tabCommand(e);
-      // Work owns its own chat bindings; the workspace ones would act on tabs
-      // the user cannot see.
-      if (cmd && appModeRef.current === "work") return;
       if (cmd) {
         const target = e.target instanceof Element ? e.target : null;
         if (
@@ -3354,12 +3369,6 @@ export default function App({
         run("open_settings", () => actions.current.openSettings());
         return;
       }
-      if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "m") {
-        e.preventDefault();
-        e.stopPropagation();
-        run("toggle_mode", () => setAppMode(otherAppMode(appModeRef.current)));
-        return;
-      }
       if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
         e.stopPropagation();
@@ -3371,35 +3380,64 @@ export default function App({
   }, [run]);
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.shiftKey || e.altKey || e.key.toLowerCase() !== "m") return;
+      e.preventDefault();
+      e.stopPropagation();
+      run("toggle_mode", () => setAppMode(otherAppMode(appModeRef.current)));
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [run]);
+
+  useEffect(() => {
     const unlisten: Array<Promise<() => void>> = [
-      listen("new_tab", () => run("new", actions.current.onNew)),
-      listen("close_tab", () => run("close", actions.current.onClosePane)),
-      listen("next_tab", () => run("next", actions.current.onNext)),
-      listen("prev_tab", () => run("prev", actions.current.onPrev)),
-      listen("back_tab", () => run("back", actions.current.onVisitBack)),
-      listen("forward_tab", () => run("forward", actions.current.onVisitForward)),
-      listen("split_right", () => run("split-right", () => actions.current.onSplit("right"))),
-      listen("split_down", () => run("split-down", () => actions.current.onSplit("down"))),
-      listen("new_terminal", () => run("new-terminal", actions.current.onNewTerminal)),
-      listen("new_terminal_tab", () => run("new-terminal-tab", actions.current.onNewTerminalTab)),
-      listen("toggle_terminal", () =>
-        run("toggle-terminal", actions.current.onToggleProjectTerminal),
+      listen("new_tab", () => runInCoding("new", actions.current.onNew)),
+      listen("close_tab", () => runInCoding("close", actions.current.onClosePane)),
+      listen("next_tab", () => runInCoding("next", actions.current.onNext)),
+      listen("prev_tab", () => runInCoding("prev", actions.current.onPrev)),
+      listen("back_tab", () => runInCoding("back", actions.current.onVisitBack)),
+      listen("forward_tab", () => runInCoding("forward", actions.current.onVisitForward)),
+      listen("split_right", () =>
+        runInCoding("split-right", () => actions.current.onSplit("right")),
       ),
-      listen("focus_left", () => run("focus-left", () => actions.current.onFocusDir("left"))),
-      listen("focus_right", () => run("focus-right", () => actions.current.onFocusDir("right"))),
-      listen("focus_up", () => run("focus-up", () => actions.current.onFocusDir("up"))),
-      listen("focus_down", () => run("focus-down", () => actions.current.onFocusDir("down"))),
-      listen("toggle_sidebar", () => run("toggle_sidebar", actions.current.onToggleSidebar)),
-      listen("open_project", () => {
-        void actions.current.pickProject();
-      }),
-      listen("go_to_file", () => actions.current.onGoToFile()),
-      listen("open_search", () => actions.current.onOpenSearch()),
-      listen("open_inbox", () => actions.current.onOpenInbox()),
-      listen("open_notes", () => actions.current.onOpenNotes()),
-      listen("open_usage", () => actions.current.onOpenUsage()),
+      listen("split_down", () => runInCoding("split-down", () => actions.current.onSplit("down"))),
+      listen("new_terminal", () => runInCoding("new-terminal", actions.current.onNewTerminal)),
+      listen("new_terminal_tab", () =>
+        runInCoding("new-terminal-tab", actions.current.onNewTerminalTab),
+      ),
+      listen("toggle_terminal", () =>
+        runInCoding("toggle-terminal", actions.current.onToggleProjectTerminal),
+      ),
+      listen("focus_left", () =>
+        runInCoding("focus-left", () => actions.current.onFocusDir("left")),
+      ),
+      listen("focus_right", () =>
+        runInCoding("focus-right", () => actions.current.onFocusDir("right")),
+      ),
+      listen("focus_up", () => runInCoding("focus-up", () => actions.current.onFocusDir("up"))),
+      listen("focus_down", () =>
+        runInCoding("focus-down", () => actions.current.onFocusDir("down")),
+      ),
+      listen("toggle_sidebar", () =>
+        runInCoding("toggle_sidebar", actions.current.onToggleSidebar),
+      ),
+      listen("open_project", () =>
+        runInCoding("open_project", () => {
+          void actions.current.pickProject();
+        }),
+      ),
+      listen("go_to_file", () => runInCoding("onGoToFile", () => actions.current.onGoToFile())),
+      listen("open_search", () =>
+        runInCoding("onOpenSearch", () => actions.current.onOpenSearch()),
+      ),
+      listen("open_inbox", () => runInCoding("onOpenInbox", () => actions.current.onOpenInbox())),
+      listen("open_notes", () => runInCoding("onOpenNotes", () => actions.current.onOpenNotes())),
+      listen("open_usage", () => runInCoding("onOpenUsage", () => actions.current.onOpenUsage())),
       listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
-        actions.current.onSelectLiveAgent(payload),
+        runInCoding("focus_session", () => actions.current.onSelectLiveAgent(payload)),
       ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
@@ -3408,7 +3446,9 @@ export default function App({
       listen("sidebar_opacity", () => {
         actions.current.openSettings("appearance");
       }),
-      listen("find_in_project", () => actions.current.onFindInProject()),
+      listen("find_in_project", () =>
+        runInCoding("find_in_project", () => actions.current.onFindInProject()),
+      ),
       listen("find", () => {
         openFindInActiveEditor();
       }),
@@ -3419,7 +3459,7 @@ export default function App({
     return () => {
       void Promise.all(unlisten).then((fns) => fns.forEach((fn) => fn()));
     };
-  }, [run]);
+  }, [run, runInCoding]);
 
   const dockGridRef = useRef<HTMLDivElement>(null);
   const dockDragSize = useRef<number | null>(null);

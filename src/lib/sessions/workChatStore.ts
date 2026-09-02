@@ -146,31 +146,49 @@ export async function createWorkChat(harness?: HarnessId, model?: string): Promi
   return chat.id;
 }
 
+/** Load a stored chat into memory. A second caller reuses the first result. */
+async function hydrate(id: string): Promise<Session | null> {
+  const open = findWorkChat(id);
+  if (open) return open;
+  const record = await getSession(id).catch(() => null);
+  if (!record) return null;
+  // Loading can race a second click; the first one in wins.
+  const raced = findWorkChat(id);
+  if (raced) return raced;
+  const chat: Session = { ...record, scope: "work", busy: false };
+  set({ chats: [...state.chats, chat] });
+  return chat;
+}
+
+function summaryHarness(id: string): HarnessId | undefined {
+  return state.summaries.find((row) => row.id === id)?.harness;
+}
+
 export async function selectWorkChat(id: string): Promise<void> {
   set({ activeId: id });
-  if (findWorkChat(id)) return;
-  const record = await getSession(id).catch(() => null);
-  if (!record) return;
-  // Selection can race a second click; the first load wins.
-  if (findWorkChat(id)) return;
-  set({ chats: [...state.chats, { ...record, scope: "work", busy: false }] });
+  await hydrate(id);
 }
 
 export async function renameWorkChat(id: string, title: string): Promise<void> {
   const next = normalizeWorkChatTitle(title);
-  patchChat(id, (chat) => (chat.title === next ? chat : { ...chat, title: next }));
   set({
     summaries: state.summaries.map((row) => (row.id === id ? { ...row, title: next } : row)),
   });
-  const chat = findWorkChat(id);
-  if (chat) await upsertSession(chat).catch(() => null);
+  // Only the chats the user has opened are in memory. Renaming one that is
+  // still just a list row has to load it, or the new title never reaches
+  // SQLite and the old one comes back on restart.
+  const chat = findWorkChat(id) ?? (await hydrate(id));
+  if (!chat) return;
+  patchChat(id, (current) => (current.title === next ? current : { ...current, title: next }));
+  await upsertSession(findWorkChat(id) ?? { ...chat, title: next }).catch(() => null);
 }
 
 export async function deleteWorkChat(id: string): Promise<void> {
-  const chat = findWorkChat(id);
   // Drop the provider thread too: the transcript is going away, so resuming it
-  // later would answer against a conversation the user cannot see.
-  if (chat) await forgetHarnessSession(chat.harness, id).catch(() => undefined);
+  // later would answer against a conversation the user cannot see. A chat the
+  // user never opened still has one, so its harness has to be looked up.
+  const harness = findWorkChat(id)?.harness ?? summaryHarness(id);
+  if (harness) await forgetHarnessSession(harness, id).catch(() => undefined);
   bumpTurn(id);
   queued.delete(id);
   const chats = state.chats.filter((row) => row.id !== id);

@@ -279,6 +279,10 @@ export async function pickFolder(title = "Open project"): Promise<string | null>
   return typeof selected === "string" && selected ? selected : null;
 }
 
+export function readFileBase64(path: string): Promise<string> {
+  return invoke("read_file_base64", { path });
+}
+
 export function writeFileBase64(path: string, data: string): Promise<void> {
   return invoke("write_file_base64", { path, data });
 }

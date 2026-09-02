@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { basename, pickFiles as pickFilePaths, writeFileBase64 } from "./fs";
+import { basename, pickFiles as pickFilePaths, readFileBase64, writeFileBase64 } from "./fs";
 import type { Attachment, AttachmentKind } from "./session";
 
 export const MAX_ATTACHMENTS = 20;
@@ -133,8 +133,7 @@ export function displayAttachments(files: Attachment[]): Attachment[] {
 export async function saveAttachmentAs(file: Attachment): Promise<string | null> {
   const target = await save({ defaultPath: file.name });
   if (!target) return null;
-  const data =
-    file.data ?? (file.path ? await invoke<string>("read_file_base64", { path: file.path }) : null);
+  const data = file.data ?? (file.path ? await readFileBase64(file.path) : null);
   if (!data) throw new Error(`${file.name} has no contents to save.`);
   await writeFileBase64(target, data);
   return target;
@@ -254,9 +253,7 @@ export async function prepareAttachments(files: Attachment[]): Promise<Attachmen
         return file;
       }
       try {
-        const data = await invoke<string>("read_file_base64", {
-          path: file.path,
-        });
+        const data = await readFileBase64(file.path);
         return { ...file, data };
       } catch {
         return file;
@@ -309,7 +306,7 @@ async function attachmentFromPath(info: PathInfo): Promise<Attachment | null> {
   };
   if (isVisionImage(mimeType) && info.size > 0 && info.size <= MAX_EMBED_BYTES) {
     try {
-      file.data = await invoke<string>("read_file_base64", { path: info.path });
+      file.data = await readFileBase64(info.path);
     } catch {
       // Fall back to a resource_link so the agent can still read the file.
     }

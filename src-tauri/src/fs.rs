@@ -3077,10 +3077,9 @@ pub async fn write_file_base64(path: String, data: String) -> Result<(), String>
 fn write_file_base64_sync(path: &str, data: &str) -> Result<(), String> {
     let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, data)
         .map_err(|_| "File data is not valid base64.".to_string())?;
+    // The path comes from a save dialog, so its directory already exists;
+    // creating one here would let a bad path write a tree anywhere.
     let target = expand_home(path);
-    if let Some(parent) = target.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
     std::fs::write(&target, bytes).map_err(|e| format!("{}: {e}", target.display()))
 }
 

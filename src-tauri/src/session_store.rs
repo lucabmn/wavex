@@ -993,30 +993,36 @@ fn list_by_project(conn: &Connection, cwd: &str) -> rusqlite::Result<Vec<Session
            AND scope = 'coding'
          ORDER BY updated_at DESC, id ASC",
     )?;
-    let rows = statement.query_map(params![cwd], |row| {
-        let stored_branch: Option<String> = row.get(9)?;
-        let archived: i64 = row.get(10)?;
-        let pinned: i64 = row.get(11)?;
-        Ok(SessionSummary {
-            id: row.get(0)?,
-            cwd: row.get(1)?,
-            harness: row.get(2)?,
-            model: row.get(3)?,
-            runtime_mode: row.get(4)?,
-            title: row.get(5)?,
-            provider_session_id: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
-            branch: nonempty(stored_branch).or_else(|| git.branch.clone()),
-            repo: git.repo.clone(),
-            additions: 0,
-            deletions: 0,
-            archived: archived != 0,
-            pinned: pinned != 0,
-            scope: row.get(12)?,
-        })
-    })?;
+    let rows = statement.query_map(params![cwd], |row| summary_row(row, Some(&git)))?;
     rows.collect()
+}
+
+/// Both listings select the same columns in the same order. `git` fills the
+/// branch and repo a project listing knows and a scope listing does not.
+fn summary_row(
+    row: &rusqlite::Row<'_>,
+    git: Option<&crate::fs::GitInfo>,
+) -> rusqlite::Result<SessionSummary> {
+    let archived: i64 = row.get(10)?;
+    let pinned: i64 = row.get(11)?;
+    Ok(SessionSummary {
+        id: row.get(0)?,
+        cwd: row.get(1)?,
+        harness: row.get(2)?,
+        model: row.get(3)?,
+        runtime_mode: row.get(4)?,
+        title: row.get(5)?,
+        provider_session_id: row.get(6)?,
+        created_at: row.get(7)?,
+        updated_at: row.get(8)?,
+        branch: nonempty(row.get(9)?).or_else(|| git.and_then(|info| info.branch.clone())),
+        repo: git.and_then(|info| info.repo.clone()),
+        additions: 0,
+        deletions: 0,
+        archived: archived != 0,
+        pinned: pinned != 0,
+        scope: row.get(12)?,
+    })
 }
 
 /// Work chats have no project, so they list by scope instead of by cwd.
@@ -1029,28 +1035,7 @@ fn list_by_scope(conn: &Connection, scope: &str) -> rusqlite::Result<Vec<Session
            AND has_user_message = 1
          ORDER BY updated_at DESC, id ASC",
     )?;
-    let rows = statement.query_map(params![scope], |row| {
-        let archived: i64 = row.get(10)?;
-        let pinned: i64 = row.get(11)?;
-        Ok(SessionSummary {
-            id: row.get(0)?,
-            cwd: row.get(1)?,
-            harness: row.get(2)?,
-            model: row.get(3)?,
-            runtime_mode: row.get(4)?,
-            title: row.get(5)?,
-            provider_session_id: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
-            branch: nonempty(row.get(9)?),
-            repo: None,
-            additions: 0,
-            deletions: 0,
-            archived: archived != 0,
-            pinned: pinned != 0,
-            scope: row.get(12)?,
-        })
-    })?;
+    let rows = statement.query_map(params![scope], |row| summary_row(row, None))?;
     rows.collect()
 }
 

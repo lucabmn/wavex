@@ -3,6 +3,7 @@ import type { HarnessEvent, SendTurnInput } from "@/lib/harness/types";
 
 const stored = new Map<string, unknown>();
 const deleted: string[] = [];
+const upserted: { id: string; title: string }[] = [];
 const forgotten: string[] = [];
 const cancelled: string[] = [];
 let live = true;
@@ -38,7 +39,10 @@ vi.mock("@/lib/sessions/sessionStore", async () => {
     deleteSession: async (id: string) => {
       deleted.push(id);
     },
-    upsertSession: async () => null,
+    upsertSession: async (session: { id: string; title: string }) => {
+      upserted.push({ id: session.id, title: session.title });
+      return null;
+    },
   };
 });
 
@@ -92,6 +96,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 beforeEach(() => {
   stored.clear();
   deleted.length = 0;
+  upserted.length = 0;
   forgotten.length = 0;
   cancelled.length = 0;
   listed = [];
@@ -251,6 +256,32 @@ describe("resendWorkChatTurn", () => {
   });
 });
 
+describe("renameWorkChat", () => {
+  /**
+   * Only opened chats sit in memory. A rename on a chat that is still just a
+   * list row has to load it, or the new title never reaches storage and the
+   * old one comes back on restart.
+   */
+  it("persists a rename for a chat the user never opened", async () => {
+    listed = [{ id: "a", title: "Stored", updatedAt: 1 }];
+    stored.set("a", {
+      id: "a",
+      cwd: "/tmp/work-chats",
+      harness: "cursor",
+      model: "gpt-5",
+      modelSettings: {},
+      runtimeMode: "supervised",
+      title: "Stored",
+      blocks: [],
+    });
+
+    await store.renameWorkChat("a", "  Launch  copy ");
+
+    expect(upserted).toEqual([{ id: "a", title: "Launch copy" }]);
+    expect(store.findWorkChat("a")?.title).toBe("Launch copy");
+  });
+});
+
 describe("deleteWorkChat", () => {
   it("drops the provider thread, the row, and the selection", async () => {
     const first = await store.createWorkChat("claude");
@@ -261,6 +292,20 @@ describe("deleteWorkChat", () => {
     expect(deleted).toEqual([second]);
     expect(store.getWorkChatState().activeId).toBe(first);
     expect(store.findWorkChat(second)).toBeNull();
+  });
+});
+
+describe("deleting a chat that was never opened", () => {
+  it("still drops the provider thread and the stored row", async () => {
+    listed = [{ id: "a", title: "Stored", updatedAt: 1 }];
+    await store.loadWorkChats();
+    store.resetWorkChatStore();
+    // Rebuild only the summary, so the chat is a list row with no transcript.
+    await store.loadWorkChats();
+
+    await store.deleteWorkChat("a");
+    expect(forgotten).toEqual(["a"]);
+    expect(deleted).toEqual(["a"]);
   });
 });
 

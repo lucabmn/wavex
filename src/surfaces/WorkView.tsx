@@ -17,7 +17,6 @@ import type { AppMode } from "../lib/workspace/appMode";
 import {
   createWorkChat,
   deleteWorkChat,
-  findWorkChat,
   getWorkChatState,
   loadWorkChats,
   regenerateWorkChatTurn,
@@ -62,7 +61,11 @@ export function WorkView({ mode, onModeChange }: Props) {
     [state.chats, state.summaries],
   );
   const visible = useMemo(() => filterWorkChats(items, query), [items, query]);
-  const active = state.activeId ? findWorkChat(state.activeId) : null;
+  // Read the subscribed snapshot, never the store's module state: rendering
+  // from the global would paint values React was not told changed, and a
+  // per-row lookup would repeat for every streamed token.
+  const byId = useMemo(() => new Map(state.chats.map((chat) => [chat.id, chat])), [state.chats]);
+  const active = state.activeId ? (byId.get(state.activeId) ?? null) : null;
 
   const onNewChat = useCallback(() => {
     void createWorkChat().then(() => composer.current?.focus());
@@ -193,7 +196,7 @@ export function WorkView({ mode, onModeChange }: Props) {
               title={item.title}
               active={item.id === state.activeId}
               renaming={renamingId === item.id}
-              busy={findWorkChat(item.id)?.busy === true}
+              busy={byId.get(item.id)?.busy === true}
               onSelect={() => void selectWorkChat(item.id)}
               onRenameStart={() => setRenamingId(item.id)}
               onRenameCancel={() => setRenamingId(null)}

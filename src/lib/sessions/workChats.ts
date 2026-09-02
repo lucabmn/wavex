@@ -15,7 +15,7 @@ import {
   preferredModelSettings,
   resolveModel,
 } from "../models";
-import type { Attachment, HarnessId, Session } from "../session";
+import { sessionScope, type Attachment, type HarnessId, type Session } from "../session";
 import type { SessionSummary } from "./sessionStore";
 
 /** Placeholder title until the first turn names the chat. */
@@ -36,13 +36,8 @@ export function workChatDir(): Promise<string> {
   return workChatDirPromise;
 }
 
-/** Test seam. */
-export function resetWorkChatDir(): void {
-  workChatDirPromise = null;
-}
-
-export function isWorkChat(session: { scope?: string }): boolean {
-  return session.scope === "work";
+export function isWorkChat(session: Pick<Session, "scope">): boolean {
+  return sessionScope(session) === "work";
 }
 
 export function newWorkChat(
