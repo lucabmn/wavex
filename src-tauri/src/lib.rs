@@ -14,7 +14,6 @@ mod rate_limits;
 mod search;
 mod session_store;
 mod skills;
-mod usage;
 mod window;
 mod window_transfer;
 mod worktree;
@@ -215,8 +214,6 @@ pub fn run() {
             skills::list_skills,
             search::search_project,
             cursor_store::cursor_tool_calls,
-            usage::usage_summary,
-            usage::usage_model_rates,
             harness::harness_resolve_cursor,
             harness::harness_resolve_codex,
             harness::harness_resolve_opencode,
