@@ -18,7 +18,7 @@ import { useWorktrees } from "../hooks/useWorktrees";
 import { Popover } from "./Popover";
 
 type Props = {
-  /** Repository the worktree is added to — its main checkout. */
+  /** Any folder in the repository the worktree is added to. */
   repoPath: string;
   onCancel: () => void;
   /** A worktree was created; `open` says whether to switch to it now. */
@@ -43,7 +43,15 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
   const { worktrees } = useWorktrees(repoPath, true);
   const trimmed = branch.trim();
   const taken = useMemo(() => worktrees.map((worktree) => worktree.path), [worktrees]);
-  const path = trimmed ? suggestWorktreePath(home, repoPath, trimmed, taken) : "";
+  // The caller opens a project folder, which may sit inside the repository
+  // rather than at its root. Git answers from either, but the worktree folder
+  // is named after the repository and the index is keyed by it, so both have to
+  // use the root git reports.
+  const repoRoot = useMemo(
+    () => worktrees.find((worktree) => worktree.main)?.path ?? repoPath,
+    [repoPath, worktrees],
+  );
+  const path = trimmed ? suggestWorktreePath(home, repoRoot, trimmed, taken) : "";
   const baseBranch = base ?? branches?.current ?? null;
 
   // A branch lives in one worktree at a time, so an existing checkout is not an
@@ -75,11 +83,11 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
     setError(null);
     setConflict(null);
     try {
-      const worktree = await gitWorktreeCreate(repoPath, path, trimmed, baseBranch);
+      const worktree = await gitWorktreeCreate(repoRoot, path, trimmed, baseBranch);
       // Written before the caller can switch to it: the sidebar decides where a
       // folder belongs synchronously, and would otherwise file the new worktree
       // as a project of its own for one render.
-      rememberWorktree(repoPath, worktree.path);
+      rememberWorktree(repoRoot, worktree.path);
       notifyGitChanged();
       onCreated(worktree, open);
     } catch (err) {
@@ -111,7 +119,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
           <h2 className="text-[13px] font-medium leading-tight text-content">New worktree</h2>
           <p className="text-[12px] leading-snug text-content/55">
             A second checkout of this repository in its own folder. Agents working there cannot
-            touch the files in {prettyCwd(repoPath)}.
+            touch the files in {prettyCwd(repoRoot)}.
           </p>
         </div>
 

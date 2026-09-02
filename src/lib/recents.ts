@@ -225,6 +225,29 @@ export function collectRailProjects(
 }
 
 /**
+ * The rail row that stands for the repository `repo`, or `null` when the
+ * repository is not on the rail.
+ *
+ * A project is keyed by the folder the user opened, which is not always the
+ * repository root: opening `wavex/src-tauri` puts that folder on the rail while
+ * git still calls the repository `wavex`. The row is the repository's all the
+ * same, so its worktrees belong under it. The shallowest candidate wins, and a
+ * worktree that happens to sit inside the repository is never one — it is a
+ * child row, not the repository's own.
+ */
+export function repoRailPath(repo: string, projects: Iterable<string>): string | null {
+  const root = normalize(repo);
+  let best: string | null = null;
+  for (const candidate of projects) {
+    const path = normalize(candidate);
+    if (path === root) return path;
+    if (!path.startsWith(`${root}/`) || isWorktreePath(path)) continue;
+    if (best === null || path.length < best.length) best = path;
+  }
+  return best;
+}
+
+/**
  * Worktrees belong under their repository, not beside it. One whose repository
  * is not on the rail stays a project of its own — otherwise opening a worktree
  * folder directly would leave it with nowhere to appear.
@@ -233,7 +256,7 @@ function withoutNestedWorktrees(map: Map<string, RecentProject>): Map<string, Re
   const nested: string[] = [];
   for (const path of map.keys()) {
     const repo = worktreeRepo(path);
-    if (repo && map.has(repo)) nested.push(path);
+    if (repo && repoRailPath(repo, map.keys()) != null) nested.push(path);
   }
   for (const path of nested) map.delete(path);
   return map;

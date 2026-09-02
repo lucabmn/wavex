@@ -222,6 +222,25 @@ describe("worktrees on the rail", () => {
     expect(items.map((item) => item.path)).toEqual(["/Users/me/.wavex/worktrees/app/login"]);
   });
 
+  it("nests a worktree under a project opened inside the repository", () => {
+    rememberProject("/Users/me/code/app/src-tauri");
+    rememberWorktrees("/Users/me/code/app", ["/private/tmp/app-main-agent"]);
+
+    const items = projectRailItems(loadRecents(), "/private/tmp/app-main-agent");
+    expect(items.map((item) => item.path)).toEqual(["/Users/me/code/app/src-tauri"]);
+  });
+
+  it("keeps a worktree beside a project that only shares a name prefix", () => {
+    rememberProject("/Users/me/code/app-tools");
+    rememberWorktrees("/Users/me/code/app", ["/private/tmp/app-main-agent"]);
+
+    const items = projectRailItems(loadRecents(), "/private/tmp/app-main-agent");
+    expect(items.map((item) => item.path)).toEqual([
+      "/Users/me/code/app-tools",
+      "/private/tmp/app-main-agent",
+    ]);
+  });
+
   it("does not spend a recents slot on a worktree", () => {
     rememberWorktrees("/Users/me/code/app", ["/Users/me/.wavex/worktrees/app/login"]);
     rememberProject("/Users/me/code/app");
