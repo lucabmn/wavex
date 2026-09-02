@@ -2199,11 +2199,11 @@ fn git_blob(root: &Path, spec: &str) -> Option<Vec<u8>> {
     git_output(root, &["cat-file", "-p", spec])
 }
 
-fn git_run(root: &Path, args: &[&str]) -> Option<String> {
+pub(crate) fn git_run(root: &Path, args: &[&str]) -> Option<String> {
     git_output(root, args).map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
 }
 
-fn git_output(root: &Path, args: &[&str]) -> Option<Vec<u8>> {
+pub(crate) fn git_output(root: &Path, args: &[&str]) -> Option<Vec<u8>> {
     let output = Command::new("git")
         .arg("--no-pager")
         .arg("-C")
@@ -2231,7 +2231,7 @@ fn git_head_branch(root: &Path) -> Option<String> {
     git_stdout(root, &["symbolic-ref", "--short", "HEAD"]).filter(|branch| branch != "HEAD")
 }
 
-fn git_is_work_tree(root: &Path) -> bool {
+pub(crate) fn git_is_work_tree(root: &Path) -> bool {
     git_stdout(root, &["rev-parse", "--is-inside-work-tree"]).as_deref() == Some("true")
 }
 
@@ -2484,7 +2484,7 @@ fn git_remote_name(root: &Path) -> Option<String> {
     Some(first)
 }
 
-fn git_default_branch(root: &Path, remote: Option<&str>) -> Option<String> {
+pub(crate) fn git_default_branch(root: &Path, remote: Option<&str>) -> Option<String> {
     if let Some(remote) = remote {
         if let Some(head) = git_stdout(
             root,
@@ -2513,7 +2513,7 @@ fn git_default_branch(root: &Path, remote: Option<&str>) -> Option<String> {
     None
 }
 
-fn git_ref_exists(root: &Path, spec: &str) -> bool {
+pub(crate) fn git_ref_exists(root: &Path, spec: &str) -> bool {
     git_output(root, &["show-ref", "--verify", "--quiet", spec]).is_some()
 }
 
@@ -2534,7 +2534,7 @@ fn git_ahead_behind(root: &Path, base: &str) -> (i64, i64) {
     (ahead, behind)
 }
 
-fn git_stdout(root: &Path, args: &[&str]) -> Option<String> {
+pub(crate) fn git_stdout(root: &Path, args: &[&str]) -> Option<String> {
     let output = Command::new("git")
         .arg("-C")
         .arg(root)

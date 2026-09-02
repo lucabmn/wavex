@@ -1,4 +1,7 @@
-import { prettyCwd } from "./paths";
+import { normalizeProjectPath, prettyCwd } from "./paths";
+import { isWorktreePath, worktreeRepo } from "./worktrees/worktreeIndex";
+
+export { normalizeProjectPath };
 
 const KEY = "wavex.recentProjects";
 const RAIL_ORDER_KEY = "wavex.projectRailOrder";
@@ -16,10 +19,6 @@ export type ArchivedProject = {
   path: string;
   archivedAt: number;
 };
-
-export function normalizeProjectPath(path: string): string {
-  return path.replace(/\/+$/, "") || "/";
-}
 
 function normalize(path: string): string {
   return normalizeProjectPath(path);
@@ -61,6 +60,9 @@ function save(next: RecentProject[]) {
 export function rememberProject(path: string): RecentProject[] {
   const normalized = normalize(path);
   if (normalized === "~") return loadRecents();
+  // Worktrees ride along with the repository they belong to. Twenty of them
+  // open at once would otherwise push every real project out of the list.
+  if (isWorktreePath(normalized)) return loadRecents();
   dropArchived(normalized);
   const prev = loadRecents().filter((p) => p.path !== normalized);
   const next = [{ path: normalized, openedAt: Date.now() }, ...prev].slice(0, MAX);
@@ -219,6 +221,44 @@ export function collectRailProjects(
       map.set(path, { path, openedAt: Date.now() });
     }
   }
+  return withoutNestedWorktrees(map);
+}
+
+/**
+ * The rail row that stands for the repository `repo`, or `null` when the
+ * repository is not on the rail.
+ *
+ * A project is keyed by the folder the user opened, which is not always the
+ * repository root: opening `wavex/src-tauri` puts that folder on the rail while
+ * git still calls the repository `wavex`. The row is the repository's all the
+ * same, so its worktrees belong under it. The shallowest candidate wins, and a
+ * worktree that happens to sit inside the repository is never one — it is a
+ * child row, not the repository's own.
+ */
+export function repoRailPath(repo: string, projects: Iterable<string>): string | null {
+  const root = normalize(repo);
+  let best: string | null = null;
+  for (const candidate of projects) {
+    const path = normalize(candidate);
+    if (path === root) return path;
+    if (!path.startsWith(`${root}/`) || isWorktreePath(path)) continue;
+    if (best === null || path.length < best.length) best = path;
+  }
+  return best;
+}
+
+/**
+ * Worktrees belong under their repository, not beside it. One whose repository
+ * is not on the rail stays a project of its own — otherwise opening a worktree
+ * folder directly would leave it with nowhere to appear.
+ */
+function withoutNestedWorktrees(map: Map<string, RecentProject>): Map<string, RecentProject> {
+  const nested: string[] = [];
+  for (const path of map.keys()) {
+    const repo = worktreeRepo(path);
+    if (repo && repoRailPath(repo, map.keys()) != null) nested.push(path);
+  }
+  for (const path of nested) map.delete(path);
   return map;
 }
 

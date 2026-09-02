@@ -31,6 +31,10 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/editor/`: editor documents, git gutter, lint, and search
 - `src/lib/files/`: file index, tree, mentions, and watching
 - `src/lib/inbox/`: GitHub issues and pull requests
+- `src/lib/updates/`: updater and release notes
+- `src/lib/project/`: project logos, mascots, metadata
+- `src/lib/worktrees/`: git worktrees, their folders, and the repository they
+  belong to
 - `src/lib/updates/`: updater state and release notes
 - `src/lib/project/`: project logos, mascots, and metadata
 
