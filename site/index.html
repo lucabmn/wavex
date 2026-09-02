@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>wavex — one desktop app for every coding agent you already pay for</title>
+    <meta
+      name="description"
+      content="wavex drives the agent CLIs installed on your machine through your own subscriptions. Sessions, editor, terminal, git and an inbox in one window. macOS on Apple Silicon, MIT."
+    />
+    <link rel="icon" href="assets/logo.png" />
+    <meta property="og:title" content="wavex" />
+    <meta
+      property="og:description"
+      content="One desktop app for every coding agent you already pay for."
+    />
+    <meta property="og:image" content="assets/app.jpg" />
+    <style>
+      :root {
+        color-scheme: dark;
+
+        --bg: hsl(240 0% 9%);
+        --bg-raised: hsl(240 0% 11%);
+        --content: hsl(240 0% 92%);
+        --accent: hsl(211 92% 62%);
+        --link: #7dd3fc;
+
+        --muted: color-mix(in srgb, var(--content) 55%, transparent);
+        --faint: color-mix(in srgb, var(--content) 38%, transparent);
+        --line: color-mix(in srgb, var(--content) 16%, transparent);
+        --line-soft: color-mix(in srgb, var(--content) 8%, transparent);
+
+        --font-sans:
+          system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+        --font-mono:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+
+        --gutter: 24px;
+        --page: 1080px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--content);
+        font-family: var(--font-sans);
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: var(--link);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      code {
+        font-family: var(--font-mono);
+        font-size: 0.875em;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: var(--page);
+        margin: 0 auto;
+        padding: 0 var(--gutter);
+      }
+
+      /* ---------- chrome ---------- */
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      @supports (backdrop-filter: blur(1px)) {
+        header {
+          backdrop-filter: saturate(140%) blur(12px);
+        }
+      }
+
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        height: 52px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--content);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .brand:hover {
+        text-decoration: none;
+      }
+
+      .brand img {
+        width: 22px;
+        height: 22px;
+        display: block;
+      }
+
+      .bar nav {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 14px;
+      }
+
+      .bar nav a {
+        color: var(--muted);
+      }
+
+      .bar nav a:hover {
+        color: var(--content);
+        text-decoration: none;
+      }
+
+      .bar .btn {
+        margin-left: 4px;
+      }
+
+      @media (max-width: 640px) {
+        .bar nav .hide-sm {
+          display: none;
+        }
+      }
+
+      /* ---------- buttons ---------- */
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--content);
+        background: transparent;
+        white-space: nowrap;
+      }
+
+      .btn:hover {
+        text-decoration: none;
+        border-color: color-mix(in srgb, var(--content) 30%, transparent);
+        background: color-mix(in srgb, var(--content) 5%, transparent);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: hsl(240 0% 9%);
+        font-weight: 600;
+      }
+
+      .btn-primary:hover {
+        background: color-mix(in srgb, var(--accent) 88%, white);
+        border-color: color-mix(in srgb, var(--accent) 88%, white);
+      }
+
+      /* ---------- sections ---------- */
+
+      section {
+        border-top: 1px solid var(--line-soft);
+        padding: 72px 0;
+      }
+
+      section:first-of-type {
+        border-top: 0;
+      }
+
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin: 0 0 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .eyebrow::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line-soft);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5.2vw, 3.1rem);
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+        font-weight: 600;
+        max-width: 17ch;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        font-weight: 600;
+      }
+
+      h3 {
+        margin: 0 0 4px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+      }
+
+      p {
+        margin: 0 0 16px;
+      }
+
+      .lede {
+        max-width: 62ch;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .note {
+        max-width: 62ch;
+        color: var(--faint);
+        font-size: 14px;
+      }
+
+      /* ---------- hero ---------- */
+
+      .hero {
+        padding: 84px 0 56px;
+      }
+
+      .hero h1 {
+        margin-bottom: 22px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin: 26px 0 14px;
+      }
+
+      .meta {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--faint);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .meta span:not(:last-child)::after {
+        content: " ·";
+      }
+
+      /* ---------- shot ---------- */
+
+      .shot {
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .shot figure {
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--bg-raised);
+        box-shadow: 0 40px 90px -50px hsl(0 0% 0% / 0.9);
+      }
+
+      .shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .shot figcaption {
+        margin-top: 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--faint);
+      }
+
+      /* ---------- providers ---------- */
+
+      .providers {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+        gap: 1px;
+        margin-top: 28px;
+        background: var(--line-soft);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .provider {
+        background: var(--bg);
+        padding: 16px 18px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .provider .icon {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        margin-top: 1px;
+        color: var(--content);
+      }
+
+      .provider .icon svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .provider .name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--content);
+      }
+
+      .provider .name a {
+        color: inherit;
+      }
+
+      .provider .cmd .then {
+        font-family: var(--font-sans);
+        font-style: italic;
+        opacity: 0.7;
+      }
+
+      .provider .cmd {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 3px;
+        word-break: break-word;
+      }
+
+      /* ---------- window contents ---------- */
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 28px 40px;
+        margin-top: 32px;
+      }
+
+      .feature {
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+
+      .feature .num {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent);
+        letter-spacing: 0.08em;
+      }
+
+      .feature p {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      /* ---------- install ---------- */
+
+      .cols {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 40px;
+        align-items: start;
+      }
+
+      @media (max-width: 760px) {
+        .cols {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 32px;
+        }
+      }
+
+      pre {
+        margin: 0 0 14px;
+        padding: 14px 16px;
+        background: var(--bg-raised);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        line-height: 1.55;
+        color: color-mix(in srgb, var(--content) 82%, transparent);
+      }
+
+      pre .prompt {
+        color: var(--faint);
+        user-select: none;
+      }
+
+      ol.steps {
+        margin: 0 0 18px;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      ol.steps li {
+        margin-bottom: 6px;
+      }
+
+      ol.steps strong {
+        color: var(--content);
+        font-weight: 600;
+      }
+
+      /* ---------- footer ---------- */
+
+      footer {
+        border-top: 1px solid var(--line-soft);
+        padding: 32px 0 48px;
+        color: var(--faint);
+        font-size: 13px;
+      }
+
+      footer .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        align-items: center;
+      }
+
+      footer .row .spacer {
+        flex: 1;
+      }
+
+      footer p {
+        margin: 16px 0 0;
+        max-width: 62ch;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap bar">
+        <a class="brand" href="#top">
+          <img src="assets/logo.png" alt="" width="22" height="22" />
+          wavex
+        </a>
+        <nav>
+          <a class="hide-sm" href="#providers">Providers</a>
+          <a class="hide-sm" href="#window">The window</a>
+          <a class="hide-sm" href="#install">Install</a>
+          <a href="https://github.com/lucabmn/wavex">GitHub</a>
+          <a
+            class="btn btn-primary"
+            href="https://github.com/lucabmn/wavex/releases/latest"
+            >Download</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">macOS · Apple Silicon · MIT</p>
+          <h1>One desktop app for every coding agent you already pay for.</h1>
+          <p class="lede">
+            wavex drives the agent CLIs installed on your machine through your own subscriptions.
+            Tabs are sessions, the composer is the input, and the agent works in your real
+            checkout — not a sandbox copy.
+          </p>
+          <p class="note">wavex does not resell tokens and has no account of its own.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://github.com/lucabmn/wavex/releases/latest"
+              >Download the .dmg</a
+            >
+            <a class="btn" href="https://github.com/lucabmn/wavex">Read the source</a>
+          </div>
+          <p class="meta">
+            <span>Tauri 2 · React 19 · Rust</span><span>MIT</span><span>not notarized yet</span>
+          </p>
+        </div>
+      </section>
+
+      <section class="shot">
+        <div class="wrap">
+          <figure>
+            <img
+              src="assets/app.jpg"
+              width="2200"
+              height="1346"
+              alt="The wavex window: a session list on the left, two agent transcripts side by side, an editor pane, and the git changes panel on the right."
+              fetchpriority="high"
+            />
+          </figure>
+          <figcaption>
+            Two agents on one checkout, an editor pane, and staged changes — same window.
+          </figcaption>
+        </div>
+      </section>
+
+      <section id="providers">
+        <div class="wrap">
+          <p class="eyebrow">01 — Providers</p>
+          <h2>Eight agents, one window.</h2>
+          <p class="lede">
+            Install and sign in to at least one. wavex detects what is on your PATH and offers only
+            that. Switch provider or model per session from the composer — a session started on one
+            agent can be handed to another mid-conversation, and any turn can be sent to a second
+            agent for a second opinion.
+          </p>
+
+          <div class="providers">
+            <div class="provider">
+              <span class="icon"><svg viewBox="-4 -4 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#claude_clip0_2480_92)">
+<path d="M5.684 19.285L11.397 16.095L11.484 15.805L11.397 15.66H11.107L10.15 15.602L6.902 15.515L4.06 15.37L1.305 15.225L0.609 15.08L0 14.21L0.058 13.775L0.638 13.398L1.479 13.456L3.306 13.601L6.061 13.775L8.062 13.891L11.02 14.239H11.484L11.542 14.036L11.397 13.92L11.281 13.804L8.41 11.89L5.336 9.86L3.712 8.671L2.842 8.091L2.407 7.511L2.233 6.293L3.016 5.423L4.089 5.51L4.35 5.568L5.423 6.409L7.743 8.178L10.73 10.44L11.165 10.788L11.339 10.672L11.368 10.585L11.165 10.266L9.57 7.25L7.83 4.234L7.047 2.987L6.844 2.233C6.757 1.943 6.728 1.653 6.728 1.363L7.598 0.145L8.12 0L9.338 0.174L9.802 0.58L10.556 2.32L11.745 5.017L13.63 8.671L14.21 9.773L14.5 10.759L14.587 11.049H14.79V10.904L14.935 8.816L15.225 6.293L15.515 3.045L15.602 2.117L16.066 1.015L16.936 0.435L17.69 0.754L18.27 1.595L18.183 2.117L17.864 4.35L17.11 7.859L16.675 10.237H16.936L17.226 9.918L18.415 8.352L20.416 5.858L21.286 4.843L22.33 3.77L22.997 3.248H24.244L25.143 4.611L24.737 6.032L23.461 7.656L22.388 9.019L20.851 11.078L19.923 12.731L20.01 12.847H20.213L23.693 12.093L25.549 11.774L27.753 11.397L28.768 11.861L28.884 12.325L28.478 13.311L26.1 13.891L23.316 14.471L19.169 15.428L19.111 15.457L19.169 15.544L21.025 15.718L21.837 15.776H23.809L27.463 16.066L28.42 16.646L28.971 17.429L28.884 18.009L27.405 18.763L25.433 18.299L20.793 17.197L19.227 16.82H18.995V16.936L20.329 18.241L22.736 20.416L25.81 23.229L25.955 23.925L25.578 24.505L25.172 24.447L22.504 22.417L21.46 21.547L19.14 19.575H18.995V19.778L19.517 20.561L22.359 24.824L22.504 26.129L22.301 26.535L21.547 26.825L20.764 26.651L19.082 24.331L17.342 21.721L15.979 19.343L15.834 19.459L14.993 28.217L14.616 28.652L13.746 29L13.021 28.42L12.615 27.55L13.021 25.752L13.485 23.432L13.862 21.576L14.21 19.285L14.413 18.531V18.473H14.21L12.47 20.88L9.86 24.447L7.772 26.651L7.279 26.854L6.409 26.419L6.496 25.607L6.96 24.94L9.86 21.228L11.6 18.937L12.76 17.603L12.731 17.458H12.644L4.988 22.446L3.625 22.62L3.045 22.04L3.103 21.17L3.393 20.88L5.713 19.285H5.684Z" fill="#D97757"/>
+</g>
+<defs>
+<clipPath id="claude_clip0_2480_92">
+<rect width="29" height="29" fill="white"/>
+</clipPath>
+</defs>
+</svg></span>
+              <div>
+                <div class="name">
+                  <a href="https://claude.com/product/claude-code">Claude Code</a>
+                </div>
+                <div class="cmd">claude auth login</div>
+              </div>
+            </div>
+            <div class="provider">
+              <span class="icon"><svg viewBox="-4 -4 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="14" cy="15" r="9" fill="white"/>
+<path d="M10.0958 1.51649C11.1796 1.07057 12.3596 0.909459 13.5233 1.0485C15.0233 1.22099 16.3598 1.85848 17.5328 2.96096C17.5478 2.97596 17.5688 2.98645 17.5883 2.99245C17.6095 2.99767 17.6316 2.99767 17.6528 2.99245C19.1778 2.59865 20.792 2.74439 22.2218 3.40495L22.2923 3.43794L22.4663 3.52344C23.963 4.28199 25.1304 5.56192 25.7483 7.12186C26.0619 7.88684 26.2178 8.68333 26.2208 9.51431C26.2434 10.1323 26.1757 10.7503 26.0199 11.3488C26.0122 11.379 26.0123 11.4106 26.0201 11.4408C26.028 11.471 26.0434 11.4987 26.0648 11.5213C26.9559 12.4317 27.5469 13.5162 27.8394 14.7762C28.2729 16.9136 27.8289 18.8411 26.5089 20.5571L26.3049 20.8061C25.4306 21.8068 24.2831 22.5304 23.0033 22.888C22.9756 22.8961 22.9501 22.9107 22.929 22.9305C22.9079 22.9503 22.8917 22.9748 22.8818 23.002C22.5953 23.8285 22.3073 24.5365 21.7718 25.243C20.4218 27.0234 18.4388 28.0119 16.2053 27.9999C14.4248 27.9909 12.8468 27.3399 11.4698 26.0469C11.4491 26.0275 11.4236 26.014 11.3959 26.0077C11.3682 26.0014 11.3394 26.0025 11.3123 26.0109C10.7303 26.1984 10.1423 26.2254 9.50627 26.2179C8.49326 26.2098 7.49546 25.9707 6.58875 25.519C5.63899 25.0483 4.81209 24.3627 4.17374 23.5165C3.94574 23.2135 3.71924 22.9285 3.55274 22.591C3.32543 22.1279 3.1397 21.6455 2.99773 21.1495C2.69803 20.021 2.69081 18.8347 2.97673 17.7026C2.98614 17.6757 2.98922 17.6469 2.98573 17.6186C2.9806 17.5908 2.96635 17.5655 2.94523 17.5466C2.25233 16.8453 1.72274 15.9997 1.39423 15.0702C1.17575 14.4976 1.0487 13.8943 1.01772 13.2822C0.96323 12.4761 1.03458 11.6664 1.22922 10.8823C1.73473 9.21431 2.70223 7.90484 4.12874 6.95536C4.44674 6.74387 4.74824 6.57887 5.03024 6.46038C5.35275 6.32688 5.67525 6.21438 5.99925 6.11988C6.0224 6.1127 6.04342 6.09991 6.06043 6.08263C6.07745 6.06536 6.08992 6.04415 6.09675 6.02089C6.34277 5.13747 6.76584 4.31329 7.34026 3.59844C8.06436 2.67897 9.01345 1.96188 10.0958 1.51649ZM15.3188 17.3636C15.075 17.3773 14.8457 17.4838 14.678 17.6612C14.5103 17.8386 14.4168 18.0735 14.4168 18.3176C14.4168 18.5618 14.5103 18.7966 14.678 18.974C14.8457 19.1514 15.075 19.2579 15.3188 19.2716H20.7728C20.9026 19.2789 21.0325 19.2596 21.1546 19.2149C21.2767 19.1703 21.3883 19.1012 21.4828 19.0119C21.5772 18.9226 21.6525 18.815 21.7039 18.6956C21.7553 18.5762 21.7818 18.4476 21.7818 18.3176C21.7818 18.1876 21.7553 18.059 21.7039 17.9396C21.6525 17.8203 21.5772 17.7126 21.4828 17.6233C21.3883 17.534 21.2767 17.4649 21.1546 17.4203C21.0325 17.3756 20.9026 17.3564 20.7728 17.3636H15.3188ZM9.19276 10.3453C9.06296 10.1339 8.856 9.98123 8.61567 9.91965C8.37534 9.85806 8.12048 9.89237 7.90499 10.0153C7.6895 10.1382 7.53028 10.3402 7.461 10.5784C7.39172 10.8166 7.41781 11.0724 7.53376 11.2918L9.44177 14.6277L7.54276 17.8316C7.47884 17.9395 7.43678 18.0588 7.419 18.1829C7.40122 18.307 7.40805 18.4334 7.43911 18.5549C7.47017 18.6763 7.52485 18.7905 7.60003 18.8908C7.67521 18.9911 7.76941 19.0757 7.87726 19.1396C7.98511 19.2035 8.10449 19.2456 8.22859 19.2633C8.35269 19.2811 8.47908 19.2743 8.60054 19.2432C8.722 19.2122 8.83615 19.1575 8.93648 19.0823C9.03681 19.0071 9.12134 18.9129 9.18526 18.8051L11.3663 15.1227C11.4523 14.9776 11.4983 14.8123 11.4996 14.6437C11.5009 14.4751 11.4575 14.3091 11.3738 14.1627L9.19276 10.3453Z" fill="url(#codex_paint0_linear_2480_101)"/>
+<defs>
+<linearGradient id="codex_paint0_linear_2480_101" x1="14.4998" y1="1.0005" x2="14.4998" y2="27.9999" gradientUnits="userSpaceOnUse">
+<stop stop-color="#B1A7FF"/>
+<stop offset="0.5" stop-color="#7A9DFF"/>
+<stop offset="1" stop-color="#3941FF"/>
+</linearGradient>
+</defs>
+</svg></span>
+              <div>
+                <div class="name"><a href="https://developers.openai.com/codex/cli">Codex</a></div>
+                <div class="cmd">codex login</div>
+              </div>
+            </div>
+            <div class="provider">
+              <span class="icon"><svg viewBox="-4 -4 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M26.5001 6.86227L15.0931 0.161574C14.913 0.055725 14.7086 0 14.5006 0C14.2926 0 14.0882 0.055725 13.908 0.161574L2.49755 6.86227C2.34639 6.95136 2.22087 7.07929 2.13356 7.23325C2.04624 7.38722 2.00018 7.56182 2 7.73958V21.257C2 21.6195 2.19 21.9542 2.49874 22.1355L13.9069 28.8386C14.0871 28.9443 14.2914 29 14.4994 29C14.7074 29 14.9118 28.9443 15.092 28.8386L26.5013 22.1355C26.6528 22.0465 26.7787 21.9184 26.8662 21.7642C26.9538 21.61 26.9999 21.4351 27 21.257V7.74079C26.9997 7.56291 26.9535 7.38823 26.8659 7.23426C26.7784 7.08028 26.6526 6.95242 26.5013 6.86348L26.5001 6.86227ZM25.784 8.28337L14.7702 27.6954C14.6953 27.826 14.4994 27.7728 14.4994 27.6217V14.9104C14.4992 14.7854 14.4667 14.6627 14.4053 14.5545C14.3438 14.4464 14.2554 14.3565 14.1491 14.2941L3.33116 7.93776C3.2041 7.86284 3.25635 7.66224 3.40479 7.66224H25.4325C25.746 7.66224 25.9408 8.00785 25.784 8.28337Z" fill="currentColor"/>
+</svg></span>
+              <div>
+                <div class="name"><a href="https://cursor.com/cli">Cursor CLI</a></div>
+                <div class="cmd">agent login</div>
+              </div>
+            </div>
+            <div class="provider">
+              <span class="icon"><svg viewBox="0 0 35 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M13.2371 21.0407L24.3186 12.8506C24.8619 12.4491 25.6384 12.6057 25.8973 13.2294C27.2597 16.5185 26.651 20.4712 23.9403 23.1851C21.2297 25.8989 17.4581 26.4941 14.0108 25.1386L10.2449 26.8843C15.6463 30.5806 22.2053 29.6665 26.304 25.5601C29.5551 22.3051 30.562 17.8683 29.6205 13.8673L29.629 13.8758C28.2637 7.99809 29.9647 5.64871 33.449 0.844576C33.5314 0.730667 33.6139 0.616757 33.6964 0.5L29.1113 5.09055V5.07631L13.2343 21.0436" fill="currentColor"/>
+  <path d="M10.9503 23.0313C7.07343 19.3235 7.74185 13.5853 11.0498 10.2763C13.4959 7.82722 17.5036 6.82767 21.0021 8.2971L24.7595 6.55998C24.0826 6.07017 23.215 5.54334 22.2195 5.17313C17.7198 3.31926 12.3326 4.24192 8.67479 7.90126C5.15635 11.4239 4.0499 16.8403 5.94992 21.4622C7.36924 24.9165 5.04257 27.3598 2.69884 29.826C1.86829 30.7002 1.0349 31.5745 0.36364 32.5L10.9474 23.0341" fill="currentColor"/>
+</svg></span>
+              <div>
+                <div class="name"><a href="https://docs.x.ai/build/overview">Grok Build</a></div>
+                <div class="cmd">
+                  curl -fsSL https://x.ai/cli/install.sh | bash<br />
+                  <span class="then">then</span> grok login
+                </div>
+              </div>
+            </div>
+            <div class="provider">
+              <span class="icon"><svg viewBox="-4 -4 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" d="M20.4 5.8H8.8V23.2H20.4V5.8ZM26.2 29H3V0H26.2V29Z" fill="currentColor"/>
+</svg></span>
+              <div>
+                <div class="name"><a href="https://opencode.ai">OpenCode</a></div>
+                <div class="cmd">opencode auth login</div>
+              </div>
+            </div>
+            <div class="provider">
+              <span class="icon"><svg viewBox="-4 -4 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M1 1H22V14.4997H14.9998V21.2499H8.0002V28H1V1ZM8.0002 7.75014V14.4997H14.9998V7.75014H8.0002Z" fill="currentColor"/>
+<path d="M22 15H28V28H22V15Z" fill="currentColor"/>
+</svg></span>
+              <div>
+                <div class="name"><a href="https://pi.dev/">Pi</a></div>
+                <div class="cmd">pnpm add -g @earendil-works/pi-coding-agent</div>
+              </div>
+            </div>
+            <div class="provider">
+              <span class="icon"><svg viewBox="-4 -4 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M1 1H29V6.5H1V1Z" fill="currentColor"/>
+<path d="M5.5 6.5H10.5V28H5.5V6.5Z" fill="currentColor"/>
+<path d="M18.5 6.5H23.5V17H18.5V6.5Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M15.5 17H26.5V25.5H15.5V17ZM19 20V22.5H20.5V20H19ZM22.5 20V22.5H24V20H22.5Z" fill="currentColor"/>
+</svg></span>
+              <div>
+                <div class="name"><a href="https://omp.sh">omp</a></div>
+                <div class="cmd">curl -fsSL https://omp.sh/install | sh</div>
+              </div>
+            </div>
+            <div class="provider">
+              <span class="icon"><svg viewBox="-4 -4 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.3315 0C14.3158 0 15.4694 0.264398 16.1485 0.571621L16.5318 0.746645L15.5996 3.46883L15.1531 3.30498C14.6358 3.11319 14.0851 2.94189 13.4432 2.94189C12.7901 2.94189 12.3826 3.0834 12.0644 3.41111C11.7202 3.76674 11.4225 4.40167 11.162 5.54119L10.9592 6.48892H14.0348L17.5254 6.50754H17.5738L17.6017 6.54851L20.9527 11.4752L24.2814 6.50754H28.7711L23.3399 14.2887L29 22.2969H24.7633L24.7354 22.2597L13.9362 7.53721L13.6032 9.19807H10.388L7.34024 23.686C7.01277 25.2686 6.50295 26.5962 5.68241 27.5328C4.84326 28.4898 3.71384 29 2.25138 29C1.47735 29 0.83915 28.8808 0.310727 28.6946L0 28.5848V25.5423L0.1228 25.5833L0.612151 25.7472C1.10522 25.911 1.52015 26.0302 2.0281 26.0302C2.28673 26.0302 2.50443 25.9799 2.69607 25.8775C2.88772 25.7751 3.0589 25.6205 3.21519 25.4046C3.54639 24.9484 3.8106 24.2297 4.03015 23.213L6.98114 9.19807H4.3967L4.74836 7.34356L4.80046 7.32681L7.55049 6.41817L7.79796 5.33265C8.23893 3.39063 8.84364 2.03698 9.7628 1.17676C10.6987 0.299775 11.8877 0 13.3315 0ZM20.0484 18.4483L17.4584 22.39H12.7082L17.6315 15.2718L20.0484 18.4483Z" fill="currentColor"/>
+</svg></span>
+              <div>
+                <div class="name"><a href="https://fx.sh">fx</a></div>
+                <div class="cmd">
+                  curl -fsSL https://fx.sh/setup.sh | bash<br />
+                  <span class="then">then</span> fx login
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="window">
+        <div class="wrap">
+          <p class="eyebrow">02 — What is in the window</p>
+          <h2>A session list, an editor, a terminal, and git.</h2>
+          <p class="lede">
+            Everything the agent touches is in the same window, working on the same checkout you
+            have open in your shell.
+          </p>
+
+          <div class="features">
+            <div class="feature">
+              <span class="num">01</span>
+              <h3>Sessions</h3>
+              <p>
+                Every tab is a conversation. Split a tab into panes to run several agents against
+                the same checkout at once, and group tabs by project.
+              </p>
+            </div>
+            <div class="feature">
+              <span class="num">02</span>
+              <h3>Editor</h3>
+              <p>
+                CodeMirror with a git gutter, inline diffs, lint, and project-wide search. Files the
+                agent touches refresh under you.
+              </p>
+            </div>
+            <div class="feature">
+              <span class="num">03</span>
+              <h3>Terminal</h3>
+              <p>
+                A real PTY per tab plus a project-wide dock, so a dev server keeps running while you
+                move between sessions.
+              </p>
+            </div>
+            <div class="feature">
+              <span class="num">04</span>
+              <h3>Git</h3>
+              <p>
+                Stage by file or by hunk, commit, push, pull, switch branches, stash, and open a
+                pull request. Commit messages, PR titles and branch names can be generated by
+                whichever agent is signed in.
+              </p>
+            </div>
+            <div class="feature">
+              <span class="num">05</span>
+              <h3>Checkpoints</h3>
+              <p>
+                Every turn that edits files is captured, so a bad turn can be undone without
+                touching your own commits.
+              </p>
+            </div>
+            <div class="feature">
+              <span class="num">06</span>
+              <h3>Inbox</h3>
+              <p>
+                GitHub issues and pull requests across your projects, with comment threads and PR
+                diffs, and one click to hand an item to an agent.
+              </p>
+            </div>
+            <div class="feature">
+              <span class="num">07</span>
+              <h3>Notes and skills</h3>
+              <p>
+                Scratch notes per project, and the skills your agents expose surfaced in the
+                composer.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="install">
+        <div class="wrap">
+          <p class="eyebrow">03 — Install</p>
+          <div class="cols">
+            <div>
+              <h2>macOS on Apple Silicon.</h2>
+              <ol class="steps">
+                <li>
+                  Download the <strong>.dmg</strong> from
+                  <a href="https://github.com/lucabmn/wavex/releases/latest">Releases</a>.
+                </li>
+                <li>Open it and drag wavex to Applications.</li>
+                <li>Sign in to at least one agent CLI.</li>
+              </ol>
+              <p class="note">
+                The build is not notarized yet. If Gatekeeper blocks the first launch, right click
+                the app and choose <strong>Open</strong>, or clear the quarantine flag:
+              </p>
+              <pre><span class="prompt">$ </span>xattr -d com.apple.quarantine /Applications/wavex.app</pre>
+            </div>
+            <div>
+              <h2>Or build from source.</h2>
+              <p class="note">
+                Node.js 22+, pnpm, a current stable Rust toolchain, and the Xcode Command Line
+                Tools.
+              </p>
+              <pre><span class="prompt">$ </span>pnpm install
+<span class="prompt">$ </span>pnpm tauri dev</pre>
+              <p class="note">
+                Small, focused pull requests are welcome. Security reports go through
+                <a href="https://github.com/lucabmn/wavex/security/advisories/new"
+                  >private advisories</a
+                >, never a public issue.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="row">
+          <a class="brand" href="#top">
+            <img src="assets/logo.png" alt="" width="22" height="22" />
+            wavex
+          </a>
+          <span class="spacer"></span>
+          <a href="https://github.com/lucabmn/wavex">GitHub</a>
+          <a href="https://github.com/lucabmn/wavex/releases/latest">Releases</a>
+          <a href="https://github.com/lucabmn/wavex/blob/main/LICENSE">MIT</a>
+        </div>
+        <p>
+          wavex is derived from MonoCode. Provider names and logos are trademarks of their owners.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
