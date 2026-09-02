@@ -82,10 +82,7 @@ export function loadTabGroupCustomColors(): Record<string, string> {
 }
 
 function writeTabGroupColorIndices(next: Record<string, number>): void {
-  writeRecord(
-    COLOR_KEY,
-    Object.fromEntries(Object.entries(next).map(([k, v]) => [k, String(v)])),
-  );
+  writeRecord(COLOR_KEY, Object.fromEntries(Object.entries(next).map(([k, v]) => [k, String(v)])));
 }
 
 function writeTabGroupCustomColors(next: Record<string, string>): void {
@@ -114,10 +111,7 @@ export function saveTabGroupColor(project: string, index: number | null): void {
   writeTabGroupColorIndices(next);
 }
 
-export function saveTabGroupCustomColor(
-  project: string,
-  color: string | null,
-): void {
+export function saveTabGroupCustomColor(project: string, color: string | null): void {
   clearTabGroupColorIndex(project);
   const next = loadTabGroupCustomColors();
   if (color == null || !HEX_COLOR_RE.test(color)) delete next[project];
@@ -162,13 +156,7 @@ export function saveTabGroupMascot(project: string, name: string | null): void {
 
 /** Drops every saved appearance override for a project. */
 export function clearTabGroupSettings(project: string): void {
-  for (const key of [
-    COLOR_KEY,
-    CUSTOM_COLOR_KEY,
-    LABEL_KEY,
-    LOGO_KEY,
-    MASCOT_KEY,
-  ]) {
+  for (const key of [COLOR_KEY, CUSTOM_COLOR_KEY, LABEL_KEY, LOGO_KEY, MASCOT_KEY]) {
     const next = readRecord(key);
     if (!(project in next)) continue;
     delete next[project];
@@ -317,10 +305,7 @@ export function canJoinTabOnto<T extends GroupedTab>(
   if (dragged.groupId) {
     return canJoinTabGroup(tabs, targetId, dragged.groupId, projectOf);
   }
-  return sameProject(
-    projectKey(projectOf(draggedId)),
-    projectKey(projectOf(targetId)),
-  );
+  return sameProject(projectKey(projectOf(draggedId)), projectKey(projectOf(targetId)));
 }
 
 export function newTabGroupId(): string {
@@ -399,16 +384,11 @@ export function reorderTabSegments(
   nextSegments.splice(toSegmentIndex, 0, moved);
 
   return nextSegments.flatMap((segment) =>
-    segment.kind === "group"
-      ? segment.tabs.map((tab) => tab.id)
-      : [segment.tab.id],
+    segment.kind === "group" ? segment.tabs.map((tab) => tab.id) : [segment.tab.id],
   );
 }
 
-function permutationOf<T extends GroupedTab>(
-  tabs: T[],
-  orderedIds: string[],
-): T[] | null {
+function permutationOf<T extends GroupedTab>(tabs: T[], orderedIds: string[]): T[] | null {
   if (orderedIds.length !== tabs.length) return null;
   const byId = new Map(tabs.map((tab) => [tab.id, tab]));
   if (orderedIds.some((id) => !byId.has(id))) return null;
@@ -467,18 +447,13 @@ export function applyGroupedReorder<T extends GroupedTab>(
       return slideOutOfGroup(tabs, ordered, movedIndex, prevGroup);
     }
     groupId = prevGroup;
-  } else if (
-    groupId &&
-    (prev?.groupId === groupId || next?.groupId === groupId)
-  ) {
+  } else if (groupId && (prev?.groupId === groupId || next?.groupId === groupId)) {
     // Keep membership when sliding along the edge of the same group.
   } else {
     groupId = undefined;
   }
 
-  return ordered.map((tab) =>
-    tab.id === movedId ? withGroup(tab, groupId) : tab,
-  );
+  return ordered.map((tab) => (tab.id === movedId ? withGroup(tab, groupId) : tab));
 }
 
 export function addTabToGroup<T extends GroupedTab>(
@@ -507,9 +482,7 @@ export function addTabsToNewGroup<T extends GroupedTab>(
   groupId: string,
 ): T[] {
   const idSet = new Set(tabIds);
-  const members = tabs
-    .filter((tab) => idSet.has(tab.id))
-    .map((tab) => withGroup(tab, groupId));
+  const members = tabs.filter((tab) => idSet.has(tab.id)).map((tab) => withGroup(tab, groupId));
   if (members.length === 0) return tabs;
   const firstIndex = tabs.findIndex((tab) => idSet.has(tab.id));
   const rest = tabs.filter((tab) => !idSet.has(tab.id));
@@ -556,18 +529,11 @@ export function joinTabOnto<T extends GroupedTab>(
 }
 
 export function ungroupTabs<T extends GroupedTab>(tabs: T[], groupId: string): T[] {
-  return tabs.map((tab) =>
-    tab.groupId === groupId ? withGroup(tab, undefined) : tab,
-  );
+  return tabs.map((tab) => (tab.groupId === groupId ? withGroup(tab, undefined) : tab));
 }
 
-export function removeTabFromGroup<T extends GroupedTab>(
-  tabs: T[],
-  tabId: string,
-): T[] {
-  return tabs.map((tab) =>
-    tab.id === tabId ? withGroup(tab, undefined) : tab,
-  );
+export function removeTabFromGroup<T extends GroupedTab>(tabs: T[], tabId: string): T[] {
+  return tabs.map((tab) => (tab.id === tabId ? withGroup(tab, undefined) : tab));
 }
 
 /** New tab inherits the active tab's group and sits beside it. */
@@ -582,19 +548,14 @@ export function insertTabBesideActive<T extends GroupedTab>(
   if (activeIndex < 0) return [...tabs, tab];
   const active = tabs[activeIndex];
   const inherits =
-    !!active.groupId &&
-    canJoinTabGroup([...tabs, tab], tab.id, active.groupId, projectOf);
+    !!active.groupId && canJoinTabGroup([...tabs, tab], tab.id, active.groupId, projectOf);
   const incoming = inherits ? withGroup(tab, active.groupId) : tab;
   const next = tabs.slice();
   next.splice(activeIndex + 1, 0, incoming);
   return next;
 }
 
-export function insertTabInGroup<T extends GroupedTab>(
-  tabs: T[],
-  tab: T,
-  groupId: string,
-): T[] {
+export function insertTabInGroup<T extends GroupedTab>(tabs: T[], tab: T, groupId: string): T[] {
   const without = tabs.filter((entry) => entry.id !== tab.id);
   return addTabToGroup([...without, tab], tab.id, groupId);
 }
@@ -607,9 +568,7 @@ export function loadCollapsedTabGroups(): Set<string> {
     if (!raw) return new Set();
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return new Set();
-    return new Set(
-      parsed.filter((entry): entry is string => typeof entry === "string"),
-    );
+    return new Set(parsed.filter((entry): entry is string => typeof entry === "string"));
   } catch {
     return new Set();
   }

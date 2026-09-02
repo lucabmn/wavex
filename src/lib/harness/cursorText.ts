@@ -1,11 +1,5 @@
 import { AcpClient } from "./acp";
-import {
-  killChild,
-  resolveCursorBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, resolveCursorBinary, spawnChild, unwatchChild, watchChild } from "./child";
 import { mergeStream } from "./streamText";
 
 const TEXT_CHILD_ID = "wavex-text";
@@ -42,9 +36,11 @@ export async function stopCursorTextPrompt(childId?: string): Promise<void> {
 /** Start the shared text ACP process in the background so the first prompt is fast. */
 export function warmupCursorText(cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns.catch(() => undefined).then(async () => {
-    await ensureLive(cwd);
-  });
+  const run = turns
+    .catch(() => undefined)
+    .then(async () => {
+      await ensureLive(cwd);
+    });
   turns = run.then(
     () => undefined,
     () => undefined,
@@ -173,20 +169,12 @@ async function openSession(session: LiveText, cwd: string): Promise<void> {
   const setup = await session.acp.request<{
     sessionId?: string;
     configOptions?: unknown;
-  }>(
-    "session/new",
-    { cwd, mcpServers: [] },
-    REQUEST_TIMEOUT_MS,
-  );
+  }>("session/new", { cwd, mcpServers: [] }, REQUEST_TIMEOUT_MS);
   const acpSessionId = setup.sessionId?.trim();
   if (!acpSessionId) throw new Error("Cursor did not return a session id");
 
   await session.acp
-    .request(
-      "session/set_mode",
-      { sessionId: acpSessionId, modeId: "ask" },
-      REQUEST_TIMEOUT_MS,
-    )
+    .request("session/set_mode", { sessionId: acpSessionId, modeId: "ask" }, REQUEST_TIMEOUT_MS)
     .catch(() => undefined);
 
   const modelConfigId = extractModelConfigId(setup.configOptions);
@@ -225,20 +213,11 @@ async function dropLive(): Promise<void> {
   await killChild(TEXT_CHILD_ID).catch(() => undefined);
 }
 
-async function handleTextRequest(
-  acp: AcpClient,
-  id: number,
-  method: string,
-  params: unknown,
-) {
+async function handleTextRequest(acp: AcpClient, id: number, method: string, params: unknown) {
   if (method === "session/request_permission") {
     const optionIds = permissionOptionIds(params);
-    const optionId =
-      optionIds.find((value) => /reject|deny|cancel/i.test(value)) ??
-      "reject-once";
-    await acp
-      .respond(id, { outcome: { outcome: "selected", optionId } })
-      .catch(() => undefined);
+    const optionId = optionIds.find((value) => /reject|deny|cancel/i.test(value)) ?? "reject-once";
+    await acp.respond(id, { outcome: { outcome: "selected", optionId } }).catch(() => undefined);
     return;
   }
   if (method === "cursor/ask_question") {
@@ -279,9 +258,7 @@ function textFromUpdate(params: unknown): string {
   const rec = asRecord(params);
   const update = asRecord(rec?.update) ?? rec;
   if (!update) return "";
-  const kind = String(
-    update.sessionUpdate ?? update.session_update ?? update.type ?? "",
-  );
+  const kind = String(update.sessionUpdate ?? update.session_update ?? update.type ?? "");
   if (kind !== "agent_message_chunk" && kind !== "agent_message") return "";
   return textFromContent(update.content ?? update.text);
 }

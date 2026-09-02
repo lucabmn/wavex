@@ -14,13 +14,7 @@ import {
   Undo2,
   WandSparkles,
 } from "./icons";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { FileTypeIcon } from "./FileTypeIcon";
 import {
   basename,
@@ -62,30 +56,19 @@ type Props = {
   onOpenFile: (path: string) => void;
 };
 
-export function GitChangesPanel({
-  cwd,
-  enabled,
-  textHarness,
-  selectedPath,
-  onOpenFile,
-}: Props) {
+export function GitChangesPanel({ cwd, enabled, textHarness, selectedPath, onOpenFile }: Props) {
   const { index, reload } = useDiffIndex(cwd, enabled);
   const files = index?.files ?? [];
 
   if (!cwd || cwd === "~") {
-    return (
-      <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>
-    );
+    return <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>;
   }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <header className="flex h-9 shrink-0 items-center gap-2 border-b border-content/10 px-3">
         {(index?.additions ?? 0) > 0 || (index?.deletions ?? 0) > 0 ? (
-          <DiffCounts
-            additions={index?.additions ?? 0}
-            deletions={index?.deletions ?? 0}
-          />
+          <DiffCounts additions={index?.additions ?? 0} deletions={index?.deletions ?? 0} />
         ) : (
           <span className="text-[12px] font-medium text-content">Changes</span>
         )}
@@ -94,14 +77,10 @@ export function GitChangesPanel({
             <GitBranch className="size-3 shrink-0" strokeWidth={1.75} />
             <span className="min-w-0 truncate">{index.branch}</span>
             {index.ahead > 0 ? (
-              <span className="shrink-0 tabular-nums text-content/40">
-                ↑{index.ahead}
-              </span>
+              <span className="shrink-0 tabular-nums text-content/40">↑{index.ahead}</span>
             ) : null}
             {index.behind > 0 ? (
-              <span className="shrink-0 tabular-nums text-content/40">
-                ↓{index.behind}
-              </span>
+              <span className="shrink-0 tabular-nums text-content/40">↓{index.behind}</span>
             ) : null}
           </span>
         ) : (
@@ -161,9 +140,7 @@ function ChangedFiles({
   const hasOpenPr = pr?.state === "open";
   const diverged = (index?.ahead ?? 0) > 0 && (index?.behind ?? 0) > 0;
   const onDefault =
-    !!index?.branch &&
-    !!index.defaultBranch &&
-    index.branch === index.defaultBranch;
+    !!index?.branch && !!index.defaultBranch && index.branch === index.defaultBranch;
   const canGenerate = files.length > 0 && !busy;
   const canCommit = staged.length > 0 && message.trim().length > 0 && !busy;
   const canCreatePr =
@@ -177,9 +154,7 @@ function ChangedFiles({
   const canViewPr = hasOpenPr && !!pr?.url;
   const canPublish = hasRemote && !index?.upstream;
   const canSync =
-    hasRemote &&
-    Boolean(index?.upstream) &&
-    ((index?.ahead ?? 0) > 0 || (index?.behind ?? 0) > 0);
+    hasRemote && Boolean(index?.upstream) && ((index?.ahead ?? 0) > 0 || (index?.behind ?? 0) > 0);
   const canCommitPush = canCommit && hasRemote && !diverged;
   const canCommitPushPr = canCommitPush && !hasOpenPr && !onDefault;
   const canEditMessage = staged.length > 0 && !busy;
@@ -215,10 +190,7 @@ function ChangedFiles({
     );
   };
 
-  const run = async (
-    file: GitChangedFile,
-    action: "stage" | "unstage" | "discard",
-  ) => {
+  const run = async (file: GitChangedFile, action: "stage" | "unstage" | "discard") => {
     if (busy) return;
     if (action === "discard") {
       const name = basename(file.relative);
@@ -310,13 +282,7 @@ function ChangedFiles({
   const openCreatedPr = async () => {
     const content = await generatePrContent(cwd, textHarness);
     if (!content) throw new Error("Could not prepare pull request content");
-    const url = await gitPrCreate(
-      cwd,
-      content.title,
-      content.body,
-      content.base,
-      content.head,
-    );
+    const url = await gitPrCreate(cwd, content.title, content.body, content.base, content.head);
     await openUrl(url.trim());
   };
 
@@ -349,11 +315,7 @@ function ChangedFiles({
             disabled={!canEditMessage}
             onChange={(event) => setMessage(event.target.value)}
             onKeyDown={(event) => {
-              if (
-                (event.metaKey || event.ctrlKey) &&
-                event.key === "Enter" &&
-                canCommit
-              ) {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && canCommit) {
                 event.preventDefault();
                 void commit(false);
               }
@@ -437,10 +399,7 @@ function ChangedFiles({
           />
         ) : null}
       </div>
-      <div
-        ref={lockOverscroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-none py-1"
-      >
+      <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none py-1">
         {files.length === 0 ? (
           <p className="px-3 py-2 text-[12px] text-content/45">
             {index
@@ -553,10 +512,7 @@ function usePrStatus(
   return { pr, reload };
 }
 
-function cachedPr(
-  cwd: string,
-  branch: string | null | undefined,
-): GitPr | null {
+function cachedPr(cwd: string, branch: string | null | undefined): GitPr | null {
   if (!cwd || cwd === "~" || !branch) return null;
   return prByCwd.get(cwd) ?? null;
 }
@@ -608,8 +564,7 @@ function GitSyncActions({
   if (!hasRemote) return null;
   const ahead = index.ahead;
   const behind = index.behind;
-  const dest =
-    index.upstream ?? `${index.remote ?? "origin"}/${index.branch ?? "HEAD"}`;
+  const dest = index.upstream ?? `${index.remote ?? "origin"}/${index.branch ?? "HEAD"}`;
   const syncing = busy === "sync";
   const syncTitle = syncing
     ? "Synchronizing Changes..."
@@ -625,9 +580,7 @@ function GitSyncActions({
   const createTitle = index.defaultBranch
     ? `Create a pull request into ${index.defaultBranch}`
     : "Create pull request";
-  const viewTitle = pr?.title
-    ? `View PR #${pr.number}: ${pr.title}`
-    : "View pull request";
+  const viewTitle = pr?.title ? `View PR #${pr.number}: ${pr.title}` : "View pull request";
   const btn =
     "flex h-7 w-full min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-[12px] font-medium disabled:opacity-40";
   const secondary = `${btn} bg-content/10 text-content hover:bg-content/15`;
@@ -646,10 +599,7 @@ function GitSyncActions({
           className={secondary}
         >
           {syncing ? (
-            <Loader
-              className="size-3.5 shrink-0 animate-spin"
-              strokeWidth={1.75}
-            />
+            <Loader className="size-3.5 shrink-0 animate-spin" strokeWidth={1.75} />
           ) : (
             <CloudUpload className="size-3.5 shrink-0" strokeWidth={1.75} />
           )}
@@ -669,14 +619,10 @@ function GitSyncActions({
           />
           <span className="min-w-0 truncate">Sync Changes</span>
           {behind > 0 ? (
-            <span className="shrink-0 tabular-nums text-content/55">
-              ↓{behind}
-            </span>
+            <span className="shrink-0 tabular-nums text-content/55">↓{behind}</span>
           ) : null}
           {ahead > 0 ? (
-            <span className="shrink-0 tabular-nums text-content/55">
-              ↑{ahead}
-            </span>
+            <span className="shrink-0 tabular-nums text-content/55">↑{ahead}</span>
           ) : null}
         </button>
       ) : null}
@@ -689,10 +635,7 @@ function GitSyncActions({
           className={secondary}
         >
           {busy === "pr" ? (
-            <Loader
-              className="size-3.5 shrink-0 animate-spin"
-              strokeWidth={1.75}
-            />
+            <Loader className="size-3.5 shrink-0 animate-spin" strokeWidth={1.75} />
           ) : (
             <GitPullRequest className="size-3.5 shrink-0" strokeWidth={1.75} />
           )}
@@ -741,15 +684,9 @@ function FileSection({
           className="flex min-w-0 flex-1 items-center gap-1 text-left"
         >
           {open ? (
-            <ChevronDown
-              className="size-3.5 shrink-0 text-content/50"
-              strokeWidth={1.75}
-            />
+            <ChevronDown className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
           ) : (
-            <ChevronRight
-              className="size-3.5 shrink-0 text-content/50"
-              strokeWidth={1.75}
-            />
+            <ChevronRight className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
           )}
           <span className="min-w-0 truncate text-[10px] font-semibold tracking-[0.04em] text-content/55 uppercase">
             {title}
@@ -782,10 +719,7 @@ function ChangeRow({
   busy: boolean;
   kind: "staged" | "unstaged";
   onOpenFile: (path: string) => void;
-  onAction: (
-    file: GitChangedFile,
-    action: "stage" | "unstage" | "discard",
-  ) => void;
+  onAction: (file: GitChangedFile, action: "stage" | "unstage" | "discard") => void;
 }) {
   const name = basename(file.relative);
   const dir = dirname(file.relative);
@@ -794,9 +728,7 @@ function ChangeRow({
     <li>
       <div
         className={`group flex h-7 w-full items-center gap-1 px-2 leading-none ${
-          active
-            ? "bg-content/10 text-content"
-            : "text-content hover:bg-content/5"
+          active ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
         }`}
       >
         <button
@@ -810,9 +742,7 @@ function ChangeRow({
           <FileTypeIcon name={name} isDir={false} size={16} />
           <span className="min-w-0 flex-1 truncate">
             <span className="text-[13px] font-medium">{name}</span>
-            {dir ? (
-              <span className="ml-1.5 text-[11px] text-content/40">{dir}</span>
-            ) : null}
+            {dir ? <span className="ml-1.5 text-[11px] text-content/40">{dir}</span> : null}
           </span>
         </button>
         <div
@@ -882,22 +812,12 @@ function IconAction({
   );
 }
 
-function DiffCounts({
-  additions,
-  deletions,
-}: {
-  additions: number;
-  deletions: number;
-}) {
+function DiffCounts({ additions, deletions }: { additions: number; deletions: number }) {
   if (additions <= 0 && deletions <= 0) return null;
   return (
     <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums">
-      {additions > 0 ? (
-        <span className="text-emerald-400">+{additions}</span>
-      ) : null}
-      {deletions > 0 ? (
-        <span className="text-red-400">-{deletions}</span>
-      ) : null}
+      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
+      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
     </span>
   );
 }
@@ -928,9 +848,7 @@ function useDiffIndex(
   index: GitDiffIndex | null;
   reload: () => void;
 } {
-  const [index, setIndex] = useState<GitDiffIndex | null>(
-    () => cachedIndex(cwd),
-  );
+  const [index, setIndex] = useState<GitDiffIndex | null>(() => cachedIndex(cwd));
   const [nonce, setNonce] = useState(0);
   const reload = useCallback(() => setNonce((value) => value + 1), []);
   const indexRef = useRef(index);

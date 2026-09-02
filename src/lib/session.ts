@@ -10,8 +10,7 @@ import {
   resolveModel,
 } from "./models";
 
-export type HarnessId =
-  "claude" | "codex" | "cursor" | "grok" | "opencode" | "pi" | "omp" | "fx";
+export type HarnessId = "claude" | "codex" | "cursor" | "grok" | "opencode" | "pi" | "omp" | "fx";
 
 export const HARNESSES: HarnessId[] = [
   "claude",
@@ -121,8 +120,7 @@ export type Block = {
   noteCard?: NoteCardMeta;
 };
 
-export type RuntimeMode =
-  "supervised" | "auto-accept-edits" | "auto" | "full-access";
+export type RuntimeMode = "supervised" | "auto-accept-edits" | "auto" | "full-access";
 
 export const RUNTIME_MODES: RuntimeMode[] = [
   "supervised",
@@ -282,15 +280,9 @@ export function formatSessionTitle(harness: HarnessId, title: string): string {
 }
 
 /** True when the stored title is still a placeholder the LLM may replace. */
-export function canReplaceSessionTitle(
-  current: string,
-  harness: HarnessId,
-  seed: string,
-): boolean {
+export function canReplaceSessionTitle(current: string, harness: HarnessId, seed: string): boolean {
   return (
-    current === seed ||
-    current === HARNESS_LABEL[harness] ||
-    current === HARNESS_TITLE[harness]
+    current === seed || current === HARNESS_LABEL[harness] || current === HARNESS_TITLE[harness]
   );
 }
 
@@ -313,9 +305,6 @@ export function sessionDisplayTitle(title: string, harness: HarnessId): string {
 }
 
 /** Working copy the agent and session git UIs should use. */
-export function sessionWorkCwd(session: {
-  cwd: string;
-  worktreeCwd?: string;
-}): string {
+export function sessionWorkCwd(session: { cwd: string; worktreeCwd?: string }): string {
   return session.worktreeCwd || session.cwd;
 }

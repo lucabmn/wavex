@@ -273,9 +273,7 @@ function TitleTabItem({
           />
         ) : tab.terminal || !fileIcon ? (
           <Terminal
-            className={`size-3.5 shrink-0 ${
-              active ? "text-content" : "text-content/55"
-            }`}
+            className={`size-3.5 shrink-0 ${active ? "text-content" : "text-content/55"}`}
             strokeWidth={1.75}
           />
         ) : (
@@ -330,13 +328,7 @@ function TitleTabItem({
   );
 }
 
-function TabStripChevron({
-  side,
-  onClick,
-}: {
-  side: "left" | "right";
-  onClick: () => void;
-}) {
+function TabStripChevron({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
   const label = side === "left" ? "Scroll tabs left" : "Scroll tabs right";
   const Icon = side === "left" ? ChevronLeft : ChevronRight;
   return (
@@ -438,26 +430,14 @@ export function TabVisitNav({
 }) {
   return (
     <div className="flex shrink-0 items-center">
-      <IconButton
-        label={`Back (${MOD}[)`}
-        disabled={!canGoBack}
-        onClick={onGoBack}
-      >
+      <IconButton label={`Back (${MOD}[)`} disabled={!canGoBack} onClick={onGoBack}>
         <ChevronLeft className="size-3.5" strokeWidth={1.75} />
       </IconButton>
-      <IconButton
-        label={`Forward (${MOD}])`}
-        disabled={!canGoForward}
-        onClick={onGoForward}
-      >
+      <IconButton label={`Forward (${MOD}])`} disabled={!canGoForward} onClick={onGoForward}>
         <ChevronRight className="size-3.5" strokeWidth={1.75} />
       </IconButton>
       {onTogglePanel ? (
-        <IconButton
-          label={panelLabel}
-          active={panelActive}
-          onClick={onTogglePanel}
-        >
+        <IconButton label={panelLabel} active={panelActive} onClick={onTogglePanel}>
           <PanelLeft className="size-3.5" strokeWidth={1.75} />
         </IconButton>
       ) : null}
@@ -482,10 +462,7 @@ export function OverlayNav({
         </IconButton>
       ) : null}
       {onToggleSidebar ? (
-        <IconButton
-          label={`Toggle Sidebar (${MOD}B)`}
-          onClick={onToggleSidebar}
-        >
+        <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
           <PanelLeft className="size-3.5" strokeWidth={1.75} />
         </IconButton>
       ) : null}
@@ -530,9 +507,7 @@ function TitleBarComponent({
     const next = el
       ? tabStripOverflow(el.scrollLeft, el.clientWidth, el.scrollWidth)
       : { left: false, right: false };
-    setTabOverflow((prev) =>
-      prev.left === next.left && prev.right === next.right ? prev : next,
-    );
+    setTabOverflow((prev) => (prev.left === next.left && prev.right === next.right ? prev : next));
   }, []);
   const scrollTabsBy = useCallback((direction: -1 | 1) => {
     const el = tabStripRef.current;
@@ -569,10 +544,7 @@ function TitleBarComponent({
     syncTabOverflow();
   }, [activeId, syncTabOverflow, tabs]);
 
-  const activeTab = useMemo(
-    () => tabs.find((t) => t.id === activeId),
-    [activeId, tabs],
-  );
+  const activeTab = useMemo(() => tabs.find((t) => t.id === activeId), [activeId, tabs]);
   const systemTitle = useMemo(() => {
     const activeName = activeTab
       ? activeTab.files[0]
@@ -603,8 +575,7 @@ function TitleBarComponent({
   const projectless = !showCurrentProject;
   // An open project is labeled in the sidebar, above Sessions / Explorer /
   // Changes. Without a project that sidebar is gone, so the picker stays here.
-  const showProjectButton =
-    railClosed && Boolean(onSelectProject) && !showCurrentProject;
+  const showProjectButton = railClosed && Boolean(onSelectProject) && !showCurrentProject;
   const trailingControls = (
     <div className="flex h-full shrink-0 items-stretch">
       <div className="flex items-center gap-0.5 px-2">
@@ -630,15 +601,9 @@ function TitleBarComponent({
         ) : null}
         {!projectless && (onShowTerminal || onNewTerminal) ? (
           <IconButton
-            label={
-              projectTerminalActive ? "Terminal" : `New Terminal (${MOD}\`)`
-            }
+            label={projectTerminalActive ? "Terminal" : `New Terminal (${MOD}\`)`}
             accent={projectTerminalActive}
-            onClick={
-              projectTerminalActive
-                ? (onShowTerminal ?? onNewTerminal)
-                : onNewTerminal
-            }
+            onClick={projectTerminalActive ? (onShowTerminal ?? onNewTerminal) : onNewTerminal}
           >
             <Terminal className="size-3.5" strokeWidth={1.75} />
           </IconButton>
@@ -667,10 +632,7 @@ function TitleBarComponent({
         <>
           <div className="w-[78px] shrink-0" />
           <div className="flex shrink-0 items-center px-1.5">
-            <IconButton
-              label={`Toggle Sidebar (${MOD}B)`}
-              onClick={onToggleSidebar}
-            >
+            <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
               <PanelLeft className="size-3.5" strokeWidth={1.75} />
             </IconButton>
           </div>

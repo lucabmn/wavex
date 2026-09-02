@@ -7,10 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { setGrabbing, suppressTextSelection } from "../lib/drag";
-import {
-  paneDropFromPoint,
-  useExternalPaneDrop,
-} from "../lib/paneDrop";
+import { paneDropFromPoint, useExternalPaneDrop } from "../lib/paneDrop";
 import type { ApprovalDecision, UserQuestionReply } from "../lib/harness";
 import type { EditorNavigationTarget } from "../lib/search";
 import {
@@ -24,13 +21,7 @@ import {
 } from "../lib/layout";
 import type { RecentProject } from "../lib/recents";
 import type { TerminalMetaPatch } from "../lib/terminalTab";
-import type {
-  Attachment,
-  Block,
-  HarnessId,
-  RuntimeMode,
-  Session,
-} from "../lib/session";
+import type { Attachment, Block, HarnessId, RuntimeMode, Session } from "../lib/session";
 import { FilePane } from "./FilePane";
 import { SessionPane } from "./SessionPane";
 
@@ -55,46 +46,21 @@ type Shared = {
   onCwdChange: (sessionId: string, cwd: string) => void;
   onBranchChange: (sessionId: string) => void;
   onModelChange: (sessionId: string, harness: HarnessId, model: string) => void;
-  onModelSettingsChange: (
-    sessionId: string,
-    settings: Record<string, string>,
-  ) => void;
+  onModelSettingsChange: (sessionId: string, settings: Record<string, string>) => void;
   onRuntimeModeChange: (sessionId: string, mode: RuntimeMode) => void;
-  onSubmit: (
-    sessionId: string,
-    text: string,
-    attachments: Attachment[],
-  ) => void;
+  onSubmit: (sessionId: string, text: string, attachments: Attachment[]) => void;
   onStop: (sessionId: string) => void;
   onInboxCardDismiss?: (sessionId: string) => void;
   onNoteCardDismiss?: (sessionId: string) => void;
   onHandoffCardDismiss?: (sessionId: string) => void;
-  onApproval: (
-    sessionId: string,
-    requestId: number,
-    decision: ApprovalDecision,
-  ) => void;
-  onQuestionReply: (
-    sessionId: string,
-    requestId: number,
-    reply: UserQuestionReply,
-  ) => void;
+  onApproval: (sessionId: string, requestId: number, decision: ApprovalDecision) => void;
+  onQuestionReply: (sessionId: string, requestId: number, reply: UserQuestionReply) => void;
   onOpenFile: (path: string) => void;
   editorNavigation?: EditorNavigationTarget | null;
   onOpenDiff: (path?: string) => void;
   onOpenPlan: (sessionId: string, blockId: string) => void;
-  onSecondOpinion?: (
-    sessionId: string,
-    harness: HarnessId,
-    turn: Block[],
-    model: string,
-  ) => void;
-  onHandoff?: (
-    sessionId: string,
-    harness: HarnessId,
-    turn: Block[],
-    model: string,
-  ) => void;
+  onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
+  onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onMovePane: (fromId: string, toId: string, edge: PaneEdge) => void;
   onNewTerminal: (sessionId: string) => void;
   onTerminalMetaChange?: (fileId: string, patch: TerminalMetaPatch) => void;
@@ -170,14 +136,11 @@ function PaneTreeComponent({
   // A sash drag re-renders this tree every frame. `SessionPane` compares props
   // shallowly, so handing it a fresh drag handler each frame would re-render
   // the whole session subtree (transcript, composer, picker) per frame.
-  const dragHandlers = useRef(
-    new Map<string, (event: ReactPointerEvent<HTMLElement>) => void>(),
-  );
+  const dragHandlers = useRef(new Map<string, (event: ReactPointerEvent<HTMLElement>) => void>());
   const paneDragStartFor = (paneId: string) => {
     const cached = dragHandlers.current.get(paneId);
     if (cached) return cached;
-    const handler = (event: ReactPointerEvent<HTMLElement>) =>
-      startPaneDrag(paneId, event);
+    const handler = (event: ReactPointerEvent<HTMLElement>) => startPaneDrag(paneId, event);
     dragHandlers.current.set(paneId, handler);
     return handler;
   };
@@ -187,81 +150,75 @@ function PaneTreeComponent({
   const sashes = layoutSashes(tree);
   const inSplit = leaves.length > 1;
 
-  const startPaneDrag = useCallback(
-    (fromId: string, event: ReactPointerEvent<HTMLElement>) => {
-      if (event.button !== 0) return;
-      const handle = event.currentTarget;
-      const pointerId = event.pointerId;
-      const startX = event.clientX;
-      const startY = event.clientY;
-      let active = false;
+  const startPaneDrag = useCallback((fromId: string, event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    const handle = event.currentTarget;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let active = false;
 
-      let lastX = startX;
-      let lastY = startY;
-      handle.setPointerCapture(pointerId);
-      const restoreSelection = suppressTextSelection();
+    let lastX = startX;
+    let lastY = startY;
+    handle.setPointerCapture(pointerId);
+    const restoreSelection = suppressTextSelection();
 
-      const onMove = (ev: PointerEvent) => {
-        lastX = ev.clientX;
-        lastY = ev.clientY;
-        if (!active) {
-          if (
-            Math.hypot(ev.clientX - startX, ev.clientY - startY) <
-            DRAG_THRESHOLD
-          ) {
-            return;
-          }
-          active = true;
-          setGrabbing(true);
-          onFocusRef.current(fromId);
-          setPaneDrag({ fromId, overId: null, edge: "left" });
-        }
-        const over = paneDropFromPoint(ev.clientX, ev.clientY);
-        if (!over || over.id === fromId) {
-          setPaneDrag({
-            fromId,
-            overId: over?.id === fromId ? fromId : null,
-            edge: over?.edge ?? "left",
-          });
+    const onMove = (ev: PointerEvent) => {
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      if (!active) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) {
           return;
         }
-        setPaneDrag({ fromId, overId: over.id, edge: over.edge });
-      };
-
-      const onUp = () => finish(true);
-      const onKey = (ev: KeyboardEvent) => {
-        if (ev.key !== "Escape") return;
-        ev.preventDefault();
-        finish(false);
-      };
-
-      function finish(commit: boolean) {
-        window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", onUp);
-        window.removeEventListener("pointercancel", onUp);
-        window.removeEventListener("keydown", onKey);
-        restoreSelection();
-        setGrabbing(false);
-        setPaneDrag(null);
-        try {
-          handle.releasePointerCapture(pointerId);
-        } catch {
-          /* already released */
-        }
-        if (!active || !commit) return;
-        const over = paneDropFromPoint(lastX, lastY);
-        if (over && over.id !== fromId) {
-          onMovePaneRef.current(fromId, over.id, over.edge);
-        }
+        active = true;
+        setGrabbing(true);
+        onFocusRef.current(fromId);
+        setPaneDrag({ fromId, overId: null, edge: "left" });
       }
+      const over = paneDropFromPoint(ev.clientX, ev.clientY);
+      if (!over || over.id === fromId) {
+        setPaneDrag({
+          fromId,
+          overId: over?.id === fromId ? fromId : null,
+          edge: over?.edge ?? "left",
+        });
+        return;
+      }
+      setPaneDrag({ fromId, overId: over.id, edge: over.edge });
+    };
 
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
-      window.addEventListener("pointercancel", onUp);
-      window.addEventListener("keydown", onKey);
-    },
-    [],
-  );
+    const onUp = () => finish(true);
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      ev.preventDefault();
+      finish(false);
+    };
+
+    function finish(commit: boolean) {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("keydown", onKey);
+      restoreSelection();
+      setGrabbing(false);
+      setPaneDrag(null);
+      try {
+        handle.releasePointerCapture(pointerId);
+      } catch {
+        /* already released */
+      }
+      if (!active || !commit) return;
+      const over = paneDropFromPoint(lastX, lastY);
+      if (over && over.id !== fromId) {
+        onMovePaneRef.current(fromId, over.id, over.edge);
+      }
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div ref={treeRef} className="relative h-full min-h-0 min-w-0">
@@ -344,9 +301,7 @@ function PaneTreeComponent({
           sash={sash}
           containerRef={treeRef}
           onPreview={(ratio) =>
-            setDraft(
-              setSplitRatio(layoutRef.current, sash.splitId, sash.index, ratio),
-            )
+            setDraft(setSplitRatio(layoutRef.current, sash.splitId, sash.index, ratio))
           }
           onCommit={(ratio) => {
             setDraft(null);
@@ -403,9 +358,7 @@ function Sash({
   onCancel: () => void;
 }) {
   const row = sash.dir === "right";
-  const boundary = sash.sizes
-    .slice(0, sash.index + 1)
-    .reduce((sum, size) => sum + size, 0);
+  const boundary = sash.sizes.slice(0, sash.index + 1).reduce((sum, size) => sum + size, 0);
   const group = sash.group;
 
   return (
@@ -415,11 +368,7 @@ function Sash({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(boundary * 100)}
-      className={
-        row
-          ? "absolute z-10 w-px bg-content/10"
-          : "absolute z-10 h-px bg-content/10"
-      }
+      className={row ? "absolute z-10 w-px bg-content/10" : "absolute z-10 h-px bg-content/10"}
       style={
         row
           ? {
@@ -451,9 +400,7 @@ function Sash({
           const restoreSelection = suppressTextSelection();
           const previousCursor = document.body.style.cursor;
           document.body.style.cursor = row ? "col-resize" : "row-resize";
-          const origin = row
-            ? rect.left + group.x * rect.width
-            : rect.top + group.y * rect.height;
+          const origin = row ? rect.left + group.x * rect.width : rect.top + group.y * rect.height;
           const span = row ? group.w * rect.width : group.h * rect.height;
           let nextBoundary = boundary;
           let moved = false;

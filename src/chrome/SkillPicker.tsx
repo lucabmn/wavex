@@ -7,11 +7,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { looksLikeProject } from "../lib/recents";
-import {
-  isValidSkillName,
-  slugSkillName,
-  type Skill,
-} from "../lib/skills";
+import { isValidSkillName, slugSkillName, type Skill } from "../lib/skills";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 
 type Props = {
@@ -199,9 +195,7 @@ function CreateSkillForm({
   const input = useRef<HTMLInputElement>(null);
   const project = looksLikeProject(cwd);
   const [name, setName] = useState(() => slugSkillName(query));
-  const [scope, setScope] = useState<"project" | "user">(
-    project ? "project" : "user",
-  );
+  const [scope, setScope] = useState<"project" | "user">(project ? "project" : "user");
 
   useEffect(() => {
     input.current?.focus();
@@ -219,9 +213,7 @@ function CreateSkillForm({
 
   return (
     <form onSubmit={submit} className="px-2.5 py-2">
-      <p className="mb-2 text-[11px] text-content/50">
-        Writes a starter SKILL.md you can edit.
-      </p>
+      <p className="mb-2 text-[11px] text-content/50">Writes a starter SKILL.md you can edit.</p>
       <input
         ref={input}
         value={name}
@@ -304,9 +296,7 @@ function ScopeButton({
       } disabled:opacity-40`}
     >
       <span className="text-[12px]">{label}</span>
-      <span className="truncate font-mono text-[10px] text-content/40">
-        {hint}
-      </span>
+      <span className="truncate font-mono text-[10px] text-content/40">{hint}</span>
     </button>
   );
 }

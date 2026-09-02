@@ -29,10 +29,10 @@ export async function confirmCloseTerminal(file: FilePaneTab): Promise<boolean> 
   if (running.length === 0) return true;
   const { process } = running[0];
   const label = terminalTabLabel(file);
-  return ask(
-    `"${process}" is still running in ${label}. Close this terminal anyway?`,
-    { title: "wavex", kind: "warning" },
-  );
+  return ask(`"${process}" is still running in ${label}. Close this terminal anyway?`, {
+    title: "wavex",
+    kind: "warning",
+  });
 }
 
 /** Confirm closing terminals that still have a foreground process. */
@@ -49,8 +49,8 @@ export async function confirmCloseTerminals(files: FilePaneTab[]): Promise<boole
   const lines = running
     .map(({ file, process }) => `• ${terminalTabLabel(file)} (${process})`)
     .join("\n");
-  return ask(
-    `These terminals are still running:\n${lines}\n\nClose them anyway?`,
-    { title: "wavex", kind: "warning" },
-  );
+  return ask(`These terminals are still running:\n${lines}\n\nClose them anyway?`, {
+    title: "wavex",
+    kind: "warning",
+  });
 }

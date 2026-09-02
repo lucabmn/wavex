@@ -28,22 +28,13 @@ export function terminalTabLabel(file: FilePaneTab): string {
 }
 
 /** Apply a live PTY title / cwd / foreground patch. */
-export function applyTerminalMeta(
-  file: FilePaneTab,
-  patch: TerminalMetaPatch,
-): FilePaneTab {
+export function applyTerminalMeta(file: FilePaneTab, patch: TerminalMetaPatch): FilePaneTab {
   if (!file.terminal) return file;
   const path = patch.title ?? file.path;
   const cwd = patch.cwd ?? file.cwd;
   const foreground =
-    patch.foreground === undefined
-      ? file.foreground
-      : (patch.foreground?.trim() || undefined);
-  if (
-    path === file.path &&
-    cwd === file.cwd &&
-    foreground === file.foreground
-  ) {
+    patch.foreground === undefined ? file.foreground : patch.foreground?.trim() || undefined;
+  if (path === file.path && cwd === file.cwd && foreground === file.foreground) {
     return file;
   }
   return {
@@ -55,9 +46,7 @@ export function applyTerminalMeta(
 }
 
 /** Terminals whose foreground process is not the shell. */
-export function listRunningTerminals(
-  files: Iterable<FilePaneTab>,
-): RunningTerminal[] {
+export function listRunningTerminals(files: Iterable<FilePaneTab>): RunningTerminal[] {
   const running: RunningTerminal[] = [];
   for (const file of files) {
     const process = file.foreground?.trim();
@@ -89,8 +78,8 @@ export function runningTerminalChipLabel(terminals: RunningTerminal[]): string {
     .join(" · ");
 }
 
-const OSC_CWD =
-  /\x1b\]7;file:\/\/[^/]*(\/[^\x07\x1b]*)(?:\x07|\x1b\\)/g;
+// oxlint-disable-next-line no-control-regex -- OSC 7 uses terminal control characters.
+const OSC_CWD = /\x1b\]7;file:\/\/[^/]*(\/[^\x07\x1b]*)(?:\x07|\x1b\\)/g;
 
 function decodeOscPath(raw: string): string {
   try {
@@ -101,10 +90,7 @@ function decodeOscPath(raw: string): string {
 }
 
 /** Scan PTY output for OSC 7 cwd reports from shell integration. */
-export function scanOscCwd(
-  chunk: string,
-  buffer: string,
-): { cwd?: string; rest: string } {
+export function scanOscCwd(chunk: string, buffer: string): { cwd?: string; rest: string } {
   const merged = buffer + chunk;
   let cwd: string | undefined;
   let last = 0;

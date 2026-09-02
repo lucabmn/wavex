@@ -1,12 +1,7 @@
 import { composeToolTitle } from "./harness/preview";
 import { isInFlightSession } from "./inFlight";
 import { displayPath } from "./paths";
-import {
-  sessionDisplayTitle,
-  type Block,
-  type HarnessId,
-  type Session,
-} from "./session";
+import { sessionDisplayTitle, type Block, type HarnessId, type Session } from "./session";
 
 export type LiveAgent = {
   id: string;
@@ -25,13 +20,8 @@ export function liveAgentsFromSessions(
   unseenFinishedIds: ReadonlySet<string> = new Set(),
 ): LiveAgent[] {
   return sessions
-    .filter(
-      (session) =>
-        isInFlightSession(session) || unseenFinishedIds.has(session.id),
-    )
-    .map((session) =>
-      toLiveAgent(session, unseenFinishedIds.has(session.id)),
-    )
+    .filter((session) => isInFlightSession(session) || unseenFinishedIds.has(session.id))
+    .map((session) => toLiveAgent(session, unseenFinishedIds.has(session.id)))
     .sort(compareLiveAgents);
 }
 
@@ -47,9 +37,7 @@ export function formatLiveElapsed(startedAt: number, now: number): string {
 }
 
 function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
-  const pending = session.blocks.find(
-    (block) => block.approval && !block.approval.decided,
-  );
+  const pending = session.blocks.find((block) => block.approval && !block.approval.decided);
   const pendingQuestion = session.pendingQuestion;
   const done = unseenFinished && !isInFlightSession(session);
   const activityBlock = pending ?? lastActivityBlock(session.blocks);
@@ -61,9 +49,7 @@ function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
     activity: done
       ? "Done"
       : pendingQuestion
-        ? pendingQuestion.title ||
-          pendingQuestion.questions[0]?.prompt ||
-          "Question"
+        ? pendingQuestion.title || pendingQuestion.questions[0]?.prompt || "Question"
         : activityLabel(activityBlock, session.cwd),
     startedAt: turnStartedAt(session.blocks),
     durationMs: done ? turnDurationMs(session.blocks) : undefined,
@@ -75,10 +61,7 @@ function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
 function compareLiveAgents(a: LiveAgent, b: LiveAgent): number {
   if (a.needsApproval !== b.needsApproval) return a.needsApproval ? -1 : 1;
   if (a.done !== b.done) return a.done ? 1 : -1;
-  return (
-    (a.startedAt ?? Number.MAX_SAFE_INTEGER) -
-    (b.startedAt ?? Number.MAX_SAFE_INTEGER)
-  );
+  return (a.startedAt ?? Number.MAX_SAFE_INTEGER) - (b.startedAt ?? Number.MAX_SAFE_INTEGER);
 }
 
 function lastActivityBlock(blocks: Block[]): Block | undefined {
@@ -112,9 +95,7 @@ function activityLabel(block: Block | undefined, cwd: string): string {
     return "Preparing a handoff";
   }
   const preview = block.tool?.preview;
-  const path = preview?.path
-    ? displayPath(preview.path, cwd)
-    : preview?.fileName;
+  const path = preview?.path ? displayPath(preview.path, cwd) : preview?.fileName;
   return (
     composeToolTitle({
       kind: block.tool?.kind,

@@ -41,10 +41,7 @@ function decodeBase64(data: string): Uint8Array {
  * byte total that remains. Never drops the newest chunk, even when that chunk
  * alone exceeds the budget — replaying something beats replaying nothing.
  */
-export function trimReplay(
-  sizes: number[],
-  bytes: number,
-): { drop: number; bytes: number } {
+export function trimReplay(sizes: number[], bytes: number): { drop: number; bytes: number } {
   let drop = 0;
   let left = bytes;
   while (
@@ -113,12 +110,7 @@ function release() {
   }, 500);
 }
 
-export async function spawnPty(
-  id: string,
-  cwd: string,
-  cols: number,
-  rows: number,
-): Promise<void> {
+export async function spawnPty(id: string, cwd: string, cols: number, rows: number): Promise<void> {
   await invoke("pty_spawn", { id, cwd, cols, rows });
 }
 
@@ -126,17 +118,11 @@ export async function writePty(id: string, data: string): Promise<void> {
   await invoke("pty_write", { id, data });
 }
 
-export async function resizePty(
-  id: string,
-  cols: number,
-  rows: number,
-): Promise<void> {
+export async function resizePty(id: string, cols: number, rows: number): Promise<void> {
   await invoke("pty_resize", { id, cols, rows });
 }
 
-export async function getPtyStatus(
-  id: string,
-): Promise<{ foreground: string | null }> {
+export async function getPtyStatus(id: string): Promise<{ foreground: string | null }> {
   return invoke<{ foreground: string | null }>("pty_status", { id });
 }
 
@@ -157,11 +143,7 @@ export async function killAllPtys(): Promise<void> {
   await invoke("pty_kill_all").catch(() => undefined);
 }
 
-export function subscribePty(
-  id: string,
-  onData: DataHandler,
-  onExit: ExitHandler,
-): () => void {
+export function subscribePty(id: string, onData: DataHandler, onExit: ExitHandler): () => void {
   retain();
   openedPtys.add(id);
   dataHandlers.set(id, onData);

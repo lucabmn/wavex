@@ -14,8 +14,7 @@ export function useTranscriptLayout(): TranscriptLayout {
       setLayout(detail === "chat" ? "chat" : "full");
     };
     window.addEventListener(TRANSCRIPT_LAYOUT_CHANGE_EVENT, onChange);
-    return () =>
-      window.removeEventListener(TRANSCRIPT_LAYOUT_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(TRANSCRIPT_LAYOUT_CHANGE_EVENT, onChange);
   }, []);
   return layout;
 }

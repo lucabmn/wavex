@@ -96,11 +96,7 @@ export function gitFileDiff(cwd: string, relative: string): Promise<GitFileDiff>
   return invoke<GitFileDiff>("git_file_diff", { cwd, relative });
 }
 
-export function gitStageContents(
-  cwd: string,
-  relative: string,
-  contents: string,
-): Promise<void> {
+export function gitStageContents(cwd: string, relative: string, contents: string): Promise<void> {
   return invoke<void>("git_stage_contents", { cwd, relative, contents });
 }
 
@@ -199,11 +195,7 @@ export function gitBranches(cwd: string): Promise<GitBranches> {
   return invoke<GitBranches>("git_branches", { cwd });
 }
 
-export function gitCheckout(
-  cwd: string,
-  name: string,
-  remote?: string | null,
-): Promise<string> {
+export function gitCheckout(cwd: string, name: string, remote?: string | null): Promise<string> {
   return invoke<string>("git_checkout", { cwd, name, remote: remote ?? null });
 }
 
@@ -250,11 +242,7 @@ export function subscribeGitChanged(listener: () => void): () => void {
   return () => window.removeEventListener(GIT_CHANGED, listener);
 }
 
-export function createPath(
-  parent: string,
-  name: string,
-  isDir: boolean,
-): Promise<string> {
+export function createPath(parent: string, name: string, isDir: boolean): Promise<string> {
   return invoke<string>("create_path", { parent, name, isDir });
 }
 
@@ -309,11 +297,7 @@ export function cloneRepo(url: string, parent: string): Promise<string> {
   return invoke<string>("clone_repo", { url, parent });
 }
 
-export function readFilePreview(
-  path: string,
-  maxLines = 6,
-  startLine?: number,
-): Promise<string[]> {
+export function readFilePreview(path: string, maxLines = 6, startLine?: number): Promise<string[]> {
   return invoke<string[]>("read_file_preview", {
     path,
     maxLines,

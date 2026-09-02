@@ -15,14 +15,10 @@ export type CheckpointStatus = {
 const REVIEW_CHANGED = "wavex-review-changed";
 
 export function notifyReviewChanged(sessionId?: string) {
-  window.dispatchEvent(
-    new CustomEvent(REVIEW_CHANGED, { detail: sessionId ?? "" }),
-  );
+  window.dispatchEvent(new CustomEvent(REVIEW_CHANGED, { detail: sessionId ?? "" }));
 }
 
-export function subscribeReviewChanged(
-  listener: (sessionId: string) => void,
-): () => void {
+export function subscribeReviewChanged(listener: (sessionId: string) => void): () => void {
   const handler = (event: Event) => {
     listener((event as CustomEvent<string>).detail ?? "");
   };
@@ -30,18 +26,12 @@ export function subscribeReviewChanged(
   return () => window.removeEventListener(REVIEW_CHANGED, handler);
 }
 
-export function ensureSessionCheckpoint(
-  sessionId: string,
-  cwd: string,
-): Promise<void> {
+export function ensureSessionCheckpoint(sessionId: string, cwd: string): Promise<void> {
   return invoke<void>("session_checkpoint_ensure", { sessionId, cwd });
 }
 
 /** Snapshot the worktree before a live turn so Keep/Undo can target this session. */
-export async function beginSessionTurn(
-  sessionId: string,
-  cwd: string,
-): Promise<void> {
+export async function beginSessionTurn(sessionId: string, cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return;
   await ensureSessionCheckpoint(sessionId, cwd);
   notifyReviewChanged(sessionId);
@@ -60,18 +50,12 @@ export function captureSessionCheckpoint(
   });
 }
 
-export function syncSessionCheckpoint(
-  sessionId: string,
-  cwd: string,
-): Promise<void> {
+export function syncSessionCheckpoint(sessionId: string, cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
   return invoke<void>("session_checkpoint_sync", { sessionId, cwd });
 }
 
-export function sessionCheckpointStatus(
-  sessionId: string,
-  cwd: string,
-): Promise<CheckpointStatus> {
+export function sessionCheckpointStatus(sessionId: string, cwd: string): Promise<CheckpointStatus> {
   return invoke<CheckpointStatus>("session_checkpoint_status", {
     sessionId,
     cwd,

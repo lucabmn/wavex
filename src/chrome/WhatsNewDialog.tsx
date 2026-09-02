@@ -1,8 +1,4 @@
-import {
-  formatReleaseDate,
-  presentReleaseNotes,
-  releaseNotesTitle,
-} from "../lib/releaseNotes";
+import { formatReleaseDate, presentReleaseNotes, releaseNotesTitle } from "../lib/releaseNotes";
 import { AgentMarkdown } from "../surfaces/AgentMarkdown";
 import { Modal } from "./Modal";
 
@@ -18,11 +14,7 @@ export function WhatsNewBody({ version }: { version: string }) {
   return (
     <article aria-label={title} className="px-5 py-4">
       {notes?.markdown ? (
-        <AgentMarkdown
-          className="whats-new-md"
-          text={notes.markdown}
-          streaming={false}
-        />
+        <AgentMarkdown className="whats-new-md" text={notes.markdown} streaming={false} />
       ) : (
         <p className="text-[13px] text-content/60">
           Release notes for this version are not available in this build.

@@ -1,34 +1,23 @@
 const INSTALLED_UPDATE_KEY = "wavex.installedUpdate";
 
-export type UpdateNoticeStore = Pick<
-  Storage,
-  "getItem" | "setItem" | "removeItem"
->;
+export type UpdateNoticeStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 export type InstalledUpdate = {
   version: string;
 };
 
-export function rememberInstalledUpdate(
-  version: string,
-  store?: UpdateNoticeStore,
-): void {
+export function rememberInstalledUpdate(version: string, store?: UpdateNoticeStore): void {
   const normalized = version.trim();
   if (!normalized) return;
   try {
     const target = store ?? window.localStorage;
-    target.setItem(
-      INSTALLED_UPDATE_KEY,
-      JSON.stringify({ version: normalized }),
-    );
+    target.setItem(INSTALLED_UPDATE_KEY, JSON.stringify({ version: normalized }));
   } catch {
     return;
   }
 }
 
-export function consumeInstalledUpdate(
-  store?: UpdateNoticeStore,
-): InstalledUpdate | null {
+export function consumeInstalledUpdate(store?: UpdateNoticeStore): InstalledUpdate | null {
   try {
     const target = store ?? window.localStorage;
     const stored = target.getItem(INSTALLED_UPDATE_KEY);

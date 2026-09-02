@@ -1,7 +1,4 @@
-import {
-  buildThreadTitlePrompt,
-  parseGeneratedThreadTitle,
-} from "../sessionTitle";
+import { buildThreadTitlePrompt, parseGeneratedThreadTitle } from "../sessionTitle";
 import { OMP_FLAVOR, PI_FLAVOR, type PiFlavor } from "./piFlavor";
 import { runTextPrompt } from "./piText";
 

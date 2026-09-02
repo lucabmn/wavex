@@ -49,6 +49,8 @@ export function refreshDir(path: string): Promise<FsEntry[]> {
 }
 
 export function forgetDir(path: string) {
+  // Snapshot keys before deleting cached directories.
+  // oxlint-disable-next-line unicorn/no-useless-spread
   for (const key of [...dirs.keys()]) {
     if (key === path || key.startsWith(`${path}/`)) dirs.delete(key);
   }

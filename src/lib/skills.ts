@@ -13,11 +13,7 @@ import { looksLikeProject, normalizeProjectPath } from "./recents";
 import { isMarkdownBlockquotePosition } from "./quoteDraft";
 import type { HarnessId } from "./session";
 import { discoverPiSkills } from "./harness/piSkills";
-import {
-  CREATE_SKILL_BODY,
-  CREATE_SKILL_DESCRIPTION,
-  CREATE_SKILL_NAME,
-} from "./createSkill";
+import { CREATE_SKILL_BODY, CREATE_SKILL_DESCRIPTION, CREATE_SKILL_NAME } from "./createSkill";
 
 export type SkillScope = "project" | "user" | "builtin";
 export type SkillSource =
@@ -74,8 +70,7 @@ export const BUILTIN_CREATE_SKILL: BuiltinSkill = {
 };
 
 const SKILL_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const SKILL_TOKEN_RE =
-  /(^|\s)\/([a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?)(?=\s|$)/g;
+const SKILL_TOKEN_RE = /(^|\s)\/([a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?)(?=\s|$)/g;
 const MAX_PICKER = 50;
 const PI_SKILL_TTL_MS = 30_000;
 const PI_SKILL_RETRY_MS = 5_000;
@@ -162,11 +157,7 @@ export function loadSkills(
   if (normalized.harness !== "pi" && entry.skills) {
     return Promise.resolve(entry.skills);
   }
-  if (
-    normalized.harness === "pi" &&
-    entry.skills &&
-    now - entry.loadedAt < PI_SKILL_TTL_MS
-  ) {
+  if (normalized.harness === "pi" && entry.skills && now - entry.loadedAt < PI_SKILL_TTL_MS) {
     return Promise.resolve(entry.skills);
   }
   if (normalized.harness === "pi" && now < entry.retryAt) {
@@ -183,10 +174,7 @@ function startCatalogLoad(
   const generation = entry.generation;
   const promise = loadCatalog(context)
     .then((skills) => {
-      if (
-        catalogEntries.get(key) !== entry ||
-        entry.generation !== generation
-      ) {
+      if (catalogEntries.get(key) !== entry || entry.generation !== generation) {
         return catalogEntries.get(key)?.skills ?? [];
       }
       entry.skills = skills;
@@ -195,10 +183,7 @@ function startCatalogLoad(
       return skills;
     })
     .catch(() => {
-      if (
-        catalogEntries.get(key) !== entry ||
-        entry.generation !== generation
-      ) {
+      if (catalogEntries.get(key) !== entry || entry.generation !== generation) {
         return catalogEntries.get(key)?.skills ?? [];
       }
       if (context.harness === "pi") {
@@ -277,13 +262,8 @@ export function rankSkills(skills: Skill[], query: string, limit = MAX_PICKER): 
   const scored: { skill: Skill; score: number }[] = [];
   for (const skill of skills) {
     const nameHit = fuzzyMatch(needle, skill.name);
-    const invocationHit = nameHit
-      ? null
-      : fuzzyMatch(needle, skill.invocation);
-    const descHit =
-      nameHit || invocationHit
-        ? null
-        : fuzzyMatch(needle, skill.description);
+    const invocationHit = nameHit ? null : fuzzyMatch(needle, skill.invocation);
+    const descHit = nameHit || invocationHit ? null : fuzzyMatch(needle, skill.description);
     const hit = nameHit ?? invocationHit ?? descHit;
     if (!hit) continue;
     const score = nameHit || invocationHit ? hit.score + 400 : hit.score;
@@ -322,11 +302,7 @@ export function slashTokenAt(text: string, cursor: number): SlashToken | null {
   return { start, end, query: typed };
 }
 
-export function replaceSlashToken(
-  text: string,
-  token: SlashToken,
-  name: string,
-): string {
+export function replaceSlashToken(text: string, token: SlashToken, name: string): string {
   const rest = text.slice(token.end);
   const spacer = rest.startsWith(" ") ? "" : " ";
   return `${text.slice(0, token.start)}/${name}${spacer}${rest}`;
@@ -355,10 +331,7 @@ export type SkillTextPart = {
 };
 
 /** Split composer text so known `/skill` tokens can be highlighted. */
-export function skillTextParts(
-  text: string,
-  names: ReadonlySet<string>,
-): SkillTextPart[] {
+export function skillTextParts(text: string, names: ReadonlySet<string>): SkillTextPart[] {
   if (!text) return [];
   if (names.size === 0) return [{ text, skill: false }];
 
@@ -380,11 +353,7 @@ export function skillTextParts(
     const name = match[2];
     const lead = match[1] ?? "";
     const start = match.index + lead.length;
-    if (
-      !name ||
-      !names.has(name) ||
-      isMarkdownBlockquotePosition(text, start)
-    ) {
+    if (!name || !names.has(name) || isMarkdownBlockquotePosition(text, start)) {
       continue;
     }
     const end = start + 1 + name.length;
@@ -449,17 +418,12 @@ export async function applySkillsToTurn(
 
 type SkillLoader = typeof loadSkills;
 
-export function warmPiSkills(
-  context: SkillCatalogContext,
-  load: SkillLoader = loadSkills,
-): void {
+export function warmPiSkills(context: SkillCatalogContext, load: SkillLoader = loadSkills): void {
   if (context.harness !== "pi") return;
   void load(context).catch(() => undefined);
 }
 
-export async function readSkillBody(
-  skill: FileSkill | BuiltinSkill,
-): Promise<string> {
+export async function readSkillBody(skill: FileSkill | BuiltinSkill): Promise<string> {
   if (skill.kind === "builtin") return CREATE_SKILL_BODY;
   try {
     return await readTextFile(skill.path);
@@ -514,10 +478,7 @@ export async function createBlankSkill(input: {
   if (!isValidSkillName(name)) {
     throw new Error("Use a lowercase name with letters, numbers, and hyphens.");
   }
-  const root =
-    input.scope === "user" || !looksLikeProject(input.cwd)
-      ? await homeDir()
-      : input.cwd;
+  const root = input.scope === "user" || !looksLikeProject(input.cwd) ? await homeDir() : input.cwd;
   const relative = `.agents/skills/${name}`;
   await createPath(root, relative, true);
   const path = joinPath(root, `${relative}/SKILL.md`);

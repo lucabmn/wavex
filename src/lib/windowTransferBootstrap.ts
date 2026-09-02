@@ -7,9 +7,7 @@ let transferPromise: Promise<WindowTransferPayload | null> | null = null;
 export function loadWindowTransfer(): Promise<WindowTransferPayload | null> {
   if (!transferPromise) {
     transferPromise = invoke<string | null>("take_window_transfer")
-      .then((raw) =>
-        raw ? (JSON.parse(raw) as WindowTransferPayload) : null,
-      )
+      .then((raw) => (raw ? (JSON.parse(raw) as WindowTransferPayload) : null))
       .catch(() => null);
   }
   return transferPromise;

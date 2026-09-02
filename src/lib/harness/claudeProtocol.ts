@@ -5,11 +5,7 @@ import {
   selectedAnswerLabels,
   type UserQuestionReply,
 } from "../userQuestion";
-import {
-  extractToolPreview,
-  isAgentToolName,
-  titleFromToolInput,
-} from "./preview";
+import { extractToolPreview, isAgentToolName, titleFromToolInput } from "./preview";
 import { streamTextDelta } from "./streamText";
 import type { ApprovalDecision, HarnessEvent } from "./types";
 
@@ -28,8 +24,7 @@ export const SUPPORTED_CLAUDE_IMAGE_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
-export type ClaudePermissionMode =
-  "default" | "acceptEdits" | "auto" | "bypassPermissions";
+export type ClaudePermissionMode = "default" | "acceptEdits" | "auto" | "bypassPermissions";
 
 export type ClaudeControlRequest = {
   requestId: string;
@@ -88,9 +83,7 @@ export function compareSemver(left: string, right: string): number {
   return 0;
 }
 
-export function runtimeModeToPermission(
-  mode: RuntimeMode,
-): ClaudePermissionMode | undefined {
+export function runtimeModeToPermission(mode: RuntimeMode): ClaudePermissionMode | undefined {
   switch (mode) {
     case "auto-accept-edits":
       return "acceptEdits";
@@ -132,9 +125,7 @@ export function normalizeClaudeCliEffort(
   return effort;
 }
 
-export function isClaudeUltracodeEffort(
-  effort: string | null | undefined,
-): boolean {
+export function isClaudeUltracodeEffort(effort: string | null | undefined): boolean {
   return effort === "ultracode";
 }
 
@@ -147,10 +138,7 @@ export function applyClaudePromptEffortPrefix(
   return `Ultrathink:\n${text}`;
 }
 
-export function resolveClaudeApiModelId(
-  model: string,
-  context?: string | null,
-): string {
+export function resolveClaudeApiModelId(model: string, context?: string | null): string {
   if (context === "1m") return `${model}[1m]`;
   return model;
 }
@@ -188,9 +176,7 @@ export function buildClaudeUserMessage(input: {
   };
 }
 
-function imageContentBlock(
-  attachment: Attachment,
-): Record<string, unknown> | null {
+function imageContentBlock(attachment: Attachment): Record<string, unknown> | null {
   if (attachment.kind !== "image" || !attachment.data) return null;
   const mime = normalizeImageMime(attachment.mimeType);
   if (!SUPPORTED_CLAUDE_IMAGE_MIME_TYPES.has(mime)) return null;
@@ -220,13 +206,7 @@ export function buildClaudeSpawnArgs(input: {
   maxTurns?: number;
   isolated?: boolean;
 }): string[] {
-  const args = [
-    "--output-format",
-    "stream-json",
-    "--verbose",
-    "--input-format",
-    "stream-json",
-  ];
+  const args = ["--output-format", "stream-json", "--verbose", "--input-format", "stream-json"];
   if (!input.isolated) {
     args.push("--permission-prompt-tool", "stdio");
   }
@@ -295,13 +275,10 @@ export type ClaudeControlResponse = {
   error?: string;
 };
 
-export function parseControlResponse(
-  rec: Record<string, unknown>,
-): ClaudeControlResponse | null {
+export function parseControlResponse(rec: Record<string, unknown>): ClaudeControlResponse | null {
   if (stringField(rec, "type") !== "control_response") return null;
   const nested = asRecord(rec.response);
-  const requestId =
-    stringField(nested, "request_id") ?? stringField(rec, "request_id") ?? "";
+  const requestId = stringField(nested, "request_id") ?? stringField(rec, "request_id") ?? "";
   if (!requestId) return null;
   const subtype = stringField(nested, "subtype") ?? "";
   if (subtype === "error") {
@@ -334,9 +311,7 @@ export function listModelsFromControlResponse(
 export function isClaudeInitMessage(rec: Record<string, unknown>): boolean {
   const type = stringField(rec, "type");
   const subtype = stringField(rec, "subtype");
-  return (
-    type === "system" && (subtype === "init" || subtype === "initialized")
-  );
+  return type === "system" && (subtype === "init" || subtype === "initialized");
 }
 
 export function toClaudePermissionResult(
@@ -352,24 +327,17 @@ export function toClaudePermissionResult(
   };
 }
 
-export function parseControlRequest(
-  rec: Record<string, unknown>,
-): ClaudeControlRequest | null {
+export function parseControlRequest(rec: Record<string, unknown>): ClaudeControlRequest | null {
   const type = stringField(rec, "type");
   if (type !== "control_request" && type !== "sdk_control_request") {
     return null;
   }
   const nested = asRecord(rec.request);
-  const requestId =
-    stringField(rec, "request_id") ?? stringField(nested, "request_id") ?? "";
-  const subtype =
-    stringField(nested, "subtype") ?? stringField(rec, "subtype") ?? "";
+  const requestId = stringField(rec, "request_id") ?? stringField(nested, "request_id") ?? "";
+  const subtype = stringField(nested, "subtype") ?? stringField(rec, "subtype") ?? "";
   if (!requestId || !subtype) return null;
   const input =
-    asRecord(nested?.input) ??
-    asRecord(nested?.tool_input) ??
-    asRecord(rec.input) ??
-    {};
+    asRecord(nested?.input) ?? asRecord(nested?.tool_input) ?? asRecord(rec.input) ?? {};
   return {
     requestId,
     subtype,
@@ -382,19 +350,12 @@ export function parseControlRequest(
   };
 }
 
-export function parseControlCancelId(
-  rec: Record<string, unknown>,
-): string | undefined {
+export function parseControlCancelId(rec: Record<string, unknown>): string | undefined {
   if (stringField(rec, "type") !== "control_cancel_request") return undefined;
-  return (
-    stringField(rec, "request_id") ??
-    stringField(asRecord(rec.request), "request_id")
-  );
+  return stringField(rec, "request_id") ?? stringField(asRecord(rec.request), "request_id");
 }
 
-export function sessionIdFromMessage(
-  rec: Record<string, unknown>,
-): string | undefined {
+export function sessionIdFromMessage(rec: Record<string, unknown>): string | undefined {
   const type = stringField(rec, "type");
   const subtype = stringField(rec, "subtype");
   if (type === "system" && subtype?.startsWith("hook_")) return undefined;
@@ -432,17 +393,14 @@ const LIFECYCLE_STATUSES = new Set([
   "compact",
 ]);
 
-export function statusTextFromSystem(
-  rec: Record<string, unknown>,
-): string | undefined {
+export function statusTextFromSystem(rec: Record<string, unknown>): string | undefined {
   if (stringField(rec, "type") !== "system") return undefined;
   const subtype = stringField(rec, "subtype") ?? "";
   const compact = subtype.startsWith("compact");
   if (subtype !== "status" && !compact) return undefined;
   // Prose lives in `message`; `status` carries the bare lifecycle token.
   const text = (stringField(rec, "message") ?? "").trim();
-  const notable =
-    text && !LIFECYCLE_STATUSES.has(text.toLowerCase().replace(/[\s.…]+$/, ""));
+  const notable = text && !LIFECYCLE_STATUSES.has(text.toLowerCase().replace(/[\s.…]+$/, ""));
   if (notable) return text;
   // Compaction is worth one row even when the CLI sends no prose with it.
   return compact ? "Compacted context" : undefined;
@@ -504,11 +462,7 @@ export function toolStartFromEvent(rec: Record<string, unknown>): {
   const block = asRecord(event.content_block);
   if (!block) return null;
   const blockType = stringField(block, "type") ?? "";
-  if (
-    blockType !== "tool_use" &&
-    blockType !== "server_tool_use" &&
-    blockType !== "mcp_tool_use"
-  ) {
+  if (blockType !== "tool_use" && blockType !== "server_tool_use" && blockType !== "mcp_tool_use") {
     return null;
   }
   const id = stringField(block, "id");
@@ -532,8 +486,7 @@ export function inputJsonDeltaFromEvent(
   }
   const delta = asRecord(event.delta);
   if (stringField(delta, "type") !== "input_json_delta") return null;
-  const partial =
-    typeof delta?.partial_json === "string" ? delta.partial_json : "";
+  const partial = typeof delta?.partial_json === "string" ? delta.partial_json : "";
   if (!partial) return null;
   const index = typeof event.index === "number" ? event.index : -1;
   return { index, partial };
@@ -558,13 +511,8 @@ export type ClaudeAgentTaskStarted = {
   ambient: boolean;
 };
 
-export function parseTaskStarted(
-  rec: Record<string, unknown>,
-): ClaudeAgentTaskStarted | null {
-  if (
-    stringField(rec, "type") !== "system" ||
-    stringField(rec, "subtype") !== "task_started"
-  ) {
+export function parseTaskStarted(rec: Record<string, unknown>): ClaudeAgentTaskStarted | null {
+  if (stringField(rec, "type") !== "system" || stringField(rec, "subtype") !== "task_started") {
     return null;
   }
   const taskId = stringField(rec, "task_id");
@@ -588,13 +536,8 @@ export type ClaudeAgentTaskProgress = {
   summary?: string;
 };
 
-export function parseTaskProgress(
-  rec: Record<string, unknown>,
-): ClaudeAgentTaskProgress | null {
-  if (
-    stringField(rec, "type") !== "system" ||
-    stringField(rec, "subtype") !== "task_progress"
-  ) {
+export function parseTaskProgress(rec: Record<string, unknown>): ClaudeAgentTaskProgress | null {
+  if (stringField(rec, "type") !== "system" || stringField(rec, "subtype") !== "task_progress") {
     return null;
   }
   const taskId = stringField(rec, "task_id");
@@ -617,24 +560,15 @@ export type ClaudeAgentTaskUpdated = {
   backgrounded?: boolean;
 };
 
-export function parseTaskUpdated(
-  rec: Record<string, unknown>,
-): ClaudeAgentTaskUpdated | null {
-  if (
-    stringField(rec, "type") !== "system" ||
-    stringField(rec, "subtype") !== "task_updated"
-  ) {
+export function parseTaskUpdated(rec: Record<string, unknown>): ClaudeAgentTaskUpdated | null {
+  if (stringField(rec, "type") !== "system" || stringField(rec, "subtype") !== "task_updated") {
     return null;
   }
   const taskId = stringField(rec, "task_id");
   const patch = asRecord(rec.patch) ?? {};
   if (!taskId) return null;
   const backgrounded =
-    patch.is_backgrounded === true
-      ? true
-      : patch.is_backgrounded === false
-        ? false
-        : undefined;
+    patch.is_backgrounded === true ? true : patch.is_backgrounded === false ? false : undefined;
   return {
     taskId,
     status: stringField(patch, "status"),
@@ -711,9 +645,7 @@ export type ClaudeToolProgress = {
   subagentType?: string;
 };
 
-export function parseToolProgress(
-  rec: Record<string, unknown>,
-): ClaudeToolProgress | null {
+export function parseToolProgress(rec: Record<string, unknown>): ClaudeToolProgress | null {
   if (stringField(rec, "type") !== "tool_progress") return null;
   const toolUseId = stringField(rec, "tool_use_id");
   if (!toolUseId) return null;
@@ -728,12 +660,7 @@ export function parseToolProgress(
 
 export function isTerminalAgentTaskStatus(status: string | undefined): boolean {
   const key = (status ?? "").toLowerCase();
-  return (
-    key === "completed" ||
-    key === "failed" ||
-    key === "killed" ||
-    key === "stopped"
-  );
+  return key === "completed" || key === "failed" || key === "killed" || key === "stopped";
 }
 
 export function assistantTextBlocks(rec: Record<string, unknown>): string[] {
@@ -766,9 +693,7 @@ export function assistantToolUses(rec: Record<string, unknown>): Array<{
   });
 }
 
-export function toolResultsFromUserMessage(
-  rec: Record<string, unknown>,
-): Array<{
+export function toolResultsFromUserMessage(rec: Record<string, unknown>): Array<{
   toolUseId: string;
   isError: boolean;
   text: string;
@@ -799,10 +724,7 @@ function toolResultText(value: unknown): string {
     .flatMap((block) => {
       if (typeof block === "string") return [block];
       const row = asRecord(block);
-      if (
-        stringField(row, "type") === "text" &&
-        typeof row?.text === "string"
-      ) {
+      if (stringField(row, "type") === "text" && typeof row?.text === "string") {
         return [row.text];
       }
       return [];
@@ -816,9 +738,7 @@ export function extractExitPlanModePlan(value: unknown): string | undefined {
   return plan;
 }
 
-export function extractAskUserQuestionTitle(
-  input: Record<string, unknown>,
-): string {
+export function extractAskUserQuestionTitle(input: Record<string, unknown>): string {
   return questionPromptTitle(questionsFromUnknown(input)) || "Claude question";
 }
 
@@ -832,17 +752,13 @@ export function askUserQuestionAllowInput(
     for (const question of questions) {
       const labels = selectedAnswerLabels(question, reply);
       if (labels.length === 0) continue;
-      answers[question.prompt] = question.multiSelect
-        ? labels.join(", ")
-        : (labels[0] ?? "");
+      answers[question.prompt] = question.multiSelect ? labels.join(", ") : (labels[0] ?? "");
     }
   }
   return { questions: input.questions, answers };
 }
 
-export function tryParseJsonRecord(
-  value: string,
-): Record<string, unknown> | undefined {
+export function tryParseJsonRecord(value: string): Record<string, unknown> | undefined {
   try {
     return asRecord(JSON.parse(value)) ?? undefined;
   } catch {
@@ -850,18 +766,14 @@ export function tryParseJsonRecord(
   }
 }
 
-export function planTextFromTodos(
-  input: Record<string, unknown>,
-): string | null {
+export function planTextFromTodos(input: Record<string, unknown>): string | null {
   const todos = input.todos;
   if (!Array.isArray(todos) || todos.length === 0) return null;
   const lines = todos.flatMap((todo) => {
     const rec = asRecord(todo);
-    const step =
-      stringField(rec, "content") ?? stringField(rec, "activeForm") ?? "Task";
+    const step = stringField(rec, "content") ?? stringField(rec, "activeForm") ?? "Task";
     const status = stringField(rec, "status") ?? "pending";
-    const mark =
-      status === "completed" ? "[x]" : status === "in_progress" ? "[~]" : "[ ]";
+    const mark = status === "completed" ? "[x]" : status === "in_progress" ? "[~]" : "[ ]";
     return [`${mark} ${step}`];
   });
   return lines.length > 0 ? lines.join("\n") : null;
@@ -904,10 +816,7 @@ export function toolKindFromName(toolName: string): string {
   return toolName;
 }
 
-export function toolTitle(
-  name: string,
-  input: Record<string, unknown>,
-): string {
+export function toolTitle(name: string, input: Record<string, unknown>): string {
   return titleFromToolInput(name, toolKindFromName(name), input);
 }
 
@@ -935,10 +844,7 @@ export function previewFromTool(
   );
 }
 
-export function summarizeToolRequest(
-  toolName: string,
-  input: Record<string, unknown>,
-): string {
+export function summarizeToolRequest(toolName: string, input: Record<string, unknown>): string {
   const command = stringField(input, "command") ?? stringField(input, "cmd");
   if (command) return `${toolName}: ${command.slice(0, 400)}`;
   const description = stringField(input, "description");
@@ -972,10 +878,7 @@ export function claudeSettingsKey(input: {
   ].join("|");
 }
 
-function numberField(
-  rec: Record<string, unknown> | null | undefined,
-  key: string,
-): number {
+function numberField(rec: Record<string, unknown> | null | undefined, key: string): number {
   const value = rec?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -1000,9 +903,7 @@ function contextUsedFromUsage(usage: Record<string, unknown> | null): number {
  * Context level from an `assistant` message. Callers must skip subagent
  * messages — subagents run their own window and would make the reading jump.
  */
-export function contextUsedFromAssistant(
-  rec: Record<string, unknown>,
-): number | undefined {
+export function contextUsedFromAssistant(rec: Record<string, unknown>): number | undefined {
   const usage = asRecord(asRecord(rec.message)?.usage);
   if (!usage) return undefined;
   const used = contextUsedFromUsage(usage);

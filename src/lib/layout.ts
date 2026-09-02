@@ -1,9 +1,5 @@
 import type { ReleaseNotesTabSource } from "./releaseNotes";
-import {
-  applyTerminalMeta,
-  defaultTerminalTitle,
-  type TerminalMetaPatch,
-} from "./terminalTab";
+import { applyTerminalMeta, defaultTerminalTitle, type TerminalMetaPatch } from "./terminalTab";
 
 /**
  * Split tree for a tab. Same-direction splits share a group so
@@ -85,11 +81,7 @@ export function newTab(sessionId: string): WorkspaceTab {
   };
 }
 
-export function newFileTab(
-  path: string,
-  cwd: string,
-  review = false,
-): FilePaneTab {
+export function newFileTab(path: string, cwd: string, review = false): FilePaneTab {
   return {
     id: crypto.randomUUID(),
     path,
@@ -112,9 +104,7 @@ export function newPlanTab(
   };
 }
 
-export function newReleaseNotesWorkspaceTab(
-  releaseNotes: ReleaseNotesTabSource,
-): WorkspaceTab {
+export function newReleaseNotesWorkspaceTab(releaseNotes: ReleaseNotesTabSource): WorkspaceTab {
   const file: FilePaneTab = {
     id: crypto.randomUUID(),
     path: `release-notes:${releaseNotes.version}`,
@@ -153,10 +143,7 @@ export function newTerminalWorkspaceTab(file: FilePaneTab): WorkspaceTab {
   };
 }
 
-export function nextTerminalTitleFromFiles(
-  files: Iterable<FilePaneTab>,
-  cwd: string,
-): string {
+export function nextTerminalTitleFromFiles(files: Iterable<FilePaneTab>, cwd: string): string {
   const base = defaultTerminalTitle(cwd);
   const taken = new Set<string>();
   for (const file of files) {
@@ -195,10 +182,7 @@ export function updateTerminalTab(
   return withSurfacePanes(tab, "terminal", terminalPanes);
 }
 
-export function surfacePanes(
-  tab: WorkspaceTab,
-  kind: SurfaceKind,
-): EditorPane[] {
+export function surfacePanes(tab: WorkspaceTab, kind: SurfaceKind): EditorPane[] {
   return kind === "editor" ? tab.editorPanes : (tab.terminalPanes ?? []);
 }
 
@@ -207,9 +191,7 @@ export function withSurfacePanes(
   kind: SurfaceKind,
   panes: EditorPane[],
 ): WorkspaceTab {
-  return kind === "editor"
-    ? { ...tab, editorPanes: panes }
-    : { ...tab, terminalPanes: panes };
+  return kind === "editor" ? { ...tab, editorPanes: panes } : { ...tab, terminalPanes: panes };
 }
 
 export function findSurfacePane(
@@ -222,9 +204,7 @@ export function findSurfacePane(
   if (terminal) return { kind: "terminal", pane: terminal };
 }
 
-export function isPlanTab(
-  file: FilePaneTab,
-): file is FilePaneTab & { plan: PlanTabSource } {
+export function isPlanTab(file: FilePaneTab): file is FilePaneTab & { plan: PlanTabSource } {
   return !!file.plan;
 }
 
@@ -318,10 +298,7 @@ export function newEditorPane(file: FilePaneTab): EditorPane {
 }
 
 /** Focus an existing editor tab, or open it in the focused editor pane / a new split. */
-export function openEditorTab(
-  tab: WorkspaceTab,
-  file: FilePaneTab,
-): WorkspaceTab {
+export function openEditorTab(tab: WorkspaceTab, file: FilePaneTab): WorkspaceTab {
   if (file.terminal) return openTerminalTab(tab, file);
   tab = isolateTerminalPanes(tab);
 
@@ -329,18 +306,14 @@ export function openEditorTab(
   const existingPane = tab.editorPanes.find((pane) =>
     pane.files.some((entry) => editorTabKey(entry) === key),
   );
-  const existingFile = existingPane?.files.find(
-    (entry) => editorTabKey(entry) === key,
-  );
+  const existingFile = existingPane?.files.find((entry) => editorTabKey(entry) === key);
   if (existingPane && existingFile) {
     return {
       ...tab,
       focusedId: existingPane.id,
       diffFocused: false,
       editorPanes: tab.editorPanes.map((pane) =>
-        pane.id === existingPane.id
-          ? { ...pane, activeFileId: existingFile.id }
-          : pane,
+        pane.id === existingPane.id ? { ...pane, activeFileId: existingFile.id } : pane,
       ),
     };
   }
@@ -396,9 +369,7 @@ export function openTerminalTab(
     };
   }
 
-  const focusedPane = tab.terminalPanes.find(
-    (pane) => pane.id === tab.focusedId,
-  );
+  const focusedPane = tab.terminalPanes.find((pane) => pane.id === tab.focusedId);
   const targetPane = focusedPane ?? tab.terminalPanes[0];
   if (targetPane) {
     return {
@@ -485,18 +456,12 @@ export function splitPane(
 
   return {
     ...node,
-    children: node.children.map((child) =>
-      splitPane(child, focusedId, dir, newSessionId),
-    ),
+    children: node.children.map((child) => splitPane(child, focusedId, dir, newSessionId)),
   };
 }
 
 /** Swap one leaf id for another, keeping the split tree intact. */
-export function replaceLeafId(
-  node: LayoutNode,
-  fromId: string,
-  toId: string,
-): LayoutNode {
+export function replaceLeafId(node: LayoutNode, fromId: string, toId: string): LayoutNode {
   if (fromId === toId) return node;
   if (node.type === "leaf") {
     return node.id === fromId ? leaf(toId) : node;
@@ -508,10 +473,7 @@ export function replaceLeafId(
 }
 
 /** Drop a leaf. Parent splits collapse to the remaining child. */
-export function removePane(
-  node: LayoutNode,
-  sessionId: string,
-): LayoutNode | null {
+export function removePane(node: LayoutNode, sessionId: string): LayoutNode | null {
   if (node.type === "leaf") return node.id === sessionId ? null : node;
 
   const kept: { child: LayoutNode; size: number }[] = [];
@@ -532,10 +494,7 @@ export function removePane(
  * Close one pane in a tab. Remaining chats, files, and terminals stay;
  * returns null only when this was the last leaf.
  */
-export function closeLeaf(
-  tab: WorkspaceTab,
-  leafId: string,
-): WorkspaceTab | null {
+export function closeLeaf(tab: WorkspaceTab, leafId: string): WorkspaceTab | null {
   const nextLayout = removePane(tab.layout, leafId);
   if (!nextLayout) return null;
   const nextFocus =
@@ -556,9 +515,7 @@ export function setSplitRatio(
   if (node.id !== splitId) {
     return {
       ...node,
-      children: node.children.map((child) =>
-        setSplitRatio(child, splitId, index, boundary),
-      ),
+      children: node.children.map((child) => setSplitRatio(child, splitId, index, boundary)),
     };
   }
   if (index < 0 || index >= node.sizes.length - 1) return node;
@@ -566,11 +523,7 @@ export function setSplitRatio(
   return { ...node, sizes: splitSizesAtBoundary(node.sizes, index, boundary) };
 }
 
-export function splitSizesAtBoundary(
-  current: number[],
-  index: number,
-  boundary: number,
-): number[] {
+export function splitSizesAtBoundary(current: number[], index: number, boundary: number): number[] {
   if (index < 0 || index >= current.length - 1) return current;
   const sizes = [...current];
   const before = sizes.slice(0, index).reduce((sum, n) => sum + n, 0);
@@ -665,18 +618,13 @@ function rangeOverlap(a0: number, a1: number, b0: number, b1: number): number {
 }
 
 /** Adjacent leaf in `dir`, preferring panes that share an edge. */
-export function neighborLeafId(
-  node: LayoutNode,
-  focusedId: string,
-  dir: FocusDir,
-): string | null {
+export function neighborLeafId(node: LayoutNode, focusedId: string, dir: FocusDir): string | null {
   const panes = leafRects(node);
   const current = panes.find((p) => p.id === focusedId);
   if (!current) return null;
   const c = current.rect;
 
-  let best: { id: string; hit: number; gap: number; overlap: number } | null =
-    null;
+  let best: { id: string; hit: number; gap: number; overlap: number } | null = null;
   for (const pane of panes) {
     if (pane.id === focusedId) continue;
     const r = pane.rect;
@@ -711,14 +659,9 @@ export function neighborLeafId(
 }
 
 /** Session to focus after closing `sessionId` — a neighbor's first leaf. */
-export function siblingLeafId(
-  node: LayoutNode,
-  sessionId: string,
-): string | null {
+export function siblingLeafId(node: LayoutNode, sessionId: string): string | null {
   if (node.type === "leaf") return null;
-  const index = node.children.findIndex(
-    (child) => child.type === "leaf" && child.id === sessionId,
-  );
+  const index = node.children.findIndex((child) => child.type === "leaf" && child.id === sessionId);
   if (index >= 0) {
     const neighbor = node.children[index - 1] ?? node.children[index + 1];
     return neighbor ? firstLeafId(neighbor) : null;
@@ -855,9 +798,7 @@ function insertBeside(
 ): LayoutNode {
   if (node.type === "leaf") return node;
 
-  const index = node.children.findIndex(
-    (child) => child.type === "leaf" && child.id === targetId,
-  );
+  const index = node.children.findIndex((child) => child.type === "leaf" && child.id === targetId);
   if (index >= 0) {
     const insertAt = place === "before" ? index : index + 1;
     const children = [...node.children];
@@ -871,9 +812,7 @@ function insertBeside(
 
   return {
     ...node,
-    children: node.children.map((child) =>
-      insertBeside(child, targetId, leaf, place),
-    ),
+    children: node.children.map((child) => insertBeside(child, targetId, leaf, place)),
   };
 }
 
@@ -896,9 +835,7 @@ function wrapBeside(
   }
   return {
     ...node,
-    children: node.children.map((child) =>
-      wrapBeside(child, targetId, incoming, dir, place),
-    ),
+    children: node.children.map((child) => wrapBeside(child, targetId, incoming, dir, place)),
   };
 }
 
@@ -921,13 +858,7 @@ export function movePane(
 
   const { dir, place } = edgeSplit(edge);
   if (toAt.dir === dir && fromAt.parentId === toAt.parentId) {
-    return reorderInSplit(
-      node,
-      fromAt.parentId,
-      fromAt.index,
-      toAt.index,
-      place,
-    );
+    return reorderInSplit(node, fromAt.parentId, fromAt.index, toAt.index, place);
   }
 
   const extracted = extractLeaf(node, fromId);

@@ -11,15 +11,11 @@ export type ReleaseNotesOpenPlan =
 
 type ReleaseNotesFocusTarget = Extract<ReleaseNotesOpenPlan, { kind: "focus" }>;
 
-export function planReleaseNotesOpen(
-  tabs: WorkspaceTab[],
-  version: string,
-): ReleaseNotesOpenPlan {
+export function planReleaseNotesOpen(tabs: WorkspaceTab[], version: string): ReleaseNotesOpenPlan {
   for (const tab of tabs) {
     for (const pane of tab.editorPanes) {
       const file = pane.files.find(
-        (entry) =>
-          isReleaseNotesTab(entry) && entry.releaseNotes.version === version,
+        (entry) => isReleaseNotesTab(entry) && entry.releaseNotes.version === version,
       );
       if (file) {
         return {
@@ -45,9 +41,7 @@ export function focusReleaseNotesTarget(
           focusedId: target.paneId,
           diffFocused: false,
           editorPanes: tab.editorPanes.map((pane) =>
-            pane.id === target.paneId
-              ? { ...pane, activeFileId: target.fileId }
-              : pane,
+            pane.id === target.paneId ? { ...pane, activeFileId: target.fileId } : pane,
           ),
         }
       : tab,

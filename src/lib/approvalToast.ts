@@ -11,17 +11,13 @@ export type PendingApprovalNotice = {
 };
 
 /** Latest undecided approval or clarifying question in a session, if any. */
-export function pendingApprovalForSession(
-  session: Session,
-): PendingApprovalNotice | null {
+export function pendingApprovalForSession(session: Session): PendingApprovalNotice | null {
   if (session.pendingQuestion) {
     return {
       sessionId: session.id,
       requestId: session.pendingQuestion.requestId,
       label:
-        session.pendingQuestion.title ||
-        session.pendingQuestion.questions[0]?.prompt ||
-        "Question",
+        session.pendingQuestion.title || session.pendingQuestion.questions[0]?.prompt || "Question",
       kind: "question",
     };
   }
@@ -63,14 +59,7 @@ export function hiddenApprovalNotices(
   for (const session of sessions) {
     const pending = pendingApprovalForSession(session);
     if (!pending) continue;
-    if (
-      isSessionConversationFocused(
-        session.id,
-        activeTabId,
-        tabs,
-        composerFocused,
-      )
-    ) {
+    if (isSessionConversationFocused(session.id, activeTabId, tabs, composerFocused)) {
       continue;
     }
     notices.push({ ...pending, session });

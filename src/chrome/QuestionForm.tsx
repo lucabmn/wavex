@@ -81,13 +81,8 @@ export function QuestionForm({ prompt, onReply }: Props) {
         }}
       >
         <div className="flex items-center gap-1.5">
-          <MessageSquare
-            className="size-3.5 shrink-0 text-content/45"
-            strokeWidth={1.75}
-          />
-          <span className="min-w-0 flex-1 truncate text-[11px] text-content/50">
-            {title}
-          </span>
+          <MessageSquare className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
+          <span className="min-w-0 flex-1 truncate text-[11px] text-content/50">{title}</span>
           {total > 1 ? (
             <span className="shrink-0 text-[11px] text-content/40">
               {index + 1} of {total}
@@ -110,11 +105,7 @@ export function QuestionForm({ prompt, onReply }: Props) {
             onSelect={(optionId) =>
               setAnswers((current) => ({
                 ...current,
-                [question.id]: nextSelection(
-                  question,
-                  current[question.id] ?? [],
-                  optionId,
-                ),
+                [question.id]: nextSelection(question, current[question.id] ?? [], optionId),
               }))
             }
             onCustom={(value) => {
@@ -122,9 +113,7 @@ export function QuestionForm({ prompt, onReply }: Props) {
               setAnswers((current) => {
                 const selected = current[question.id] ?? [];
                 if (question.multiSelect) {
-                  const without = selected.filter(
-                    (id) => !isCustomId(question, id),
-                  );
+                  const without = selected.filter((id) => !isCustomId(question, id));
                   return {
                     ...current,
                     [question.id]: [...without, customOptionId(question)],
@@ -171,9 +160,7 @@ function QuestionFields({
 
   return (
     <fieldset className="min-w-0" aria-label={question.header || question.prompt}>
-      <p className="text-[13px] font-medium leading-snug text-content">
-        {question.prompt}
-      </p>
+      <p className="text-[13px] font-medium leading-snug text-content">{question.prompt}</p>
       {question.multiSelect ? (
         <p className="mt-0.5 text-[11px] text-content/40">Select all that apply</p>
       ) : null}
@@ -187,8 +174,7 @@ function QuestionFields({
       ) : (
         <div className="mt-1.5 flex max-h-52 flex-col gap-1 overflow-y-auto" role="group">
           {options.map((option) => {
-            const isCustom =
-              isOtherOption(option) || option.id === CUSTOM_OPTION_ID;
+            const isCustom = isOtherOption(option) || option.id === CUSTOM_OPTION_ID;
             const active = selected.includes(option.id);
             return (
               <div key={option.id}>
@@ -212,9 +198,7 @@ function QuestionFields({
                         : "border-content/30"
                     }`}
                   >
-                    {active ? (
-                      <Check className="size-2.5" strokeWidth={2.5} />
-                    ) : null}
+                    {active ? <Check className="size-2.5" strokeWidth={2.5} /> : null}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[12px] leading-snug text-content">
@@ -264,11 +248,7 @@ function isCustomId(question: UserQuestion, optionId: string): boolean {
   return optionId === CUSTOM_OPTION_ID || optionId === customOptionId(question);
 }
 
-function nextSelection(
-  question: UserQuestion,
-  current: string[],
-  optionId: string,
-): string[] {
+function nextSelection(question: UserQuestion, current: string[], optionId: string): string[] {
   if (!question.multiSelect) return [optionId];
   if (current.includes(optionId)) {
     return current.filter((id) => id !== optionId);

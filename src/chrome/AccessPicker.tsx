@@ -1,10 +1,5 @@
 import { ChevronDown, Lock, LockOpen, Pencil, Sparkles } from "./icons";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   RUNTIME_MODE_HINT,
   RUNTIME_MODE_LABEL,
@@ -30,9 +25,7 @@ const ICONS: Record<RuntimeMode, typeof Lock> = {
 
 export function AccessPicker({ value, onChange, onClose }: Props) {
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(() =>
-    Math.max(0, RUNTIME_MODES.indexOf(value)),
-  );
+  const [active, setActive] = useState(() => Math.max(0, RUNTIME_MODES.indexOf(value)));
   const root = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -88,15 +81,11 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
           setOpen(true);
         }}
         className={`flex h-6.5 max-w-52 items-center gap-1 rounded-md px-1.5 ${
-          open
-            ? "bg-content/10 text-content"
-            : "bg-content/10 text-content hover:bg-content/15"
+          open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"
         }`}
       >
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
-        <span className="min-w-0 truncate text-[11px]">
-          {RUNTIME_MODE_LABEL[value]}
-        </span>
+        <span className="min-w-0 truncate text-[11px]">{RUNTIME_MODE_LABEL[value]}</span>
         <ChevronDown
           className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
@@ -135,10 +124,7 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
                     : "text-content hover:bg-content/5"
                 }`}
               >
-                <ModeIcon
-                  className="mt-0.5 size-3.5 shrink-0 text-content/70"
-                  strokeWidth={1.75}
-                />
+                <ModeIcon className="mt-0.5 size-3.5 shrink-0 text-content/70" strokeWidth={1.75} />
                 <span className="min-w-0">
                   <span className="block text-[13px] font-medium leading-5">
                     {RUNTIME_MODE_LABEL[mode]}

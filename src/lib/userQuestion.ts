@@ -33,8 +33,7 @@ export type UserQuestionReply =
 
 export function questionsFromUnknown(value: unknown): UserQuestion[] {
   const rec = asRecord(value);
-  const nested =
-    asRecord(rec?.input) ?? asRecord(rec?.params) ?? asRecord(rec?.question);
+  const nested = asRecord(rec?.input) ?? asRecord(rec?.params) ?? asRecord(rec?.question);
   const raw = firstArray(
     rec?.questions,
     nested?.questions,
@@ -74,9 +73,7 @@ export function questionAnswersComplete(
   custom: Record<string, string> = {},
 ): boolean {
   if (questions.length === 0) return false;
-  return questions.every((question) =>
-    questionIsComplete(question, answers, custom),
-  );
+  return questions.every((question) => questionIsComplete(question, answers, custom));
 }
 
 /** Skip every question → skipped. Any answered question → answered with those only. */
@@ -85,9 +82,7 @@ export function buildQuestionReply(
   answers: Record<string, string[]>,
   custom: Record<string, string> = {},
 ): UserQuestionReply {
-  const answered = questions.filter((question) =>
-    questionIsComplete(question, answers, custom),
-  );
+  const answered = questions.filter((question) => questionIsComplete(question, answers, custom));
   if (answered.length === 0) return { kind: "skipped" };
   const nextAnswers: Record<string, string[]> = {};
   const nextCustom: Record<string, string> = {};
@@ -119,10 +114,7 @@ export function selectedAnswerLabels(
   });
 }
 
-export function isCustomSelection(
-  question: UserQuestion,
-  optionId: string,
-): boolean {
+export function isCustomSelection(question: UserQuestion, optionId: string): boolean {
   if (optionId === CUSTOM_OPTION_ID) return true;
   const option = question.options.find((item) => item.id === optionId);
   return option ? isOtherOption(option) : false;
@@ -149,16 +141,10 @@ function questionFromUnknown(
   if (!prompt && options.length === 0 && !allowCustom) return null;
   const header = stringField(rec, "header") ?? stringField(rec, "title");
   return {
-    id: uniqueId(
-      stringField(rec, "id") ?? prompt ?? header ?? `q${index + 1}`,
-      usedIds,
-    ),
+    id: uniqueId(stringField(rec, "id") ?? prompt ?? header ?? `q${index + 1}`, usedIds),
     ...(header ? { header } : {}),
     prompt: prompt || header || `Question ${index + 1}`,
-    multiSelect:
-      rec.multiSelect === true ||
-      rec.allowMultiple === true ||
-      rec.multiple === true,
+    multiSelect: rec.multiSelect === true || rec.allowMultiple === true || rec.multiple === true,
     allowCustom,
     options,
   };
@@ -197,10 +183,7 @@ function optionsFromUnknown(value: unknown): UserQuestionOption[] {
   });
 }
 
-function customAllowed(
-  rec: Record<string, unknown>,
-  options: UserQuestionOption[],
-): boolean {
+function customAllowed(rec: Record<string, unknown>, options: UserQuestionOption[]): boolean {
   if (typeof rec.custom === "boolean") return rec.custom;
   if (typeof rec.allowCustom === "boolean") return rec.allowCustom;
   if (options.some(isOtherOption)) return true;

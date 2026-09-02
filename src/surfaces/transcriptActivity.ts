@@ -13,8 +13,7 @@ import type { Block } from "../lib/session";
 
 export type ToolCallState = "pending" | "accepted" | "rejected";
 
-export type TurnItem =
-  { type: "block"; block: Block } | { type: "activity"; blocks: Block[] };
+export type TurnItem = { type: "block"; block: Block } | { type: "activity"; blocks: Block[] };
 
 export function needsApproval(block: Block): boolean {
   return !!block.approval && !block.approval.decided;
@@ -35,12 +34,7 @@ export function toolCallState(block: Block): ToolCallState {
   }
   if (needsApproval(block)) return "pending";
   if (status === "completed" || status === "success") return "accepted";
-  if (
-    block.streaming ||
-    status === "in_progress" ||
-    status === "pending" ||
-    status === "running"
-  ) {
+  if (block.streaming || status === "in_progress" || status === "pending" || status === "running") {
     return "pending";
   }
   if (decided === "allow" || decided === "cancelled" || !status) {
@@ -51,9 +45,7 @@ export function toolCallState(block: Block): ToolCallState {
 
 export function toolCallLabel(block: Block, cwd?: string): string {
   const preview = block.tool?.preview;
-  const path = preview?.path
-    ? displayPath(preview.path, cwd)
-    : preview?.fileName;
+  const path = preview?.path ? displayPath(preview.path, cwd) : preview?.fileName;
   return (
     composeToolTitle({
       kind: block.tool?.kind,
@@ -66,11 +58,7 @@ export function toolCallLabel(block: Block, cwd?: string): string {
   );
 }
 
-export function isIncompleteTool(
-  block: Block,
-  label: string,
-  state: ToolCallState,
-): boolean {
+export function isIncompleteTool(block: Block, label: string, state: ToolCallState): boolean {
   if (state !== "pending") return false;
   const kind = block.tool?.kind?.toLowerCase();
   if (kind && kind !== "other") return false;
@@ -86,13 +74,7 @@ export function isIncompleteTool(
 
 export function isHiddenTool(block: Block): boolean {
   if (block.role !== "tool" && block.role !== "approval") return false;
-  if (
-    isEditTool(
-      block.tool?.kind,
-      block.text || block.tool?.title,
-      block.tool?.preview,
-    )
-  ) {
+  if (isEditTool(block.tool?.kind, block.text || block.tool?.title, block.tool?.preview)) {
     return false;
   }
   const state = toolCallState(block);
@@ -107,11 +89,7 @@ export function isActivityBlock(block: Block): boolean {
   if (isThinkingBlock(block)) return true;
   if (block.role !== "tool" && block.role !== "approval") return false;
   if (
-    isEditTool(
-      block.tool?.kind,
-      block.text || block.tool?.title,
-      block.tool?.preview,
-    ) &&
+    isEditTool(block.tool?.kind, block.text || block.tool?.title, block.tool?.preview) &&
     needsApproval(block)
   ) {
     return false;
@@ -203,9 +181,7 @@ export function groupTurns(blocks: Block[]): Block[][] {
  * into one activity group, leaving the final answer standing alone.
  */
 export function groupTurnItems(blocks: Block[]): TurnItem[] {
-  const visible = blocks.filter(
-    (block) => !isIgnoredTurnBlock(block) && !isHiddenTool(block),
-  );
+  const visible = blocks.filter((block) => !isIgnoredTurnBlock(block) && !isHiddenTool(block));
   const finalStart = finalResponseStart(visible);
   const items: TurnItem[] = [];
   let activity: Block[] = [];
@@ -257,9 +233,7 @@ export function lastActivityIndex(items: TurnItem[]): number {
 /** True while a tool in this turn is still running or waiting on the user. */
 export function activityStillRunning(blocks: Block[]): boolean {
   return blocks.some(
-    (block) =>
-      (isToolBlock(block) && toolCallState(block) === "pending") ||
-      needsApproval(block),
+    (block) => (isToolBlock(block) && toolCallState(block) === "pending") || needsApproval(block),
   );
 }
 
@@ -294,13 +268,7 @@ export type ActivityPhase = {
 };
 
 /** Ties break towards the kind that changed the most: an edit outranks a read. */
-const WORK_KIND_ORDER: ActivityWorkKind[] = [
-  "edit",
-  "run",
-  "agent",
-  "research",
-  "other",
-];
+const WORK_KIND_ORDER: ActivityWorkKind[] = ["edit", "run", "agent", "research", "other"];
 
 export function toolCategory(block: Block): ActivityWorkKind {
   const kind = block.tool?.kind;
@@ -392,8 +360,7 @@ function absorbStrayPhases(phases: ActivityPhase[]): ActivityPhase[] {
   const kept: ActivityPhase[] = [];
   for (const phase of phases) {
     const previous = kept[kept.length - 1];
-    const stray =
-      !phase.headline && phase.steps.filter(isToolBlock).length === 1;
+    const stray = !phase.headline && phase.steps.filter(isToolBlock).length === 1;
     if (
       previous &&
       stray &&

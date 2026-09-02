@@ -1,10 +1,4 @@
-import {
-  CaseSensitive,
-  ChevronLeft,
-  LoaderCircle,
-  Regex,
-  WholeWord,
-} from "./icons";
+import { CaseSensitive, ChevronLeft, LoaderCircle, Regex, WholeWord } from "./icons";
 import {
   useEffect,
   useMemo,
@@ -13,11 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
-import {
-  searchProject,
-  type OpenFileFn,
-  type ProjectSearchMatch,
-} from "../lib/search";
+import { searchProject, type OpenFileFn, type ProjectSearchMatch } from "../lib/search";
 import { FileTypeIcon } from "./FileTypeIcon";
 
 type Props = {
@@ -34,12 +24,7 @@ type MatchGroup = {
   matches: ProjectSearchMatch[];
 };
 
-export function ProjectSearch({
-  cwd,
-  focusToken = 0,
-  onOpenFile,
-  onClose,
-}: Props) {
+export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -136,9 +121,7 @@ export function ProjectSearch({
   };
 
   if (!cwd || cwd === "~") {
-    return (
-      <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>
-    );
+    return <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>;
   }
 
   return (
@@ -153,9 +136,7 @@ export function ProjectSearch({
         >
           <ChevronLeft className="size-4" strokeWidth={1.75} />
         </button>
-        <span className="min-w-0 flex-1 truncate text-[12px] text-content/55">
-          Search in files
-        </span>
+        <span className="min-w-0 flex-1 truncate text-[12px] text-content/55">Search in files</span>
       </div>
       <div className="shrink-0 space-y-2 border-b border-content/10 p-2">
         <div className="flex items-center gap-1 rounded-md border border-content/10 bg-content/5 px-2 pr-1">
@@ -234,17 +215,12 @@ export function ProjectSearch({
           <section key={group.path} className="border-b border-content/8">
             <div className="flex items-center gap-1.5 px-2 py-1.5">
               <FileTypeIcon name={group.name} isDir={false} size={16} />
-              <span className="min-w-0 flex-1 truncate text-[12px] text-content">
-                {group.name}
-              </span>
+              <span className="min-w-0 flex-1 truncate text-[12px] text-content">{group.name}</span>
               <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] tabular-nums text-accent">
                 {group.matches.length}
               </span>
             </div>
-            <p
-              className="truncate px-2 pb-1 text-[10px] text-content/40"
-              title={group.relative}
-            >
+            <p className="truncate px-2 pb-1 text-[10px] text-content/40" title={group.relative}>
               {group.relative}
             </p>
             <ul>
@@ -346,9 +322,7 @@ function MatchPreview({
       return (
         <>
           {preview.slice(0, start)}
-          <mark className="rounded-sm bg-accent/35 text-content">
-            {preview.slice(start, end)}
-          </mark>
+          <mark className="rounded-sm bg-accent/35 text-content">{preview.slice(start, end)}</mark>
           {preview.slice(end)}
         </>
       );
@@ -365,9 +339,7 @@ function MatchPreview({
   return (
     <>
       {preview.slice(0, index)}
-      <mark className="rounded-sm bg-accent/35 text-content">
-        {preview.slice(index, end)}
-      </mark>
+      <mark className="rounded-sm bg-accent/35 text-content">{preview.slice(index, end)}</mark>
       {preview.slice(end)}
     </>
   );

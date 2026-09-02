@@ -43,8 +43,6 @@ export function editorPathsEqual(a: string, b: string): boolean {
   return normalizeEditorPath(a) === normalizeEditorPath(b);
 }
 
-export function searchProject(
-  options: ProjectSearchOptions,
-): Promise<ProjectSearchResult> {
+export function searchProject(options: ProjectSearchOptions): Promise<ProjectSearchResult> {
   return invoke<ProjectSearchResult>("search_project", { options });
 }

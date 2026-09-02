@@ -43,10 +43,7 @@ export function joinPath(parent: string, relative: string): string {
 }
 
 /** Absolute path for a workspace file href, or `undefined` if it is not a local file. */
-export function resolveWorkspacePath(
-  href: string,
-  cwd?: string,
-): string | undefined {
+export function resolveWorkspacePath(href: string, cwd?: string): string | undefined {
   let value = href.trim();
   if (!value || /^(https?:|mailto:|tel:)/i.test(value)) return undefined;
 
@@ -59,7 +56,13 @@ export function resolveWorkspacePath(
   }
 
   value = value.replace(/\\/g, "/").replace(/(?::\d+(?::\d+)?|#L\d+(?:-L\d+)?)$/, "");
-  if (!value || value === "." || value.startsWith("#") || value.startsWith("?") || value.includes("://")) {
+  if (
+    !value ||
+    value === "." ||
+    value.startsWith("#") ||
+    value.startsWith("?") ||
+    value.includes("://")
+  ) {
     return undefined;
   }
   if (!looksLikeFilePath(value)) return undefined;

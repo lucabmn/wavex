@@ -1,12 +1,6 @@
 import { nativeModelId } from "../models";
 import type { Attachment, RuntimeMode } from "../session";
-import {
-  killChild,
-  resolveCodexBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, resolveCodexBinary, spawnChild, unwatchChild, watchChild } from "./child";
 import {
   asRecord,
   buildThreadStartParams,
@@ -61,9 +55,7 @@ const cancelledThreads = new Set<string>();
 let resolveCodexBinaryImpl: () => Promise<{ path: string }> = resolveCodexBinary;
 
 /** Test seam. */
-export function setCodexBinaryResolver(
-  fn: () => Promise<{ path: string }>,
-): void {
+export function setCodexBinaryResolver(fn: () => Promise<{ path: string }>): void {
   resolveCodexBinaryImpl = fn;
 }
 
@@ -79,16 +71,18 @@ export async function sendCodexTurn(input: SendTurnInput): Promise<void> {
 
   live.onEvent = input.onEvent;
   live.runtimeMode = input.runtimeMode;
-  live.turns = live.turns.catch(() => undefined).then(async () => {
-    live.cancelled = false;
-    live.muteUpdates = false;
-    try {
-      await runTurn(live, input);
-    } catch (error) {
-      if (live.cancelled) return;
-      throw error;
-    }
-  });
+  live.turns = live.turns
+    .catch(() => undefined)
+    .then(async () => {
+      live.cancelled = false;
+      live.muteUpdates = false;
+      try {
+        await runTurn(live, input);
+      } catch (error) {
+        if (live.cancelled) return;
+        throw error;
+      }
+    });
   await live.turns;
 }
 
@@ -105,10 +99,7 @@ export async function steerCodexTurn(input: SteerTurnInput): Promise<void> {
     prompt: input.text.trim() || undefined,
     attachments,
   });
-  if (
-    !params.input ||
-    (Array.isArray(params.input) && params.input.length === 0)
-  ) {
+  if (!params.input || (Array.isArray(params.input) && params.input.length === 0)) {
     return;
   }
 
@@ -147,10 +138,7 @@ export async function cancelCodexTurn(sessionId: string): Promise<void> {
       })
       .catch(() => undefined);
   }
-  finishActiveTurn(live, [
-    { type: "message.completed" },
-    { type: "reasoning.completed" },
-  ]);
+  finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
 export async function stopCodexSession(sessionId: string): Promise<void> {
@@ -173,11 +161,7 @@ export async function forgetCodexSession(sessionId: string): Promise<void> {
   await stopCodexSession(sessionId);
 }
 
-export function bindCodexSession(
-  threadId: string,
-  providerSessionId: string,
-  cwd: string,
-): void {
+export function bindCodexSession(threadId: string, providerSessionId: string, cwd: string): void {
   const providerThreadId = providerSessionId.trim();
   if (!threadId || !providerThreadId || !cwd.trim()) return;
   resumeByThread.set(threadId, { threadId: providerThreadId, cwd });
@@ -261,18 +245,15 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
 
     if (canResume && resume) {
       try {
-        const opened = await rpc.request<{ thread?: { id?: string } }>(
-          "thread/resume",
-          {
-            threadId: resume.threadId,
-            ...buildThreadStartParams({
-              cwd: input.cwd,
-              runtimeMode: input.runtimeMode,
-              model,
-              serviceTier,
-            }),
-          },
-        );
+        const opened = await rpc.request<{ thread?: { id?: string } }>("thread/resume", {
+          threadId: resume.threadId,
+          ...buildThreadStartParams({
+            cwd: input.cwd,
+            runtimeMode: input.runtimeMode,
+            model,
+            serviceTier,
+          }),
+        });
         threadId = opened.thread?.id ?? resume.threadId;
         didResume = true;
       } catch (error) {
@@ -353,8 +334,7 @@ async function runTurn(live: Live, input: SendTurnInput): Promise<void> {
   });
 
   if (
-    (!params.input ||
-      (Array.isArray(params.input) && params.input.length === 0)) &&
+    (!params.input || (Array.isArray(params.input) && params.input.length === 0)) &&
     !input.text.trim() &&
     attachments.length === 0
   ) {
@@ -371,10 +351,7 @@ async function runTurn(live: Live, input: SendTurnInput): Promise<void> {
   settlePendingTurn(live);
 
   try {
-    const response = await live.rpc.request<{ turn?: { id?: string } }>(
-      "turn/start",
-      params,
-    );
+    const response = await live.rpc.request<{ turn?: { id?: string } }>("turn/start", params);
     const turnId = response.turn?.id;
     if (turnId) {
       live.activeTurnId = live.activeTurnId ?? turnId;
@@ -394,11 +371,7 @@ async function runTurn(live: Live, input: SendTurnInput): Promise<void> {
   }
 }
 
-function handleNotification(
-  live: Live,
-  method: string,
-  params: unknown,
-): void {
+function handleNotification(live: Live, method: string, params: unknown): void {
   // A Codex turn is a sequence of items. Completing an agentMessage does not
   // mean the turn is over — more tools and messages can still arrive. Only
   // turn/completed (and turn/aborted) settle sendCodexTurn, which is what the
@@ -430,8 +403,7 @@ function publishCodexText(
   text: string,
   snapshot: boolean,
 ): void {
-  const already =
-    role === "assistant" ? live.emittedAssistant : live.emittedReasoning;
+  const already = role === "assistant" ? live.emittedAssistant : live.emittedReasoning;
   const emit = snapshot ? snapshotRemainder(already, text) : text;
   if (!emit) return;
   if (role === "assistant") {
@@ -485,9 +457,7 @@ async function handleServerRequest(
   if (!mapped) {
     // Unknown server request — decline/cancel safely when possible.
     if (method.includes("requestApproval") || method.includes("Approval")) {
-      await live.rpc
-        .respond(id, { decision: "decline" })
-        .catch(() => undefined);
+      await live.rpc.respond(id, { decision: "decline" }).catch(() => undefined);
       return;
     }
     if (method === "item/permissions/requestApproval") {
@@ -570,10 +540,7 @@ function waitApproval(
   });
 }
 
-function autoApproval(
-  runtimeMode: RuntimeMode,
-  kind: CodexApprovalKind,
-): ApprovalDecision | null {
+function autoApproval(runtimeMode: RuntimeMode, kind: CodexApprovalKind): ApprovalDecision | null {
   if (runtimeMode === "supervised") return null;
   if (runtimeMode === "full-access") return "allow";
   if (runtimeMode === "auto") {

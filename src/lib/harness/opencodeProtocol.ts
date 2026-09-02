@@ -122,9 +122,7 @@ export function isOpenCodeNotFound(cause: unknown): boolean {
   return false;
 }
 
-export function buildOpenCodePermissionRules(
-  runtimeMode: RuntimeMode,
-): OpenCodePermissionRule[] {
+export function buildOpenCodePermissionRules(runtimeMode: RuntimeMode): OpenCodePermissionRule[] {
   if (runtimeMode === "full-access") {
     return [{ permission: "*", pattern: "*", action: "allow" }];
   }
@@ -141,9 +139,7 @@ export function buildOpenCodePermissionRules(
   return rules;
 }
 
-export function toOpenCodePermissionReply(
-  decision: "allow" | "deny",
-): "once" | "reject" {
+export function toOpenCodePermissionReply(decision: "allow" | "deny"): "once" | "reject" {
   return decision === "allow" ? "once" : "reject";
 }
 
@@ -184,9 +180,7 @@ export function mergeOpenCodeAssistantText(
   nextText: string,
 ): { latestText: string; deltaToEmit: string } {
   const latestText =
-    previousText &&
-    previousText.length > nextText.length &&
-    previousText.startsWith(nextText)
+    previousText && previousText.length > nextText.length && previousText.startsWith(nextText)
       ? previousText
       : nextText;
   return {
@@ -220,20 +214,13 @@ export function titleCaseSlug(value: string): string {
   return segments.join(" ");
 }
 
-export function inferDefaultVariant(
-  providerID: string,
-  variants: string[],
-): string | undefined {
+export function inferDefaultVariant(providerID: string, variants: string[]): string | undefined {
   if (variants.length === 1) return variants[0];
   if (providerID === "anthropic" || providerID.startsWith("google")) {
     return variants.includes("high") ? "high" : undefined;
   }
   if (providerID === "openai" || providerID === "opencode") {
-    return variants.includes("medium")
-      ? "medium"
-      : variants.includes("high")
-        ? "high"
-        : undefined;
+    return variants.includes("medium") ? "medium" : variants.includes("high") ? "high" : undefined;
   }
   return undefined;
 }
@@ -244,7 +231,11 @@ export function inferDefaultAgent(agents: Array<{ name: string }>): string | und
 
 export function toolKindFromName(toolName: string): string {
   const normalized = toolName.toLowerCase();
-  if (normalized.includes("bash") || normalized.includes("command") || normalized.includes("shell")) {
+  if (
+    normalized.includes("bash") ||
+    normalized.includes("command") ||
+    normalized.includes("shell")
+  ) {
     return "shell";
   }
   if (
@@ -265,11 +256,7 @@ export function toolKindFromName(toolName: string): string {
     return "search";
   }
   if (normalized === "skill" || normalized === "skills") return "skill";
-  if (
-    normalized === "agent" ||
-    normalized === "task" ||
-    normalized === "subagent"
-  ) {
+  if (normalized === "agent" || normalized === "task" || normalized === "subagent") {
     return "agent";
   }
   return toolName;
@@ -365,10 +352,7 @@ export function eventSessionId(event: Record<string, unknown>): string | undefin
   return stringField(info, "id");
 }
 
-export function textDeltaEvent(
-  part: OpenCodePart,
-  text: string,
-): HarnessEvent | null {
+export function textDeltaEvent(part: OpenCodePart, text: string): HarnessEvent | null {
   if (!text) return null;
   if (part.type === "reasoning") return { type: "reasoning.delta", text };
   return { type: "message.delta", text };

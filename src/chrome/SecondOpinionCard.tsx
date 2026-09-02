@@ -20,18 +20,11 @@ export function SecondOpinionCard({ card }: Props) {
       <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-content/50">
         <HarnessIcon harness={card.from} className="size-3 shrink-0" />
         <span className="truncate">{HARNESS_TITLE[card.from]}</span>
-        <ChevronRight
-          className="size-3 shrink-0 text-content/35"
-          strokeWidth={1.75}
-        />
+        <ChevronRight className="size-3 shrink-0 text-content/35" strokeWidth={1.75} />
         <HarnessIcon harness={card.to} className="size-3 shrink-0" />
         <span className="truncate">{HARNESS_TITLE[card.to]}</span>
       </div>
-      {files ? (
-        <div className="mt-1 text-[11px] leading-4 text-content/45">
-          {files}
-        </div>
-      ) : null}
+      {files ? <div className="mt-1 text-[11px] leading-4 text-content/45">{files}</div> : null}
     </div>
   );
 }

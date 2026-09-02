@@ -24,12 +24,14 @@ import {
 import { AgentTranscript } from "./AgentTranscript";
 import { EmptySession } from "./EmptySession";
 import { MOD } from "../lib/platform";
-import { acknowledgeQuoteRequest, ADD_TO_CHAT_EVENT, type AddToChatRequest, type QuoteRequest } from "../lib/quoteDraft";
-import { createNote, noteTitle } from "../lib/notes";
 import {
-  loadNotesEnabled,
-  subscribeNotesEnabled,
-} from "../lib/settings";
+  acknowledgeQuoteRequest,
+  ADD_TO_CHAT_EVENT,
+  type AddToChatRequest,
+  type QuoteRequest,
+} from "../lib/quoteDraft";
+import { createNote, noteTitle } from "../lib/notes";
+import { loadNotesEnabled, subscribeNotesEnabled } from "../lib/settings";
 
 type Props = {
   session: Session;
@@ -44,45 +46,20 @@ type Props = {
   onCwdChange: (sessionId: string, cwd: string) => void;
   onBranchChange: (sessionId: string) => void;
   onModelChange: (sessionId: string, harness: HarnessId, model: string) => void;
-  onModelSettingsChange: (
-    sessionId: string,
-    settings: Record<string, string>,
-  ) => void;
+  onModelSettingsChange: (sessionId: string, settings: Record<string, string>) => void;
   onRuntimeModeChange: (sessionId: string, mode: RuntimeMode) => void;
-  onSubmit: (
-    sessionId: string,
-    text: string,
-    attachments: Attachment[],
-  ) => void;
+  onSubmit: (sessionId: string, text: string, attachments: Attachment[]) => void;
   onStop: (sessionId: string) => void;
   onInboxCardDismiss?: (sessionId: string) => void;
   onNoteCardDismiss?: (sessionId: string) => void;
   onHandoffCardDismiss?: (sessionId: string) => void;
-  onApproval: (
-    sessionId: string,
-    requestId: number,
-    decision: ApprovalDecision,
-  ) => void;
-  onQuestionReply: (
-    sessionId: string,
-    requestId: number,
-    reply: UserQuestionReply,
-  ) => void;
+  onApproval: (sessionId: string, requestId: number, decision: ApprovalDecision) => void;
+  onQuestionReply: (sessionId: string, requestId: number, reply: UserQuestionReply) => void;
   onOpenFile: (path: string) => void;
   onOpenDiff: (path?: string) => void;
   onOpenPlan: (sessionId: string, blockId: string) => void;
-  onSecondOpinion?: (
-    sessionId: string,
-    harness: HarnessId,
-    turn: Block[],
-    model: string,
-  ) => void;
-  onHandoff?: (
-    sessionId: string,
-    harness: HarnessId,
-    turn: Block[],
-    model: string,
-  ) => void;
+  onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
+  onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onNewTerminal: (sessionId: string) => void;
   onPaneDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
 };
@@ -119,13 +96,11 @@ export const SessionPane = memo(function SessionPane({
 }: Props) {
   const title = sessionDisplayTitle(session.title, session.harness);
   const approve = useCallback(
-    (requestId: number, decision: ApprovalDecision) =>
-      onApproval(session.id, requestId, decision),
+    (requestId: number, decision: ApprovalDecision) => onApproval(session.id, requestId, decision),
     [onApproval, session.id],
   );
   const replyQuestion = useCallback(
-    (requestId: number, reply: UserQuestionReply) =>
-      onQuestionReply(session.id, requestId, reply),
+    (requestId: number, reply: UserQuestionReply) => onQuestionReply(session.id, requestId, reply),
     [onQuestionReply, session.id],
   );
   const openPlan = useCallback(
@@ -146,19 +121,12 @@ export const SessionPane = memo(function SessionPane({
   const acknowledgeQuote = useCallback((handledId: number) => {
     setQuoteRequest((current) => acknowledgeQuoteRequest(current, handledId));
   }, []);
-  const notesEnabled = useSyncExternalStore(
-    subscribeNotesEnabled,
-    loadNotesEnabled,
-    () => true,
-  );
+  const notesEnabled = useSyncExternalStore(subscribeNotesEnabled, loadNotesEnabled, () => true);
   const saveNote = useCallback(
     (text: string) => {
       const sessionTitle = sessionDisplayTitle(session.title, session.harness);
       void createNote({
-        title:
-          sessionTitle && sessionTitle !== "New session"
-            ? sessionTitle
-            : noteTitle(text),
+        title: sessionTitle && sessionTitle !== "New session" ? sessionTitle : noteTitle(text),
         body: text,
         sourceSessionId: session.id,
         sourceCwd: session.cwd,
@@ -215,12 +183,8 @@ export const SessionPane = memo(function SessionPane({
       onCwdChange={(cwd) => onCwdChange(session.id, cwd)}
       onBranchChange={() => onBranchChange(session.id)}
       onNewTerminal={() => onNewTerminal(session.id)}
-      onModelChange={(harness, model) =>
-        onModelChange(session.id, harness, model)
-      }
-      onModelSettingsChange={(settings) =>
-        onModelSettingsChange(session.id, settings)
-      }
+      onModelChange={(harness, model) => onModelChange(session.id, harness, model)}
+      onModelSettingsChange={(settings) => onModelSettingsChange(session.id, settings)}
       onRuntimeModeChange={(mode) => onRuntimeModeChange(session.id, mode)}
       onSubmit={(text, attachments) => onSubmit(session.id, text, attachments)}
       onStop={() => onStop(session.id)}
@@ -250,27 +214,19 @@ export const SessionPane = memo(function SessionPane({
           }`}
           onPointerDown={(event) => {
             if (event.button !== 0 || !onPaneDragStart) return;
-            if (
-              (event.target as HTMLElement | null)?.closest("[data-no-drag]")
-            ) {
+            if ((event.target as HTMLElement | null)?.closest("[data-no-drag]")) {
               return;
             }
             onPaneDragStart(event);
           }}
         >
           {onPaneDragStart ? (
-            <GripVertical
-              className="size-3.5 shrink-0 text-content/35"
-              strokeWidth={1.75}
-            />
+            <GripVertical className="size-3.5 shrink-0 text-content/35" strokeWidth={1.75} />
           ) : null}
           <span
             className={`size-2 shrink-0 rounded-full ${focused ? "bg-accent" : "bg-transparent"}`}
           />
-          <span
-            className="min-w-0 flex-1 truncate text-xs text-content"
-            title={title}
-          >
+          <span className="min-w-0 flex-1 truncate text-xs text-content" title={title}>
             {title}
           </span>
           <button
@@ -292,10 +248,7 @@ export const SessionPane = memo(function SessionPane({
       ) : null}
       <div className="relative min-h-0 flex-1">
         {isEmpty ? (
-          <EmptySession
-            cwd={session.cwd}
-            composer={dockComposer ? undefined : composer}
-          />
+          <EmptySession cwd={session.cwd} composer={dockComposer ? undefined : composer} />
         ) : (
           <>
             <AgentTranscript
@@ -313,14 +266,12 @@ export const SessionPane = memo(function SessionPane({
               onOpenPlan={openPlan}
               onSecondOpinion={
                 onSecondOpinion
-                  ? (harness, turn, model) =>
-                      onSecondOpinion(session.id, harness, turn, model)
+                  ? (harness, turn, model) => onSecondOpinion(session.id, harness, turn, model)
                   : undefined
               }
               onHandoff={
                 onHandoff
-                  ? (harness, turn, model) =>
-                      onHandoff(session.id, harness, turn, model)
+                  ? (harness, turn, model) => onHandoff(session.id, harness, turn, model)
                   : undefined
               }
               onJumpToBottomChange={setShowJumpToBottom}
@@ -343,9 +294,7 @@ export const SessionPane = memo(function SessionPane({
           </>
         )}
       </div>
-      {dockComposer ? (
-        <div className="mx-auto w-full max-w-4xl shrink-0">{composer}</div>
-      ) : null}
+      {dockComposer ? <div className="mx-auto w-full max-w-4xl shrink-0">{composer}</div> : null}
     </div>
   );
 });

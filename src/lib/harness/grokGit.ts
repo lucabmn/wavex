@@ -56,9 +56,7 @@ export async function generateGrokPrContent(
     console.debug("[wavex] pr content", error);
   }
   const title =
-    parsed?.title ||
-    range.commitSummary.split(/\r?\n/)[0]?.trim() ||
-    `Update ${range.head}`;
+    parsed?.title || range.commitSummary.split(/\r?\n/)[0]?.trim() || `Update ${range.head}`;
   return {
     title,
     body: parsed?.body || range.commitSummary.trim(),
@@ -67,10 +65,7 @@ export async function generateGrokPrContent(
   };
 }
 
-export async function generateGrokBranchName(
-  cwd: string,
-  message: string,
-): Promise<string | null> {
+export async function generateGrokBranchName(cwd: string, message: string): Promise<string | null> {
   try {
     const output = await runGrokTextPrompt({
       cwd,

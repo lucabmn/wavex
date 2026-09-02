@@ -33,10 +33,7 @@ export function rememberOpenedFile(cwd: string, path: string) {
   if (!path) return;
   const key = normCwd(cwd);
   const prev = recentsByCwd.get(key) ?? [];
-  recentsByCwd.set(
-    key,
-    [path, ...prev.filter((item) => item !== path)].slice(0, MAX_RECENTS),
-  );
+  recentsByCwd.set(key, [path, ...prev.filter((item) => item !== path)].slice(0, MAX_RECENTS));
 }
 
 export function recentOpenedFiles(cwd: string): string[] {
@@ -48,10 +45,7 @@ export function prefetchProjectFiles(cwd: string) {
   void loadProjectFiles(cwd);
 }
 
-export function loadProjectFiles(
-  cwd: string,
-  refresh = false,
-): Promise<ProjectFile[]> {
+export function loadProjectFiles(cwd: string, refresh = false): Promise<ProjectFile[]> {
   if (!looksLikeProject(cwd)) return Promise.resolve([]);
   if (!refresh && cache?.cwd === cwd) return Promise.resolve(cache.files);
   if (inflight?.cwd === cwd) return inflight.promise;
@@ -99,8 +93,7 @@ export function rankProjectFiles(
     const hit = scorePath(query, file.relative, file.name);
     if (!hit) continue;
     const recency = recentRank.get(file.path);
-    const score =
-      hit.score + (recency == null ? 0 : (MAX_RECENTS - recency) * 8);
+    const score = hit.score + (recency == null ? 0 : (MAX_RECENTS - recency) * 8);
     scored.push({ ...file, score, positions: hit.positions });
   }
 
@@ -115,28 +108,21 @@ export function rankProjectFiles(
 }
 
 /** Resolve a transcript or markdown file link to an existing project file. */
-export async function resolveOpenablePath(
-  cwd: string,
-  href: string,
-): Promise<string | undefined> {
+export async function resolveOpenablePath(cwd: string, href: string): Promise<string | undefined> {
   const direct = resolveWorkspacePath(href, cwd);
   if (!direct) return undefined;
 
   const files = await loadProjectFiles(cwd);
   if (files.length === 0) return direct;
 
-  const byPath = new Map(
-    files.map((file) => [normalizeEditorPath(file.path), file]),
-  );
+  const byPath = new Map(files.map((file) => [normalizeEditorPath(file.path), file]));
   const normalizedDirect = normalizeEditorPath(direct);
   const exact = byPath.get(normalizedDirect);
   if (exact) return exact.path;
 
   const relHint = relativePathHint(href, cwd, direct);
   const exactRelative = files.find(
-    (file) =>
-      file.relative === relHint ||
-      normalizeEditorPath(file.relative) === relHint,
+    (file) => file.relative === relHint || normalizeEditorPath(file.relative) === relHint,
   );
   if (exactRelative) return exactRelative.path;
 
@@ -158,10 +144,7 @@ export async function resolveOpenablePath(
 
 function relativePathHint(href: string, cwd: string, direct: string): string {
   let value = href.trim().replace(/\\/g, "/");
-  value = value.replace(
-    /(?::\d+(?::\d+)?|#L\d+(?:-L\d+)?)$/,
-    "",
-  );
+  value = value.replace(/(?::\d+(?::\d+)?|#L\d+(?:-L\d+)?)$/, "");
   if (value.startsWith("file://")) {
     try {
       value = decodeURIComponent(value.slice("file://".length));
@@ -180,28 +163,19 @@ function relativePathHint(href: string, cwd: string, direct: string): string {
   return value;
 }
 
-function pickOpenableFile(
-  candidates: ProjectFile[],
-  cwd: string,
-  relHint: string,
-): ProjectFile {
+function pickOpenableFile(candidates: ProjectFile[], cwd: string, relHint: string): ProjectFile {
   const recents = recentOpenedFiles(cwd);
   for (const recent of recents) {
     const normalizedRecent = normalizeEditorPath(recent);
-    const hit = candidates.find(
-      (file) => normalizeEditorPath(file.path) === normalizedRecent,
-    );
+    const hit = candidates.find((file) => normalizeEditorPath(file.path) === normalizedRecent);
     if (hit) return hit;
   }
 
   const suffixMatches = candidates.filter(
-    (file) =>
-      file.relative === relHint || file.relative.endsWith(`/${relHint}`),
+    (file) => file.relative === relHint || file.relative.endsWith(`/${relHint}`),
   );
   if (suffixMatches.length > 0) {
-    return suffixMatches.sort(
-      (a, b) => a.relative.length - b.relative.length,
-    )[0];
+    return suffixMatches.sort((a, b) => a.relative.length - b.relative.length)[0];
   }
 
   return candidates.sort((a, b) => a.relative.length - b.relative.length)[0];

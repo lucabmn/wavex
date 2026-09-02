@@ -20,11 +20,7 @@ export function AttachmentChip({ attachment, onRemove }: Props) {
       title={attachment.path ?? attachment.name}
     >
       {image ? (
-        <img
-          src={preview}
-          alt=""
-          className="size-9 shrink-0 rounded-lg object-cover"
-        />
+        <img src={preview} alt="" className="size-9 shrink-0 rounded-lg object-cover" />
       ) : (
         <>
           <span className="grid size-5 shrink-0 place-items-center">

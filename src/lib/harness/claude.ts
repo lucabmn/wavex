@@ -59,11 +59,7 @@ import {
 } from "./claudeProtocol";
 import { isAgentToolName } from "./preview";
 import { joinStreamText, snapshotRemainder } from "./streamText";
-import {
-  questionPromptTitle,
-  questionsFromUnknown,
-  type UserQuestionReply,
-} from "../userQuestion";
+import { questionPromptTitle, questionsFromUnknown, type UserQuestionReply } from "../userQuestion";
 import type { ApprovalDecision, HarnessEvent, SendTurnInput, SteerTurnInput } from "./types";
 
 /**
@@ -140,9 +136,7 @@ const cancelledThreads = new Set<string>();
 let resolveClaudeBinaryImpl: () => Promise<{ path: string }> = resolveClaudeBinary;
 
 /** Test seam. */
-export function setClaudeBinaryResolver(
-  fn: () => Promise<{ path: string }>,
-): void {
+export function setClaudeBinaryResolver(fn: () => Promise<{ path: string }>): void {
   resolveClaudeBinaryImpl = fn;
 }
 
@@ -158,16 +152,18 @@ export async function sendClaudeTurn(input: SendTurnInput): Promise<void> {
 
   live.onEvent = input.onEvent;
   live.runtimeMode = input.runtimeMode;
-  live.turns = live.turns.catch(() => undefined).then(async () => {
-    live.cancelled = false;
-    live.muteUpdates = false;
-    try {
-      await runTurn(live, input);
-    } catch (error) {
-      if (live.cancelled) return;
-      throw error;
-    }
-  });
+  live.turns = live.turns
+    .catch(() => undefined)
+    .then(async () => {
+      live.cancelled = false;
+      live.muteUpdates = false;
+      try {
+        await runTurn(live, input);
+      } catch (error) {
+        if (live.cancelled) return;
+        throw error;
+      }
+    });
   await live.turns;
 }
 
@@ -224,10 +220,7 @@ export async function cancelClaudeTurn(sessionId: string): Promise<void> {
     sessionId,
     buildControlRequest(nextControlId(live), { subtype: "interrupt" }),
   ).catch(() => undefined);
-  finishActiveTurn(live, [
-    { type: "message.completed" },
-    { type: "reasoning.completed" },
-  ]);
+  finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
 export async function stopClaudeSession(sessionId: string): Promise<void> {
@@ -256,11 +249,7 @@ export async function forgetClaudeSession(sessionId: string): Promise<void> {
   await stopClaudeSession(sessionId);
 }
 
-export function bindClaudeSession(
-  threadId: string,
-  providerSessionId: string,
-  cwd: string,
-): void {
+export function bindClaudeSession(threadId: string, providerSessionId: string, cwd: string): void {
   const sessionId = providerSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
   resumeByThread.set(threadId, { sessionId, cwd });
@@ -269,11 +258,7 @@ export function bindClaudeSession(
 async function ensureLive(input: SendTurnInput): Promise<Live> {
   const settingsKey = settingsKeyFor(input);
   const existing = liveByThread.get(input.sessionId);
-  if (
-    existing &&
-    existing.cwd === input.cwd &&
-    existing.settingsKey === settingsKey
-  ) {
+  if (existing && existing.cwd === input.cwd && existing.settingsKey === settingsKey) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
@@ -343,12 +328,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     },
   );
 
-  await spawnChild(
-    input.sessionId,
-    path,
-    buildClaudeSpawnArgs(launch),
-    input.cwd,
-  );
+  await spawnChild(input.sessionId, path, buildClaudeSpawnArgs(launch), input.cwd);
 
   liveByThread.set(input.sessionId, live);
   resumeByThread.set(input.sessionId, {
@@ -648,10 +628,7 @@ async function handleControlRequest(
   control: ClaudeControlRequest,
 ): Promise<void> {
   if (control.subtype !== "can_use_tool" && control.subtype !== "permission") {
-    await writeJson(
-      sessionId,
-      buildControlResponse(control.requestId, {}),
-    ).catch(() => undefined);
+    await writeJson(sessionId, buildControlResponse(control.requestId, {})).catch(() => undefined);
     return;
   }
 
@@ -661,10 +638,7 @@ async function handleControlRequest(
   if (live.cancelled || live.muteUpdates) {
     await writeJson(
       sessionId,
-      buildControlResponse(
-        control.requestId,
-        toClaudePermissionResult("deny", input),
-      ),
+      buildControlResponse(control.requestId, toClaudePermissionResult("deny", input)),
     ).catch(() => undefined);
     return;
   }
@@ -681,11 +655,7 @@ async function handleControlRequest(
     });
     const outcome = await waitQuestion(live, uiId, control.requestId);
     const decision =
-      outcome === "cancelled"
-        ? "cancelled"
-        : outcome.kind === "answered"
-          ? "answered"
-          : "skipped";
+      outcome === "cancelled" ? "cancelled" : outcome.kind === "answered" ? "answered" : "skipped";
     live.onEvent({ type: "question.resolved", requestId: uiId, decision });
     if (outcome === "cancelled") return;
     const response =
@@ -695,10 +665,9 @@ async function handleControlRequest(
             behavior: "deny",
             message: "User cancelled tool execution.",
           };
-    await writeJson(
-      sessionId,
-      buildControlResponse(control.requestId, response),
-    ).catch(() => undefined);
+    await writeJson(sessionId, buildControlResponse(control.requestId, response)).catch(
+      () => undefined,
+    );
     return;
   }
 
@@ -721,10 +690,7 @@ async function handleControlRequest(
   if (live.runtimeMode === "full-access") {
     await writeJson(
       sessionId,
-      buildControlResponse(
-        control.requestId,
-        toClaudePermissionResult("allow", input),
-      ),
+      buildControlResponse(control.requestId, toClaudePermissionResult("allow", input)),
     ).catch(() => undefined);
     return;
   }
@@ -743,10 +709,7 @@ async function handleControlRequest(
   if (decision === "cancelled") return;
   await writeJson(
     sessionId,
-    buildControlResponse(
-      control.requestId,
-      toClaudePermissionResult(decision, input),
-    ),
+    buildControlResponse(control.requestId, toClaudePermissionResult(decision, input)),
   ).catch(() => undefined);
 }
 
@@ -793,20 +756,13 @@ function waitQuestion(
   });
 }
 
-function emitPlanIfNeeded(
-  live: Live,
-  toolName: string,
-  input: Record<string, unknown>,
-): void {
+function emitPlanIfNeeded(live: Live, toolName: string, input: Record<string, unknown>): void {
   if (!isTodoTool(toolName)) return;
   const plan = planTextFromTodos(input);
   if (plan) live.onEvent({ type: "plan", text: plan });
 }
 
-function handleAgentLifecycle(
-  live: Live,
-  rec: Record<string, unknown>,
-): boolean {
+function handleAgentLifecycle(live: Live, rec: Record<string, unknown>): boolean {
   const started = parseTaskStarted(rec);
   if (started) {
     if (started.ambient || !isAgentTaskType(started.taskType)) return true;
@@ -830,13 +786,7 @@ function handleAgentLifecycle(
       (progress.subagentType
         ? `${progress.subagentType.replace(/[_-]+/g, " ")} subagent`
         : undefined);
-    upsertAgentTool(
-      live,
-      progress.toolUseId ?? task?.toolUseId,
-      title,
-      "in_progress",
-      detail,
-    );
+    upsertAgentTool(live, progress.toolUseId ?? task?.toolUseId, title, "in_progress", detail);
     return true;
   }
 
@@ -874,6 +824,8 @@ function handleAgentLifecycle(
   const liveTasks = parseBackgroundAgentTasks(rec);
   if (!liveTasks) return false;
   const next = new Set(liveTasks.map((task) => task.taskId));
+  // Snapshot keys before completeAgentTask mutates the map.
+  // oxlint-disable-next-line unicorn/no-useless-spread
   for (const id of [...live.agentTasks.keys()]) {
     if (!next.has(id)) completeAgentTask(live, id, "completed");
   }
@@ -895,9 +847,7 @@ function handleToolProgress(live: Live, rec: Record<string, unknown>): void {
   if (!progress) return;
   const tool =
     live.toolsById.get(progress.toolUseId) ??
-    (progress.parentToolUseId
-      ? live.toolsById.get(progress.parentToolUseId)
-      : undefined);
+    (progress.parentToolUseId ? live.toolsById.get(progress.parentToolUseId) : undefined);
   if (!tool || !isAgentToolName(tool.name)) return;
   const detail = progress.subagentType
     ? `${progress.subagentType.replace(/[_-]+/g, " ")} subagent`
@@ -986,22 +936,11 @@ function upsertAgentTool(
   });
 }
 
-function completeAgentTask(
-  live: Live,
-  taskId: string,
-  status: string,
-  detail?: string,
-): void {
+function completeAgentTask(live: Live, taskId: string, status: string, detail?: string): void {
   const task = live.agentTasks.get(taskId);
   live.agentTasks.delete(taskId);
   if (task) {
-    upsertAgentTool(
-      live,
-      task.toolUseId,
-      task.description,
-      status,
-      detail,
-    );
+    upsertAgentTool(live, task.toolUseId, task.description, status, detail);
   }
   maybeFinishTurn(live);
 }
@@ -1010,10 +949,7 @@ function maybeFinishTurn(live: Live): void {
   if (!live.turnResultSeen) return;
   if (live.agentTasks.size > 0) return;
   if (!live.activeTurn && !live.turnDone) return;
-  finishActiveTurn(live, [
-    { type: "message.completed" },
-    { type: "reasoning.completed" },
-  ]);
+  finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
 function finishActiveTurn(live: Live, extraEvents: HarnessEvent[] = []): void {
@@ -1062,10 +998,7 @@ function nextControlId(live: Live): string {
   return `wavex_${live.nextControlId}`;
 }
 
-function writeJson(
-  sessionId: string,
-  payload: Record<string, unknown>,
-): Promise<void> {
+function writeJson(sessionId: string, payload: Record<string, unknown>): Promise<void> {
   return writeChild(sessionId, JSON.stringify(payload));
 }
 

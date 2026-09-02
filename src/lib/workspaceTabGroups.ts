@@ -12,10 +12,7 @@ import { projectName } from "./paths";
 import { sameProjectPath } from "./recents";
 import type { Session } from "./session";
 
-export function workspaceTabCwd(
-  tab: WorkspaceTab,
-  sessions: Session[],
-): string | null {
+export function workspaceTabCwd(tab: WorkspaceTab, sessions: Session[]): string | null {
   for (const id of leafIds(tab.layout)) {
     const session = sessions.find((entry) => entry.id === id);
     if (session?.cwd && session.cwd !== "~") return session.cwd;
@@ -27,10 +24,7 @@ export function workspaceTabCwd(
   return null;
 }
 
-export function workspaceTabProject(
-  tab: WorkspaceTab,
-  sessions: Session[],
-): string | null {
+export function workspaceTabProject(tab: WorkspaceTab, sessions: Session[]): string | null {
   const cwd = workspaceTabCwd(tab, sessions);
   if (!cwd) return null;
   const name = projectName(cwd);
@@ -140,9 +134,7 @@ export function applyDeletedSessionToWorkspace({
   let nextSessions = sessions.filter((session) => session.id !== sessionId);
   let nextActiveTabId = activeTabId;
 
-  const affectedTabs = tabs.filter((tab) =>
-    leafIds(tab.layout).includes(sessionId),
-  );
+  const affectedTabs = tabs.filter((tab) => leafIds(tab.layout).includes(sessionId));
 
   for (const tab of affectedTabs) {
     const tabIndex = nextTabs.findIndex((entry) => entry.id === tab.id);
@@ -217,9 +209,7 @@ export function applyPlaceSessionOnPane({
   activeTabId: string;
 } | null {
   if (sessionId === targetId) return null;
-  const targetIndex = tabs.findIndex((tab) =>
-    leafIds(tab.layout).includes(targetId),
-  );
+  const targetIndex = tabs.findIndex((tab) => leafIds(tab.layout).includes(targetId));
   if (targetIndex < 0) return null;
 
   let nextSessions = replaceTarget
@@ -235,7 +225,9 @@ export function applyPlaceSessionOnPane({
     return { ...tab, layout, focusedId: sessionId, diffFocused: false };
   });
 
-  for (const tab of [...nextTabs]) {
+  // `nextTabs` is rebound by `filter` below, which leaves this iterator on the
+  // array it started with — the same elements the old defensive copy yielded.
+  for (const tab of nextTabs) {
     if (tab.id === targetTabId) continue;
     if (!leafIds(tab.layout).includes(sessionId)) continue;
     const tabIndex = nextTabs.findIndex((entry) => entry.id === tab.id);
@@ -258,9 +250,7 @@ export function applyPlaceSessionOnPane({
       continue;
     }
 
-    const replacement = createReplacement(
-      nextSessions.find((session) => session.id === sessionId),
-    );
+    const replacement = createReplacement(nextSessions.find((session) => session.id === sessionId));
     nextSessions = [...nextSessions, replacement];
     nextTabs[tabIndex] = {
       ...tab,
@@ -276,9 +266,7 @@ export function applyPlaceSessionOnPane({
   return { tabs: nextTabs, sessions: nextSessions, activeTabId: targetTabId };
 }
 
-export function isGroupableProject(
-  project: string | null,
-): project is string {
+export function isGroupableProject(project: string | null): project is string {
   return !!project && project !== "~";
 }
 

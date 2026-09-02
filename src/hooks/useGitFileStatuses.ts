@@ -1,9 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
-import {
-  gitDiffIndex,
-  subscribeGitChanged,
-  type GitDiffIndex,
-} from "../lib/fs";
+import { gitDiffIndex, subscribeGitChanged, type GitDiffIndex } from "../lib/fs";
 import { subscribeDirsChanged } from "../lib/fileTree";
 import { parentPath } from "../lib/paths";
 
@@ -73,10 +69,7 @@ function buildStatusMaps(index: GitDiffIndex, cwd: string): GitStatusMap {
   return { files, dirs };
 }
 
-function sameMaps(
-  a: Map<string, string>,
-  b: Map<string, string>,
-): boolean {
+function sameMaps(a: Map<string, string>, b: Map<string, string>): boolean {
   if (a.size !== b.size) return false;
   for (const [k, v] of b) {
     if (a.get(k) !== v) return false;
@@ -139,10 +132,7 @@ function stop(entry: Entry) {
   entry.unsubscribeDirs = null;
 }
 
-export function useGitFileStatuses(
-  cwd: string,
-  enabled: boolean,
-): GitStatusMap {
+export function useGitFileStatuses(cwd: string, enabled: boolean): GitStatusMap {
   const active = enabled && Boolean(cwd) && cwd !== "~";
   const subscribe = useCallback(
     (listener: () => void) => {

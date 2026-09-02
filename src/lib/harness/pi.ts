@@ -44,17 +44,11 @@ export function forgetPiSession(sessionId: string): Promise<void> {
   return forgetSession(PI_FLAVOR, sessionId);
 }
 
-export function bindPiSession(
-  threadId: string,
-  providerSessionId: string,
-  cwd: string,
-): void {
+export function bindPiSession(threadId: string, providerSessionId: string, cwd: string): void {
   bindSession(PI_FLAVOR, threadId, providerSessionId, cwd);
 }
 
 /** Test seam. */
-export function setPiBinaryResolver(
-  fn: () => Promise<{ path: string }>,
-): void {
+export function setPiBinaryResolver(fn: () => Promise<{ path: string }>): void {
   setFlavorBinaryResolver(PI_FLAVOR, fn);
 }

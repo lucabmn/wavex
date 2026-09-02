@@ -28,13 +28,7 @@ export type PromptContentBlock =
 const SKIP_NAMES = new Set([".ds_store", "thumbs.db", "desktop.ini"]);
 
 /** MIME types providers typically send as vision input. */
-const VISION_MIME = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/gif",
-  "image/webp",
-]);
+const VISION_MIME = new Set(["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"]);
 
 const MIME_BY_EXT: Record<string, string> = {
   png: "image/png",
@@ -142,16 +136,11 @@ export function revokeAttachment(file: Attachment) {
   if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
 }
 
-export function mergeAttachments(
-  existing: Attachment[],
-  incoming: Attachment[],
-): Attachment[] {
+export function mergeAttachments(existing: Attachment[], incoming: Attachment[]): Attachment[] {
   const next = [...existing];
   for (const file of incoming) {
     const duplicate = next.some(
-      (item) =>
-        (item.path && file.path && item.path === file.path) ||
-        item.id === file.id,
+      (item) => (item.path && file.path && item.path === file.path) || item.id === file.id,
     );
     if (duplicate) continue;
     next.push(file);
@@ -197,13 +186,9 @@ function dropMacScreenshotTwins(files: File[]): File[] {
     const type = file.type.toLowerCase();
     if (type !== "image/tiff" && type !== "image/tif") return false;
     const name = file.name.trim().toLowerCase();
-    return (
-      !name || name === "image.tiff" || name === "image.tif" || name === "image"
-    );
+    return !name || name === "image.tiff" || name === "image.tif" || name === "image";
   };
-  const hasOtherImage = files.some(
-    (file) => file.type.startsWith("image/") && !unnamedTiff(file),
-  );
+  const hasOtherImage = files.some((file) => file.type.startsWith("image/") && !unnamedTiff(file));
   if (!hasOtherImage) return files;
   return files.filter((file) => !unnamedTiff(file));
 }
@@ -214,9 +199,7 @@ export async function pickAttachments(): Promise<Attachment[]> {
   return attachmentsFromPaths(paths);
 }
 
-export async function attachmentsFromPaths(
-  paths: string[],
-): Promise<Attachment[]> {
+export async function attachmentsFromPaths(paths: string[]): Promise<Attachment[]> {
   const unique = [...new Set(paths.filter((path) => path.trim()))];
   if (unique.length === 0) return [];
   const infos = await invoke<PathInfo[]>("inspect_paths", { paths: unique });
@@ -228,9 +211,7 @@ export async function attachmentsFromPaths(
   return out;
 }
 
-export async function attachmentsFromFiles(
-  files: File[],
-): Promise<Attachment[]> {
+export async function attachmentsFromFiles(files: File[]): Promise<Attachment[]> {
   const out: Attachment[] = [];
   const pathFiles: string[] = [];
   const blobs: File[] = [];
@@ -249,9 +230,7 @@ export async function attachmentsFromFiles(
   return out;
 }
 
-export async function prepareAttachments(
-  files: Attachment[],
-): Promise<Attachment[]> {
+export async function prepareAttachments(files: Attachment[]): Promise<Attachment[]> {
   return Promise.all(
     files.map(async (file) => {
       if (file.data || !file.path) return file;
@@ -270,10 +249,7 @@ export async function prepareAttachments(
   );
 }
 
-export function promptBlocks(
-  text: string,
-  attachments: Attachment[] = [],
-): PromptContentBlock[] {
+export function promptBlocks(text: string, attachments: Attachment[] = []): PromptContentBlock[] {
   const blocks: PromptContentBlock[] = [];
   const trimmed = text.trim();
   if (trimmed) blocks.push({ type: "text", text: trimmed });
@@ -315,11 +291,7 @@ async function attachmentFromPath(info: PathInfo): Promise<Attachment | null> {
     size: info.size,
     path: info.path,
   };
-  if (
-    isVisionImage(mimeType) &&
-    info.size > 0 &&
-    info.size <= MAX_EMBED_BYTES
-  ) {
+  if (isVisionImage(mimeType) && info.size > 0 && info.size <= MAX_EMBED_BYTES) {
     try {
       file.data = await invoke<string>("read_file_base64", { path: info.path });
     } catch {
@@ -380,10 +352,7 @@ function mimeFromFile(file: File): string {
 function mimeFromName(name: string): string {
   const ext = extension(name);
   if (!ext) return "application/octet-stream";
-  return (
-    MIME_BY_EXT[ext] ??
-    (isTextExt(ext) ? "text/plain" : "application/octet-stream")
-  );
+  return MIME_BY_EXT[ext] ?? (isTextExt(ext) ? "text/plain" : "application/octet-stream");
 }
 
 function isTextExt(ext: string): boolean {

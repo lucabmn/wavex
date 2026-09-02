@@ -487,10 +487,7 @@ fn relaunch_from_dev_bundle() -> Result<(), String> {
         return Ok(());
     }
 
-    let app = exe
-        .parent()
-        .ok_or("missing exe parent")?
-        .join("wavex.app");
+    let app = exe.parent().ok_or("missing exe parent")?.join("wavex.app");
     let macos_dir = app.join("Contents/MacOS");
     std::fs::create_dir_all(&macos_dir).map_err(|e| e.to_string())?;
     write_dev_bundle_icons(&app)?;

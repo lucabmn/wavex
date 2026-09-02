@@ -1,7 +1,4 @@
-import {
-  buildThreadTitlePrompt,
-  parseGeneratedThreadTitle,
-} from "../sessionTitle";
+import { buildThreadTitlePrompt, parseGeneratedThreadTitle } from "../sessionTitle";
 import { runOpenCodeTextPrompt } from "./opencodeText";
 
 const TITLE_TIMEOUT_MS = 45_000;

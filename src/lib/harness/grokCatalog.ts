@@ -81,38 +81,38 @@ async function discoverViaAcp() {
 
   try {
     await spawnChild(PROBE_ID, path, grokSpawnArgs({ model: "" }), cwd);
-    return await withTimeout(DISCOVERY_TIMEOUT_MS, async () => {
-      const init = await acp.request(
-        "initialize",
-        {
-          protocolVersion: 1,
-          clientCapabilities: CLIENT_CAPABILITIES,
-          clientInfo: { name: "wavex", version: "0.1.0" },
-        },
-        REQUEST_TIMEOUT_MS,
-      );
-      const fromInit = modelsFromInitialize(init);
-      if (fromInit.length > 0) return fromInit;
+    return await withTimeout(
+      DISCOVERY_TIMEOUT_MS,
+      async () => {
+        const init = await acp.request(
+          "initialize",
+          {
+            protocolVersion: 1,
+            clientCapabilities: CLIENT_CAPABILITIES,
+            clientInfo: { name: "wavex", version: "0.1.0" },
+          },
+          REQUEST_TIMEOUT_MS,
+        );
+        const fromInit = modelsFromInitialize(init);
+        if (fromInit.length > 0) return fromInit;
 
-      const methodId = grokAuthMethodId(init);
-      if (methodId) {
-        await acp
-          .request(
-            "authenticate",
-            { methodId, _meta: { headless: true } },
-            REQUEST_TIMEOUT_MS,
-          )
-          .catch(() => undefined);
-      }
-      const created = await acp.request(
-        "session/new",
-        { cwd, mcpServers: [] },
-        REQUEST_TIMEOUT_MS,
-      );
-      return modelsFromSessionNew(created);
-    }, () => {
-      void stop();
-    });
+        const methodId = grokAuthMethodId(init);
+        if (methodId) {
+          await acp
+            .request("authenticate", { methodId, _meta: { headless: true } }, REQUEST_TIMEOUT_MS)
+            .catch(() => undefined);
+        }
+        const created = await acp.request(
+          "session/new",
+          { cwd, mcpServers: [] },
+          REQUEST_TIMEOUT_MS,
+        );
+        return modelsFromSessionNew(created);
+      },
+      () => {
+        void stop();
+      },
+    );
   } finally {
     await stop();
   }
@@ -125,11 +125,7 @@ async function discoverViaCli() {
   return modelsFromGrokModelsOutput(stdout);
 }
 
-function withTimeout<T>(
-  ms: number,
-  run: () => Promise<T>,
-  onTimeout: () => void,
-): Promise<T> {
+function withTimeout<T>(ms: number, run: () => Promise<T>, onTimeout: () => void): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       onTimeout();

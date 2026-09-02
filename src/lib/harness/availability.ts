@@ -85,9 +85,7 @@ export function harnessUnavailableHint(id: HarnessId): string {
   return `${name} not found${how}. Install it, or restart wavex if it is already installed.`;
 }
 
-export function probeHarnessAvailability(
-  options?: { force?: boolean },
-): Promise<void> {
+export function probeHarnessAvailability(options?: { force?: boolean }): Promise<void> {
   if (inflight) return inflight;
   if (!options?.force && probedAt > 0 && Date.now() - probedAt < PROBE_TTL_MS) {
     return Promise.resolve();

@@ -1,11 +1,5 @@
 import { modelsFor } from "../models";
-import {
-  killChild,
-  resolveCodexBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, resolveCodexBinary, spawnChild, unwatchChild, watchChild } from "./child";
 import {
   asRecord,
   buildThreadStartParams,
@@ -63,9 +57,11 @@ export async function stopCodexTextPrompt(): Promise<void> {
 /** Start the shared Codex app-server in the background so the first prompt is fast. */
 export function warmupCodexText(cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns.catch(() => undefined).then(async () => {
-    await ensureLive(cwd);
-  });
+  const run = turns
+    .catch(() => undefined)
+    .then(async () => {
+      await ensureLive(cwd);
+    });
   turns = run.then(
     () => undefined,
     () => undefined,
@@ -118,10 +114,7 @@ async function promptOnLive(input: {
     await Promise.race([
       turnPromise,
       new Promise<void>((_, reject) => {
-        setTimeout(
-          () => reject(new Error("Codex text generation timed out")),
-          timeoutMs,
-        );
+        setTimeout(() => reject(new Error("Codex text generation timed out")), timeoutMs);
       }),
     ]);
 
@@ -258,11 +251,7 @@ async function dropLive(): Promise<void> {
   await killChild(TEXT_CHILD_ID).catch(() => undefined);
 }
 
-function handleNotification(
-  session: LiveText | null,
-  method: string,
-  params: unknown,
-): void {
+function handleNotification(session: LiveText | null, method: string, params: unknown): void {
   if (!session || !session.collecting) {
     if (session && method === "turn/completed") {
       session.turnDone?.();
@@ -282,8 +271,7 @@ function handleNotification(
     const turn = asRecord(asRecord(params)?.turn);
     const status = stringField(turn, "status") ?? "completed";
     if (status === "failed") {
-      const message =
-        stringField(asRecord(turn?.error), "message") ?? "Codex turn failed";
+      const message = stringField(asRecord(turn?.error), "message") ?? "Codex turn failed";
       session.turnFailed?.(new Error(message));
     } else {
       session.turnDone?.();

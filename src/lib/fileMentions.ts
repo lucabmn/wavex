@@ -29,27 +29,12 @@ export type MentionTextPart = {
 };
 
 const MENTION_TOKEN_RE = /(^|\s)@(\S+)/g;
-const TRAILING_PUNCTUATION = new Set([
-  ",",
-  ";",
-  ":",
-  "!",
-  "?",
-  ")",
-  "]",
-  "}",
-  '"',
-  "'",
-  "/",
-]);
+const TRAILING_PUNCTUATION = new Set([",", ";", ":", "!", "?", ")", "]", "}", '"', "'", "/"]);
 const MAX_QUERY = 120;
 const MAX_PICKER = 30;
 
 /** Mention token that contains `cursor`, if the user is typing `@file`. */
-export function mentionTokenAt(
-  text: string,
-  cursor: number,
-): MentionToken | null {
+export function mentionTokenAt(text: string, cursor: number): MentionToken | null {
   const i = clamp(cursor, 0, text.length);
   let start = i;
   while (start > 0 && !isSpace(text[start - 1]!)) start -= 1;
@@ -65,11 +50,7 @@ export function mentionTokenAt(
   return { start, end, query: typed };
 }
 
-export function replaceMentionToken(
-  text: string,
-  token: MentionToken,
-  label: string,
-): string {
+export function replaceMentionToken(text: string, token: MentionToken, label: string): string {
   const rest = text.slice(token.end);
   const spacer = rest.startsWith(" ") ? "" : " ";
   return `${text.slice(0, token.start)}@${label}${spacer}${rest}`;
@@ -86,8 +67,7 @@ export function buildMentionIndex(files: ProjectFile[]): MentionIndex {
   const labelOf = new Map<string, string>();
   for (const file of entries) {
     if (hasSpace(file.relative)) continue;
-    const unique =
-      !file.isDir && counts.get(file.name) === 1 && !hasSpace(file.name);
+    const unique = !file.isDir && counts.get(file.name) === 1 && !hasSpace(file.name);
     labelOf.set(file.path, unique ? file.name : file.relative);
     if (!labels.has(file.relative)) labels.set(file.relative, file);
     if (unique && !labels.has(file.name)) labels.set(file.name, file);
@@ -106,9 +86,7 @@ export function rankMentionFiles(
   recents: string[],
   limit = MAX_PICKER,
 ): RankedFile[] {
-  const usable = withMentionDirectories(files).filter(
-    (file) => !hasSpace(file.relative),
-  );
+  const usable = withMentionDirectories(files).filter((file) => !hasSpace(file.relative));
   const needle = query.replace(/\/+$/, "").trim();
   if (needle) return rankProjectFiles(usable, needle, recents, limit);
 
@@ -176,10 +154,7 @@ export function fileMentionsInText(
  * which `App.tsx` the user meant. Tokens already written as a project-relative
  * path need no help.
  */
-export async function applyFileMentionsToTurn(
-  text: string,
-  cwd: string,
-): Promise<string> {
+export async function applyFileMentionsToTurn(text: string, cwd: string): Promise<string> {
   if (!looksMentioned(text)) return text;
   const files = await loadProjectFiles(cwd).catch(() => []);
   if (files.length === 0) return text;
@@ -222,10 +197,7 @@ export function withMentionDirectories(files: ProjectFile[]): ProjectFile[] {
   return extra.length === 0 ? files : [...files, ...extra];
 }
 
-function scanMentions(
-  text: string,
-  labels: ReadonlyMap<string, ProjectFile>,
-): MentionHit[] {
+function scanMentions(text: string, labels: ReadonlyMap<string, ProjectFile>): MentionHit[] {
   if (labels.size === 0) return [];
   const hits: MentionHit[] = [];
   MENTION_TOKEN_RE.lastIndex = 0;

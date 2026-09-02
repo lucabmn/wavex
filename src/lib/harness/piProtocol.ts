@@ -86,12 +86,7 @@ export function stringField(
 function toolArgsFromEvent(
   rec: Record<string, unknown> | null | undefined,
 ): Record<string, unknown> {
-  return (
-    parseArgBag(rec?.args) ??
-    parseArgBag(rec?.arguments) ??
-    parseArgBag(rec?.input) ??
-    {}
-  );
+  return parseArgBag(rec?.args) ?? parseArgBag(rec?.arguments) ?? parseArgBag(rec?.input) ?? {};
 }
 
 function parseArgBag(value: unknown): Record<string, unknown> | null {
@@ -231,9 +226,7 @@ export function parseRpcResponse(rec: Record<string, unknown>): PiRpcResponse | 
   };
 }
 
-export function parseExtensionUiRequest(
-  rec: Record<string, unknown>,
-): PiExtensionUiRequest | null {
+export function parseExtensionUiRequest(rec: Record<string, unknown>): PiExtensionUiRequest | null {
   if (stringField(rec, "type") !== "extension_ui_request") return null;
   const id = stringField(rec, "id");
   const method = stringField(rec, "method");
@@ -433,9 +426,7 @@ export function toolCallEndFromEvent(
   const call = asRecord(event?.toolCall) ?? event;
   const id = stringField(call, "id") ?? stringField(event, "id");
   const name =
-    stringField(call, "name") ??
-    stringField(call, "toolName") ??
-    stringField(event, "toolName");
+    stringField(call, "name") ?? stringField(call, "toolName") ?? stringField(event, "toolName");
   if (!id || !name) return null;
   const input =
     parseArgBag(call?.arguments) ??
@@ -455,9 +446,7 @@ export function toolExecutionStartFromEvent(
   return { id, name, input: toolArgsFromEvent(rec) };
 }
 
-export function toolExecutionUpdateFromEvent(
-  rec: Record<string, unknown>,
-): {
+export function toolExecutionUpdateFromEvent(rec: Record<string, unknown>): {
   id: string;
   name?: string;
   detail?: string;
@@ -475,9 +464,7 @@ export function toolExecutionUpdateFromEvent(
   };
 }
 
-export function toolExecutionEndFromEvent(
-  rec: Record<string, unknown>,
-): {
+export function toolExecutionEndFromEvent(rec: Record<string, unknown>): {
   id: string;
   name?: string;
   detail?: string;
@@ -584,20 +571,13 @@ export function toolKindFromName(toolName: string): string {
     return "search";
   }
   if (normalized === "skill" || normalized === "skills") return "skill";
-  if (
-    normalized === "agent" ||
-    normalized === "task" ||
-    normalized === "subagent"
-  ) {
+  if (normalized === "agent" || normalized === "task" || normalized === "subagent") {
     return "agent";
   }
   return toolName;
 }
 
-export function toolTitle(
-  name: string,
-  input: Record<string, unknown>,
-): string {
+export function toolTitle(name: string, input: Record<string, unknown>): string {
   return titleFromToolInput(name, toolKindFromName(name), input);
 }
 
@@ -625,16 +605,11 @@ export function previewFromTool(
   );
 }
 
-export function summarizeToolRequest(
-  toolName: string,
-  input: Record<string, unknown>,
-): string {
+export function summarizeToolRequest(toolName: string, input: Record<string, unknown>): string {
   const command = stringField(input, "command") ?? stringField(input, "cmd");
   if (command) return `${toolName}: ${command.slice(0, 400)}`;
   const path =
-    stringField(input, "path") ??
-    stringField(input, "file_path") ??
-    stringField(input, "filePath");
+    stringField(input, "path") ?? stringField(input, "file_path") ?? stringField(input, "filePath");
   if (path) return `${toolName}: ${path}`;
   try {
     const serialized = JSON.stringify(input);
@@ -645,16 +620,9 @@ export function summarizeToolRequest(
   }
 }
 
-export function modelsFromRpcData(
-  flavor: PiFlavor,
-  data: unknown,
-): AgentModel[] {
+export function modelsFromRpcData(flavor: PiFlavor, data: unknown): AgentModel[] {
   const rec = asRecord(data);
-  const list = Array.isArray(rec?.models)
-    ? rec.models
-    : Array.isArray(data)
-      ? data
-      : [];
+  const list = Array.isArray(rec?.models) ? rec.models : Array.isArray(data) ? data : [];
   const models: AgentModel[] = [];
   const seen = new Set<string>();
   for (const item of list) {
@@ -696,9 +664,7 @@ export function thinkingSetting(reasoning: boolean): ModelSetting | undefined {
 }
 
 export function isPiThinkingLevel(value: string | undefined): value is PiThinkingLevel {
-  return (
-    !!value && (PI_THINKING_LEVELS as readonly string[]).includes(value)
-  );
+  return !!value && (PI_THINKING_LEVELS as readonly string[]).includes(value);
 }
 
 function thinkingLabel(level: PiThinkingLevel): string {
@@ -707,9 +673,7 @@ function thinkingLabel(level: PiThinkingLevel): string {
   return level.slice(0, 1).toUpperCase() + level.slice(1);
 }
 
-function assistantMessageUsage(
-  rec: Record<string, unknown>,
-): Record<string, unknown> | null {
+function assistantMessageUsage(rec: Record<string, unknown>): Record<string, unknown> | null {
   const message = asRecord(rec.message);
   if (stringField(message, "role") !== "assistant") return null;
   return asRecord(message?.usage);

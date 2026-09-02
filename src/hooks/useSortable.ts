@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { setGrabbing, suppressTextSelection } from "../lib/drag";
 import { moveItem } from "../lib/reorder";
 
@@ -23,11 +18,7 @@ export type SortableOptions = {
   onActivate?: (id: string) => void;
   onDropOnItem?: (draggedId: string, targetId: string) => void;
   onDropOnGroup?: (draggedId: string, groupId: string) => void;
-  canDropOn?: (
-    draggedId: string,
-    kind: "tab" | "group",
-    targetId: string,
-  ) => boolean;
+  canDropOn?: (draggedId: string, kind: "tab" | "group", targetId: string) => boolean;
 };
 
 type DragState = {
@@ -40,9 +31,7 @@ type DragState = {
   dropTarget: SortableDropTarget | null;
 };
 
-function optionsOf(
-  axisOrOptions: "x" | "y" | SortableOptions | undefined,
-): SortableOptions {
+function optionsOf(axisOrOptions: "x" | "y" | SortableOptions | undefined): SortableOptions {
   if (axisOrOptions == null) return { axis: "x" };
   if (axisOrOptions === "x" || axisOrOptions === "y") return { axis: axisOrOptions };
   return { axis: "x", ...axisOrOptions };
@@ -94,8 +83,7 @@ export function useSortable(
       for (let i = 0; i < list.length; i++) {
         const rect = nodes.current.get(list[i])?.getBoundingClientRect();
         if (!rect) continue;
-        const mid =
-          axis === "x" ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
+        const mid = axis === "x" ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
         if (pos < mid) {
           next = i;
           break;
@@ -108,10 +96,7 @@ export function useSortable(
 
   const dropTargetAt = useCallback(
     (draggedId: string, x: number, y: number): SortableDropTarget | null => {
-      const target = (
-        kind: "tab" | "group",
-        id: string,
-      ): SortableDropTarget => ({
+      const target = (kind: "tab" | "group", id: string): SortableDropTarget => ({
         kind,
         id,
         allowed: canDropOnRef.current?.(draggedId, kind, id) ?? true,
@@ -127,14 +112,10 @@ export function useSortable(
         if (id === draggedId) continue;
         const rect = nodes.current.get(id)?.getBoundingClientRect();
         if (!rect) continue;
-        const inset =
-          axis === "x" ? rect.width * DROP_ON_INSET : rect.height * DROP_ON_INSET;
+        const inset = axis === "x" ? rect.width * DROP_ON_INSET : rect.height * DROP_ON_INSET;
         const inCenter =
           axis === "x"
-            ? x >= rect.left + inset &&
-              x <= rect.right - inset &&
-              y >= rect.top &&
-              y <= rect.bottom
+            ? x >= rect.left + inset && x <= rect.right - inset && y >= rect.top && y <= rect.bottom
             : y >= rect.top + inset &&
               y <= rect.bottom - inset &&
               x >= rect.left &&
@@ -174,10 +155,7 @@ export function useSortable(
         const current = drag.current;
         if (!current || current.id !== id) return;
         if (!current.active) {
-          if (
-            Math.hypot(ev.clientX - current.startX, ev.clientY - current.startY) <
-            THRESHOLD
-          ) {
+          if (Math.hypot(ev.clientX - current.startX, ev.clientY - current.startY) < THRESHOLD) {
             return;
           }
           current.active = true;
@@ -256,10 +234,7 @@ export function useSortable(
     [dropTargetAt, indexAt],
   );
 
-  const consumeClick = useCallback(
-    () => performance.now() < suppressClickUntil.current,
-    [],
-  );
+  const consumeClick = useCallback(() => performance.now() < suppressClickUntil.current, []);
 
   return {
     draggingId,

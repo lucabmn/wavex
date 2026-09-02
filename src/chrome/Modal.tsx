@@ -56,9 +56,7 @@ export function ModalPanel({
   }, [onClose]);
 
   return (
-    <div
-      className={`absolute left-1/2 ${TOP[size]} ${WIDTH[size]} -translate-x-1/2`}
-    >
+    <div className={`absolute left-1/2 ${TOP[size]} ${WIDTH[size]} -translate-x-1/2`}>
       <div
         role="dialog"
         aria-modal="true"
@@ -69,10 +67,7 @@ export function ModalPanel({
       >
         <header className="flex shrink-0 items-start gap-2 px-4 pt-3">
           <div className="min-w-0 flex-1 pt-0.5">
-            <h2
-              id={titleId}
-              className="text-2xl font-semibold leading-tight text-content"
-            >
+            <h2 id={titleId} className="text-2xl font-semibold leading-tight text-content">
               {title}
             </h2>
             {description ? (
@@ -94,10 +89,7 @@ export function ModalPanel({
             <X className="size-3.5" strokeWidth={1.75} />
           </button>
         </header>
-        <div
-          ref={lockOverscroll}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-none"
-        >
+        <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
           {children}
         </div>
       </div>
@@ -108,10 +100,7 @@ export function ModalPanel({
 export function Modal(props: Props) {
   return createPortal(
     <div className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
-      <div
-        className="modal-backdrop absolute inset-0 bg-black/40"
-        onMouseDown={props.onClose}
-      />
+      <div className="modal-backdrop absolute inset-0 bg-black/40" onMouseDown={props.onClose} />
       <ModalPanel {...props} />
     </div>,
     document.body,

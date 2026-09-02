@@ -74,12 +74,7 @@ function roomOn(
   return viewport.width - anchor.right - gap - padding;
 }
 
-function crossAxisStart(
-  align: PopoverAlign,
-  start: number,
-  end: number,
-  length: number,
-): number {
+function crossAxisStart(align: PopoverAlign, start: number, end: number, length: number): number {
   if (align === "start") return start;
   if (align === "end") return end - length;
   return start + (end - start) / 2 - length / 2;
@@ -96,10 +91,7 @@ export function placePopover(
   const align = options.align ?? "start";
   const preferred = options.side ?? "bottom";
 
-  const width = Math.min(
-    options.width ?? popover.width,
-    Math.max(0, viewport.width - padding * 2),
-  );
+  const width = Math.min(options.width ?? popover.width, Math.max(0, viewport.width - padding * 2));
   const wanted = Math.min(
     options.maxHeight ?? Infinity,
     Math.max(popover.height, options.minHeight ?? 0),
@@ -144,8 +136,7 @@ export function placePopover(
     padding,
     viewport.height - height - padding,
   );
-  const rawLeft =
-    side === "right" ? anchor.right + gap : anchor.left - gap - width;
+  const rawLeft = side === "right" ? anchor.right + gap : anchor.left - gap - width;
   return {
     side,
     left: clamp(rawLeft, padding, viewport.width - width - padding),

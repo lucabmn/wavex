@@ -12,12 +12,7 @@ import {
   searchPanelOpen,
   setSearchQuery,
 } from "@codemirror/search";
-import {
-  EditorSelection,
-  Prec,
-  type Extension,
-  type SelectionRange,
-} from "@codemirror/state";
+import { EditorSelection, Prec, type Extension, type SelectionRange } from "@codemirror/state";
 import {
   EditorView,
   keymap,
@@ -217,12 +212,7 @@ class FindPanel implements Panel {
       `${MOD}${SHIFT}G`,
       svgIcon("M4 10l4-4 4 4"),
     );
-    const nextButton = iconButton(
-      "cm-find-step",
-      "Next Match",
-      `${MOD}G`,
-      svgIcon("M4 6l4 4 4-4"),
-    );
+    const nextButton = iconButton("cm-find-step", "Next Match", `${MOD}G`, svgIcon("M4 6l4 4 4-4"));
     const closeButton = iconButton(
       "cm-find-close",
       "Close",
@@ -252,12 +242,7 @@ class FindPanel implements Panel {
         elt(
           "div",
           { class: "cm-find-row" },
-          elt(
-            "div",
-            { class: "cm-find-query cm-find-search" },
-            this.searchField,
-            this.count,
-          ),
+          elt("div", { class: "cm-find-query cm-find-search" }, this.searchField, this.count),
           elt(
             "div",
             { class: "cm-find-toggles" },
@@ -282,9 +267,7 @@ class FindPanel implements Panel {
       if (!this.composing) this.commit(true);
     });
     this.replaceField.addEventListener("input", () => this.commit(false));
-    this.caseButton.addEventListener("click", () =>
-      this.toggle("caseSensitive"),
-    );
+    this.caseButton.addEventListener("click", () => this.toggle("caseSensitive"));
     this.wordButton.addEventListener("click", () => this.toggle("wholeWord"));
     this.regexButton.addEventListener("click", () => this.toggle("regexp"));
     this.expandButton.addEventListener("click", () =>
@@ -345,11 +328,8 @@ class FindPanel implements Panel {
       search: this.searchField.value,
       replace: this.replaceField.value,
       caseSensitive:
-        flag === "caseSensitive"
-          ? !this.query.caseSensitive
-          : this.query.caseSensitive,
-      wholeWord:
-        flag === "wholeWord" ? !this.query.wholeWord : this.query.wholeWord,
+        flag === "caseSensitive" ? !this.query.caseSensitive : this.query.caseSensitive,
+      wholeWord: flag === "wholeWord" ? !this.query.wholeWord : this.query.wholeWord,
       regexp: flag === "regexp" ? !this.query.regexp : this.query.regexp,
       literal: true,
     });
@@ -427,8 +407,7 @@ class FindPanel implements Panel {
       return;
     }
     const suffix = capped ? "+" : "";
-    this.count.textContent =
-      current > 0 ? `${current} of ${total}${suffix}` : `${total}${suffix}`;
+    this.count.textContent = current > 0 ? `${current} of ${total}${suffix}` : `${total}${suffix}`;
     this.count.dataset.state = "ok";
   }
 
@@ -438,12 +417,7 @@ class FindPanel implements Panel {
       keyEvent.preventDefault();
       return;
     }
-    if (
-      keyEvent.altKey &&
-      !keyEvent.metaKey &&
-      !keyEvent.ctrlKey &&
-      !keyEvent.shiftKey
-    ) {
+    if (keyEvent.altKey && !keyEvent.metaKey && !keyEvent.ctrlKey && !keyEvent.shiftKey) {
       if (keyEvent.code === "KeyC") {
         keyEvent.preventDefault();
         this.toggle("caseSensitive");
@@ -498,10 +472,7 @@ function nextMatch(
   return result.done ? null : result.value;
 }
 
-function inputField(
-  label: string,
-  attrs: Record<string, string>,
-): HTMLInputElement {
+function inputField(label: string, attrs: Record<string, string>): HTMLInputElement {
   return elt("input", {
     type: "text",
     placeholder: label,
@@ -530,12 +501,7 @@ function toggleButton(label: string, title: string, shortcut: string) {
   return button;
 }
 
-function iconButton(
-  className: string,
-  title: string,
-  shortcut: string,
-  icon: Node,
-) {
+function iconButton(className: string, title: string, shortcut: string, icon: Node) {
   return elt(
     "button",
     {
@@ -586,10 +552,7 @@ function svgIcon(path: string) {
   return svg;
 }
 
-type Attrs = Record<
-  string,
-  string | boolean | ((event: Event) => void) | null | undefined
->;
+type Attrs = Record<string, string | boolean | ((event: Event) => void) | null | undefined>;
 
 function elt<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -601,10 +564,7 @@ function elt<K extends keyof HTMLElementTagNameMap>(
     for (const [key, value] of Object.entries(attrs)) {
       if (value == null || value === false) continue;
       if (key.startsWith("on") && typeof value === "function") {
-        node.addEventListener(
-          key.slice(2).toLowerCase(),
-          value as EventListener,
-        );
+        node.addEventListener(key.slice(2).toLowerCase(), value as EventListener);
         continue;
       }
       if (value === true) {
@@ -644,29 +604,26 @@ const findTheme = EditorView.theme(
       alignItems: "stretch",
       gap: "4px",
       padding: "6px",
-      border:
-        "1px solid color-mix(in srgb, var(--color-content) 12%, transparent)",
+      border: "1px solid color-mix(in srgb, var(--color-content) 12%, transparent)",
       borderRadius: "10px",
       backgroundColor: "var(--color-background-base)",
       boxShadow: "0 10px 28px hsl(0 0% 0% / 0.28)",
       color: "var(--color-content)",
     },
-    ".cm-find-expand, .cm-find-step, .cm-find-close, .cm-find-toggle, .cm-find-text":
-      {
-        display: "grid",
-        placeItems: "center",
-        margin: "0",
-        padding: "0",
-        border: "0",
-        borderRadius: "6px",
-        background: "transparent",
-        color: "color-mix(in srgb, var(--color-content) 62%, transparent)",
-        cursor: "pointer",
-      },
+    ".cm-find-expand, .cm-find-step, .cm-find-close, .cm-find-toggle, .cm-find-text": {
+      display: "grid",
+      placeItems: "center",
+      margin: "0",
+      padding: "0",
+      border: "0",
+      borderRadius: "6px",
+      background: "transparent",
+      color: "color-mix(in srgb, var(--color-content) 62%, transparent)",
+      cursor: "pointer",
+    },
     ".cm-find-expand:hover, .cm-find-step:hover, .cm-find-close:hover, .cm-find-toggle:hover, .cm-find-text:hover":
       {
-        backgroundColor:
-          "color-mix(in srgb, var(--color-content) 10%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--color-content) 10%, transparent)",
         color: "var(--color-content)",
       },
     ".cm-find-expand": {
@@ -705,11 +662,9 @@ const findTheme = EditorView.theme(
       flex: "none",
       height: "26px",
       padding: "0 8px",
-      border:
-        "1px solid color-mix(in srgb, var(--color-content) 12%, transparent)",
+      border: "1px solid color-mix(in srgb, var(--color-content) 12%, transparent)",
       borderRadius: "6px",
-      backgroundColor:
-        "color-mix(in srgb, var(--color-content) 6%, transparent)",
+      backgroundColor: "color-mix(in srgb, var(--color-content) 6%, transparent)",
     },
     ".cm-find.is-empty .cm-find-search, .cm-find.is-invalid .cm-find-search": {
       borderColor: "color-mix(in srgb, #f87171 55%, transparent)",
@@ -758,8 +713,7 @@ const findTheme = EditorView.theme(
       fontWeight: "600",
     },
     ".cm-find-toggle.is-active": {
-      backgroundColor:
-        "color-mix(in srgb, var(--color-accent) 28%, transparent)",
+      backgroundColor: "color-mix(in srgb, var(--color-accent) 28%, transparent)",
       color: "var(--color-content)",
     },
     ".cm-find-step, .cm-find-close": {
@@ -775,12 +729,10 @@ const findTheme = EditorView.theme(
       backgroundColor: "color-mix(in srgb, #e2c08d 46%, transparent)",
     },
     ".cm-searchMatch-selected": {
-      backgroundColor:
-        "color-mix(in srgb, var(--color-accent) 52%, transparent)",
+      backgroundColor: "color-mix(in srgb, var(--color-accent) 52%, transparent)",
     },
     ".cm-selectionMatch": {
-      backgroundColor:
-        "color-mix(in srgb, var(--color-content) 14%, transparent)",
+      backgroundColor: "color-mix(in srgb, var(--color-content) 14%, transparent)",
     },
   },
   { dark: true },

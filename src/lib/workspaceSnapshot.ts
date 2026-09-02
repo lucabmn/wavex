@@ -10,11 +10,7 @@ import {
   type WorkspaceTab,
 } from "./layout";
 import type { ReleaseNotesTabSource } from "./releaseNotes";
-import {
-  clampDockSize,
-  isDockSide,
-  type ProjectTerminalDock,
-} from "./projectTerminal";
+import { clampDockSize, isDockSide, type ProjectTerminalDock } from "./projectTerminal";
 import { normalizeProjectPath } from "./recents";
 import {
   HARNESSES,
@@ -55,7 +51,9 @@ export function collectWorkspaceSnapshot(
 ): WorkspaceSnapshot {
   return {
     tabs: tabs.map(sanitizeTab).filter((tab): tab is WorkspaceTab => tab != null),
-    sessions: sessions.map(sessionStub).filter((stub): stub is WorkspaceSessionStub => stub != null),
+    sessions: sessions
+      .map(sessionStub)
+      .filter((stub): stub is WorkspaceSessionStub => stub != null),
     activeTabId,
     projectCwd: projectCwd.trim() || "~",
     projectTerminals: projectTerminals
@@ -76,22 +74,16 @@ export function parseWorkspaceSnapshot(raw: unknown): WorkspaceSnapshot | null {
   if (!Array.isArray(value.tabs) || typeof value.activeTabId !== "string") {
     return null;
   }
-  const tabs = value.tabs
-    .map(sanitizeTab)
-    .filter((tab): tab is WorkspaceTab => tab != null);
+  const tabs = value.tabs.map(sanitizeTab).filter((tab): tab is WorkspaceTab => tab != null);
   if (tabs.length === 0) return null;
   const sessions = Array.isArray(value.sessions)
-    ? value.sessions
-        .map(sanitizeStub)
-        .filter((stub): stub is WorkspaceSessionStub => stub != null)
+    ? value.sessions.map(sanitizeStub).filter((stub): stub is WorkspaceSessionStub => stub != null)
     : [];
   const activeTabId = tabs.some((tab) => tab.id === value.activeTabId)
     ? value.activeTabId
     : tabs[0].id;
   const projectCwd =
-    typeof value.projectCwd === "string" && value.projectCwd.trim()
-      ? value.projectCwd.trim()
-      : "~";
+    typeof value.projectCwd === "string" && value.projectCwd.trim() ? value.projectCwd.trim() : "~";
   const projectTerminals = Array.isArray(value.projectTerminals)
     ? value.projectTerminals
         .map(sanitizeProjectTerminal)
@@ -171,9 +163,7 @@ export function hydrateWorkspaceSnapshot(
     ? parsed.activeTabId
     : tabs[0].id;
   const projectCwd =
-    parsed.projectCwd !== "~"
-      ? parsed.projectCwd
-      : sessions.values().next().value?.cwd ?? "~";
+    parsed.projectCwd !== "~" ? parsed.projectCwd : (sessions.values().next().value?.cwd ?? "~");
 
   return {
     tabs,
@@ -194,9 +184,7 @@ function sessionStub(session: Session): WorkspaceSessionStub | null {
     modelSettings: { ...session.modelSettings },
     runtimeMode: session.runtimeMode,
     title: session.title,
-    ...(session.providerSessionId
-      ? { providerSessionId: session.providerSessionId }
-      : {}),
+    ...(session.providerSessionId ? { providerSessionId: session.providerSessionId } : {}),
     ...(session.branch ? { branch: session.branch } : {}),
     ...(session.worktreeCwd ? { worktreeCwd: session.worktreeCwd } : {}),
   };
@@ -214,9 +202,7 @@ function sessionFromStub(stub: WorkspaceSessionStub): Session {
     ...session,
     id: stub.id,
     title: stub.title,
-    ...(stub.providerSessionId
-      ? { providerSessionId: stub.providerSessionId }
-      : {}),
+    ...(stub.providerSessionId ? { providerSessionId: stub.providerSessionId } : {}),
     ...(stub.branch ? { branch: stub.branch } : {}),
     ...(stub.worktreeCwd ? { worktreeCwd: stub.worktreeCwd } : {}),
   };
@@ -241,8 +227,7 @@ function sanitizeStub(raw: unknown): WorkspaceSessionStub | null {
       : {};
   return {
     id: value.id,
-    cwd:
-      typeof value.cwd === "string" && value.cwd.trim() ? value.cwd.trim() : "~",
+    cwd: typeof value.cwd === "string" && value.cwd.trim() ? value.cwd.trim() : "~",
     harness,
     model: typeof value.model === "string" ? value.model : "",
     modelSettings,
@@ -268,17 +253,12 @@ function sanitizeTab(raw: unknown): WorkspaceTab | null {
   if (!layout) return null;
   const editorResult = sanitizePanes(value.editorPanes);
   const terminalResult = sanitizePanes(value.terminalPanes);
-  const invalidPaneIds = new Set([
-    ...editorResult.invalidIds,
-    ...terminalResult.invalidIds,
-  ]);
+  const invalidPaneIds = new Set([...editorResult.invalidIds, ...terminalResult.invalidIds]);
   if (leafIds(layout).some((id) => invalidPaneIds.has(id))) return null;
   const editorPanes = editorResult.panes;
   const terminalPanes = terminalResult.panes;
   const focusedId =
-    typeof value.focusedId === "string" && value.focusedId
-      ? value.focusedId
-      : leafIds(layout)[0];
+    typeof value.focusedId === "string" && value.focusedId ? value.focusedId : leafIds(layout)[0];
   if (!focusedId) return null;
   return {
     kind: "session",
@@ -289,9 +269,7 @@ function sanitizeTab(raw: unknown): WorkspaceTab | null {
     terminalPanes,
     ...(value.diffOpen === true ? { diffOpen: true } : {}),
     ...(value.diffFocused === true ? { diffFocused: true } : {}),
-    ...(typeof value.groupId === "string" && value.groupId
-      ? { groupId: value.groupId }
-      : {}),
+    ...(typeof value.groupId === "string" && value.groupId ? { groupId: value.groupId } : {}),
   };
 }
 
@@ -299,9 +277,7 @@ function sanitizeLayout(raw: unknown): LayoutNode | null {
   if (!raw || typeof raw !== "object") return null;
   const value = raw as Record<string, unknown>;
   if (value.type === "leaf") {
-    return typeof value.id === "string" && value.id
-      ? { type: "leaf", id: value.id }
-      : null;
+    return typeof value.id === "string" && value.id ? { type: "leaf", id: value.id } : null;
   }
   if (value.type !== "split" || typeof value.id !== "string" || !value.id) {
     return null;
@@ -315,12 +291,12 @@ function sanitizeLayout(raw: unknown): LayoutNode | null {
     .filter((node): node is LayoutNode => node != null);
   if (children.length < 2) return null;
   const sizes = Array.isArray(value.sizes)
-    ? value.sizes.filter((size): size is number => typeof size === "number" && Number.isFinite(size))
+    ? value.sizes.filter(
+        (size): size is number => typeof size === "number" && Number.isFinite(size),
+      )
     : [];
   const normalized =
-    sizes.length === children.length
-      ? sizes
-      : children.map(() => 1 / children.length);
+    sizes.length === children.length ? sizes : children.map(() => 1 / children.length);
   return { type: "split", id: value.id, dir, children, sizes: normalized };
 }
 
@@ -349,13 +325,10 @@ function sanitizePane(raw: unknown): EditorPane | null {
   const value = raw as Record<string, unknown>;
   if (typeof value.id !== "string" || !value.id) return null;
   if (!Array.isArray(value.files)) return null;
-  const files = value.files
-    .map(sanitizeFile)
-    .filter((file): file is FilePaneTab => file != null);
+  const files = value.files.map(sanitizeFile).filter((file): file is FilePaneTab => file != null);
   if (files.length === 0) return null;
   const activeFileId =
-    typeof value.activeFileId === "string" &&
-    files.some((file) => file.id === value.activeFileId)
+    typeof value.activeFileId === "string" && files.some((file) => file.id === value.activeFileId)
       ? value.activeFileId
       : files[0].id;
   return { id: value.id, files, activeFileId };
@@ -371,10 +344,7 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
   const hasReleaseNotes = "releaseNotes" in value;
   const releaseNotes = sanitizeReleaseNotes(value.releaseNotes);
   if (hasReleaseNotes && !releaseNotes) return null;
-  if (
-    releaseNotes &&
-    (value.plan != null || value.review === true || value.terminal === true)
-  ) {
+  if (releaseNotes && (value.plan != null || value.review === true || value.terminal === true)) {
     return null;
   }
   return {
@@ -388,9 +358,7 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
   };
 }
 
-function sanitizeReleaseNotes(
-  raw: unknown,
-): ReleaseNotesTabSource | undefined {
+function sanitizeReleaseNotes(raw: unknown): ReleaseNotesTabSource | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const version = (raw as Record<string, unknown>).version;
   if (typeof version !== "string" || !version.trim()) return undefined;

@@ -39,9 +39,7 @@ export function collectWindowTransfer(
     }
   }
 
-  const activeTabIdInGroup = idSet.has(activeTabId)
-    ? activeTabId
-    : movingTabs[0].id;
+  const activeTabIdInGroup = idSet.has(activeTabId) ? activeTabId : movingTabs[0].id;
 
   return {
     tabs: movingTabs,

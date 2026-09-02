@@ -134,11 +134,7 @@ export function notesAsProjectFiles(notes: Note[]): ProjectFile[] {
   }));
 }
 
-export function rankNoteFiles(
-  notes: Note[],
-  query: string,
-  limit = MAX_NOTE_PICKER,
-): RankedFile[] {
+export function rankNoteFiles(notes: Note[], query: string, limit = MAX_NOTE_PICKER): RankedFile[] {
   const needle = query.replace(/\/+$/, "").trim().toLowerCase();
   if (!needle) {
     return [...notes]
@@ -224,23 +220,13 @@ export function notePreview(text: string, title: string): string {
   return preview.length > 120 ? `${preview.slice(0, 119)}…` : preview;
 }
 
-export function appendNoteReference(
-  draft: string,
-  title: string,
-  body: string,
-): string {
+export function appendNoteReference(draft: string, title: string, body: string): string {
   const content = body.replace(/\r\n?/g, "\n").trim();
   if (!content) return draft;
   const heading = title.trim() || "Untitled";
   const block = `Note: ${heading}\n\n${content}`;
   const separator =
-    draft.length === 0
-      ? ""
-      : draft.endsWith("\n\n")
-        ? ""
-        : draft.endsWith("\n")
-          ? "\n"
-          : "\n\n";
+    draft.length === 0 ? "" : draft.endsWith("\n\n") ? "" : draft.endsWith("\n") ? "\n" : "\n\n";
   return `${draft}${separator}${block}\n\n`;
 }
 
@@ -303,10 +289,7 @@ export function requestAddNoteToChat(note: Note) {
   );
 }
 
-export function composeNoteMessage(
-  card: NoteComposerCard | undefined,
-  text: string,
-): string {
+export function composeNoteMessage(card: NoteComposerCard | undefined, text: string): string {
   if (!card) return text.trim();
   const lead = text.trim() || "Use this note.";
   return injectNotePrompt(lead, [

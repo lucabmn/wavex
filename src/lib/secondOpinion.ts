@@ -22,9 +22,7 @@ export function harnessForTurn(
   sessionHarness: HarnessId,
 ): HarnessId {
   const startId = turn[0]?.id;
-  const start = startId
-    ? blocks.findIndex((block) => block.id === startId)
-    : -1;
+  const start = startId ? blocks.findIndex((block) => block.id === startId) : -1;
   if (start > 0) {
     for (let i = start - 1; i >= 0; i--) {
       const handoff = blocks[i]?.handoff;
@@ -52,19 +50,11 @@ export function turnEditedFiles(blocks: Block[], cwd?: string): string[] {
   const files = new Map<string, string>();
   for (const block of blocks) {
     if (block.role !== "tool" && block.role !== "approval") continue;
-    if (
-      !isEditTool(
-        block.tool?.kind,
-        block.text || block.tool?.title,
-        block.tool?.preview,
-      )
-    ) {
+    if (!isEditTool(block.tool?.kind, block.text || block.tool?.title, block.tool?.preview)) {
       continue;
     }
     const preview = block.tool?.preview;
-    const path = preview?.path
-      ? displayPath(preview.path, cwd)
-      : preview?.fileName;
+    const path = preview?.path ? displayPath(preview.path, cwd) : preview?.fileName;
     const label = path?.trim();
     if (label) files.set(label.toLowerCase(), label);
   }
@@ -105,19 +95,13 @@ export function buildSecondOpinionPrompt(input: {
   ];
 
   if (report) {
-    sections.push(
-      `## What ${fromTitle} reported\n${limitSection(report, REPORT_LIMIT)}`,
-    );
+    sections.push(`## What ${fromTitle} reported\n${limitSection(report, REPORT_LIMIT)}`);
   } else {
-    sections.push(
-      `## What ${fromTitle} reported\n(no written summary — inspect the files)`,
-    );
+    sections.push(`## What ${fromTitle} reported\n(no written summary — inspect the files)`);
   }
 
   if (files.length > 0) {
-    sections.push(
-      `## Files it edited\n${files.map((path) => `- ${path}`).join("\n")}`,
-    );
+    sections.push(`## Files it edited\n${files.map((path) => `- ${path}`).join("\n")}`);
   } else {
     sections.push("## Files it edited\n(none recorded on this turn)");
   }

@@ -9,10 +9,7 @@ export type SessionGitHint = {
   branch?: string;
 };
 
-export function compareSessionSummaries(
-  a: SessionSummary,
-  b: SessionSummary,
-): number {
+export function compareSessionSummaries(a: SessionSummary, b: SessionSummary): number {
   const pin = Number(!!b.pinned) - Number(!!a.pinned);
   if (pin !== 0) return pin;
   return b.updatedAt - a.updatedAt || a.id.localeCompare(b.id);
@@ -73,10 +70,7 @@ export function filterSessionsByArchive(
   return rows.filter((row) => !!row.archived === showArchived);
 }
 
-export function filterSessionsByQuery(
-  rows: SessionSummary[],
-  query: string,
-): SessionSummary[] {
+export function filterSessionsByQuery(rows: SessionSummary[], query: string): SessionSummary[] {
   const needle = query.trim();
   if (!needle) return rows;
   return rows.filter((row) => sessionSearchHit(row, needle));
@@ -89,10 +83,7 @@ function sessionSearchHit(row: SessionSummary, query: string): boolean {
   return fields.some((field) => field && fuzzyMatch(query, field) != null);
 }
 
-export function summaryFromSession(
-  session: Session,
-  git?: SessionGitHint,
-): SessionSummary {
+export function summaryFromSession(session: Session, git?: SessionGitHint): SessionSummary {
   return {
     id: session.id,
     cwd: session.cwd,
@@ -109,10 +100,7 @@ export function summaryFromSession(
 }
 
 /** Prefer the project's persisted origin name, then the overlay / folder name. */
-export function projectGitHint(
-  rows: SessionSummary[],
-  overlay?: SessionGitHint,
-): SessionGitHint {
+export function projectGitHint(rows: SessionSummary[], overlay?: SessionGitHint): SessionGitHint {
   const repo = rows.find((row) => row.repo)?.repo ?? overlay?.repo;
   const branch = overlay?.branch ?? rows.find((row) => row.branch)?.branch;
   return {

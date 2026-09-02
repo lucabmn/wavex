@@ -101,10 +101,7 @@ function stop(entry: Entry) {
 
 /** Branch list plus whether git has answered yet, for callers that must not
  *  confuse "still looking" with "not a repo". */
-export function useProjectBranchesState(
-  cwd: string,
-  enabled: boolean,
-): ProjectBranchesState {
+export function useProjectBranchesState(cwd: string, enabled: boolean): ProjectBranchesState {
   const active = enabled && Boolean(cwd) && cwd !== "~";
   const subscribe = useCallback(
     (listener: () => void) => {
@@ -126,9 +123,6 @@ export function useProjectBranchesState(
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-export function useProjectBranches(
-  cwd: string,
-  enabled: boolean,
-): GitBranches | null {
+export function useProjectBranches(cwd: string, enabled: boolean): GitBranches | null {
   return useProjectBranchesState(cwd, enabled).branches;
 }

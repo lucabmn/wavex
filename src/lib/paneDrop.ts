@@ -19,11 +19,7 @@ function getNullDrop(): PaneDrop | null {
 }
 
 export function setExternalPaneDrop(next: PaneDrop | null) {
-  if (
-    drop?.fromId === next?.fromId &&
-    drop?.overId === next?.overId &&
-    drop?.edge === next?.edge
-  ) {
+  if (drop?.fromId === next?.fromId && drop?.overId === next?.overId && drop?.edge === next?.edge) {
     return;
   }
   if (drop == null && next == null) return;
@@ -50,10 +46,7 @@ export function useExternalPaneDrop(enabled = true) {
   );
 }
 
-export function paneDropFromPoint(
-  x: number,
-  y: number,
-): { id: string; edge: PaneEdge } | null {
+export function paneDropFromPoint(x: number, y: number): { id: string; edge: PaneEdge } | null {
   const el = document.elementFromPoint(x, y);
   const pane = el?.closest("[data-pane-id]") as HTMLElement | null;
   const id = pane?.dataset.paneId;

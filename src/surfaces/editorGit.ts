@@ -84,13 +84,7 @@ const chunksField = StateField.define<readonly Chunk[]>({
       if (replacesEntireDoc(tr)) {
         return chunksFor(original, tr.state.doc);
       }
-      return Chunk.updateB(
-        chunks,
-        original,
-        tr.state.doc,
-        tr.changes,
-        DIFF_CONFIG,
-      );
+      return Chunk.updateB(chunks, original, tr.state.doc, tr.changes, DIFF_CONFIG);
     }
     return chunks;
   },
@@ -106,16 +100,12 @@ const gitDecorations = StateField.define<GitDecorations>({
     return buildDecorations(state);
   },
   update(value, tr) {
-    if (
-      tr.docChanged ||
-      tr.state.field(chunksField) !== tr.startState.field(chunksField)
-    ) {
+    if (tr.docChanged || tr.state.field(chunksField) !== tr.startState.field(chunksField)) {
       return buildDecorations(tr.state);
     }
     return value;
   },
-  provide: (field) =>
-    EditorView.decorations.from(field, (value) => value.lines),
+  provide: (field) => EditorView.decorations.from(field, (value) => value.lines),
 });
 
 class DeletedLinesWidget extends WidgetType {
@@ -171,17 +161,10 @@ export function editorGit(options?: { onStage?: GitStageHandler }): Extension {
 export function diffNavigablePositions(view: EditorView): number[] {
   const original = view.state.field(originalField);
   if (!original) return [];
-  return navigableChunkPositions(
-    view.state.doc,
-    view.state.field(chunksField),
-    original,
-  );
+  return navigableChunkPositions(view.state.doc, view.state.field(chunksField), original);
 }
 
-export function diffActiveChunkIndex(
-  view: EditorView,
-  positions: number[],
-): number {
+export function diffActiveChunkIndex(view: EditorView, positions: number[]): number {
   return activeChunkIndex(view, positions);
 }
 
@@ -238,17 +221,10 @@ export function diffLineStatsFromState(state: EditorState): {
   additions: number;
   deletions: number;
 } {
-  return diffLineStats(
-    state.doc,
-    state.field(chunksField),
-    state.field(originalField),
-  );
+  return diffLineStats(state.doc, state.field(chunksField), state.field(originalField));
 }
 
-export function setGitOriginal(
-  view: EditorView,
-  original: string | null,
-): boolean {
+export function setGitOriginal(view: EditorView, original: string | null): boolean {
   const current = view.state.field(originalField);
   const next = original == null ? null : textFromString(original);
   if (sameText(current, next)) return false;
@@ -270,10 +246,7 @@ export function stateWithGitOriginalUpdated(
 }
 
 /** Apply git original (index) text to an editor state. Used by the view and by tests. */
-export function stateWithGitOriginal(
-  doc: string,
-  original: string | null,
-): EditorState {
+export function stateWithGitOriginal(doc: string, original: string | null): EditorState {
   return EditorState.create({ doc, extensions: editorGit() }).update({
     effects: setOriginalEffect.of(original),
   }).state;
@@ -320,10 +293,7 @@ export function stageChunkText(
   return orig.replace(changes.from, changes.to, changes.insert).toString();
 }
 
-export async function stageChunkAt(
-  view: EditorView,
-  pos: number,
-): Promise<boolean> {
+export async function stageChunkAt(view: EditorView, pos: number): Promise<boolean> {
   const original = view.state.field(originalField);
   const onStage = view.state.facet(gitStageFacet);
   if (!original || !onStage) return false;
@@ -341,15 +311,9 @@ export async function stageChunkAt(
   return true;
 }
 
-export function findChunk(
-  doc: Text,
-  chunks: readonly Chunk[],
-  pos: number,
-): Chunk | undefined {
+export function findChunk(doc: Text, chunks: readonly Chunk[], pos: number): Chunk | undefined {
   const at = Math.max(0, Math.min(pos, doc.length));
-  const covering = chunks.find(
-    (chunk) => chunk.fromB <= at && chunk.endB >= at,
-  );
+  const covering = chunks.find((chunk) => chunk.fromB <= at && chunk.endB >= at);
   if (covering) return covering;
   if (doc.length === 0) return chunks[0];
   const line = doc.lineAt(at);
@@ -385,15 +349,7 @@ function revertChunkChanges(
 ): { from: number; to: number; insert: Text } | null {
   const range = actionChunkRange(original, doc, pos, selection);
   if (!range) return null;
-  return applySide(
-    original,
-    doc,
-    range.fromA,
-    range.toA,
-    range.fromB,
-    range.toB,
-    lineBreak,
-  );
+  return applySide(original, doc, range.fromA, range.toA, range.fromB, range.toB, lineBreak);
 }
 
 function stageChunkChanges(
@@ -405,15 +361,7 @@ function stageChunkChanges(
 ): { from: number; to: number; insert: Text } | null {
   const range = actionChunkRange(original, doc, pos, selection);
   if (!range) return null;
-  return applySide(
-    doc,
-    original,
-    range.fromB,
-    range.toB,
-    range.fromA,
-    range.toA,
-    lineBreak,
-  );
+  return applySide(doc, original, range.fromB, range.toB, range.fromA, range.toA, lineBreak);
 }
 
 function applySide(
@@ -552,9 +500,7 @@ function offsetsForLines(
 
 export function deletedLineTexts(original: Text, chunk: Chunk): string[] {
   if (chunk.fromA === chunk.toA) return [];
-  return original
-    .sliceString(chunk.fromA, Math.max(chunk.fromA, chunk.toA - 1))
-    .split("\n");
+  return original.sliceString(chunk.fromA, Math.max(chunk.fromA, chunk.toA - 1)).split("\n");
 }
 
 export type OverviewTick = {
@@ -615,8 +561,7 @@ function buildDecorations(state: EditorState): GitDecorations {
   for (const chunk of chunks) {
     const insertion = chunk.fromB !== chunk.toB;
     const widgetAt = widgetPos(state.doc, chunk);
-    const deleted =
-      chunk.fromA !== chunk.toA ? deletedLineTexts(original, chunk) : [];
+    const deleted = chunk.fromA !== chunk.toA ? deletedLineTexts(original, chunk) : [];
     if (deleted.length > 0) {
       lineItems.push({
         from: widgetAt,
@@ -641,9 +586,7 @@ function buildDecorations(state: EditorState): GitDecorations {
     }
   }
 
-  lineItems.sort(
-    (a, b) => a.from - b.from || a.deco.startSide - b.deco.startSide,
-  );
+  lineItems.sort((a, b) => a.from - b.from || a.deco.startSide - b.deco.startSide);
   markItems.sort((a, b) => a.from - b.from);
 
   const lines = new RangeSetBuilder<Decoration>();
@@ -735,15 +678,9 @@ const gitOverview = ViewPlugin.fromClass(
     jump(event: MouseEvent) {
       const rect = this.dom.getBoundingClientRect();
       if (rect.height <= 0) return;
-      const ratio = Math.min(
-        1,
-        Math.max(0, (event.clientY - rect.top) / rect.height),
-      );
+      const ratio = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
       const doc = this.view.state.doc;
-      const lineNumber = Math.min(
-        doc.lines,
-        Math.max(1, Math.floor(ratio * doc.lines) + 1),
-      );
+      const lineNumber = Math.min(doc.lines, Math.max(1, Math.floor(ratio * doc.lines) + 1));
       const pos = doc.line(lineNumber).from;
       this.view.dispatch({
         effects: EditorView.scrollIntoView(pos, { y: "center" }),
@@ -760,10 +697,7 @@ const gitOverview = ViewPlugin.fromClass(
         return;
       }
       this.dom.hidden = false;
-      const height = Math.max(
-        1,
-        this.dom.clientHeight || this.view.dom.clientHeight,
-      );
+      const height = Math.max(1, this.dom.clientHeight || this.view.dom.clientHeight);
       for (const tick of overviewTicks(state.doc, chunks, original)) {
         const el = document.createElement("div");
         el.className = `cm-gitOverviewTick cm-gitOverview-${tick.kind}`;
@@ -806,9 +740,7 @@ const gitHunkActions = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      if (
-        update.state.field(chunksField) !== update.startState.field(chunksField)
-      ) {
+      if (update.state.field(chunksField) !== update.startState.field(chunksField)) {
         this.hover = -1;
       }
       if (
@@ -841,10 +773,7 @@ const gitHunkActions = ViewPlugin.fromClass(
     };
 
     onLeave = (event: MouseEvent) => {
-      if (
-        event.relatedTarget instanceof Node &&
-        this.bar.contains(event.relatedTarget)
-      ) {
+      if (event.relatedTarget instanceof Node && this.bar.contains(event.relatedTarget)) {
         return;
       }
       this.hover = -1;
@@ -922,10 +851,7 @@ function hunkIndexAt(view: EditorView, clientY: number): number {
   return -1;
 }
 
-function hunkScreenBounds(
-  view: EditorView,
-  chunk: Chunk,
-): { top: number; bottom: number } | null {
+function hunkScreenBounds(view: EditorView, chunk: Chunk): { top: number; bottom: number } | null {
   const doc = view.state.doc;
   const from = widgetPos(doc, chunk);
   const start = view.lineBlockAt(from);
@@ -1016,8 +942,7 @@ const gitTheme = EditorView.theme({
     userSelect: "none",
     borderRadius: "4px",
     color: "var(--color-content)",
-    background:
-      "color-mix(in srgb, var(--color-background-base) 92%, transparent)",
+    background: "color-mix(in srgb, var(--color-background-base) 92%, transparent)",
     boxShadow:
       "0 0 0 1px color-mix(in srgb, var(--color-content) 14%, transparent), 0 6px 16px color-mix(in srgb, #000 22%, transparent)",
   },
@@ -1033,8 +958,7 @@ const gitTheme = EditorView.theme({
     cursor: "pointer",
   },
   ".cm-gitHunkBtn:hover": {
-    backgroundColor:
-      "color-mix(in srgb, var(--color-content) 12%, transparent)",
+    backgroundColor: "color-mix(in srgb, var(--color-content) 12%, transparent)",
   },
   ".cm-gitHunkBtn:focus-visible": {
     outline: "1px solid var(--color-accent)",

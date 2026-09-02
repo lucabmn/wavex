@@ -6,19 +6,8 @@ import {
   indentUnit,
   syntaxTree,
 } from "@codemirror/language";
-import {
-  Facet,
-  Prec,
-  StateField,
-  type EditorState,
-  type Extension,
-} from "@codemirror/state";
-import {
-  Decoration,
-  EditorView,
-  keymap,
-  type DecorationSet,
-} from "@codemirror/view";
+import { Facet, Prec, StateField, type EditorState, type Extension } from "@codemirror/state";
+import { Decoration, EditorView, keymap, type DecorationSet } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { basename } from "../lib/fs";
 
@@ -92,9 +81,7 @@ const HTML_TAGS = new Set(
 );
 
 const SELF_CLOSING = new Set(
-  "area base br col embed hr img input link meta param source track wbr".split(
-    " ",
-  ),
+  "area base br col embed hr img input link meta param source track wbr".split(" "),
 );
 
 const ALWAYS_FORBIDDEN = new Set([
@@ -125,11 +112,7 @@ const ALWAYS_FORBIDDEN = new Set([
   "VariableDefinition",
 ]);
 
-const FORBIDDEN_UNLESS_LINE_START = new Set([
-  "ArgList",
-  "CallExpression",
-  "ParamList",
-]);
+const FORBIDDEN_UNLESS_LINE_START = new Set(["ArgList", "CallExpression", "ParamList"]);
 
 type Piece = {
   tag: string;
@@ -331,9 +314,7 @@ function tagDecorations(state: EditorState): DecorationSet {
 
 function tagPairAt(state: EditorState, pos: number) {
   const tree = syntaxTree(state);
-  const tag =
-    tagFromCursor(tree.resolveInner(pos, 1)) ??
-    tagFromCursor(tree.resolveInner(pos, -1));
+  const tag = tagFromCursor(tree.resolveInner(pos, 1)) ?? tagFromCursor(tree.resolveInner(pos, -1));
   if (!tag?.parent || !ELEMENT_NODES.has(tag.parent.name)) return null;
 
   const open = tag.parent.firstChild;

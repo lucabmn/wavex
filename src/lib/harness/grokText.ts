@@ -1,16 +1,6 @@
 import { AcpClient } from "./acp";
-import {
-  killChild,
-  resolveGrokBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
-import {
-  grokAuthMethodId,
-  grokTextSpawnArgs,
-  TEXT_MODEL,
-} from "./grokProtocol";
+import { killChild, resolveGrokBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import { grokAuthMethodId, grokTextSpawnArgs, TEXT_MODEL } from "./grokProtocol";
 import { mergeStream } from "./streamText";
 
 const TEXT_CHILD_ID = "wavex-grok-text";
@@ -44,9 +34,11 @@ export async function stopGrokTextPrompt(childId?: string): Promise<void> {
 
 export function warmupGrokText(cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns.catch(() => undefined).then(async () => {
-    await ensureLive(cwd);
-  });
+  const run = turns
+    .catch(() => undefined)
+    .then(async () => {
+      await ensureLive(cwd);
+    });
   turns = run.then(
     () => undefined,
     () => undefined,
@@ -158,11 +150,7 @@ async function startLive(cwd: string): Promise<LiveText> {
     const methodId = grokAuthMethodId(init);
     if (methodId) {
       await acp
-        .request(
-          "authenticate",
-          { methodId, _meta: { headless: true } },
-          REQUEST_TIMEOUT_MS,
-        )
+        .request("authenticate", { methodId, _meta: { headless: true } }, REQUEST_TIMEOUT_MS)
         .catch(() => undefined);
     }
     await openSession(session, cwd);
@@ -194,11 +182,7 @@ async function openSession(session: LiveText, cwd: string): Promise<void> {
     )
     .catch(() => undefined);
   await session.acp
-    .request(
-      "session/set_mode",
-      { sessionId: acpSessionId, modeId: "low" },
-      REQUEST_TIMEOUT_MS,
-    )
+    .request("session/set_mode", { sessionId: acpSessionId, modeId: "low" }, REQUEST_TIMEOUT_MS)
     .catch(() => undefined);
 
   session.cwd = cwd;
@@ -216,29 +200,15 @@ async function dropLive(): Promise<void> {
   await killChild(TEXT_CHILD_ID).catch(() => undefined);
 }
 
-async function handleTextRequest(
-  acp: AcpClient,
-  id: number,
-  method: string,
-  params: unknown,
-) {
+async function handleTextRequest(acp: AcpClient, id: number, method: string, params: unknown) {
   if (method === "session/request_permission") {
     const optionIds = permissionOptionIds(params);
-    const optionId =
-      optionIds.find((value) => /reject|deny|cancel/i.test(value)) ??
-      "reject-once";
-    await acp
-      .respond(id, { outcome: { outcome: "selected", optionId } })
-      .catch(() => undefined);
+    const optionId = optionIds.find((value) => /reject|deny|cancel/i.test(value)) ?? "reject-once";
+    await acp.respond(id, { outcome: { outcome: "selected", optionId } }).catch(() => undefined);
     return;
   }
-  if (
-    method === "_x.ai/ask_user_question" ||
-    method === "x.ai/ask_user_question"
-  ) {
-    await acp
-      .respond(id, { outcome: "skip_interview" })
-      .catch(() => undefined);
+  if (method === "_x.ai/ask_user_question" || method === "x.ai/ask_user_question") {
+    await acp.respond(id, { outcome: "skip_interview" }).catch(() => undefined);
     return;
   }
   await acp.respond(id, {}).catch(() => undefined);
@@ -269,9 +239,7 @@ function textFromUpdate(params: unknown): string {
       ? (rec.update as Record<string, unknown>)
       : rec;
   if (!update) return "";
-  const kind = String(
-    update.sessionUpdate ?? update.session_update ?? update.type ?? "",
-  );
+  const kind = String(update.sessionUpdate ?? update.session_update ?? update.type ?? "");
   if (kind !== "agent_message_chunk" && kind !== "agent_message") return "";
   return textFromContent(update.content ?? update.text);
 }

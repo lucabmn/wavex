@@ -17,10 +17,7 @@ import {
 } from "./inFlight";
 import { leafIds, type WorkspaceTab } from "./layout";
 import { killPty } from "./pty";
-import {
-  projectTerminalFileIds,
-  type ProjectTerminalDock,
-} from "./projectTerminal";
+import { projectTerminalFileIds, type ProjectTerminalDock } from "./projectTerminal";
 import { sessionWorkCwd, type Session } from "./session";
 import { restoreSessionCheckout } from "./fs";
 import { sessionChildHarnesses } from "./handoff";
@@ -135,11 +132,7 @@ export function loadBootWorkspace(): Promise<BootWorkspace> {
       const historyHint = listProjectHistory(hintedCwd);
       const windowTransfer = await loadWindowTransfer();
       if (windowTransfer) {
-        const listed = await historyForCwd(
-          windowTransfer.projectCwd,
-          hintedCwd,
-          historyHint,
-        );
+        const listed = await historyForCwd(windowTransfer.projectCwd, hintedCwd, historyHint);
         return {
           windowTransfer,
           resumed: null,
@@ -147,10 +140,7 @@ export function loadBootWorkspace(): Promise<BootWorkspace> {
           historyCwd: listed?.cwd ?? null,
         };
       }
-      const [resumed, hinted] = await Promise.all([
-        loadResumedWorkspace(),
-        historyHint,
-      ]);
+      const [resumed, hinted] = await Promise.all([loadResumedWorkspace(), historyHint]);
       const listed = await historyForCwd(
         resumed?.projectCwd ?? hintedCwd,
         hintedCwd,
@@ -214,9 +204,7 @@ async function loadResumedWorkspaceOnce(): Promise<ResumedWorkspace | null> {
     }),
   );
 
-  let workspace = snapshot
-    ? hydrateWorkspaceSnapshot(snapshot, loaded, interrupted)
-    : null;
+  let workspace = snapshot ? hydrateWorkspaceSnapshot(snapshot, loaded, interrupted) : null;
   if (!workspace && refs.length > 0) {
     const sessions: Session[] = [];
     for (const ref of refs) {
@@ -267,9 +255,7 @@ export async function closeCurrentWindow(): Promise<void> {
   await invoke("destroy_window");
 }
 
-export async function persistLiveTranscripts(
-  sessions: Session[],
-): Promise<void> {
+export async function persistLiveTranscripts(sessions: Session[]): Promise<void> {
   await Promise.all(
     sessions
       .filter(shouldPersistSession)
@@ -290,20 +276,12 @@ export async function persistQuitState(
   await Promise.all(
     sessions.map(async (session) => {
       if (!shouldPersistSession(session)) return;
-      const payload = interrupted.has(session.id)
-        ? markTurnInterrupted(session)
-        : session;
+      const payload = interrupted.has(session.id) ? markTurnInterrupted(session) : session;
       await upsertSession(payload).catch(() => null);
     }),
   );
   await saveWorkspaceSnapshot(
-    collectWorkspaceSnapshot(
-      tabs,
-      sessions,
-      activeTabId,
-      projectCwd,
-      projectTerminals,
-    ),
+    collectWorkspaceSnapshot(tabs, sessions, activeTabId, projectCwd, projectTerminals),
   ).catch(() => undefined);
   // Vite/webview reload must not wipe a restored snapshot: those chats are idle
   // in this process until Continue runs.
@@ -328,12 +306,10 @@ async function persistBootingResume(workspace: ResumedWorkspace): Promise<void> 
     ),
   ).catch(() => undefined);
   await replaceInFlightSessions(
-    workspace.sessions
-      .filter(wasTurnInterrupted)
-      .map((session) => ({
-        sessionId: session.id,
-        cwd: session.cwd,
-      })),
+    workspace.sessions.filter(wasTurnInterrupted).map((session) => ({
+      sessionId: session.id,
+      cwd: session.cwd,
+    })),
   ).catch(() => undefined);
 }
 
@@ -358,14 +334,7 @@ async function confirmQuitAndExit(
     }
     quitting = true;
     try {
-      await persistQuitState(
-        sessions,
-        tabs,
-        activeTabId,
-        projectCwd,
-        "quit",
-        projectTerminals,
-      );
+      await persistQuitState(sessions, tabs, activeTabId, projectCwd, "quit", projectTerminals);
       await invoke("confirm_quit");
     } catch {
       quitting = false;
@@ -383,15 +352,13 @@ export async function reapWindowRuntime(
   await Promise.all(
     sessions.map((session) =>
       Promise.all(
-        sessionChildHarnesses(session).map((harness) =>
-          forgetHarnessSession(harness, session.id),
-        ),
+        sessionChildHarnesses(session).map((harness) => forgetHarnessSession(harness, session.id)),
       ),
     ),
   );
   await Promise.all(
-    [...terminalFileIds(tabs), ...projectTerminalFileIds(projectTerminals)].map(
-      (id) => killPty(id),
+    [...terminalFileIds(tabs), ...projectTerminalFileIds(projectTerminals)].map((id) =>
+      killPty(id),
     ),
   );
   // Catalog probes, title generators, and usage scrapers are not session

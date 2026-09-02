@@ -1,11 +1,7 @@
 import { homeDir } from "../fs";
 import { setHarnessModels } from "../models";
 import { execChild, resolveFxBinary } from "./child";
-import {
-  mergeFxCatalogModels,
-  modelFromFxStatusOutput,
-  modelsFromFxOutput,
-} from "./fxProtocol";
+import { mergeFxCatalogModels, modelFromFxStatusOutput, modelsFromFxOutput } from "./fxProtocol";
 
 let inflight: Promise<void> | null = null;
 

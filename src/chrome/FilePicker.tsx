@@ -29,13 +29,7 @@ type Props = {
   onClose: () => void;
 };
 
-export function FilePicker({
-  open,
-  cwd,
-  openPaths = [],
-  onOpenFile,
-  onClose,
-}: Props) {
+export function FilePicker({ open, cwd, openPaths = [], onOpenFile, onClose }: Props) {
   const search = useRef<HTMLInputElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -56,10 +50,7 @@ export function FilePicker({
     return out;
   }, [cwd, openPaths, open]);
 
-  const results = useMemo(
-    () => rankProjectFiles(files, query, recents),
-    [files, query, recents],
-  );
+  const results = useMemo(() => rankProjectFiles(files, query, recents), [files, query, recents]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,9 +87,7 @@ export function FilePicker({
   }, [open, cwd]);
 
   useEffect(() => {
-    setActive((index) =>
-      results.length === 0 ? 0 : Math.min(index, results.length - 1),
-    );
+    setActive((index) => (results.length === 0 ? 0 : Math.min(index, results.length - 1)));
   }, [results.length]);
 
   useEffect(() => {

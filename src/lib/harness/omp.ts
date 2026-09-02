@@ -45,17 +45,11 @@ export function forgetOmpSession(sessionId: string): Promise<void> {
   return forgetSession(OMP_FLAVOR, sessionId);
 }
 
-export function bindOmpSession(
-  threadId: string,
-  providerSessionId: string,
-  cwd: string,
-): void {
+export function bindOmpSession(threadId: string, providerSessionId: string, cwd: string): void {
   bindSession(OMP_FLAVOR, threadId, providerSessionId, cwd);
 }
 
 /** Test seam. */
-export function setOmpBinaryResolver(
-  fn: () => Promise<{ path: string }>,
-): void {
+export function setOmpBinaryResolver(fn: () => Promise<{ path: string }>): void {
   setFlavorBinaryResolver(OMP_FLAVOR, fn);
 }

@@ -94,10 +94,7 @@ function stop(entry: Entry) {
   entry.unsubscribeGit = null;
 }
 
-export function useProjectDiffStats(
-  cwd: string,
-  enabled: boolean,
-): GitDiffStats | null {
+export function useProjectDiffStats(cwd: string, enabled: boolean): GitDiffStats | null {
   const active = enabled && Boolean(cwd) && cwd !== "~";
   const subscribe = useCallback(
     (listener: () => void) => {

@@ -79,10 +79,7 @@ const REVEAL_LABEL = IS_MAC
     ? "Reveal in File Explorer"
     : "Open Containing Folder";
 
-function projectMenuExtraItems(
-  pinned: boolean,
-  canRemove: boolean,
-): TabGroupMenuExtraItem[] {
+function projectMenuExtraItems(pinned: boolean, canRemove: boolean): TabGroupMenuExtraItem[] {
   const items: TabGroupMenuExtraItem[] = [
     pinned
       ? { id: "unpin", label: "Unpin project", icon: PinOff }
@@ -165,8 +162,7 @@ export function ProjectRail({
 }: Props) {
   const resize = useDragResize({
     min: PROJECT_RAIL_WIDTH_MIN,
-    max: () =>
-      Math.min(PROJECT_RAIL_WIDTH_MAX, Math.floor(window.innerWidth * 0.35)),
+    max: () => Math.min(PROJECT_RAIL_WIDTH_MAX, Math.floor(window.innerWidth * 0.35)),
     defaultWidth: PROJECT_RAIL_WIDTH_DEFAULT,
     initial: loadProjectRailWidth(),
     onCommit: saveProjectRailWidth,
@@ -176,9 +172,7 @@ export function ProjectRail({
   const [groupLabels, setGroupLabels] = useState(loadTabGroupLabels);
   const [groupColors, setGroupColors] = useState(loadTabGroupColors);
   const [groupMascots, setGroupMascots] = useState(loadTabGroupMascots);
-  const [groupCustomColors, setGroupCustomColors] = useState(
-    loadTabGroupCustomColors,
-  );
+  const [groupCustomColors, setGroupCustomColors] = useState(loadTabGroupCustomColors);
   const [projectMenu, setProjectMenu] = useState<{
     x: number;
     y: number;
@@ -192,10 +186,7 @@ export function ProjectRail({
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const scrollRef = useRef<HTMLDivElement>(null);
   const groupLogos = useTabGroupLogos();
-  const allProjects = useMemo(
-    () => collectRailProjects(recents, cwd),
-    [cwd, recents],
-  );
+  const allProjects = useMemo(() => collectRailProjects(recents, cwd), [cwd, recents]);
   const sections = useMemo(
     () => projectRailSections(recents, cwd, railOrder, pinnedPaths),
     [cwd, pinnedPaths, railOrder, recents],
@@ -241,10 +232,7 @@ export function ProjectRail({
     });
   };
 
-  const onProjectContextMenu = (
-    path: string,
-    event: MouseEvent<HTMLElement>,
-  ) => {
+  const onProjectContextMenu = (path: string, event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
     openProjectMenu(path, event.clientX, event.clientY);
@@ -255,10 +243,7 @@ export function ProjectRail({
     setGroupLabels(loadTabGroupLabels());
   };
 
-  const onProjectColorChange = (
-    projectKey: string,
-    colorIndex: number | null,
-  ) => {
+  const onProjectColorChange = (projectKey: string, colorIndex: number | null) => {
     saveTabGroupColor(projectKey, colorIndex);
     setGroupColors(loadTabGroupColors());
     setGroupCustomColors(loadTabGroupCustomColors());
@@ -275,11 +260,7 @@ export function ProjectRail({
     setGroupCustomColors(loadTabGroupCustomColors());
   };
 
-  const reorderSubset = (
-    fullOrder: string[],
-    subsetOrder: string[],
-    subsetPaths: Set<string>,
-  ) => {
+  const reorderSubset = (fullOrder: string[], subsetOrder: string[], subsetPaths: Set<string>) => {
     const next: string[] = [];
     let subsetIndex = 0;
     for (const path of fullOrder) {
@@ -309,9 +290,7 @@ export function ProjectRail({
   };
 
   const onTogglePin = (path: string) => {
-    const isPinned = pinnedPaths.some((pinned) =>
-      sameProjectPath(pinned, path),
-    );
+    const isPinned = pinnedPaths.some((pinned) => sameProjectPath(pinned, path));
     const next = isPinned
       ? pinnedPaths.filter((pinned) => !sameProjectPath(pinned, path))
       : [...pinnedPaths, path];
@@ -498,10 +477,7 @@ export function ProjectRail({
             groupColors,
             groupCustomColors,
           )}
-          customColor={resolveTabGroupCustomColor(
-            projectMenu.projectKey,
-            groupCustomColors,
-          )}
+          customColor={resolveTabGroupCustomColor(projectMenu.projectKey, groupCustomColors)}
           currentColor={resolveTabGroupColor(
             projectMenu.projectKey,
             groupColors,
@@ -510,10 +486,7 @@ export function ProjectRail({
           )}
           logoPath={resolveTabGroupLogo(projectMenu.projectKey, groupLogos)}
           logoProject={projectMenu.projectKey}
-          mascotName={resolveTabGroupMascot(
-            projectMenu.projectKey,
-            groupMascots,
-          )}
+          mascotName={resolveTabGroupMascot(projectMenu.projectKey, groupMascots)}
           mascotProject={projectMenu.projectKey}
           onRename={onProjectRename}
           onColorChange={onProjectColorChange}
@@ -524,9 +497,7 @@ export function ProjectRail({
           onClose={() => setProjectMenu(null)}
           showActions={false}
           extraItems={projectMenuExtraItems(
-            pinnedPaths.some((pinned) =>
-              sameProjectPath(pinned, projectMenu.path),
-            ),
+            pinnedPaths.some((pinned) => sameProjectPath(pinned, projectMenu.path)),
             Boolean(onRemoveProject),
           )}
           onExtraPick={onProjectMenuPick}
@@ -595,8 +566,7 @@ function LiveAgentsPreview({
   if (agents.length < LIVE_AGENT_MIN) return null;
 
   const extra = agents.length - LIVE_AGENT_CAP;
-  const visible =
-    expanded || extra <= 0 ? agents : agents.slice(0, LIVE_AGENT_CAP);
+  const visible = expanded || extra <= 0 ? agents : agents.slice(0, LIVE_AGENT_CAP);
 
   return (
     <div className="shrink-0 px-2">
@@ -610,12 +580,8 @@ function LiveAgentsPreview({
             aria-hidden
             className="size-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-pulse"
           />
-          <span className="min-w-0 flex-1 truncate text-xs text-content/50">
-            Working
-          </span>
-          <span className="text-[11px] tabular-nums text-content/40">
-            {agents.length}
-          </span>
+          <span className="min-w-0 flex-1 truncate text-xs text-content/50">Working</span>
+          <span className="text-[11px] tabular-nums text-content/40">{agents.length}</span>
         </div>
         <div
           ref={expanded ? lockList : undefined}
@@ -678,12 +644,7 @@ function LiveAgentCard({
 }) {
   const projectKey = projectName(agent.cwd);
   const project = resolveTabGroupLabel(projectKey, groupLabels, projectKey);
-  const color = resolveTabGroupColor(
-    projectKey,
-    groupColors,
-    groupCustomColors,
-    projectKey,
-  );
+  const color = resolveTabGroupColor(projectKey, groupColors, groupCustomColors, projectKey);
   const elapsed = agent.done
     ? agent.durationMs != null
       ? formatLiveElapsed(0, agent.durationMs)
@@ -691,23 +652,15 @@ function LiveAgentCard({
     : agent.startedAt != null
       ? formatLiveElapsed(agent.startedAt, now)
       : "";
-  const activity = agent.needsApproval
-    ? "Need approval"
-    : agent.done
-      ? "Done"
-      : agent.activity;
+  const activity = agent.needsApproval ? "Need approval" : agent.done ? "Done" : agent.activity;
   const live = !agent.needsApproval && !agent.done;
-  const title = [agent.title, project, activity, elapsed]
-    .filter(Boolean)
-    .join("\n");
+  const title = [agent.title, project, activity, elapsed].filter(Boolean).join("\n");
 
   return (
     <button
       type="button"
       title={title}
-      aria-label={[agent.title, project, activity, elapsed]
-        .filter(Boolean)
-        .join(", ")}
+      aria-label={[agent.title, project, activity, elapsed].filter(Boolean).join(", ")}
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect?.(agent.id)}
       className={`relative flex w-full flex-col rounded-md px-2 py-1.5 text-left ${
@@ -753,9 +706,7 @@ function LiveAgentCard({
       <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11px] leading-tight text-content/45">
         <HarnessIcon harness={agent.harness} className="size-3 shrink-0" />
         <span className="min-w-0 flex-1 truncate">{project}</span>
-        {elapsed ? (
-          <span className="shrink-0 tabular-nums">{elapsed}</span>
-        ) : null}
+        {elapsed ? <span className="shrink-0 tabular-nums">{elapsed}</span> : null}
       </span>
     </button>
   );
@@ -803,9 +754,7 @@ function ProjectSection({
   return (
     <div className="shrink-0 mb-2">
       <div className="flex items-center gap-1 px-3 pb-1.5 pt-1">
-        <span className="min-w-0 flex-1 truncate px-1 text-xs text-content/50">
-          {label}
-        </span>
+        <span className="min-w-0 flex-1 truncate px-1 text-xs text-content/50">{label}</span>
         {onAdd ? (
           <button
             type="button"
@@ -819,9 +768,7 @@ function ProjectSection({
         ) : null}
       </div>
       {items.length === 0 && emptyLabel ? (
-        <p className="px-4 pb-1 text-[11px] leading-tight text-content/40">
-          {emptyLabel}
-        </p>
+        <p className="px-4 pb-1 text-[11px] leading-tight text-content/40">{emptyLabel}</p>
       ) : null}
       <div className="flex flex-col gap-px px-2">
         {items.map((item, index) => (
@@ -849,8 +796,7 @@ function ProjectSection({
   );
 }
 
-const nameClassName =
-  "min-w-0 flex-1 truncate text-sm font-medium leading-tight";
+const nameClassName = "min-w-0 flex-1 truncate text-sm font-medium leading-tight";
 
 function ProjectCard({
   item,
@@ -889,12 +835,7 @@ function ProjectCard({
   const projectKey = projectName(item.path);
   const name = resolveTabGroupLabel(projectKey, groupLabels, fallbackName);
   const logoPath = resolveTabGroupLogo(projectKey, groupLogos);
-  const color = resolveTabGroupColor(
-    projectKey,
-    groupColors,
-    groupCustomColors,
-    projectKey,
-  );
+  const color = resolveTabGroupColor(projectKey, groupColors, groupCustomColors, projectKey);
   const dragging = sortable.draggingId === item.path;
   const showStart =
     sortable.draggingId &&
@@ -919,9 +860,7 @@ function ProjectCard({
     <div
       ref={(el) => sortable.setItemRef(item.path, el)}
       className={`group relative flex touch-none items-stretch rounded-md px-2 h-8 ${
-        selected
-          ? "bg-content/12 text-content"
-          : "opacity-65 hover:bg-content/5 hover:text-content"
+        selected ? "bg-content/12 text-content" : "opacity-65 hover:bg-content/5 hover:text-content"
       } ${dragging ? "opacity-40" : ""} cursor-default`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -1026,19 +965,10 @@ function isBusyPath(path: string, busy: Set<string>): boolean {
   return false;
 }
 
-function ProjectDiffStat({
-  additions,
-  deletions,
-}: {
-  additions: number;
-  deletions: number;
-}) {
+function ProjectDiffStat({ additions, deletions }: { additions: number; deletions: number }) {
   if (additions <= 0 && deletions <= 0) return null;
 
-  const label = [
-    additions > 0 ? `+${additions}` : "",
-    deletions > 0 ? `-${deletions}` : "",
-  ]
+  const label = [additions > 0 ? `+${additions}` : "", deletions > 0 ? `-${deletions}` : ""]
     .filter(Boolean)
     .join(" ");
 
@@ -1047,12 +977,8 @@ function ProjectDiffStat({
       title={`${label} uncommitted`}
       className="flex shrink-0 items-center gap-1 font-mono text-[11px] font-semibold tabular-nums"
     >
-      {additions > 0 ? (
-        <span className="text-emerald-400">+{additions}</span>
-      ) : null}
-      {deletions > 0 ? (
-        <span className="text-red-400">-{deletions}</span>
-      ) : null}
+      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
+      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
     </span>
   );
 }
@@ -1082,11 +1008,7 @@ function projectCardTitle(
   return parts.join("\n");
 }
 
-function projectCardAriaLabel(
-  name: string,
-  stats: GitDiffStats | null,
-  busy: boolean,
-): string {
+function projectCardAriaLabel(name: string, stats: GitDiffStats | null, busy: boolean): string {
   const parts = [name];
   if (busy) parts.push("working");
   const files = stats?.files ?? 0;

@@ -1,10 +1,6 @@
 import type { ToolPreview, ToolPreviewKind, ToolPreviewLine } from "../session";
 import { displayPath } from "../paths";
-import {
-  formatShellIntent,
-  inferShellIntent,
-  rewriteReadableTitle,
-} from "./shellIntent";
+import { formatShellIntent, inferShellIntent, rewriteReadableTitle } from "./shellIntent";
 
 export const MAX_PREVIEW_LINES = 6;
 export const MAX_LINE_CHARS = 120;
@@ -18,11 +14,7 @@ export function extractToolPreview(
     coerceString(tool.title) ??
     coerceString(update.name) ??
     coerceString(tool.name);
-  const rawKind = (
-    coerceString(update.kind) ??
-    coerceString(tool.kind) ??
-    ""
-  ).toLowerCase();
+  const rawKind = (coerceString(update.kind) ?? coerceString(tool.kind) ?? "").toLowerCase();
   const inputs = inputRecords(
     update.rawInput ?? update.raw_input ?? update.input,
     tool.rawInput ?? tool.raw_input ?? tool.input,
@@ -44,10 +36,7 @@ export function extractToolPreview(
 
   if (
     kind === "search" ||
-    (query &&
-      kind !== "write" &&
-      rawKind !== "read" &&
-      !/^read\b/i.test(title ?? ""))
+    (query && kind !== "write" && rawKind !== "read" && !/^read\b/i.test(title ?? ""))
   ) {
     return {
       kind: "search",
@@ -125,11 +114,7 @@ function shellPreview(
   };
 }
 
-export function isEditTool(
-  kind?: string,
-  title?: string,
-  preview?: ToolPreview,
-): boolean {
+export function isEditTool(kind?: string, title?: string, preview?: ToolPreview): boolean {
   if (preview?.kind === "write") return true;
   const key = kind?.trim().toLowerCase() ?? "";
   if (["edit", "write", "delete", "move"].includes(key)) return true;
@@ -137,11 +122,7 @@ export function isEditTool(
   return /^(edit|write|delete|update)\b/i.test(title?.trim() ?? "");
 }
 
-export function isReadTool(
-  kind?: string,
-  title?: string,
-  preview?: ToolPreview,
-): boolean {
+export function isReadTool(kind?: string, title?: string, preview?: ToolPreview): boolean {
   if (preview?.kind === "read") return true;
   const key = kind?.trim().toLowerCase() ?? "";
   if (key === "read") return true;
@@ -149,11 +130,7 @@ export function isReadTool(
   return /^read\b/i.test(title?.trim() ?? "");
 }
 
-export function isSearchTool(
-  kind?: string,
-  title?: string,
-  preview?: ToolPreview,
-): boolean {
+export function isSearchTool(kind?: string, title?: string, preview?: ToolPreview): boolean {
   if (preview?.kind === "search") return true;
   const key = kind?.trim().toLowerCase() ?? "";
   if (key === "search") return true;
@@ -161,23 +138,15 @@ export function isSearchTool(
   return /^(find|search|grep|glob)\b/i.test(title?.trim() ?? "");
 }
 
-export function isFileTool(
-  kind?: string,
-  title?: string,
-  preview?: ToolPreview,
-): boolean {
-  return (
-    isReadTool(kind, title, preview) || isEditTool(kind, title, preview)
-  );
+export function isFileTool(kind?: string, title?: string, preview?: ToolPreview): boolean {
+  return isReadTool(kind, title, preview) || isEditTool(kind, title, preview);
 }
 
 export function isExecuteTool(kind?: string, title?: string): boolean {
   const key = kind?.trim().toLowerCase() ?? "";
   if (key === "execute" || key === "shell" || key === "bash") return true;
   if (key && key !== "other") return false;
-  return /^(bash|shell|run(?:ning)?(?:\s+command)?)\b/i.test(
-    title?.trim() ?? "",
-  );
+  return /^(bash|shell|run(?:ning)?(?:\s+command)?)\b/i.test(title?.trim() ?? "");
 }
 
 /** The argv / script a shell tool is about to run, if the harness sent it. */
@@ -230,10 +199,7 @@ export function isAgentTool(kind?: string, title?: string): boolean {
 }
 
 /** Human label for a spawned subagent: the agent's description, else its type. */
-export function agentToolTitle(
-  input: Record<string, unknown>,
-  fallback = "Subagent",
-): string {
+export function agentToolTitle(input: Record<string, unknown>, fallback = "Subagent"): string {
   const description = coerceString(input.description)?.trim();
   if (description) return description;
   const type =
@@ -245,11 +211,7 @@ export function agentToolTitle(
     const label = formatAgentType(type);
     return /subagent/i.test(label) ? label : `${label} subagent`;
   }
-  if (
-    fallback &&
-    !isAgentToolName(fallback) &&
-    !isWeakToolTitle(fallback)
-  ) {
+  if (fallback && !isAgentToolName(fallback) && !isWeakToolTitle(fallback)) {
     return fallback;
   }
   return "Subagent";
@@ -357,10 +319,7 @@ export function composeToolTitle(opts: {
     const inferred = inferShellIntent(script);
     if (inferred) {
       const inferredPath =
-        path ||
-        (inferred.path
-          ? displayPath(inferred.path, opts.cwd)
-          : undefined);
+        path || (inferred.path ? displayPath(inferred.path, opts.cwd) : undefined);
       const readable = formatShellIntent(inferred, inferredPath, query);
       if (readable) return readable;
     }
@@ -387,9 +346,7 @@ export function composeToolTitle(opts: {
   }
 
   if (previewKind === "search" || isSearchTool(kind, title)) {
-    const q =
-      query ||
-      title.replace(/^(?:find|search|grep|glob)(?:ing)?\b\s*/i, "").trim();
+    const q = query || title.replace(/^(?:find|search|grep|glob)(?:ing)?\b\s*/i, "").trim();
     if (q && !isWeakToolTitle(q)) return `Find ${q}`;
     return "Find";
   }
@@ -397,10 +354,7 @@ export function composeToolTitle(opts: {
   return title;
 }
 
-export function stubFilePreview(
-  kind?: string,
-  title?: string,
-): ToolPreview {
+export function stubFilePreview(kind?: string, title?: string): ToolPreview {
   const inferred = previewKind(kind ?? "", title, false, false);
   return {
     kind: inferred === "write" ? "write" : "read",
@@ -414,10 +368,7 @@ export function isWeakToolTitle(value: string): boolean {
   );
 }
 
-export function contextLines(
-  text: string,
-  startLine?: number,
-): ToolPreviewLine[] {
+export function contextLines(text: string, startLine?: number): ToolPreviewLine[] {
   const raw = text.replace(/\r\n/g, "\n").replace(/\s+$/, "").split("\n");
   const start = Math.max(1, startLine ?? 1);
   const from = Math.min(Math.max(0, start - 1), Math.max(0, raw.length - 1));
@@ -428,10 +379,7 @@ export function contextLines(
   }));
 }
 
-export function mergeToolPreview(
-  next?: ToolPreview,
-  prev?: ToolPreview,
-): ToolPreview | undefined {
+export function mergeToolPreview(next?: ToolPreview, prev?: ToolPreview): ToolPreview | undefined {
   if (!next) return prev;
   if (!prev) return next;
   return {
@@ -455,10 +403,7 @@ export function mergeToolPreview(
   };
 }
 
-function pickStrong(
-  next?: string,
-  prev?: string,
-): string | undefined {
+function pickStrong(next?: string, prev?: string): string | undefined {
   if (next && !isWeakToolTitle(next)) return next;
   if (prev && !isWeakToolTitle(prev)) return prev;
   return next || prev;
@@ -506,15 +451,11 @@ function extractPath(
     contentPath(update.content ?? tool.content) ??
     findPathInUnknown(update, 0) ??
     findPathInUnknown(tool, 0) ??
-    pathFromTitle(
-      coerceString(update.title) ?? coerceString(tool.title),
-    )
+    pathFromTitle(coerceString(update.title) ?? coerceString(tool.title))
   );
 }
 
-function firstInputPath(
-  inputs: Record<string, unknown>[],
-): string | undefined {
+function firstInputPath(inputs: Record<string, unknown>[]): string | undefined {
   for (const raw of inputs) {
     const found = inputPath(raw);
     if (found) return found;
@@ -522,10 +463,7 @@ function firstInputPath(
   return undefined;
 }
 
-function firstNumber(
-  inputs: Record<string, unknown>[],
-  key: string,
-): number | undefined {
+function firstNumber(inputs: Record<string, unknown>[], key: string): number | undefined {
   for (const raw of inputs) {
     const found = numberField(raw, key);
     if (found) return found;
@@ -555,20 +493,14 @@ function inputPath(rawInput: Record<string, unknown>): string | undefined {
 
 function pathFromTitle(title?: string): string | undefined {
   if (!title) return undefined;
-  const match = title.match(
-    /^(?:Read|Edit|Write|Delete|Update)\s+(?:file\s+)?(.+)$/i,
-  );
+  const match = title.match(/^(?:Read|Edit|Write|Delete|Update)\s+(?:file\s+)?(.+)$/i);
   const rest = match?.[1]?.trim();
   if (!rest) return undefined;
   return looksLikeToolPath(rest) ? rest : undefined;
 }
 
 function locationPath(locations: unknown): string | undefined {
-  const items = Array.isArray(locations)
-    ? locations
-    : locations
-      ? [locations]
-      : [];
+  const items = Array.isArray(locations) ? locations : locations ? [locations] : [];
   for (const item of items) {
     if (typeof item === "string" && looksLikeToolPath(item)) {
       return normalizePath(item);
@@ -586,11 +518,7 @@ function locationPath(locations: unknown): string | undefined {
 }
 
 function locationLine(locations: unknown): number | undefined {
-  const items = Array.isArray(locations)
-    ? locations
-    : locations
-      ? [locations]
-      : [];
+  const items = Array.isArray(locations) ? locations : locations ? [locations] : [];
   for (const item of items) {
     const rec = asRecord(item);
     const line = rec && numberField(rec, "line");
@@ -610,21 +538,21 @@ function contentPath(content: unknown): string | undefined {
   return undefined;
 }
 
-function extractDiff(content: unknown): {
-  path?: string;
-  oldText?: string;
-  newText?: string;
-  lines?: ToolPreviewLine[];
-  additions?: number;
-  deletions?: number;
-} | undefined {
+function extractDiff(content: unknown):
+  | {
+      path?: string;
+      oldText?: string;
+      newText?: string;
+      lines?: ToolPreviewLine[];
+      additions?: number;
+      deletions?: number;
+    }
+  | undefined {
   for (const block of contentBlocks(content)) {
     const type = (coerceString(block.type) ?? "").toLowerCase();
     if (type !== "diff") continue;
     const change = firstChange(block);
-    const path =
-      coerceString(block.path) ??
-      (change ? coerceString(change.path) : undefined);
+    const path = coerceString(block.path) ?? (change ? coerceString(change.path) : undefined);
     const patch = asRecord(block.patch);
     const patchText = coerceString(patch?.text) ?? coerceString(block.patch);
     if (patchText && /^(diff --git|@@ )/.test(patchText.trim())) {
@@ -645,9 +573,7 @@ function extractDiff(content: unknown): {
   return undefined;
 }
 
-function firstChange(
-  block: Record<string, unknown>,
-): Record<string, unknown> | null {
+function firstChange(block: Record<string, unknown>): Record<string, unknown> | null {
   if (!Array.isArray(block.changes) || block.changes.length === 0) return null;
   return asRecord(block.changes[0]);
 }
@@ -802,11 +728,7 @@ function findSync(
       if (di === 0 && dj === 0) continue;
       const oi = i + di;
       const nj = j + dj;
-      if (
-        oi < oldLines.length &&
-        nj < newLines.length &&
-        oldLines[oi] === newLines[nj]
-      ) {
+      if (oi < oldLines.length && nj < newLines.length && oldLines[oi] === newLines[nj]) {
         return { i: oi, j: nj };
       }
     }
@@ -956,11 +878,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function commandField(value: unknown): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
-  if (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.every((item) => typeof item === "string")
-  ) {
+  if (Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string")) {
     const joined = value.join(" ").trim();
     if (joined) return joined;
   }
@@ -974,7 +892,7 @@ function firstLine(value: string | undefined): string {
 }
 
 function stripExecutePrefix(title: string): string {
-  return title.replace(/^(?:bash|shell|execute)\s*[:\-]\s+/i, "").trim();
+  return title.replace(/^(?:bash|shell|execute)\s*[:-]\s+/i, "").trim();
 }
 
 function skillNameField(value: unknown): string | undefined {
@@ -1012,10 +930,7 @@ function coerceString(value: unknown): string | undefined {
   );
 }
 
-function numberField(
-  rec: Record<string, unknown>,
-  key: string,
-): number | undefined {
+function numberField(rec: Record<string, unknown>, key: string): number | undefined {
   const value = rec[key];
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {

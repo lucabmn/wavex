@@ -41,9 +41,7 @@ export function loadRecents(): RecentProject[] {
       const rec = item as { path?: unknown; openedAt?: unknown };
       if (typeof rec.path !== "string" || !rec.path) continue;
       const openedAt =
-        typeof rec.openedAt === "number" && Number.isFinite(rec.openedAt)
-          ? rec.openedAt
-          : 0;
+        typeof rec.openedAt === "number" && Number.isFinite(rec.openedAt) ? rec.openedAt : 0;
       out.push({ path: normalize(rec.path), openedAt });
     }
     return out;
@@ -65,10 +63,7 @@ export function rememberProject(path: string): RecentProject[] {
   if (normalized === "~") return loadRecents();
   dropArchived(normalized);
   const prev = loadRecents().filter((p) => p.path !== normalized);
-  const next = [{ path: normalized, openedAt: Date.now() }, ...prev].slice(
-    0,
-    MAX,
-  );
+  const next = [{ path: normalized, openedAt: Date.now() }, ...prev].slice(0, MAX);
   save(next);
   return next;
 }
@@ -78,12 +73,8 @@ function dropFromRail(path: string): RecentProject[] {
   const normalized = normalize(path);
   const next = loadRecents().filter((item) => item.path !== normalized);
   save(next);
-  saveProjectRailOrder(
-    loadProjectRailOrder().filter((entry) => entry !== normalized),
-  );
-  savePinnedProjects(
-    loadPinnedProjects().filter((entry) => entry !== normalized),
-  );
+  saveProjectRailOrder(loadProjectRailOrder().filter((entry) => entry !== normalized));
+  savePinnedProjects(loadPinnedProjects().filter((entry) => entry !== normalized));
   return next;
 }
 
@@ -119,9 +110,7 @@ export function loadArchivedProjects(): ArchivedProject[] {
       if (seen.has(path) || !looksLikeProject(path)) continue;
       seen.add(path);
       const archivedAt =
-        typeof rec.archivedAt === "number" && Number.isFinite(rec.archivedAt)
-          ? rec.archivedAt
-          : 0;
+        typeof rec.archivedAt === "number" && Number.isFinite(rec.archivedAt) ? rec.archivedAt : 0;
       out.push({ path, archivedAt });
     }
     return out;
@@ -249,10 +238,7 @@ export function syncProjectRailOrder(
   }
   const newcomers = [...paths]
     .filter((path) => !seen.has(path))
-    .sort(
-      (a, b) =>
-        (projects.get(b)?.openedAt ?? 0) - (projects.get(a)?.openedAt ?? 0),
-    );
+    .sort((a, b) => (projects.get(b)?.openedAt ?? 0) - (projects.get(a)?.openedAt ?? 0));
   return [...next, ...newcomers];
 }
 
@@ -277,10 +263,7 @@ export function projectRailSections(
 }
 
 /** Recents plus the current folder when it is a project not yet remembered. */
-export function projectRailItems(
-  recents: RecentProject[],
-  currentCwd: string,
-): RecentProject[] {
+export function projectRailItems(recents: RecentProject[], currentCwd: string): RecentProject[] {
   const projects = collectRailProjects(recents, currentCwd);
   const order = syncProjectRailOrder(loadProjectRailOrder(), projects);
   const { pinned, projects: unpinned } = projectRailSections(

@@ -117,10 +117,7 @@ export type RunnerPose = {
   airborne: boolean;
 };
 
-export function pingPong(
-  distance: number,
-  length: number,
-): { t: number; facing: 1 | -1 } {
+export function pingPong(distance: number, length: number): { t: number; facing: 1 | -1 } {
   if (length <= 0) return { t: 0, facing: 1 };
   const cycle = length * 2;
   const d = ((distance % cycle) + cycle) % cycle;
@@ -128,13 +125,7 @@ export function pingPong(
   return { t: cycle - d, facing: -1 };
 }
 
-function arc(
-  x: number,
-  left: number,
-  right: number,
-  height: number,
-  lead = JUMP_LEAD,
-): number {
+function arc(x: number, left: number, right: number, height: number, lead = JUMP_LEAD): number {
   const start = left - lead;
   const end = right + lead;
   if (end <= start || x <= start || x >= end) return 0;
@@ -153,19 +144,11 @@ export function jumpHeight(
   obstacle: Obstacle | null,
   coins: readonly Coin[] = [],
 ): number {
-  let height = obstacle
-    ? arc(x, obstacle.left, obstacle.right, obstacle.height)
-    : 0;
+  let height = obstacle ? arc(x, obstacle.left, obstacle.right, obstacle.height) : 0;
   for (const coin of coins) {
     height = Math.max(
       height,
-      arc(
-        x,
-        coin.x - COIN_WIDTH / 2,
-        coin.x + COIN_WIDTH / 2,
-        coinJumpPeak(coin),
-        COIN_JUMP_LEAD,
-      ),
+      arc(x, coin.x - COIN_WIDTH / 2, coin.x + COIN_WIDTH / 2, coinJumpPeak(coin), COIN_JUMP_LEAD),
     );
   }
   return height;
@@ -268,13 +251,10 @@ export function stunDone(elapsedMs: number): boolean {
 }
 
 /** Pixel stars orbiting the sprite while it is stunned. Offsets are from the sprite top-left. */
-export function stunStars(
-  elapsedMs: number,
-): { dx: number; dy: number; opacity: number }[] {
+export function stunStars(elapsedMs: number): { dx: number; dy: number; opacity: number }[] {
   if (elapsedMs < 0 || elapsedMs >= CRASH_STUN_MS) return [];
   const fadeAt = CRASH_STUN_MS - 140;
-  const opacity =
-    elapsedMs < fadeAt ? 1 : Math.max(0, 1 - (elapsedMs - fadeAt) / 140);
+  const opacity = elapsedMs < fadeAt ? 1 : Math.max(0, 1 - (elapsedMs - fadeAt) / 140);
   const originX = (RUNNER_SIZE - STAR_SIZE) / 2;
   const originY = (RUNNER_SIZE - STAR_SIZE) / 2 - 5;
   const angle = (elapsedMs / STAR_SPIN_MS) * Math.PI * 2;
@@ -329,11 +309,7 @@ export function pickCoinX(
  * Vertical hop that peaks, then drops below the rim so the sprite can clip
  * away behind the composer.
  */
-export function exitJumpY(
-  t: number,
-  peak = EXIT_PEAK,
-  sink = EXIT_SINK,
-): number {
+export function exitJumpY(t: number, peak = EXIT_PEAK, sink = EXIT_SINK): number {
   if (t <= 0) return 0;
   if (t >= 1) return -sink;
   if (t < EXIT_APEX) {
@@ -354,10 +330,7 @@ export function spriteClipBottom(y: number, size = RUNNER_SIZE): number {
  * Treat a control as a hurdle when it sits on (or just above) the composer's
  * top border and overlaps it horizontally — the jump-to-latest chevron.
  */
-export function obstacleFromRects(
-  box: Rect,
-  button: Rect | null,
-): Obstacle | null {
+export function obstacleFromRects(box: Rect, button: Rect | null): Obstacle | null {
   if (!button) return null;
   if (button.right <= box.left || button.left >= box.right) return null;
   if (button.bottom < box.top - 48 || button.top > box.top + 12) return null;
@@ -377,9 +350,7 @@ export type RunnerTrack = {
 
 /** Prefer the session-review bar's top edge when it is sitting on the composer. */
 export function runnerTrack(box: Rect, review: Rect | null): RunnerTrack {
-  const reviewWidth = review
-    ? (review.width ?? review.right - review.left)
-    : 0;
+  const reviewWidth = review ? (review.width ?? review.right - review.left) : 0;
   if (!review || reviewWidth <= 0) {
     return {
       left: box.left,

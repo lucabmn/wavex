@@ -40,15 +40,9 @@ export async function fetchClaudeRateLimits(): Promise<ProviderRateLimits> {
       };
     }
     if (result.status === "unavailable") {
-      return unavailableRateLimits(
-        "claude",
-        result.error?.trim() || "Claude not signed in",
-      );
+      return unavailableRateLimits("claude", result.error?.trim() || "Claude not signed in");
     }
-    return errorRateLimits(
-      "claude",
-      result.error?.trim() || "Claude usage unavailable",
-    );
+    return errorRateLimits("claude", result.error?.trim() || "Claude usage unavailable");
   } catch (error) {
     return errorRateLimits(
       "claude",
@@ -128,11 +122,7 @@ export async function fetchCodexRateLimits(): Promise<ProviderRateLimits> {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (
-      /not signed in|chatgpt authentication required|not authenticated/i.test(
-        message,
-      )
-    ) {
+    if (/not signed in|chatgpt authentication required|not authenticated/i.test(message)) {
       return unavailableRateLimits("codex", "Codex not signed in");
     }
     if (/ENOENT|not found|could not run/i.test(message)) {

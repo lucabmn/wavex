@@ -3,11 +3,7 @@ import { createPortal } from "react-dom";
 import type { ApprovalDecision } from "../lib/harness";
 import type { PendingApprovalNotice } from "../lib/approvalToast";
 import { LAYER } from "../lib/layers";
-import {
-  HARNESS_TITLE,
-  sessionDisplayTitle,
-  type Session,
-} from "../lib/session";
+import { HARNESS_TITLE, sessionDisplayTitle, type Session } from "../lib/session";
 import { HarnessIcon } from "./HarnessIcon";
 
 type Notice = PendingApprovalNotice & { session: Session };
@@ -15,11 +11,7 @@ type Notice = PendingApprovalNotice & { session: Session };
 type Props = {
   notices: Notice[];
   onFocusSession: (sessionId: string) => void;
-  onApproval: (
-    sessionId: string,
-    requestId: number,
-    decision: ApprovalDecision,
-  ) => void;
+  onApproval: (sessionId: string, requestId: number, decision: ApprovalDecision) => void;
 };
 
 export function ApprovalToasts({ notices, onFocusSession, onApproval }: Props) {
@@ -79,9 +71,7 @@ function ApprovalToastCard({
             <span>{notice.kind === "question" ? "Question" : "Approval"}</span>
           </span>
         </span>
-        <span className="line-clamp-3 text-[12px] leading-relaxed text-content/70">
-          {label}
-        </span>
+        <span className="line-clamp-3 text-[12px] leading-relaxed text-content/70">{label}</span>
         <span className="text-[11px] text-content/40">{harness}</span>
       </button>
       {notice.kind === "question" ? null : (

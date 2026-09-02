@@ -1,9 +1,5 @@
 import type { RuntimeMode, ToolPreview } from "../session";
-import {
-  composeToolTitle,
-  extractToolPreview,
-  formatAgentType,
-} from "./preview";
+import { composeToolTitle, extractToolPreview, formatAgentType } from "./preview";
 import { streamTextDelta } from "./streamText";
 import type { HarnessEvent } from "./types";
 
@@ -12,10 +8,7 @@ export type CodexThreadConfig = {
   approvalPolicy: "untrusted" | "on-request" | "never";
   sandbox: "read-only" | "workspace-write" | "danger-full-access";
   approvalsReviewer: "user" | "auto_review";
-  sandboxPolicy:
-    | { type: "readOnly" }
-    | { type: "workspaceWrite" }
-    | { type: "dangerFullAccess" };
+  sandboxPolicy: { type: "readOnly" } | { type: "workspaceWrite" } | { type: "dangerFullAccess" };
 };
 
 export function runtimeModeToCodexConfig(mode: RuntimeMode): CodexThreadConfig {
@@ -122,9 +115,7 @@ export function buildTurnStartParams(input: {
 }
 
 export function isRecoverableThreadResumeError(error: unknown): boolean {
-  const message = (
-    error instanceof Error ? error.message : String(error)
-  ).toLowerCase();
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
   if (!message.includes("thread")) return false;
   return [
     "not found",
@@ -152,21 +143,14 @@ export function stringField(
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function numberField(
-  rec: Record<string, unknown> | null | undefined,
-  key: string,
-): number {
+function numberField(rec: Record<string, unknown> | null | undefined, key: string): number {
   const value = rec?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 export type CodexApprovalKind = "command" | "file-change" | "permissions";
 
-export type CodexApprovalDecisionWire =
-  | "accept"
-  | "acceptForSession"
-  | "decline"
-  | "cancel";
+export type CodexApprovalDecisionWire = "accept" | "acceptForSession" | "decline" | "cancel";
 
 export function toCodexApprovalDecision(
   decision: "allow" | "deny",
@@ -192,10 +176,7 @@ export type MappedCodexNotification = {
  * Translate a Codex app-server notification into wavex HarnessEvents.
  * Unknown methods return empty events (non-fatal).
  */
-export function mapCodexNotification(
-  method: string,
-  params: unknown,
-): MappedCodexNotification {
+export function mapCodexNotification(method: string, params: unknown): MappedCodexNotification {
   const rec = asRecord(params);
   if (!rec) return { events: [] };
 
@@ -284,9 +265,7 @@ export function mapCodexNotification(
   if (method === "error") {
     const errorObj = asRecord(rec.error);
     const message =
-      stringField(errorObj, "message") ??
-      stringField(rec, "message") ??
-      "Codex error";
+      stringField(errorObj, "message") ?? stringField(rec, "message") ?? "Codex error";
     const willRetry = rec.willRetry === true;
     if (willRetry) {
       return { events: [{ type: "status", text: message }] };
@@ -296,9 +275,7 @@ export function mapCodexNotification(
 
   if (method === "configWarning" || method === "warning") {
     const message =
-      stringField(rec, "summary") ??
-      stringField(rec, "message") ??
-      stringField(rec, "details");
+      stringField(rec, "summary") ?? stringField(rec, "message") ?? stringField(rec, "details");
     if (!message) return { events: [] };
     return { events: [{ type: "status", text: message }] };
   }
@@ -307,11 +284,7 @@ export function mapCodexNotification(
 }
 
 /** Codex thread items wavex already renders elsewhere or that are internal metadata. */
-const SILENT_ITEM_TYPES = new Set([
-  "userMessage",
-  "contextCompaction",
-  "enteredReviewMode",
-]);
+const SILENT_ITEM_TYPES = new Set(["userMessage", "contextCompaction", "enteredReviewMode"]);
 
 /**
  * Codex reports both `last` (the most recent request) and `total` (cumulative
@@ -336,14 +309,10 @@ function mapTokenUsage(rec: Record<string, unknown>): MappedCodexNotification {
   };
 }
 
-function mapTurnTerminal(
-  method: string,
-  rec: Record<string, unknown>,
-): MappedCodexNotification {
+function mapTurnTerminal(method: string, rec: Record<string, unknown>): MappedCodexNotification {
   const turn = asRecord(rec.turn);
   const statusRaw =
-    stringField(turn, "status") ??
-    (method === "turn/aborted" ? "interrupted" : "completed");
+    stringField(turn, "status") ?? (method === "turn/aborted" ? "interrupted" : "completed");
   const errorObj = asRecord(turn?.error);
   const error = stringField(errorObj, "message");
   const status =
@@ -354,10 +323,7 @@ function mapTurnTerminal(
           ? "cancelled"
           : "interrupted"
         : "completed";
-  const events: HarnessEvent[] = [
-    { type: "message.completed" },
-    { type: "reasoning.completed" },
-  ];
+  const events: HarnessEvent[] = [{ type: "message.completed" }, { type: "reasoning.completed" }];
   if (status === "failed" && error) {
     events.push({ type: "session.error", message: error });
   }
@@ -368,10 +334,7 @@ function mapTurnTerminal(
   };
 }
 
-function mapItemLifecycle(
-  method: string,
-  rec: Record<string, unknown>,
-): MappedCodexNotification {
+function mapItemLifecycle(method: string, rec: Record<string, unknown>): MappedCodexNotification {
   const item = asRecord(rec.item);
   if (!item) return { events: [] };
   const callId = stringField(item, "id") ?? "";
@@ -387,10 +350,7 @@ function mapItemLifecycle(
     const review = stringField(item, "review");
     if (review) {
       return {
-        events: [
-          { type: "message.delta", text: review },
-          { type: "message.completed" },
-        ],
+        events: [{ type: "message.delta", text: review }, { type: "message.completed" }],
       };
     }
     return { events: [] };
@@ -405,10 +365,7 @@ function mapItemLifecycle(
       const text = streamTextDelta(item.text);
       const events: HarnessEvent[] = [];
       if (text) {
-        events.push(
-          { type: "message.delta", text },
-          { type: "message.completed" },
-        );
+        events.push({ type: "message.delta", text }, { type: "message.completed" });
       }
       return { events };
     }
@@ -429,10 +386,7 @@ function mapItemLifecycle(
           .join("\n");
         if (text) {
           return {
-            events: [
-              { type: "reasoning.delta", text },
-              { type: "reasoning.completed" },
-            ],
+            events: [{ type: "reasoning.delta", text }, { type: "reasoning.completed" }],
           };
         }
       }
@@ -462,9 +416,7 @@ function mapToolItem(
   if (itemType === "commandExecution") {
     const command = stringField(item, "command") ?? "Shell";
     const status = mapItemStatus(stringField(item, "status"), completed);
-    const output =
-      stringField(item, "aggregatedOutput") ??
-      stringField(item, "output");
+    const output = stringField(item, "aggregatedOutput") ?? stringField(item, "output");
     const preview: ToolPreview | undefined = undefined;
     const eventType = completed ? "tool.updated" : "tool.started";
     if (eventType === "tool.started") {
@@ -572,8 +524,7 @@ function mapSubAgentActivity(
   completed: boolean,
 ): HarnessEvent {
   const kind = (stringField(item, "kind") ?? "").toLowerCase();
-  const path =
-    stringField(item, "agentPath") ?? stringField(item, "agent_path");
+  const path = stringField(item, "agentPath") ?? stringField(item, "agent_path");
   const leaf = path?.split(/[/\\]/).filter(Boolean).pop();
   const title = leaf ? `${formatAgentType(leaf)} subagent` : "Subagent";
   if (kind === "interrupted") {
@@ -643,9 +594,7 @@ function mapFileChangeItem(
   };
 }
 
-function mapFileChangePatch(
-  rec: Record<string, unknown>,
-): MappedCodexNotification {
+function mapFileChangePatch(rec: Record<string, unknown>): MappedCodexNotification {
   const itemId = stringField(rec, "itemId") ?? "";
   if (!itemId) return { events: [] };
   const changes = Array.isArray(rec.changes) ? rec.changes : [];
@@ -691,16 +640,11 @@ function buildDiffPreview(
   };
   return (
     extractToolPreview(fake, fake) ??
-    (path
-      ? { kind: "write", path, fileName: path.split(/[/\\]/).pop() }
-      : undefined)
+    (path ? { kind: "write", path, fileName: path.split(/[/\\]/).pop() } : undefined)
   );
 }
 
-function mapItemStatus(
-  status: string | undefined,
-  completed: boolean,
-): string {
+function mapItemStatus(status: string | undefined, completed: boolean): string {
   if (status === "completed" || status === "failed" || status === "declined") {
     return status === "declined" ? "failed" : status;
   }

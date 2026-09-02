@@ -139,9 +139,7 @@ export function grokAuthMethodId(init: unknown): string | null {
   const ids = new Set(
     methods.flatMap((item) => {
       const id = asRecord(item)?.id;
-      return typeof id === "string" && id.trim() && id !== "grok.com"
-        ? [id.trim()]
-        : [];
+      return typeof id === "string" && id.trim() && id !== "grok.com" ? [id.trim()] : [];
     }),
   );
   const defaultId = stringField(asRecord(rec?._meta) ?? {}, "defaultAuthMethodId");
@@ -195,10 +193,7 @@ export function pickAutoOption(
   ]);
 }
 
-export function permissionOptionId(
-  decision: ApprovalDecision,
-  optionIds: string[],
-): string {
+export function permissionOptionId(decision: ApprovalDecision, optionIds: string[]): string {
   if (decision === "allow") {
     return (
       pickOption(optionIds, [
@@ -222,9 +217,7 @@ export function permissionOptionId(
   );
 }
 
-export function permissionRequestFromAcp(
-  params: unknown,
-): GrokPermissionRequest {
+export function permissionRequestFromAcp(params: unknown): GrokPermissionRequest {
   const rec = asRecord(params);
   const subject = asRecord(rec?.subject);
   const tool =
@@ -235,8 +228,7 @@ export function permissionRequestFromAcp(
     rec ??
     {};
   const grok = grokToolFields(tool, tool);
-  const kind =
-    grok.kind ?? stringField(tool, "kind") ?? stringField(subject ?? {}, "kind");
+  const kind = grok.kind ?? stringField(tool, "kind") ?? stringField(subject ?? {}, "kind");
   const preview = extractToolPreview(tool, tool);
   const command = grok.command ?? extractShellCommand(tool);
   const title =
@@ -273,12 +265,7 @@ export function permissionRequestFromAcp(
 export function planFromExitPlan(params: unknown): string {
   const rec = asRecord(params);
   const nested = asRecord(rec?.input);
-  const text =
-    rec?.planContent ??
-    rec?.plan ??
-    rec?.content ??
-    nested?.plan ??
-    nested?.planContent;
+  const text = rec?.planContent ?? rec?.plan ?? rec?.content ?? nested?.plan ?? nested?.planContent;
   return typeof text === "string" ? text.trim() : "";
 }
 
@@ -286,9 +273,7 @@ export function eventsFromAcpUpdate(params: unknown): HarnessEvent[] {
   const rec = asRecord(params);
   const update = asRecord(rec?.update) ?? rec;
   if (!update) return [];
-  const kind = String(
-    update.sessionUpdate ?? update.session_update ?? update.type ?? "",
-  );
+  const kind = String(update.sessionUpdate ?? update.session_update ?? update.type ?? "");
 
   if (kind === "agent_message_chunk" || kind === "agent_message") {
     const text = textFromContent(
@@ -307,10 +292,7 @@ export function eventsFromAcpUpdate(params: unknown): HarnessEvent[] {
   }
 
   if (kind === "tool_call_delta_chunk") {
-    const callId =
-      stringField(update, "toolCallId") ??
-      stringField(update, "tool_call_id") ??
-      "";
+    const callId = stringField(update, "toolCallId") ?? stringField(update, "tool_call_id") ?? "";
     if (!callId) return [];
     const name = stringField(update, "name") ?? stringField(update, "title");
     return [
@@ -324,33 +306,18 @@ export function eventsFromAcpUpdate(params: unknown): HarnessEvent[] {
     ];
   }
 
-  if (
-    kind === "tool_call" ||
-    kind === "tool_call_update" ||
-    kind === "tool_call_content_chunk"
-  ) {
-    const tool =
-      asRecord(update.toolCall) ?? asRecord(update.tool_call) ?? update;
+  if (kind === "tool_call" || kind === "tool_call_update" || kind === "tool_call_content_chunk") {
+    const tool = asRecord(update.toolCall) ?? asRecord(update.tool_call) ?? update;
     const grok = grokToolFields(update, tool);
     const callId =
       grok.callId ??
       String(
-        tool.toolCallId ??
-          tool.tool_call_id ??
-          update.toolCallId ??
-          update.tool_call_id ??
-          "",
+        tool.toolCallId ?? tool.tool_call_id ?? update.toolCallId ?? update.tool_call_id ?? "",
       );
     if (!callId) return [];
-    const toolKind =
-      grok.kind ?? stringField(update, "kind") ?? stringField(tool, "kind");
+    const toolKind = grok.kind ?? stringField(update, "kind") ?? stringField(tool, "kind");
     const status = stringField(update, "status") ?? stringField(tool, "status");
-    const preview = mergePreview(
-      extractToolPreview(update, tool),
-      grok.path,
-      grok.query,
-      toolKind,
-    );
+    const preview = mergePreview(extractToolPreview(update, tool), grok.path, grok.query, toolKind);
     const title =
       composeToolTitle({
         kind: toolKind,
@@ -414,13 +381,9 @@ export function sessionIdFromResult(result: unknown): string | undefined {
 }
 
 export function contextWindowFromSetup(result: unknown): number | undefined {
-  const models = [
-    ...modelsFromSessionNew(result),
-    ...modelsFromInitialize(result),
-  ];
+  const models = [...modelsFromSessionNew(result), ...modelsFromInitialize(result)];
   const current = currentModelId(result);
-  const match =
-    models.find((model) => model.nativeId === current) ?? models[0];
+  const match = models.find((model) => model.nativeId === current) ?? models[0];
   return match?.contextWindow;
 }
 
@@ -446,16 +409,15 @@ export function modelsFromInitialize(result: unknown): AgentModel[] {
 export function modelsFromSessionNew(result: unknown): AgentModel[] {
   const rec = asRecord(result);
   const models = asRecord(rec?.models);
-  return modelsFromAvailable(
-    models?.availableModels ?? asRecord(rec?._meta)?.availableModels,
-  );
+  return modelsFromAvailable(models?.availableModels ?? asRecord(rec?._meta)?.availableModels);
 }
 
 export function modelsFromGrokModelsOutput(stdout: string): AgentModel[] {
   const models: AgentModel[] = [];
   for (const raw of stdout.split(/\r?\n/)) {
+    // oxlint-disable-next-line no-control-regex -- Strip terminal ANSI sequences.
     const line = raw.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").trim();
-    const match = /^[*+\-]\s+(\S+)/.exec(line);
+    const match = /^[*+-]\s+(\S+)/.exec(line);
     if (!match) continue;
     const nativeId = match[1].trim();
     if (!nativeId) continue;
@@ -492,9 +454,7 @@ function modelsFromAvailable(raw: unknown): AgentModel[] {
   for (const item of raw) {
     const rec = asRecord(item);
     if (!rec) continue;
-    const nativeId = String(
-      rec.modelId ?? rec.model_id ?? rec.id ?? rec.value ?? "",
-    ).trim();
+    const nativeId = String(rec.modelId ?? rec.model_id ?? rec.id ?? rec.value ?? "").trim();
     if (!nativeId) continue;
     const name = String(rec.name ?? rec.displayName ?? nativeId).trim();
     const meta = asRecord(rec._meta) ?? rec;
@@ -545,17 +505,13 @@ function modelFromNative(
   };
 }
 
-function effortSetting(
-  options: ModelSettingChoice[],
-  value?: string,
-): ModelSetting {
+function effortSetting(options: ModelSettingChoice[], value?: string): ModelSetting {
   return {
     id: "effort",
     label: "Reasoning",
     kind: "select",
-    value: value && options.some((item) => item.value === value)
-      ? value
-      : (options[0]?.value ?? "high"),
+    value:
+      value && options.some((item) => item.value === value) ? value : (options[0]?.value ?? "high"),
     options: options.map((item) => ({
       value: item.value,
       label: EFFORT_LABELS[item.value] ?? item.label,
@@ -597,8 +553,7 @@ function grokToolFields(
   callId?: string;
   input?: Record<string, unknown>;
 } {
-  const meta =
-    nestedMeta(update, "x.ai/tool") ?? nestedMeta(tool, "x.ai/tool");
+  const meta = nestedMeta(update, "x.ai/tool") ?? nestedMeta(tool, "x.ai/tool");
   const input =
     asRecord(meta?.input) ??
     asRecord(update.rawInput) ??
@@ -635,10 +590,7 @@ function grokToolFields(
   };
 }
 
-function nestedMeta(
-  rec: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | null {
+function nestedMeta(rec: Record<string, unknown>, key: string): Record<string, unknown> | null {
   const meta = asRecord(rec._meta);
   return meta ? asRecord(meta[key]) : null;
 }
@@ -650,7 +602,7 @@ function mergePreview(
   kind?: string,
 ): ToolPreview | undefined {
   if (query && (!preview || preview.kind === "search" || !preview.path)) {
-    return { kind: "search", ...(preview ?? {}), query };
+    return { kind: "search", ...preview, query };
   }
   if (!path) return preview;
   const fileName = basename(path);
@@ -684,12 +636,7 @@ function usageFromUpdate(update: Record<string, unknown>): HarnessEvent | null {
     numberField(usage, "used") ??
     numberField(usage, "usedTokens") ??
     numberField(usage, "used_tokens") ??
-    sumNumbers(usage, [
-      "inputTokens",
-      "outputTokens",
-      "input_tokens",
-      "output_tokens",
-    ]);
+    sumNumbers(usage, ["inputTokens", "outputTokens", "input_tokens", "output_tokens"]);
   const window =
     numberField(usage, "window") ??
     numberField(usage, "contextWindow") ??
@@ -745,9 +692,7 @@ function toolDetail(
   update: Record<string, unknown>,
   tool: Record<string, unknown>,
 ): string | undefined {
-  const content =
-    textFromContent(update.content, "\n") ||
-    textFromContent(tool.content, "\n");
+  const content = textFromContent(update.content, "\n") || textFromContent(tool.content, "\n");
   if (content.trim()) return cap(content);
   const output = update.rawOutput ?? tool.rawOutput;
   if (typeof output === "string" && output.trim()) return cap(output);
@@ -765,9 +710,7 @@ function kindFromName(name?: string): string | undefined {
 
 function humanizeToolName(name: string): string {
   const cleaned = name.replace(/[_-]+/g, " ").trim();
-  return cleaned
-    ? cleaned.replace(/\b\w/g, (ch) => ch.toUpperCase())
-    : name;
+  return cleaned ? cleaned.replace(/\b\w/g, (ch) => ch.toUpperCase()) : name;
 }
 
 function uniqueGrokModels(models: AgentModel[]): AgentModel[] {
@@ -782,9 +725,7 @@ function uniqueGrokModels(models: AgentModel[]): AgentModel[] {
 }
 
 function displayName(nativeId: string): string {
-  return nativeId
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return nativeId.replace(/[-_]+/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 function nativeId(model: string): string {
@@ -807,10 +748,7 @@ function pickOption(optionIds: string[], preferred: string[]): string | null {
   return null;
 }
 
-function humanField(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function humanField(rec: Record<string, unknown>, key: string): string | undefined {
   const value = stringField(rec, key);
   if (!value || looksLikeCallId(value)) return undefined;
   return value;
@@ -850,26 +788,17 @@ export function asRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
-export function stringField(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+export function stringField(rec: Record<string, unknown>, key: string): string | undefined {
   const value = rec[key];
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function numberField(
-  rec: Record<string, unknown>,
-  key: string,
-): number | undefined {
+function numberField(rec: Record<string, unknown>, key: string): number | undefined {
   const value = rec[key];
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function sumNumbers(
-  rec: Record<string, unknown>,
-  keys: string[],
-): number | undefined {
+function sumNumbers(rec: Record<string, unknown>, keys: string[]): number | undefined {
   let total = 0;
   let found = false;
   for (const key of keys) {

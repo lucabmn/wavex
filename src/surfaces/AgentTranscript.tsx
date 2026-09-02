@@ -13,15 +13,7 @@ import {
   Wrench,
   X,
 } from "../chrome/icons";
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AttachmentChip } from "../chrome/AttachmentChip";
 import { FilePreview } from "../chrome/FilePreview";
 import { FileTypeIcon } from "../chrome/FileTypeIcon";
@@ -31,12 +23,7 @@ import { SecondOpinionCard } from "../chrome/SecondOpinionCard";
 import { NoteMiniCard } from "../chrome/NoteMiniCard";
 import { TerminalSpinner } from "../chrome/TerminalSpinner";
 import type { ApprovalDecision } from "../lib/harness";
-import {
-  isEditTool,
-  isReadTool,
-  isSearchTool,
-  stubFilePreview,
-} from "../lib/harness/preview";
+import { isEditTool, isReadTool, isSearchTool, stubFilePreview } from "../lib/harness/preview";
 import { copyText } from "../lib/clipboard";
 import { playCue } from "../lib/sounds";
 import { displayPath, resolveWorkspacePath } from "../lib/paths";
@@ -150,8 +137,7 @@ export function AgentTranscript({
   const liveStartedAt = turnUserBlock(blocks)?.startedAt;
   const waitingForApproval = hasPendingApproval(blocks) || pendingQuestion;
   const preparingHandoff = blocks.some(
-    (block) =>
-      block.role === "handoff" && block.handoff?.status === "preparing",
+    (block) => block.role === "handoff" && block.handoff?.status === "preparing",
   );
 
   const setShowJump = useCallback(
@@ -167,8 +153,7 @@ export function AgentTranscript({
     (el: HTMLElement) => {
       const near = isNearBottom(el);
       stickToBottom.current = near;
-      distanceFromBottom.current =
-        el.scrollHeight - el.scrollTop - el.clientHeight;
+      distanceFromBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight;
       setShowJump(!near);
     },
     [setShowJump],
@@ -277,17 +262,14 @@ export function AgentTranscript({
     if (previousHeight == null || !el) return;
     prependHeight.current = null;
     el.scrollTop += el.scrollHeight - previousHeight;
-    distanceFromBottom.current =
-      el.scrollHeight - el.scrollTop - el.clientHeight;
+    distanceFromBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight;
   }, [visibleTurnCount]);
 
   const loadEarlier = () => {
     const el = scroller.current;
     if (el) prependHeight.current = el.scrollHeight;
     stickToBottom.current = false;
-    setVisibleTurnCount((count) =>
-      Math.min(turns.length, count + TURN_PAGE_SIZE),
-    );
+    setVisibleTurnCount((count) => Math.min(turns.length, count + TURN_PAGE_SIZE));
   };
 
   return (
@@ -324,9 +306,7 @@ export function AgentTranscript({
             foldedAt >= 0 &&
             items
               .slice(foldedAt + 1)
-              .some(
-                (item) => item.type === "block" && isProseBlock(item.block),
-              );
+              .some((item) => item.type === "block" && isProseBlock(item.block));
           const workStillRunning = activityStillRunning(turn);
           return (
             <div
@@ -341,15 +321,15 @@ export function AgentTranscript({
             >
               {items.map((item, itemIndex) =>
                 item.type === "activity" ? (
-                    <ActivityPhases
-                      key={item.blocks[0].id}
-                      blocks={item.blocks}
-                      cwd={cwd}
-                      done={settled || (answering && !workStillRunning)}
-                      onApproval={onApproval}
-                      onOpenFile={onOpenFile}
-                      onOpenDiff={onOpenDiff}
-                    />
+                  <ActivityPhases
+                    key={item.blocks[0].id}
+                    blocks={item.blocks}
+                    cwd={cwd}
+                    done={settled || (answering && !workStillRunning)}
+                    onApproval={onApproval}
+                    onOpenFile={onOpenFile}
+                    onOpenDiff={onOpenDiff}
+                  />
                 ) : (
                   <TranscriptBlock
                     key={item.block.id}
@@ -357,9 +337,7 @@ export function AgentTranscript({
                     layout={transcriptLayout}
                     stickyIndex={firstVisibleTurn + turnIndex + 1}
                     compactTop={
-                      foldedAt >= 0 &&
-                      itemIndex === foldedAt + 1 &&
-                      isProseBlock(item.block)
+                      foldedAt >= 0 && itemIndex === foldedAt + 1 && isProseBlock(item.block)
                     }
                     onApproval={onApproval}
                     onOpenFile={onOpenFile}
@@ -373,23 +351,17 @@ export function AgentTranscript({
                 <TurnDuration
                   elapsedMs={durationMs}
                   done
-                  completedAt={
-                    startedAt != null ? startedAt + durationMs : undefined
-                  }
+                  completedAt={startedAt != null ? startedAt + durationMs : undefined}
                   copyText={turnCopyText(turn)}
                   onSaveNote={onSaveNote}
-                  fromHarness={
-                    harness ? harnessForTurn(blocks, turn, harness) : undefined
-                  }
+                  fromHarness={harness ? harnessForTurn(blocks, turn, harness) : undefined}
                   onSecondOpinion={
                     onSecondOpinion
                       ? (target, model) => onSecondOpinion(target, turn, model)
                       : undefined
                   }
                   onHandoff={
-                    onHandoff
-                      ? (target, model) => onHandoff(target, turn, model)
-                      : undefined
+                    onHandoff ? (target, model) => onHandoff(target, turn, model) : undefined
                   }
                 />
               ) : null}
@@ -397,9 +369,7 @@ export function AgentTranscript({
                 <LiveWorking
                   startedAt={liveStartedAt}
                   paused={waitingForApproval}
-                  waitingLabel={
-                    pendingQuestion ? "Waiting for answers" : undefined
-                  }
+                  waitingLabel={pendingQuestion ? "Waiting for answers" : undefined}
                   subagent={hasRunningSubagent(turn)}
                 />
               ) : null}
@@ -469,26 +439,15 @@ function TurnDuration({
   onHandoff?: (harness: HarnessId, model: string) => void;
 }) {
   const label = waiting
-    ? waitingLabel ?? "Waiting for approval"
+    ? (waitingLabel ?? "Waiting for approval")
     : formatWorkingDuration(elapsedMs, done, subagent);
-  const dot = (
-    <span
-      aria-hidden
-      className="size-[3px] shrink-0 rounded-full bg-content/25"
-    />
-  );
+  const dot = <span aria-hidden className="size-[3px] shrink-0 rounded-full bg-content/25" />;
   return (
     <div
       role={live ? "status" : undefined}
       aria-live={live ? "polite" : undefined}
       aria-label={
-        waiting
-          ? label
-          : live
-            ? subagent
-              ? "Subagent is running"
-              : "Agent is working"
-            : label
+        waiting ? label : live ? (subagent ? "Subagent is running" : "Agent is working") : label
       }
       className="flex items-center gap-3 px-4 pt-1 pb-3 font-sans text-sm text-content/40"
     >
@@ -497,9 +456,7 @@ function TurnDuration({
           {output ? (
             <>
               <CopyTurnButton text={output} />
-              {onSaveNote ? (
-                <SaveNoteButton text={output} onSave={onSaveNote} />
-              ) : null}
+              {onSaveNote ? <SaveNoteButton text={output} onSave={onSaveNote} /> : null}
             </>
           ) : (
             <Check className="size-3.5" strokeWidth={1.75} />
@@ -517,18 +474,12 @@ function TurnDuration({
 
       {done ? dot : null}
 
-      {live && !done ? (
-        <Shimmer duration={1}>{label}</Shimmer>
-      ) : (
-        <span>{label}</span>
-      )}
+      {live && !done ? <Shimmer duration={1}>{label}</Shimmer> : <span>{label}</span>}
 
       {completedAt != null ? (
         <>
           {dot}
-          <span className="text-content/35">
-            {formatClockTime(completedAt)}
-          </span>
+          <span className="text-content/35">{formatClockTime(completedAt)}</span>
         </>
       ) : null}
     </div>
@@ -581,13 +532,7 @@ function CopyTurnButton({ text }: { text: string }) {
   );
 }
 
-function SaveNoteButton({
-  text,
-  onSave,
-}: {
-  text: string;
-  onSave: (text: string) => void;
-}) {
+function SaveNoteButton({ text, onSave }: { text: string; onSave: (text: string) => void }) {
   const [saved, setSaved] = useState(false);
   const timer = useRef<number | null>(null);
 
@@ -643,13 +588,7 @@ const TranscriptBlock = memo(function TranscriptBlock({
   onOpenPlan?: (blockId: string) => void;
 }) {
   if (block.role === "user") {
-    return (
-      <UserMessageBlock
-        block={block}
-        layout={layout}
-        stickyIndex={stickyIndex}
-      />
-    );
+    return <UserMessageBlock block={block} layout={layout} stickyIndex={stickyIndex} />;
   }
 
   if (block.role === "tool") {
@@ -699,9 +638,7 @@ const TranscriptBlock = memo(function TranscriptBlock({
   if (block.role === "system") {
     return (
       <div className="px-4 py-2 text-content/50">
-        <pre className="min-w-0 whitespace-pre-wrap break-words">
-          {block.text}
-        </pre>
+        <pre className="min-w-0 whitespace-pre-wrap break-words">{block.text}</pre>
       </div>
     );
   }
@@ -755,24 +692,16 @@ function UserMessageBlock({
   };
 
   return (
-    <div
-      className={
-        chat ? "flex justify-end pt-1.5 pr-4 pb-4 pl-14" : "p-1.5 pb-3"
-      }
-    >
+    <div className={chat ? "flex justify-end pt-1.5 pr-4 pb-4 pl-14" : "p-1.5 pb-3"}>
       <div
         className={`min-w-0 bg-content/10 px-3 py-2 font-sans text-content ${
-          chat
-            ? "w-fit max-w-xl rounded-xl"
-            : "rounded-lg border border-content/10"
+          chat ? "w-fit max-w-xl rounded-xl" : "rounded-lg border border-content/10"
         }`}
         style={{ zIndex: stickyIndex }}
         onClick={overflows ? toggle : undefined}
       >
         {block.attachments?.length ? (
-          <div
-            className={`flex flex-wrap gap-1.5 ${text || card || note ? "mb-2" : ""}`}
-          >
+          <div className={`flex flex-wrap gap-1.5 ${text || card || note ? "mb-2" : ""}`}>
             {block.attachments.map((file) => (
               <AttachmentChip key={file.id} attachment={file} />
             ))}
@@ -848,11 +777,7 @@ function ActivityPhases({
  * before paint so the window follows without a visible hitch; only a real
  * wheel away from the bottom pauses that.
  */
-function useLivePhaseScroll(
-  el: HTMLDivElement | null,
-  enabled: boolean,
-  steps: Block[],
-) {
+function useLivePhaseScroll(el: HTMLDivElement | null, enabled: boolean, steps: Block[]) {
   const stickToBottom = useRef(true);
   const wasEnabled = useRef(false);
 
@@ -957,10 +882,7 @@ function ActivityPhaseGroup({
   }
 
   const label = active ? (
-    <Shimmer
-      className="min-w-0 flex-1 truncate font-sans text-sm"
-      duration={1.6}
-    >
+    <Shimmer className="min-w-0 flex-1 truncate font-sans text-sm" duration={1.6}>
       {title}
     </Shimmer>
   ) : (
@@ -986,9 +908,7 @@ function ActivityPhaseGroup({
       <button
         type="button"
         aria-expanded={open}
-        aria-label={
-          open ? `Hide the steps for ${title}` : `Show the steps for ${title}`
-        }
+        aria-label={open ? `Hide the steps for ${title}` : `Show the steps for ${title}`}
         onClick={() => setOverride(!open)}
         className="group flex w-full min-w-0 items-center gap-1.5 py-1 text-left"
       >
@@ -997,10 +917,7 @@ function ActivityPhaseGroup({
          * between them leaves both half-drawn on top of each other.
          */}
         <span className="relative flex size-3.5 shrink-0 items-center justify-center">
-          <ActivityPhaseIcon
-            kind={phase.kind}
-            className="group-hover:opacity-0"
-          />
+          <ActivityPhaseIcon kind={phase.kind} className="group-hover:opacity-0" />
           <ChevronRight
             className={`absolute size-3.5 text-content/45 opacity-0 transition-transform duration-200 group-hover:opacity-100 ${
               open ? "rotate-90" : ""
@@ -1011,19 +928,12 @@ function ActivityPhaseGroup({
         {label}
       </button>
       <div className="zen-phase-body" data-open={open}>
-        <div
-          ref={setLiveScroller}
-          className={active || !open ? "zen-phase-live" : undefined}
-        >
+        <div ref={setLiveScroller} className={active || !open ? "zen-phase-live" : undefined}>
           <div className="flex min-w-0 flex-col">
             {headline ? (
               <div className="zen-phase-step py-1">
                 <AgentMarkdown
-                  className={
-                    headline.role === "reasoning"
-                      ? "agent-reasoning"
-                      : undefined
-                  }
+                  className={headline.role === "reasoning" ? "agent-reasoning" : undefined}
                   text={headline.text}
                   cwd={cwd}
                   onOpenFile={onOpenFile}
@@ -1031,10 +941,7 @@ function ActivityPhaseGroup({
               </div>
             ) : null}
             {phase.steps.map((block) => (
-              <div
-                key={block.id}
-                className={`zen-phase-step${active ? " zen-step-in" : ""}`}
-              >
+              <div key={block.id} className={`zen-phase-step${active ? " zen-step-in" : ""}`}>
                 <ActivityRow
                   block={block}
                   cwd={cwd}
@@ -1100,26 +1007,10 @@ function ActivityRow({
   onOpenDiff?: (path: string) => void;
 }) {
   if (isThinkingBlock(block)) {
-    return (
-      <ActivityThinkingRow
-        block={block}
-        cwd={cwd}
-        expandable
-        bare
-        onOpenFile={onOpenFile}
-      />
-    );
+    return <ActivityThinkingRow block={block} cwd={cwd} expandable bare onOpenFile={onOpenFile} />;
   }
   if (isProseBlock(block)) {
-    return (
-      <ActivityNoteRow
-        block={block}
-        cwd={cwd}
-        bare
-        expandable
-        onOpenFile={onOpenFile}
-      />
-    );
+    return <ActivityNoteRow block={block} cwd={cwd} bare expandable onOpenFile={onOpenFile} />;
   }
   return (
     <ActivityToolRow
@@ -1158,16 +1049,11 @@ function ActivityThinkingRow({
   // reasoning streams in — the line itself does.
   const pulse = block.streaming ? "zen-thinking-pulse" : "";
   const icon = bare ? null : (
-    <Minus
-      className={`size-3.5 shrink-0 text-content/40 ${pulse}`}
-      strokeWidth={1.75}
-    />
+    <Minus className={`size-3.5 shrink-0 text-content/40 ${pulse}`} strokeWidth={1.75} />
   );
   const label = (
     <span
-      className={`min-w-0 flex-1 truncate font-sans text-sm text-content/50 ${
-        bare ? pulse : ""
-      }`}
+      className={`min-w-0 flex-1 truncate font-sans text-sm text-content/50 ${bare ? pulse : ""}`}
     >
       {text}
     </span>
@@ -1175,10 +1061,7 @@ function ActivityThinkingRow({
 
   if (!expandable) {
     return (
-      <div
-        aria-label={`Thinking: ${text}`}
-        className="flex min-w-0 items-center gap-1.5 py-1"
-      >
+      <div aria-label={`Thinking: ${text}`} className="flex min-w-0 items-center gap-1.5 py-1">
         {icon}
         {label}
       </div>
@@ -1242,14 +1125,9 @@ function ActivityNoteRow({
 
   if (!expandable) {
     return (
-      <div
-        aria-label={`Agent said: ${text}`}
-        className="flex min-w-0 items-center gap-1.5 py-1"
-      >
+      <div aria-label={`Agent said: ${text}`} className="flex min-w-0 items-center gap-1.5 py-1">
         {icon}
-        <span className="min-w-0 flex-1 truncate font-sans text-sm text-content/70">
-          {text}
-        </span>
+        <span className="min-w-0 flex-1 truncate font-sans text-sm text-content/70">{text}</span>
       </div>
     );
   }
@@ -1307,10 +1185,7 @@ function ActivityToolRow({
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div
-        aria-label={`Tool call: ${label}`}
-        className="flex min-w-0 items-center gap-1.5 py-1"
-      >
+      <div aria-label={`Tool call: ${label}`} className="flex min-w-0 items-center gap-1.5 py-1">
         {bare ? null : <ActivityToolIcon state={state} live={live} />}
         <ToolCallSummary
           label={label}
@@ -1322,20 +1197,12 @@ function ActivityToolRow({
         />
         {pending ? null : <ToolCallStatusIcon state={state} />}
       </div>
-      {pending ? (
-        <ApprovalControls block={block} onApproval={onApproval} />
-      ) : null}
+      {pending ? <ApprovalControls block={block} onApproval={onApproval} /> : null}
     </div>
   );
 }
 
-function ActivityToolIcon({
-  state,
-  live = false,
-}: {
-  state: ToolCallState;
-  live?: boolean;
-}) {
+function ActivityToolIcon({ state, live = false }: { state: ToolCallState; live?: boolean }) {
   if (state === "pending") {
     return (
       <CircleDashed
@@ -1345,9 +1212,7 @@ function ActivityToolIcon({
     );
   }
 
-  return (
-    <Minus className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
-  );
+  return <Minus className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />;
 }
 
 /** Failure stays marked. Running and success do not get a trailing icon. */
@@ -1358,10 +1223,7 @@ function ToolCallStatusIcon({ state }: { state: ToolCallState }) {
   return null;
 }
 
-function useElapsedFrom(
-  startedAt: number | undefined,
-  paused: boolean,
-): number | null {
+function useElapsedFrom(startedAt: number | undefined, paused: boolean): number | null {
   const fallback = useRef<number | null>(null);
   const pausedMs = useRef(0);
   const pauseStarted = useRef<number | null>(null);
@@ -1375,9 +1237,7 @@ function useElapsedFrom(
   }
 
   const origin = startedAt ?? (fallback.current ??= Date.now());
-  const [elapsedMs, setElapsedMs] = useState(() =>
-    Math.max(0, Date.now() - origin),
-  );
+  const [elapsedMs, setElapsedMs] = useState(() => Math.max(0, Date.now() - origin));
 
   useEffect(() => {
     const start = startedAt ?? (fallback.current ??= Date.now());
@@ -1389,8 +1249,7 @@ function useElapsedFrom(
       pausedMs.current += Date.now() - pauseStarted.current;
       pauseStarted.current = null;
     }
-    const tick = () =>
-      setElapsedMs(Math.max(0, Date.now() - start - pausedMs.current));
+    const tick = () => setElapsedMs(Math.max(0, Date.now() - start - pausedMs.current));
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
@@ -1399,21 +1258,13 @@ function useElapsedFrom(
   return elapsedMs;
 }
 
-function formatWorkingDuration(
-  elapsedMs: number | null,
-  done = false,
-  subagent = false,
-): string {
+function formatWorkingDuration(elapsedMs: number | null, done = false, subagent = false): string {
   if (elapsedMs == null) {
     if (done) return "Worked";
     return subagent ? "Subagent running…" : "Working…";
   }
   const totalSec = Math.max(1, Math.round(elapsedMs / 1000));
-  const label = done
-    ? "Worked for"
-    : subagent
-      ? "Subagent running for"
-      : "Working for";
+  const label = done ? "Worked for" : subagent ? "Subagent running for" : "Working for";
   if (totalSec < 60) return `${label} ${totalSec}s`;
   const minutes = Math.floor(totalSec / 60);
   const seconds = totalSec % 60;
@@ -1442,19 +1293,10 @@ function ToolCall({
   const expanded = detail && detail !== label ? detail : label;
   const state = toolCallState(block);
   const stateLabel =
-    state === "accepted"
-      ? "Accepted"
-      : state === "rejected"
-        ? "Rejected"
-        : "Pending";
-  const editTool = isEditTool(
-    block.tool?.kind,
-    block.text || block.tool?.title,
-    preview,
-  );
+    state === "accepted" ? "Accepted" : state === "rejected" ? "Rejected" : "Pending";
+  const editTool = isEditTool(block.tool?.kind, block.text || block.tool?.title, preview);
   const compact =
-    isReadTool(block.tool?.kind, label, preview) ||
-    isSearchTool(block.tool?.kind, label, preview);
+    isReadTool(block.tool?.kind, label, preview) || isSearchTool(block.tool?.kind, label, preview);
   const expandable = !compact && !!detail && detail !== label;
 
   const frame = embedded ? "py-0.5" : "px-4 py-1";
@@ -1565,10 +1407,7 @@ function ToolCallSummary({
   const target =
     parts?.[2] ??
     writeTarget ??
-    (action === "Read" ||
-    action === "List" ||
-    action === "Edit" ||
-    action === "Write"
+    (action === "Read" || action === "List" || action === "Edit" || action === "Write"
       ? preview?.path
         ? displayPath(preview.path, cwd)
         : preview?.fileName
@@ -1598,17 +1437,11 @@ function ToolCallSummary({
   const filePath = resolveWorkspacePath(preview?.path || target, cwd);
   const canOpen = interactive && !!onOpenFile && !!filePath;
   const actionTone = failed ? "text-red-400" : "text-content/50";
-  const targetTone = failed
-    ? "text-red-400"
-    : chip
-      ? "text-content/70"
-      : "text-content/85";
+  const targetTone = failed ? "text-red-400" : chip ? "text-content/70" : "text-content/85";
 
   return (
     <span className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[13px]">
-      <span className={`shrink-0 font-sans text-sm ${actionTone}`}>
-        {action}
-      </span>
+      <span className={`shrink-0 font-sans text-sm ${actionTone}`}>{action}</span>
       {isFile ? (
         canOpen ? (
           <button
@@ -1630,9 +1463,7 @@ function ToolCallSummary({
         ) : (
           <span
             className={`flex min-w-0 items-center gap-1 rounded px-1 ${
-              chip
-                ? `max-w-full bg-content/6 ${targetTone}`
-                : `flex-1 ${targetTone}`
+              chip ? `max-w-full bg-content/6 ${targetTone}` : `flex-1 ${targetTone}`
             }`}
             title={preview?.path || target}
           >
@@ -1657,12 +1488,7 @@ function ToolCallIcon({ state }: { state: ToolCallState }) {
     return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
   }
   if (state === "pending") {
-    return (
-      <CircleDashed
-        className="size-3.5 shrink-0 text-content/40"
-        strokeWidth={1.75}
-      />
-    );
+    return <CircleDashed className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />;
   }
   return null;
 }
@@ -1757,9 +1583,7 @@ function pinToBottom(el: HTMLElement | null) {
 function syncTranscriptViewport(el: HTMLElement | null) {
   if (!el || el.clientHeight <= 0) return;
   const inner = el.firstElementChild as HTMLElement | null;
-  const pad = inner
-    ? Number.parseFloat(getComputedStyle(inner).paddingBottom) || 0
-    : 0;
+  const pad = inner ? Number.parseFloat(getComputedStyle(inner).paddingBottom) || 0 : 0;
   const next = `${Math.max(0, el.clientHeight - pad)}px`;
   if (el.style.getPropertyValue("--transcript-viewport") === next) return;
   el.style.setProperty("--transcript-viewport", next);

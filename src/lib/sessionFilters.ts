@@ -42,8 +42,7 @@ export function loadSessionSidebarFilters(): SessionSidebarFilters {
   try {
     const raw = localStorage.getItem(FILTERS_KEY);
     if (!raw) {
-      const legacyArchived =
-        localStorage.getItem("wavex.sessionsShowArchived") === "1";
+      const legacyArchived = localStorage.getItem("wavex.sessionsShowArchived") === "1";
       return legacyArchived
         ? { ...DEFAULT_SESSION_SIDEBAR_FILTERS, showArchived: true }
         : DEFAULT_SESSION_SIDEBAR_FILTERS;
@@ -74,9 +73,7 @@ export function saveSessionSidebarFilters(filters: SessionSidebarFilters) {
   }
 }
 
-export function hasActiveSessionFilters(
-  filters: SessionSidebarFilters,
-): boolean {
+export function hasActiveSessionFilters(filters: SessionSidebarFilters): boolean {
   return (
     filters.showArchived ||
     filters.hiddenHarnesses.length > 0 ||

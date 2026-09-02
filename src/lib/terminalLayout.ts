@@ -7,9 +7,7 @@ const MIN_TUI_SCROLLBAR_WIDTH = 1;
 
 type CellSize = { width: number; height: number };
 
-export function terminalScrollbarWidth(
-  overviewRuler?: { width?: number },
-): number {
+export function terminalScrollbarWidth(overviewRuler?: { width?: number }): number {
   const width = overviewRuler?.width;
   return width === undefined ? DEFAULT_SCROLLBAR_WIDTH : width;
 }
@@ -32,9 +30,7 @@ function availableSize(
   term: Terminal,
 ): { width: number; height: number } | null {
   const gutter =
-    mode === "tui"
-      ? MIN_TUI_SCROLLBAR_WIDTH
-      : terminalScrollbarWidth(term.options.overviewRuler);
+    mode === "tui" ? MIN_TUI_SCROLLBAR_WIDTH : terminalScrollbarWidth(term.options.overviewRuler);
   const width = host.clientWidth - gutter;
   const height = host.clientHeight;
   if (width < 8 || height < 8) return null;
@@ -42,11 +38,7 @@ function availableSize(
 }
 
 /** Grow letter-spacing / line-height so the cell grid covers the host (TUI mode). */
-export function stretchGridToHost(
-  term: Terminal,
-  host: HTMLElement,
-  mode: TerminalFitMode,
-): void {
+export function stretchGridToHost(term: Terminal, host: HTMLElement, mode: TerminalFitMode): void {
   if (mode !== "tui") return;
   const size = availableSize(host, mode, term);
   if (!size) return;
@@ -58,14 +50,12 @@ export function stretchGridToHost(
     const gapH = size.height - term.rows * cell.height;
     if (gapW <= 0.5 && gapH <= 0.5) break;
     if (gapW > 0.5) {
-      term.options.letterSpacing =
-        (term.options.letterSpacing ?? 0) + gapW / term.cols;
+      term.options.letterSpacing = (term.options.letterSpacing ?? 0) + gapW / term.cols;
     }
     if (gapH > 0.5) {
       const rowHeight = cell.height;
       const targetRow = size.height / term.rows;
-      term.options.lineHeight =
-        (term.options.lineHeight ?? 1) * (targetRow / rowHeight);
+      term.options.lineHeight = (term.options.lineHeight ?? 1) * (targetRow / rowHeight);
     }
   }
 }
@@ -112,11 +102,7 @@ export function fitTerminal(
   return { cols: term.cols, rows: term.rows };
 }
 
-export function applyTerminalChrome(
-  term: Terminal,
-  outer: HTMLElement,
-  tui: boolean,
-): void {
+export function applyTerminalChrome(term: Terminal, outer: HTMLElement, tui: boolean): void {
   outer.classList.toggle("wavex-terminal--alt-screen", tui);
   term.options.overviewRuler = tui ? { width: MIN_TUI_SCROLLBAR_WIDTH } : {};
 }

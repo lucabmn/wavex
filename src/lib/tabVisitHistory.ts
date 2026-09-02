@@ -20,10 +20,7 @@ export function canTabVisitForward(history: TabVisitHistory): boolean {
   return history.forward.length > 0;
 }
 
-export function recordTabVisit(
-  history: TabVisitHistory,
-  id: string,
-): TabVisitHistory {
+export function recordTabVisit(history: TabVisitHistory, id: string): TabVisitHistory {
   if (history.current === id) return history;
   return {
     back: pushVisit(history.back, history.current),
@@ -43,9 +40,7 @@ export function tabVisitBack(history: TabVisitHistory): TabVisitHistory | null {
   };
 }
 
-export function tabVisitForward(
-  history: TabVisitHistory,
-): TabVisitHistory | null {
+export function tabVisitForward(history: TabVisitHistory): TabVisitHistory | null {
   if (history.forward.length === 0) return null;
   const [id, ...forward] = history.forward;
   return {

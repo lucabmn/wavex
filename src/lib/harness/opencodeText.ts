@@ -38,9 +38,11 @@ export async function stopOpenCodeTextPrompt(): Promise<void> {
 
 export function warmupOpenCodeText(cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns.catch(() => undefined).then(async () => {
-    await ensureLive(cwd);
-  });
+  const run = turns
+    .catch(() => undefined)
+    .then(async () => {
+      await ensureLive(cwd);
+    });
   turns = run.then(
     () => undefined,
     () => undefined,
@@ -105,9 +107,7 @@ async function startLive(
   const versionOut = await execChild(path, ["--version"], cwd).catch(() => "");
   const version = parseOpenCodeVersion(versionOut);
   if (!version || compareSemver(version, MINIMUM_OPENCODE_VERSION) < 0) {
-    throw new Error(
-      `OpenCode v${version ?? "unknown"} is too old for text generation.`,
-    );
+    throw new Error(`OpenCode v${version ?? "unknown"} is too old for text generation.`);
   }
 
   serverUrl = "";
@@ -127,12 +127,7 @@ async function startLive(
   );
 
   const port = await freeHarnessPort();
-  await spawnChild(
-    TEXT_CHILD_ID,
-    path,
-    ["serve", `--hostname=127.0.0.1`, `--port=${port}`],
-    cwd,
-  );
+  await spawnChild(TEXT_CHILD_ID, path, ["serve", `--hostname=127.0.0.1`, `--port=${port}`], cwd);
 
   try {
     const url = await waitForUrl(() => serverUrl, SERVER_TIMEOUT_MS);

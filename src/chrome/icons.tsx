@@ -1,9 +1,5 @@
 /** Hugeicons chrome set. Glyphs are deep-imported so the 5MB catalog is not bundled. */
-import {
-  HugeiconsIcon,
-  type HugeiconsIconProps,
-  type IconSvgElement,
-} from "@hugeicons/react";
+import { HugeiconsIcon, type HugeiconsIconProps, type IconSvgElement } from "@hugeicons/react";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
 import AddSquareIcon from "@hugeicons/core-free-icons/AddSquareIcon";
 import AlertCircleIcon from "@hugeicons/core-free-icons/AlertCircleIcon";
@@ -93,14 +89,7 @@ function wrap(icon: IconSvgElement, name: string) {
     { strokeWidth = 1.75, ...props }: IconProps,
     ref: Ref<SVGSVGElement>,
   ) {
-    return (
-      <HugeiconsIcon
-        ref={ref}
-        icon={icon}
-        strokeWidth={strokeWidth}
-        {...props}
-      />
-    );
+    return <HugeiconsIcon ref={ref} icon={icon} strokeWidth={strokeWidth} {...props} />;
   });
   Component.displayName = name;
   return Component;
@@ -166,14 +155,8 @@ export const GitBranch = wrap(GitBranchIcon, "GitBranch");
 export const GitCompare = wrap(GitCompareIcon, "GitCompare");
 export const GitMerge = wrap(GitMergeIcon, "GitMerge");
 export const GitPullRequest = wrap(GitPullRequestIcon, "GitPullRequest");
-export const GitPullRequestClosed = wrap(
-  GitPullRequestClosedIcon,
-  "GitPullRequestClosed",
-);
-export const GitPullRequestDraft = wrap(
-  GitPullRequestDraftIcon,
-  "GitPullRequestDraft",
-);
+export const GitPullRequestClosed = wrap(GitPullRequestClosedIcon, "GitPullRequestClosed");
+export const GitPullRequestDraft = wrap(GitPullRequestDraftIcon, "GitPullRequestDraft");
 export const GripVertical = wrap(DragDropVerticalIcon, "GripVertical");
 export const ImagePlus = wrap(ImageAdd01Icon, "ImagePlus");
 export const Inbox = wrap(InboxIcon, "Inbox");
@@ -206,10 +189,7 @@ export const Replace = wrap(ReplaceIcon, "Replace");
 export const RotateCcw = wrap(RotateCcwIcon, "RotateCcw");
 export const Search = wrap(Search01Icon, "Search");
 export const Settings = wrap(Settings01Icon, "Settings");
-export const SlidersHorizontal = wrap(
-  PreferenceHorizontalIcon,
-  "SlidersHorizontal",
-);
+export const SlidersHorizontal = wrap(PreferenceHorizontalIcon, "SlidersHorizontal");
 export const Sparkles = wrap(SparklesIcon, "Sparkles");
 export const Square = wrap(SquareIcon, "Square");
 export const SquarePlus = wrap(AddSquareIcon, "SquarePlus");

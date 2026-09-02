@@ -31,9 +31,7 @@ type Props = {
 
 const MENU_WIDTH = 280;
 
-type Row =
-  | { kind: "create"; name: string }
-  | { kind: "branch"; branch: GitBranchInfo };
+type Row = { kind: "create"; name: string } | { kind: "branch"; branch: GitBranchInfo };
 
 type PendingSwitch =
   | { kind: "create"; name: string }
@@ -42,13 +40,7 @@ type PendingSwitch =
 const MENU_MIN_HEIGHT = 180;
 const MENU_MAX_HEIGHT = 280;
 
-export function BranchPicker({
-  cwd,
-  branch,
-  enabled = true,
-  onChange,
-  onClose,
-}: Props) {
+export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -56,9 +48,7 @@ export function BranchPicker({
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<PendingSwitch | null>(null);
   const [blockedError, setBlockedError] = useState<string | null>(null);
-  const [blockedBusy, setBlockedBusy] = useState<"stash" | "commit" | null>(
-    null,
-  );
+  const [blockedBusy, setBlockedBusy] = useState<"stash" | "commit" | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const onCloseRef = useRef(onClose);
@@ -67,8 +57,10 @@ export function BranchPicker({
   onChangeRef.current = onChange;
 
   const inProject = Boolean(cwd) && cwd !== "~";
-  const { branches: projectBranches, settled: branchesSettled } =
-    useProjectBranchesState(cwd, inProject);
+  const { branches: projectBranches, settled: branchesSettled } = useProjectBranchesState(
+    cwd,
+    inProject,
+  );
 
   const current = branch || projectBranches?.current || null;
   const detached = !branch && !!projectBranches?.detached;
@@ -112,18 +104,13 @@ export function BranchPicker({
     const needle = name.toLowerCase();
     const filtered = needle
       ? branches.filter((entry) => {
-          const hay = entry.remote
-            ? `${entry.name} ${entry.remote}`
-            : entry.name;
+          const hay = entry.remote ? `${entry.name} ${entry.remote}` : entry.name;
           return hay.toLowerCase().includes(needle);
         })
       : branches;
-    const taken = branches.some(
-      (entry) => !entry.remote && entry.name === name,
-    );
+    const taken = branches.some((entry) => !entry.remote && entry.name === name);
     const selected = branch || projectBranches?.current;
-    const create: Row[] =
-      name && !taken ? [{ kind: "create", name }] : [];
+    const create: Row[] = name && !taken ? [{ kind: "create", name }] : [];
     return [
       ...create,
       ...filtered.map((entry) => ({
@@ -151,8 +138,7 @@ export function BranchPicker({
     dismiss(true);
   };
 
-  const failMessage = (err: unknown) =>
-    err instanceof Error ? err.message : String(err);
+  const failMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
   const run = async (pending: PendingSwitch) => {
     if (busy || blocked) return;
@@ -179,10 +165,7 @@ export function BranchPicker({
     }
   };
 
-  const resolveBlocked = async (
-    kind: "stash" | "commit",
-    work: () => Promise<unknown>,
-  ) => {
+  const resolveBlocked = async (kind: "stash" | "commit", work: () => Promise<unknown>) => {
     if (!blocked || blockedBusy) return;
     setBlockedBusy(kind);
     setBlockedError(null);
@@ -237,16 +220,8 @@ export function BranchPicker({
   // real branch all share the same icon + 12px mono line box.
   const awaitingBranch = inProject && !current && !branchesSettled;
   const missingGit = !current && !awaitingBranch;
-  const label = current
-    ? detached
-      ? `detached ${current}`
-      : current
-    : "No repo";
-  const title = awaitingBranch
-    ? "Loading branch…"
-    : missingGit
-      ? "No git repository"
-      : label;
+  const label = current ? (detached ? `detached ${current}` : current) : "No repo";
+  const title = awaitingBranch ? "Loading branch…" : missingGit ? "No git repository" : label;
   const interactive = enabled && !awaitingBranch && !missingGit;
 
   return (
@@ -256,11 +231,7 @@ export function BranchPicker({
           type="button"
           title={title}
           aria-label={
-            awaitingBranch
-              ? "Loading branch"
-              : missingGit
-                ? "No git repository"
-                : `Branch ${label}`
+            awaitingBranch ? "Loading branch" : missingGit ? "No git repository" : `Branch ${label}`
           }
           aria-expanded={missingGit ? undefined : open}
           aria-haspopup={missingGit ? undefined : "dialog"}
@@ -404,9 +375,7 @@ function BranchList({
   }, [active]);
 
   if (rows.length === 0) {
-    return (
-      <div className="px-3 py-4 text-[12px] text-content/50">{emptyLabel}</div>
-    );
+    return <div className="px-3 py-4 text-[12px] text-content/50">{emptyLabel}</div>;
   }
 
   return (
@@ -451,27 +420,20 @@ function BranchList({
             {row.kind === "create" ? (
               <>
                 <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="min-w-0 truncate text-[12px]">
-                  Create and checkout {row.name}
-                </span>
+                <span className="min-w-0 truncate text-[12px]">Create and checkout {row.name}</span>
               </>
             ) : (
               <>
                 {selected ? (
                   <Check className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : (
-                  <GitBranch
-                    className="size-3.5 shrink-0 text-content/50"
-                    strokeWidth={1.75}
-                  />
+                  <GitBranch className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
                 )}
                 <span className="min-w-0 flex-1 truncate font-mono text-[12px]">
                   {row.branch.name}
                 </span>
                 {row.branch.remote ? (
-                  <span className="shrink-0 text-[10px] text-content/40">
-                    {row.branch.remote}
-                  </span>
+                  <span className="shrink-0 text-[10px] text-content/40">{row.branch.remote}</span>
                 ) : null}
               </>
             )}

@@ -28,14 +28,7 @@ const TIME_OPTIONS: { id: SessionTimeFilter; label: string }[] = [
   { id: "30d", label: "Last 30 days" },
 ];
 
-export function SessionFiltersMenu({
-  x,
-  y,
-  harnesses,
-  filters,
-  onChange,
-  onClose,
-}: Props) {
+export function SessionFiltersMenu({ x, y, harnesses, filters, onChange, onClose }: Props) {
   const hiddenHarnesses = new Set(filters.hiddenHarnesses);
 
   const toggleHarness = (harness: HarnessId) => {
@@ -73,11 +66,7 @@ export function SessionFiltersMenu({
       onContextMenu={(event) => event.preventDefault()}
       className="overflow-y-auto overscroll-none p-1"
     >
-      <FilterItem
-        label="Archived"
-        checked={filters.showArchived}
-        onClick={toggleArchived}
-      />
+      <FilterItem label="Archived" checked={filters.showArchived} onClick={toggleArchived} />
 
       <SectionLabel>Status</SectionLabel>
       <FilterItem
@@ -90,11 +79,7 @@ export function SessionFiltersMenu({
         checked={filters.status.needsApproval}
         onClick={() => toggleStatus("needsApproval")}
       />
-      <FilterItem
-        label="Done"
-        checked={filters.status.done}
-        onClick={() => toggleStatus("done")}
-      />
+      <FilterItem label="Done" checked={filters.status.done} onClick={() => toggleStatus("done")} />
 
       <SectionLabel>Time</SectionLabel>
       {TIME_OPTIONS.map((option) => (
@@ -114,9 +99,7 @@ export function SessionFiltersMenu({
               key={harness}
               label={HARNESS_TITLE[harness]}
               checked={!hiddenHarnesses.has(harness)}
-              icon={
-                <HarnessIcon harness={harness} className="size-3.5 shrink-0" />
-              }
+              icon={<HarnessIcon harness={harness} className="size-3.5 shrink-0" />}
               onClick={() => toggleHarness(harness)}
             />
           ))}
@@ -171,9 +154,7 @@ function FilterItem({
     >
       {icon}
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {checked ? (
-        <Check className="size-3.5 shrink-0" strokeWidth={2.25} />
-      ) : null}
+      {checked ? <Check className="size-3.5 shrink-0" strokeWidth={2.25} /> : null}
     </button>
   );
 }

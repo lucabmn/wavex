@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   loadSkills,
   mergeCatalog,
@@ -33,9 +27,7 @@ export function nextComposerSkillContextToken(
   return { key, generation: (current?.generation ?? -1) + 1 };
 }
 
-export function pickerSkillLoadOptions(
-  harness: HarnessId,
-): { refresh: true } | undefined {
+export function pickerSkillLoadOptions(harness: HarnessId): { refresh: true } | undefined {
   return harness === "pi" ? undefined : { refresh: true };
 }
 
@@ -45,7 +37,7 @@ export function visibleComposerSkills(
   cached: Skill[] | null,
   fallback: Skill[],
 ): Skill[] {
-  return state.key === currentKey ? state.skills : cached ?? fallback;
+  return state.key === currentKey ? state.skills : (cached ?? fallback);
 }
 
 export function useComposerSkills(input: {
@@ -63,10 +55,7 @@ export function useComposerSkills(input: {
     [input.harness],
   );
   const currentToken = useRef<ComposerSkillContextToken | null>(null);
-  currentToken.current = nextComposerSkillContextToken(
-    currentToken.current,
-    contextKey,
-  );
+  currentToken.current = nextComposerSkillContextToken(currentToken.current, contextKey);
   const contextToken = currentToken.current;
   const [state, setState] = useState<ComposerSkillState>(() => ({
     key: contextKey,
@@ -110,11 +99,6 @@ export function useComposerSkills(input: {
     contextToken,
     isCurrent,
     refresh,
-    skills: visibleComposerSkills(
-      state,
-      contextKey,
-      peekSkills(context),
-      fallback,
-    ),
+    skills: visibleComposerSkills(state, contextKey, peekSkills(context), fallback),
   };
 }

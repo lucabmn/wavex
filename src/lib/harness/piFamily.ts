@@ -1,11 +1,5 @@
 import { nativeModelId } from "../models";
-import {
-  killChild,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-  writeChild,
-} from "./child";
+import { killChild, spawnChild, unwatchChild, watchChild, writeChild } from "./child";
 import type { PiFlavor } from "./piFlavor";
 import { PiRpc } from "./piClient";
 import {
@@ -124,10 +118,7 @@ function stateFor(flavor: PiFlavor): FlavorState {
 }
 
 /** Test seam. */
-export function setPiBinaryResolver(
-  flavor: PiFlavor,
-  fn: () => Promise<{ path: string }>,
-): void {
+export function setPiBinaryResolver(flavor: PiFlavor, fn: () => Promise<{ path: string }>): void {
   stateFor(flavor).resolveBinary = fn;
 }
 
@@ -136,10 +127,7 @@ export function setPiBinaryResolver(
  * loaded (no `--no-extensions`). Todos/subagents packages in `~/.pi/agent`
  * keep working; TUI-only widgets do not appear in wavex.
  */
-export async function sendTurn(
-  flavor: PiFlavor,
-  input: SendTurnInput,
-): Promise<void> {
+export async function sendTurn(flavor: PiFlavor, input: SendTurnInput): Promise<void> {
   const { cancelledThreads } = stateFor(flavor);
   let live: Live;
   try {
@@ -151,23 +139,22 @@ export async function sendTurn(
   if (cancelledThreads.delete(input.sessionId)) return;
 
   live.onEvent = input.onEvent;
-  live.turns = live.turns.catch(() => undefined).then(async () => {
-    live.cancelled = false;
-    live.muteUpdates = false;
-    try {
-      await runTurn(live, input);
-    } catch (error) {
-      if (live.cancelled) return;
-      throw error;
-    }
-  });
+  live.turns = live.turns
+    .catch(() => undefined)
+    .then(async () => {
+      live.cancelled = false;
+      live.muteUpdates = false;
+      try {
+        await runTurn(live, input);
+      } catch (error) {
+        if (live.cancelled) return;
+        throw error;
+      }
+    });
   await live.turns;
 }
 
-export async function steerTurn(
-  flavor: PiFlavor,
-  input: SteerTurnInput,
-): Promise<void> {
+export async function steerTurn(flavor: PiFlavor, input: SteerTurnInput): Promise<void> {
   const live = stateFor(flavor).liveByThread.get(input.sessionId);
   if (!live?.activeTurn) throw new Error("No active turn to steer");
   const message = input.text.trim();
@@ -191,10 +178,7 @@ export function respondApproval(
   pending.resolve(decision);
 }
 
-export async function cancelTurn(
-  flavor: PiFlavor,
-  sessionId: string,
-): Promise<void> {
+export async function cancelTurn(flavor: PiFlavor, sessionId: string): Promise<void> {
   const { liveByThread, cancelledThreads } = stateFor(flavor);
   const live = liveByThread.get(sessionId);
   if (!live) {
@@ -207,16 +191,10 @@ export async function cancelTurn(
   for (const [, pending] of live.approvals) pending.resolve("deny");
   live.approvals.clear();
   await live.rpc.request({ type: "abort" }, 5_000).catch(() => undefined);
-  finishActiveTurn(live, [
-    { type: "message.completed" },
-    { type: "reasoning.completed" },
-  ]);
+  finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
-export async function stopSession(
-  flavor: PiFlavor,
-  sessionId: string,
-): Promise<void> {
+export async function stopSession(flavor: PiFlavor, sessionId: string): Promise<void> {
   const { liveByThread, cancelledThreads } = stateFor(flavor);
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
@@ -236,10 +214,7 @@ export async function stopSession(
   await killChild(sessionId).catch(() => undefined);
 }
 
-export async function forgetSession(
-  flavor: PiFlavor,
-  sessionId: string,
-): Promise<void> {
+export async function forgetSession(flavor: PiFlavor, sessionId: string): Promise<void> {
   stateFor(flavor).resumeByThread.delete(sessionId);
   await stopSession(flavor, sessionId);
 }
@@ -255,10 +230,7 @@ export function bindSession(
   stateFor(flavor).resumeByThread.set(threadId, { sessionId, cwd });
 }
 
-async function ensureLive(
-  flavor: PiFlavor,
-  input: SendTurnInput,
-): Promise<Live> {
+async function ensureLive(flavor: PiFlavor, input: SendTurnInput): Promise<Live> {
   const { liveByThread, resumeByThread } = stateFor(flavor);
   const existing = liveByThread.get(input.sessionId);
   if (existing && existing.cwd === input.cwd) {
@@ -278,11 +250,7 @@ async function ensureLive(
   }
 
   try {
-    return await startLive(
-      flavor,
-      input,
-      canResume ? resume?.sessionId : undefined,
-    );
+    return await startLive(flavor, input, canResume ? resume?.sessionId : undefined);
   } catch (error) {
     if (!canResume) throw error;
     resumeByThread.delete(input.sessionId);
@@ -303,11 +271,15 @@ async function startLive(
   const modelRef = parsePiModelRef(native);
   const liveRef: { current: Live | null } = { current: null };
 
-  const rpc = new PiRpc(input.sessionId, (rec) => {
-    const current = liveRef.current;
-    if (!current) return;
-    handleFrame(flavor, input.sessionId, current, rec);
-  }, flavor.label);
+  const rpc = new PiRpc(
+    input.sessionId,
+    (rec) => {
+      const current = liveRef.current;
+      if (!current) return;
+      handleFrame(flavor, input.sessionId, current, rec);
+    },
+    flavor.label,
+  );
 
   const live: Live = {
     rpc,
@@ -369,10 +341,7 @@ async function startLive(
   liveByThread.set(input.sessionId, live);
 
   try {
-    const stateFrame = await rpc.request(
-      { type: "get_state" },
-      INIT_TIMEOUT_MS,
-    );
+    const stateFrame = await rpc.request({ type: "get_state" }, INIT_TIMEOUT_MS);
     bindState(flavor, input.sessionId, live, stateFrame.data);
     await applyModel(live, input);
     if (live.providerSessionId) {
@@ -569,10 +538,7 @@ async function settleTurn(live: Live): Promise<void> {
   live.settling = true;
   const token = live.settleToken;
   try {
-    const stats = await live.rpc.request(
-      { type: "get_session_stats" },
-      STATS_TIMEOUT_MS,
-    );
+    const stats = await live.rpc.request({ type: "get_session_stats" }, STATS_TIMEOUT_MS);
     if (live.settleToken === token && !live.cancelled) {
       const context = contextFromSessionStats(stats.data);
       if (context) live.onEvent({ type: "context", ...context });
@@ -581,10 +547,7 @@ async function settleTurn(live: Live): Promise<void> {
     // meter stays on the last streamed usage
   }
   if (live.settleToken === token && !live.cancelled) {
-    finishActiveTurn(live, [
-      { type: "message.completed" },
-      { type: "reasoning.completed" },
-    ]);
+    finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
   }
   live.settling = false;
 }
@@ -600,10 +563,9 @@ async function handleExtensionUi(
   }
 
   if (live.cancelled || live.muteUpdates) {
-    await writeChild(
-      sessionId,
-      JSON.stringify(extensionUiResponse(request, "deny")),
-    ).catch(() => undefined);
+    await writeChild(sessionId, JSON.stringify(extensionUiResponse(request, "deny"))).catch(
+      () => undefined,
+    );
     return;
   }
 
@@ -619,10 +581,9 @@ async function handleExtensionUi(
   });
   live.approvals.delete(uiId);
   live.onEvent({ type: "approval.resolved", requestId: uiId, decision });
-  await writeChild(
-    sessionId,
-    JSON.stringify(extensionUiResponse(request, decision)),
-  ).catch(() => undefined);
+  await writeChild(sessionId, JSON.stringify(extensionUiResponse(request, decision))).catch(
+    () => undefined,
+  );
 }
 
 async function applyModel(live: Live, input: SendTurnInput): Promise<void> {
@@ -636,9 +597,8 @@ async function applyModel(live: Live, input: SendTurnInput): Promise<void> {
     });
     live.nativeModel = native;
     const model = asRecord(result.data);
-    const window = model && typeof model.contextWindow === "number"
-      ? model.contextWindow
-      : undefined;
+    const window =
+      model && typeof model.contextWindow === "number" ? model.contextWindow : undefined;
     if (window && window > 0) live.contextWindow = window;
   } else if (ref) {
     live.nativeModel = native;
@@ -646,19 +606,12 @@ async function applyModel(live: Live, input: SendTurnInput): Promise<void> {
 
   const thinking = input.modelSettings?.thinking;
   if (isPiThinkingLevel(thinking) && thinking !== live.thinking) {
-    await live.rpc
-      .request({ type: "set_thinking_level", level: thinking })
-      .catch(() => undefined);
+    await live.rpc.request({ type: "set_thinking_level", level: thinking }).catch(() => undefined);
     live.thinking = thinking;
   }
 }
 
-function bindState(
-  flavor: PiFlavor,
-  sessionId: string,
-  live: Live,
-  data: unknown,
-): void {
+function bindState(flavor: PiFlavor, sessionId: string, live: Live, data: unknown): void {
   const state = sessionFromState(data);
   const providerSessionId = providerSessionIdFromState(data);
   if (state.contextWindow) live.contextWindow = state.contextWindow;
@@ -708,11 +661,7 @@ function upsertTool(
   if (index != null && index >= 0) live.toolsByIndex.set(index, tool);
 }
 
-function updateTool(
-  live: Live,
-  tool: InFlightTool,
-  input: Record<string, unknown>,
-): void {
+function updateTool(live: Live, tool: InFlightTool, input: Record<string, unknown>): void {
   tool.input = mergeToolInput(tool.input, input);
   tool.title = toolTitle(tool.name, tool.input);
   live.onEvent({

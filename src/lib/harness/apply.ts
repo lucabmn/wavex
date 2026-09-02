@@ -11,10 +11,7 @@ import {
 import { joinStreamText } from "./streamText";
 import type { HarnessEvent } from "./types";
 
-export function applyHarnessEvent(
-  session: Session,
-  event: HarnessEvent,
-): Session {
+export function applyHarnessEvent(session: Session, event: HarnessEvent): Session {
   switch (event.type) {
     case "message.delta":
       return patchStreaming(session, "assistant", event.text, true);
@@ -158,9 +155,7 @@ export function stopStreaming(session: Session): Session {
     busy: false,
     pendingQuestion: undefined,
     blocks: stampTurnDuration(
-      session.blocks.map((block) =>
-        block.streaming ? { ...block, streaming: false } : block,
-      ),
+      session.blocks.map((block) => (block.streaming ? { ...block, streaming: false } : block)),
     ),
   };
 }
@@ -188,9 +183,7 @@ function stampTurnDuration(blocks: Block[]): Block[] {
 function appendStatus(session: Session, text: string): Session {
   const trimmed = text.trim();
   if (!trimmed) return session;
-  const last = [...session.blocks]
-    .reverse()
-    .find((block) => block.role !== "reasoning");
+  const last = [...session.blocks].reverse().find((block) => block.role !== "reasoning");
   if (last?.role === "system" && last.text === trimmed) return session;
   return appendBlock(session, {
     id: crypto.randomUUID(),
@@ -273,8 +266,7 @@ function attachApproval(
   }
   const preview = event.preview;
   const label =
-    finalToolLabel(session, event.kind, preferLabel(event.title), preview) ||
-    kindTitle(event.kind);
+    finalToolLabel(session, event.kind, preferLabel(event.title), preview) || kindTitle(event.kind);
   return appendBlock(session, {
     id: crypto.randomUUID(),
     role: "tool",
@@ -294,9 +286,7 @@ function findToolForApproval(
   event: Extract<HarnessEvent, { type: "approval.requested" }>,
 ): number {
   if (event.callId) {
-    const byId = session.blocks.findIndex(
-      (block) => block.tool?.callId === event.callId,
-    );
+    const byId = session.blocks.findIndex((block) => block.tool?.callId === event.callId);
     if (byId >= 0) return byId;
   }
   const needle = normalizeLabel(event.title);
@@ -336,12 +326,7 @@ function upsertTool(
   if (index < 0) {
     const detail = capToolDetail(patch.detail);
     const preview = fillPreview(patch.preview, detail, patch.kind, patch.title);
-    const label = finalToolLabel(
-      session,
-      patch.kind,
-      displayLabel(patch),
-      preview,
-    );
+    const label = finalToolLabel(session, patch.kind, displayLabel(patch), preview);
     return appendBlock(session, {
       id: crypto.randomUUID(),
       role: "tool",
@@ -432,9 +417,7 @@ function fillPreview(
   kind?: string,
   title?: string,
 ): ToolPreview | undefined {
-  if (
-    preview?.lines?.some((line) => line.kind === "add" || line.kind === "del")
-  ) {
+  if (preview?.lines?.some((line) => line.kind === "add" || line.kind === "del")) {
     return preview;
   }
   if (preview) return { ...preview, lines: undefined };
@@ -444,14 +427,9 @@ function fillPreview(
   return undefined;
 }
 
-function findToolIndex(
-  session: Session,
-  patch: { callId: string; title?: string },
-): number {
+function findToolIndex(session: Session, patch: { callId: string; title?: string }): number {
   if (patch.callId) {
-    const byId = session.blocks.findIndex(
-      (block) => block.tool?.callId === patch.callId,
-    );
+    const byId = session.blocks.findIndex((block) => block.tool?.callId === patch.callId);
     if (byId >= 0) return byId;
   }
   const needle = normalizeLabel(patch.title || "");
@@ -466,10 +444,7 @@ function findToolIndex(
 
 function sealLastStream(blocks: Block[]): Block[] {
   const last = blocks[blocks.length - 1];
-  if (
-    !last?.streaming ||
-    (last.role !== "assistant" && last.role !== "reasoning")
-  ) {
+  if (!last?.streaming || (last.role !== "assistant" && last.role !== "reasoning")) {
     return blocks.slice();
   }
   const next = blocks.slice();
@@ -477,10 +452,7 @@ function sealLastStream(blocks: Block[]): Block[] {
   return next;
 }
 
-function displayLabel(
-  patch: { title?: string; kind?: string },
-  prev?: Block,
-): string {
+function displayLabel(patch: { title?: string; kind?: string }, prev?: Block): string {
   return (
     preferLabel(patch.title, prev?.tool?.title, prev?.text) ||
     kindTitle(patch.kind ?? prev?.tool?.kind)
@@ -493,9 +465,7 @@ function finalToolLabel(
   title: string | undefined,
   preview?: ToolPreview,
 ): string {
-  const path = preview?.path
-    ? displayPath(preview.path, session.cwd)
-    : preview?.fileName;
+  const path = preview?.path ? displayPath(preview.path, session.cwd) : preview?.fileName;
   return (
     composeToolTitle({
       kind,
@@ -515,9 +485,7 @@ function preferLabel(...parts: (string | undefined)[]): string {
     .filter((part): part is string => !!part?.trim())
     .map((part) => part.trim())
     .filter((part) => !isCallId(part));
-  const strong = filled.filter(
-    (part) => !isWeakToolTitle(part) && compactLabel(part) === part,
-  );
+  const strong = filled.filter((part) => !isWeakToolTitle(part) && compactLabel(part) === part);
   strong.sort((a, b) => b.length - a.length);
   if (strong[0]) return strong[0];
   const compact = filled.filter((part) => compactLabel(part) === part);
@@ -579,9 +547,7 @@ function finishRole(session: Session, role: Block["role"]): Session {
   return {
     ...session,
     blocks: session.blocks.map((block) =>
-      block.role === role && block.streaming
-        ? { ...block, streaming: false }
-        : block,
+      block.role === role && block.streaming ? { ...block, streaming: false } : block,
     ),
   };
 }

@@ -34,12 +34,7 @@ export const TRANSCRIPT_LAYOUT_CHANGE_EVENT = "wavex:transcriptlayoutchange";
 
 export type SidebarTabId = "files" | "sessions" | "changes" | "inbox";
 
-const DEFAULT_SIDEBAR_TAB_ORDER: SidebarTabId[] = [
-  "sessions",
-  "inbox",
-  "files",
-  "changes",
-];
+const DEFAULT_SIDEBAR_TAB_ORDER: SidebarTabId[] = ["sessions", "inbox", "files", "changes"];
 
 export const THEME_HUE_MIN = 0;
 export const THEME_HUE_MAX = 360;
@@ -106,19 +101,12 @@ function writeFlag(key: string, value: boolean) {
 
 export function loadThemeHue(): number {
   return Math.round(
-    clamp(
-      readNumber(THEME_HUE_KEY) ?? THEME_HUE_DEFAULT,
-      THEME_HUE_MIN,
-      THEME_HUE_MAX,
-    ),
+    clamp(readNumber(THEME_HUE_KEY) ?? THEME_HUE_DEFAULT, THEME_HUE_MIN, THEME_HUE_MAX),
   );
 }
 
 export function saveThemeHue(value: number) {
-  writeNumber(
-    THEME_HUE_KEY,
-    Math.round(clamp(value, THEME_HUE_MIN, THEME_HUE_MAX)),
-  );
+  writeNumber(THEME_HUE_KEY, Math.round(clamp(value, THEME_HUE_MIN, THEME_HUE_MAX)));
 }
 
 export function loadThemeSaturation(): number {
@@ -134,22 +122,15 @@ export function loadThemeSaturation(): number {
 export function saveThemeSaturation(value: number) {
   writeNumber(
     THEME_SATURATION_KEY,
-    Math.round(
-      clamp(value, THEME_SATURATION_MIN, THEME_SATURATION_MAX),
-    ),
+    Math.round(clamp(value, THEME_SATURATION_MIN, THEME_SATURATION_MAX)),
   );
 }
 
 export function applyThemeTint(hue: number, saturation: number) {
   const nextHue = Math.round(clamp(hue, THEME_HUE_MIN, THEME_HUE_MAX));
-  const nextSaturation = Math.round(
-    clamp(saturation, THEME_SATURATION_MIN, THEME_SATURATION_MAX),
-  );
+  const nextSaturation = Math.round(clamp(saturation, THEME_SATURATION_MIN, THEME_SATURATION_MAX));
   document.documentElement.style.setProperty("--theme-hue", String(nextHue));
-  document.documentElement.style.setProperty(
-    "--theme-saturation",
-    `${nextSaturation}%`,
-  );
+  document.documentElement.style.setProperty("--theme-saturation", `${nextSaturation}%`);
   return { hue: nextHue, saturation: nextSaturation };
 }
 
@@ -204,9 +185,7 @@ export function isLightScheme(): boolean {
 export function applyThemePreference(value: ThemePreference): ColorScheme {
   const next = resolveColorScheme(value);
   document.documentElement.classList.toggle("theme-light", next === "light");
-  window.dispatchEvent(
-    new CustomEvent<ColorScheme>(SCHEME_CHANGE_EVENT, { detail: next }),
-  );
+  window.dispatchEvent(new CustomEvent<ColorScheme>(SCHEME_CHANGE_EVENT, { detail: next }));
   return next;
 }
 
@@ -229,10 +208,7 @@ export function loadSidebarOpacity(): number {
 }
 
 export function saveSidebarOpacity(value: number) {
-  writeNumber(
-    OPACITY_KEY,
-    clamp(value, SIDEBAR_OPACITY_MIN, SIDEBAR_OPACITY_MAX),
-  );
+  writeNumber(OPACITY_KEY, clamp(value, SIDEBAR_OPACITY_MIN, SIDEBAR_OPACITY_MAX));
 }
 
 export function applySidebarOpacity(value: number) {
@@ -243,25 +219,16 @@ export function applySidebarOpacity(value: number) {
 
 export function loadSidebarBlur(): number {
   return Math.round(
-    clamp(
-      readNumber(BLUR_KEY) ?? SIDEBAR_BLUR_DEFAULT,
-      SIDEBAR_BLUR_MIN,
-      SIDEBAR_BLUR_MAX,
-    ),
+    clamp(readNumber(BLUR_KEY) ?? SIDEBAR_BLUR_DEFAULT, SIDEBAR_BLUR_MIN, SIDEBAR_BLUR_MAX),
   );
 }
 
 export function saveSidebarBlur(value: number) {
-  writeNumber(
-    BLUR_KEY,
-    Math.round(clamp(value, SIDEBAR_BLUR_MIN, SIDEBAR_BLUR_MAX)),
-  );
+  writeNumber(BLUR_KEY, Math.round(clamp(value, SIDEBAR_BLUR_MIN, SIDEBAR_BLUR_MAX)));
 }
 
 export function applySidebarBlur(value: number) {
-  const next = Math.round(
-    clamp(value, SIDEBAR_BLUR_MIN, SIDEBAR_BLUR_MAX),
-  );
+  const next = Math.round(clamp(value, SIDEBAR_BLUR_MIN, SIDEBAR_BLUR_MAX));
   void invoke("set_window_background_blur", { radius: next });
   return next;
 }
@@ -280,12 +247,7 @@ export function applyBodyGlass(value: boolean) {
 }
 
 function isSidebarTabId(value: unknown): value is SidebarTabId {
-  return (
-    value === "files" ||
-    value === "sessions" ||
-    value === "changes" ||
-    value === "inbox"
-  );
+  return value === "files" || value === "sessions" || value === "changes" || value === "inbox";
 }
 
 export function loadProjectRailOpen(): boolean {
@@ -306,9 +268,7 @@ export function loadSidebarTabOrder(): SidebarTabId[] {
     for (const id of DEFAULT_SIDEBAR_TAB_ORDER) {
       if (!next.includes(id)) next.push(id);
     }
-    return next.length === DEFAULT_SIDEBAR_TAB_ORDER.length
-      ? next
-      : [...DEFAULT_SIDEBAR_TAB_ORDER];
+    return next.length === DEFAULT_SIDEBAR_TAB_ORDER.length ? next : [...DEFAULT_SIDEBAR_TAB_ORDER];
   } catch {
     return [...DEFAULT_SIDEBAR_TAB_ORDER];
   }
@@ -335,9 +295,7 @@ export function loadProjectRailWidth(): number {
 export function saveProjectRailWidth(value: number) {
   writeNumber(
     PROJECT_RAIL_WIDTH_KEY,
-    Math.round(
-      clamp(value, PROJECT_RAIL_WIDTH_MIN, PROJECT_RAIL_WIDTH_MAX),
-    ),
+    Math.round(clamp(value, PROJECT_RAIL_WIDTH_MIN, PROJECT_RAIL_WIDTH_MAX)),
   );
 }
 

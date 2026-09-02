@@ -23,26 +23,14 @@ export type HarnessAdapter = {
   sendTurn(input: SendTurnInput): Promise<void>;
   steerTurn(input: SteerTurnInput): Promise<void>;
   cancelTurn(sessionId: string): Promise<void>;
-  respondApproval(
-    sessionId: string,
-    requestId: number,
-    decision: ApprovalDecision,
-  ): void;
-  respondQuestion?(
-    sessionId: string,
-    requestId: number,
-    reply: UserQuestionReply,
-  ): void;
+  respondApproval(sessionId: string, requestId: number, decision: ApprovalDecision): void;
+  respondQuestion?(sessionId: string, requestId: number, reply: UserQuestionReply): void;
   /** Kill the child but keep resume state for later rebind. */
   stopSession(sessionId: string): Promise<void>;
   /** Drop resume state and kill the child (delete, harness switch, idle detach). */
   forgetSession(sessionId: string): Promise<void>;
   /** Seed resume state from a restored wavex session. */
-  bindSession(
-    threadId: string,
-    providerSessionId: string,
-    cwd: string,
-  ): void;
+  bindSession(threadId: string, providerSessionId: string, cwd: string): void;
   /** Refresh the model catalog overlay when supported. */
   refreshCatalog?(): Promise<void>;
   /** Optional LLM tab title for the first turn. */
@@ -50,9 +38,7 @@ export type HarnessAdapter = {
   /** Optional LLM commit message from staged changes. */
   generateCommitMessage?(cwd: string): Promise<string>;
   /** Optional LLM pull request title/body from branch diff context. */
-  generatePrContent?(
-    cwd: string,
-  ): Promise<(PrContent & { base: string; head: string }) | null>;
+  generatePrContent?(cwd: string): Promise<(PrContent & { base: string; head: string }) | null>;
   /** Optional LLM branch name from a user message. */
   generateBranchName?(cwd: string, message: string): Promise<string | null>;
   /** Optional warmup for text-generation backends. */
@@ -145,10 +131,7 @@ export async function steerHarnessTurn(
   await adapter.steerTurn(input);
 }
 
-export async function cancelHarnessTurn(
-  harness: HarnessId,
-  sessionId: string,
-): Promise<void> {
+export async function cancelHarnessTurn(harness: HarnessId, sessionId: string): Promise<void> {
   const adapter = getHarness(harness);
   if (!adapter?.live) return;
   cancelIdlePark(sessionId);
@@ -174,20 +157,14 @@ export function respondHarnessQuestion(
   getHarness(harness)?.respondQuestion?.(sessionId, requestId, reply);
 }
 
-export async function stopHarnessSession(
-  harness: HarnessId,
-  sessionId: string,
-): Promise<void> {
+export async function stopHarnessSession(harness: HarnessId, sessionId: string): Promise<void> {
   cancelIdlePark(sessionId);
   const adapter = getHarness(harness);
   if (!adapter?.live) return;
   await adapter.stopSession(sessionId);
 }
 
-export async function forgetHarnessSession(
-  harness: HarnessId,
-  sessionId: string,
-): Promise<void> {
+export async function forgetHarnessSession(harness: HarnessId, sessionId: string): Promise<void> {
   cancelIdlePark(sessionId);
   const adapter = getHarness(harness);
   if (!adapter) return;
@@ -208,9 +185,7 @@ export function bindHarnessSession(
  * Boot used to refresh every adapter; that spawned unused CLIs (Pi with
  * extensions can sit at ~1GB) even when the workspace never touched them.
  */
-export async function refreshHarnessCatalogs(
-  ids: Iterable<HarnessId>,
-): Promise<void> {
+export async function refreshHarnessCatalogs(ids: Iterable<HarnessId>): Promise<void> {
   const wanted = new Set(ids);
   if (wanted.size === 0) return;
   await Promise.all(
@@ -264,9 +239,6 @@ export async function generateHarnessBranchName(
   return adapter.generateBranchName(cwd, message);
 }
 
-export async function warmupHarnessText(
-  harness: HarnessId,
-  cwd: string,
-): Promise<void> {
+export async function warmupHarnessText(harness: HarnessId, cwd: string): Promise<void> {
   await getHarness(harness)?.warmupText?.(cwd);
 }

@@ -24,10 +24,7 @@ function isValidBasename(name: string): boolean {
   return true;
 }
 
-export function validateFileName(
-  raw: string,
-  siblingNames: Iterable<string>,
-): NameIssue | null {
+export function validateFileName(raw: string, siblingNames: Iterable<string>): NameIssue | null {
   const name = wellFormedFileName(raw);
 
   if (!name || /^\s+$/.test(name)) {
@@ -38,9 +35,7 @@ export function validateFileName(
     return { severity: "error", kind: "slash" };
   }
 
-  const siblings = new Set(
-    [...siblingNames].map((n) => n.toLowerCase()),
-  );
+  const siblings = new Set([...siblingNames].map((n) => n.toLowerCase()));
   if (siblings.has(name.toLowerCase())) {
     return { severity: "error", kind: "exists", name };
   }

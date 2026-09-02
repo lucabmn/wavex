@@ -60,9 +60,7 @@ export async function generateCursorPrContent(
     console.debug("[wavex] pr content", error);
   }
   const title =
-    parsed?.title ||
-    range.commitSummary.split(/\r?\n/)[0]?.trim() ||
-    `Update ${range.head}`;
+    parsed?.title || range.commitSummary.split(/\r?\n/)[0]?.trim() || `Update ${range.head}`;
   return {
     title,
     body: parsed?.body || range.commitSummary.trim(),

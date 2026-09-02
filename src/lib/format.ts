@@ -1,14 +1,7 @@
 import type { Plugin } from "prettier";
 import { basename } from "./fs";
 
-type ParserName =
-  | "babel"
-  | "typescript"
-  | "json"
-  | "css"
-  | "html"
-  | "markdown"
-  | "mdx";
+type ParserName = "babel" | "typescript" | "json" | "css" | "html" | "markdown" | "mdx";
 
 const MAX_FORMAT_CHARS = 512 * 1024;
 

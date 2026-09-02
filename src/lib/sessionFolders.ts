@@ -47,10 +47,7 @@ export function folderContaining(
   return folders.find((folder) => folder.sessionIds.includes(sessionId));
 }
 
-export function uniqueFolderName(
-  folders: SessionFolder[],
-  base = "New folder",
-): string {
+export function uniqueFolderName(folders: SessionFolder[], base = "New folder"): string {
   const names = new Set(folders.map((folder) => folder.name));
   if (!names.has(base)) return base;
   for (let n = 2; ; n += 1) {
@@ -82,9 +79,7 @@ export function mergeFolderSessionSummaries(
     for (const id of folder.sessionIds) grouped.add(id);
   }
   const have = new Set(visible.map((session) => session.id));
-  const extra = extras.filter(
-    (session) => grouped.has(session.id) && !have.has(session.id),
-  );
+  const extra = extras.filter((session) => grouped.has(session.id) && !have.has(session.id));
   if (extra.length === 0) return visible;
   return [...visible, ...extra];
 }
@@ -179,10 +174,7 @@ export function removeSessionFromFolder(
   );
 }
 
-export function dissolveFolder(
-  folders: SessionFolder[],
-  folderId: string,
-): SessionFolder[] {
+export function dissolveFolder(folders: SessionFolder[], folderId: string): SessionFolder[] {
   if (!folders.some((folder) => folder.id === folderId)) return folders;
   return folders.filter((folder) => folder.id !== folderId);
 }
@@ -196,9 +188,7 @@ export function renameFolder(
   if (!trimmed) return folders;
   const folder = folders.find((entry) => entry.id === folderId);
   if (!folder || folder.name === trimmed) return folders;
-  return folders.map((entry) =>
-    entry.id === folderId ? { ...entry, name: trimmed } : entry,
-  );
+  return folders.map((entry) => (entry.id === folderId ? { ...entry, name: trimmed } : entry));
 }
 
 export function setFolderCollapsed(
@@ -208,9 +198,7 @@ export function setFolderCollapsed(
 ): SessionFolder[] {
   const folder = folders.find((entry) => entry.id === folderId);
   if (!folder || folder.collapsed === collapsed) return folders;
-  return folders.map((entry) =>
-    entry.id === folderId ? { ...entry, collapsed } : entry,
-  );
+  return folders.map((entry) => (entry.id === folderId ? { ...entry, collapsed } : entry));
 }
 
 export function setFolderColor(
@@ -220,10 +208,7 @@ export function setFolderColor(
 ): SessionFolder[] {
   const folder = folders.find((entry) => entry.id === folderId);
   const nextIndex = sanitizeColorIndex(colorIndex);
-  if (
-    !folder ||
-    (folder.colorIndex === nextIndex && folder.customColor == null)
-  ) {
+  if (!folder || (folder.colorIndex === nextIndex && folder.customColor == null)) {
     return folders;
   }
   return folders.map((entry) => {
@@ -242,25 +227,18 @@ export function setFolderCustomColor(
   if (!folder) return folders;
   if (color == null) {
     if (folder.customColor == null) return folders;
-    return folders.map((entry) =>
-      entry.id === folderId ? withoutColors(entry) : entry,
-    );
+    return folders.map((entry) => (entry.id === folderId ? withoutColors(entry) : entry));
   }
   const hex = parseCustomHex(color);
   if (hex == null) return folders;
   if (folder.customColor === hex && folder.colorIndex == null) return folders;
   return folders.map((entry) =>
-    entry.id === folderId
-      ? { ...withoutColors(entry), customColor: hex }
-      : entry,
+    entry.id === folderId ? { ...withoutColors(entry), customColor: hex } : entry,
   );
 }
 
 /** Reorder only the named folders; anything else keeps its slot. */
-export function reorderSessionFolders(
-  folders: SessionFolder[],
-  ids: string[],
-): SessionFolder[] {
+export function reorderSessionFolders(folders: SessionFolder[], ids: string[]): SessionFolder[] {
   const idSet = new Set(ids);
   const moving = folders.filter((folder) => idSet.has(folder.id));
   const ordered = orderByIds(moving, ids);
@@ -271,9 +249,7 @@ export function reorderSessionFolders(
     return folders;
   }
   let next = 0;
-  return folders.map((folder) =>
-    idSet.has(folder.id) ? ordered[next++]! : folder,
-  );
+  return folders.map((folder) => (idSet.has(folder.id) ? ordered[next++]! : folder));
 }
 
 /** Saturated project palette or custom hex, or undefined for the default wash. */
@@ -334,10 +310,7 @@ export function applySessionListDrop(
     const next = addSessionToFolder(folders, dest.id, draggedId);
     return { folders: setFolderCollapsed(next, dest.id, false) };
   }
-  const { folders: next, id } = createFolderWithSessions(folders, [
-    draggedId,
-    target.id,
-  ]);
+  const { folders: next, id } = createFolderWithSessions(folders, [draggedId, target.id]);
   return id ? { folders: next, createdId: id } : { folders };
 }
 
@@ -432,22 +405,14 @@ function parseFolder(value: unknown): SessionFolder | null {
     rec.sessionIds.filter((id): id is string => typeof id === "string" && !!id),
   );
   if (sessionIds.length === 0) return null;
-  const customColor = parseCustomHex(
-    typeof rec.customColor === "string" ? rec.customColor : null,
-  );
-  const colorIndex = sanitizeColorIndex(
-    typeof rec.colorIndex === "number" ? rec.colorIndex : null,
-  );
+  const customColor = parseCustomHex(typeof rec.customColor === "string" ? rec.customColor : null);
+  const colorIndex = sanitizeColorIndex(typeof rec.colorIndex === "number" ? rec.colorIndex : null);
   return {
     id: rec.id,
     name,
     sessionIds,
     collapsed: rec.collapsed === true,
-    ...(customColor != null
-      ? { customColor }
-      : colorIndex != null
-        ? { colorIndex }
-        : {}),
+    ...(customColor != null ? { customColor } : colorIndex != null ? { colorIndex } : {}),
   };
 }
 
@@ -472,10 +437,7 @@ function uniqueIds(ids: string[]): string[] {
   return out;
 }
 
-function removeSessions(
-  folders: SessionFolder[],
-  sessionIds: string[],
-): SessionFolder[] {
+function removeSessions(folders: SessionFolder[], sessionIds: string[]): SessionFolder[] {
   const drop = new Set(sessionIds);
   return removeEmpty(
     folders.map((folder) => {

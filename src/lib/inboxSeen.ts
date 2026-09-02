@@ -30,9 +30,7 @@ function notifyInboxSeen() {
 
 function isSeenMap(value: unknown): value is SeenMap {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  return Object.values(value).every(
-    (entry) => typeof entry === "number" && Number.isFinite(entry),
-  );
+  return Object.values(value).every((entry) => typeof entry === "number" && Number.isFinite(entry));
 }
 
 function loadInboxSeenStore(): SeenStore {
@@ -58,10 +56,7 @@ function loadInboxSeenStore(): SeenStore {
 
 function saveInboxSeenStore(store: SeenStore) {
   try {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify({ seeded: store.seeded, items: store.items }),
-    );
+    localStorage.setItem(KEY, JSON.stringify({ seeded: store.seeded, items: store.items }));
     localStorage.removeItem(LEGACY_KEY);
   } catch {
     // private mode / quota

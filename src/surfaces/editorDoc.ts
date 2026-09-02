@@ -25,10 +25,7 @@ export function replaceEditorDoc(
   if (prev === next) return false;
   const changes = editorDocChanges(prev, next);
   view.dispatch({
-    changes:
-      changes.length > 0
-        ? changes
-        : { from: 0, to: view.state.doc.length, insert: next },
+    changes: changes.length > 0 ? changes : { from: 0, to: view.state.doc.length, insert: next },
     selection: options?.selection,
     annotations: options?.annotations,
     scrollIntoView: false,
@@ -58,8 +55,7 @@ export function preserveEditorViewport(view: EditorView, mutate: () => void) {
     }
     const after = view.coordsAtPos(view.state.selection.main.head);
     if (!after) return;
-    scroller.scrollTop +=
-      after.top - scroller.getBoundingClientRect().top - offsetY;
+    scroller.scrollTop += after.top - scroller.getBoundingClientRect().top - offsetY;
   };
   restore();
   view.requestMeasure({

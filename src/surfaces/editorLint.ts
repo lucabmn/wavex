@@ -56,10 +56,7 @@ const LINTABLE_EXTENSIONS = new Set([
   ".py",
 ]);
 
-export function editorLint(
-  path: string,
-  onErrorCount?: (count: number) => void,
-): Extension {
+export function editorLint(path: string, onErrorCount?: (count: number) => void): Extension {
   if (!isLintable(path)) return [];
   return [
     linter((view) => syntaxDiagnostics(view.state), {
@@ -69,8 +66,7 @@ export function editorLint(
        * files parse in chunks. Neither is a document change, so without this a
        * file opened with an error in it stays clean until the first keystroke.
        */
-      needsRefresh: (update) =>
-        syntaxTree(update.state) !== syntaxTree(update.startState),
+      needsRefresh: (update) => syntaxTree(update.state) !== syntaxTree(update.startState),
     }),
     onErrorCount ? errorCountReporter(onErrorCount) : [],
     lintTheme,
@@ -103,9 +99,7 @@ export function syntaxDiagnostics(state: EditorState): Diagnostic[] {
 
   // Viewport parsing leaves a dummy error at the frontier (~3kb in). Lint
   // has to finish the tree or it will underline the next `import` forever.
-  const tree =
-    ensureSyntaxTree(state, state.doc.length, PARSE_BUDGET_MS) ??
-    syntaxTree(state);
+  const tree = ensureSyntaxTree(state, state.doc.length, PARSE_BUDGET_MS) ?? syntaxTree(state);
   if (tree.length === 0) return [];
 
   const incomplete = tree.length < state.doc.length;
@@ -136,8 +130,7 @@ const TYPED_CATCH = /^catch\s*\(\s*[\w$]+\s*:/;
 const JSX_BLOCK_COMMENT = /^\{\s*\/\*/;
 
 /** Tailwind v4 at-rules the CSS grammar doesn't know. */
-const TAILWIND_AT =
-  /^@(?:source|plugin|theme|utility|custom-variant|reference|config)\b/;
+const TAILWIND_AT = /^@(?:source|plugin|theme|utility|custom-variant|reference|config)\b/;
 
 /** `fn<typeof import("mod")>()` — `import(` is parsed as a dynamic import. */
 const TYPEOF_IMPORT = /<typeof\s+import\s*\(/;
@@ -161,11 +154,7 @@ function isGrammarGap(
   return false;
 }
 
-function errorDiagnostic(
-  state: EditorState,
-  from: number,
-  to: number,
-): Diagnostic {
+function errorDiagnostic(state: EditorState, from: number, to: number): Diagnostic {
   const message = errorMessage(state, from, to);
   let [start, end] = [from, to];
 
@@ -188,9 +177,7 @@ function errorMessage(state: EditorState, from: number, to: number): string {
   const token = tokenAt(state, from);
   if (token) return `Unexpected ${quote(token)}`;
 
-  return from >= state.doc.length
-    ? "Unexpected end of file"
-    : "Unexpected end of line";
+  return from >= state.doc.length ? "Unexpected end of file" : "Unexpected end of line";
 }
 
 /** The token the parser choked on: the parse stops just before it. */
@@ -199,17 +186,13 @@ function tokenAt(state: EditorState, pos: number): string | null {
   const line = state.doc.lineAt(pos);
   if (pos >= line.to) return null;
 
-  const rest = state.doc.sliceString(
-    pos,
-    Math.min(line.to, pos + MAX_TOKEN_CHARS + 1),
-  );
+  const rest = state.doc.sliceString(pos, Math.min(line.to, pos + MAX_TOKEN_CHARS + 1));
   return rest.trimStart().match(/^(\w+|[^\s\w])/)?.[1] ?? null;
 }
 
 function quote(text: string): string {
   const flat = text.replace(/\s+/g, " ");
-  const clipped =
-    flat.length > MAX_TOKEN_CHARS ? `${flat.slice(0, MAX_TOKEN_CHARS)}…` : flat;
+  const clipped = flat.length > MAX_TOKEN_CHARS ? `${flat.slice(0, MAX_TOKEN_CHARS)}…` : flat;
   return `"${clipped}"`;
 }
 

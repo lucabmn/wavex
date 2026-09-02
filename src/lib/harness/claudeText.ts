@@ -50,9 +50,11 @@ export async function stopClaudeTextPrompt(): Promise<void> {
 
 export function warmupClaudeText(cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns.catch(() => undefined).then(async () => {
-    await ensureLive(cwd);
-  });
+  const run = turns
+    .catch(() => undefined)
+    .then(async () => {
+      await ensureLive(cwd);
+    });
   turns = run.then(
     () => undefined,
     () => undefined,
@@ -89,18 +91,12 @@ async function promptOnLive(input: {
       session.turnFailed = reject;
     });
 
-    await writeChild(
-      TEXT_CHILD_ID,
-      JSON.stringify(buildClaudeUserMessage({ text: input.prompt })),
-    );
+    await writeChild(TEXT_CHILD_ID, JSON.stringify(buildClaudeUserMessage({ text: input.prompt })));
 
     await Promise.race([
       turnPromise,
       new Promise<void>((_, reject) => {
-        setTimeout(
-          () => reject(new Error("Claude text generation timed out")),
-          timeoutMs,
-        );
+        setTimeout(() => reject(new Error("Claude text generation timed out")), timeoutMs);
       }),
     ]);
 
@@ -193,8 +189,7 @@ function handleLine(session: LiveText, line: string): void {
   const type = stringField(rec, "type");
   if (
     type === "system" &&
-    (stringField(rec, "subtype") === "init" ||
-      stringField(rec, "subtype") === "initialized")
+    (stringField(rec, "subtype") === "init" || stringField(rec, "subtype") === "initialized")
   ) {
     session.ready = true;
     session.readyDone?.();

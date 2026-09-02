@@ -7,12 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { Popover } from "./Popover";
-import {
-  getModelSnapshot,
-  resolveModel,
-  subscribeModels,
-  type ModelSetting,
-} from "../lib/models";
+import { getModelSnapshot, resolveModel, subscribeModels, type ModelSetting } from "../lib/models";
 import type { HarnessId } from "../lib/session";
 
 type Props = {
@@ -25,13 +20,7 @@ type Props = {
 
 const MENU_WIDTH = 220;
 
-export function ModelSettings({
-  harness,
-  model,
-  values,
-  onChange,
-  onClose,
-}: Props) {
+export function ModelSettings({ harness, model, values, onChange, onClose }: Props) {
   const catalog = useSyncCatalog();
   const settings = useMemo(() => {
     void catalog;
@@ -90,8 +79,7 @@ function ToggleSetting({
   onChange: (value: string) => void;
 }) {
   const on = value === "true";
-  const Icon =
-    setting.id === "fast" ? Zap : setting.id === "thinking" ? Brain : Gauge;
+  const Icon = setting.id === "fast" ? Zap : setting.id === "thinking" ? Brain : Gauge;
   return (
     <button
       type="button"
@@ -133,9 +121,7 @@ function SelectSetting({
   const root = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const current =
-    setting.options.find((option) => option.value === value) ??
-    setting.options[0];
+  const current = setting.options.find((option) => option.value === value) ?? setting.options[0];
   const Icon = setting.id === "context" ? Maximize2 : Gauge;
 
   const dismiss = (restore: boolean) => {
@@ -193,15 +179,11 @@ function SelectSetting({
           setOpen(true);
         }}
         className={`flex h-6.5 max-w-36 items-center gap-1 rounded-md px-1.5 ${
-          open
-            ? "bg-content/10 text-content"
-            : "bg-content/10 text-content hover:bg-content/15"
+          open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"
         }`}
       >
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
-        <span className="min-w-0 truncate text-[11px]">
-          {current?.label ?? setting.label}
-        </span>
+        <span className="min-w-0 truncate text-[11px]">{current?.label ?? setting.label}</span>
         <ChevronDown
           className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}

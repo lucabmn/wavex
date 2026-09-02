@@ -49,10 +49,7 @@ export function invalidateWatchedFiles(paths?: string[]) {
     mtimes.set(path, undefined);
     listeners.get(path)?.forEach((listener) => listener());
   }
-  if (
-    watched.length > 0 &&
-    (typeof document === "undefined" || !document.hidden)
-  ) {
+  if (watched.length > 0 && (typeof document === "undefined" || !document.hidden)) {
     void poll(paths ? watched : "all");
   }
 }

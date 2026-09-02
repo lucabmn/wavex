@@ -9,12 +9,7 @@ export const SOUNDS_VOLUME = 0.55;
 
 export const SOUNDS_CHANGE_EVENT = "wavex:sounds-change";
 
-export type SoundCue =
-  | "turnFinished"
-  | "inboxUnseen"
-  | "updateAvailable"
-  | "switch"
-  | "copy";
+export type SoundCue = "turnFinished" | "inboxUnseen" | "updateAvailable" | "switch" | "copy";
 
 const CUES: Record<SoundCue, SoundName> = {
   turnFinished: "success",
@@ -42,9 +37,7 @@ export function saveSoundsEnabled(value: boolean) {
   }
   applySoundEngine();
   if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<boolean>(SOUNDS_CHANGE_EVENT, { detail: value }),
-  );
+  window.dispatchEvent(new CustomEvent<boolean>(SOUNDS_CHANGE_EVENT, { detail: value }));
 }
 
 function applySoundEngine() {

@@ -1,12 +1,4 @@
-import {
-  AppWindow,
-  ImagePlus,
-  SquarePlus,
-  Trash2,
-  Ungroup,
-  X,
-  type IconComponent,
-} from "./icons";
+import { AppWindow, ImagePlus, SquarePlus, Trash2, Ungroup, X, type IconComponent } from "./icons";
 import {
   Fragment,
   useEffect,
@@ -274,19 +266,31 @@ export function TabGroupMenu({
           <div className="my-1 h-px bg-content/10" />
 
           {ITEMS.slice(0, 2).map((item) => (
-            <MenuRow key={item.id} item={item} onPick={() => onPick(item.id as TabGroupMenuAction)} />
+            <MenuRow
+              key={item.id}
+              item={item}
+              onPick={() => onPick(item.id as TabGroupMenuAction)}
+            />
           ))}
 
           <div className="my-1 h-px bg-content/10" />
 
           {ITEMS.slice(2, 4).map((item) => (
-            <MenuRow key={item.id} item={item} onPick={() => onPick(item.id as TabGroupMenuAction)} />
+            <MenuRow
+              key={item.id}
+              item={item}
+              onPick={() => onPick(item.id as TabGroupMenuAction)}
+            />
           ))}
 
           <div className="my-1 h-px bg-content/10" />
 
           {ITEMS.slice(4).map((item) => (
-            <MenuRow key={item.id} item={item} onPick={() => onPick(item.id as TabGroupMenuAction)} />
+            <MenuRow
+              key={item.id}
+              item={item}
+              onPick={() => onPick(item.id as TabGroupMenuAction)}
+            />
           ))}
         </>
       ) : null}
@@ -296,9 +300,7 @@ export function TabGroupMenu({
           <div className="my-1 h-px bg-content/10" />
           {extraItems.map((item) => (
             <Fragment key={item.id}>
-              {item.sepBefore ? (
-                <div role="separator" className="my-1 h-px bg-content/10" />
-              ) : null}
+              {item.sepBefore ? <div role="separator" className="my-1 h-px bg-content/10" /> : null}
               <MenuRow
                 item={item}
                 onPick={() => {
@@ -342,13 +344,7 @@ function MascotSwatch({
   );
 }
 
-function MenuRow({
-  item,
-  onPick,
-}: {
-  item: MenuItem;
-  onPick: () => void;
-}) {
+function MenuRow({ item, onPick }: { item: MenuItem; onPick: () => void }) {
   const Icon = item.icon;
   return (
     <button
@@ -357,17 +353,13 @@ function MenuRow({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPick}
       className={`flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] leading-none ${
-        item.danger
-          ? "text-red-300/90 hover:bg-red-500/15"
-          : "text-content hover:bg-content/5"
+        item.danger ? "text-red-300/90 hover:bg-red-500/15" : "text-content hover:bg-content/5"
       }`}
     >
       <Icon className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.shortcut ? (
-        <span className="shrink-0 text-[11px] text-content/40">
-          {item.shortcut}
-        </span>
+        <span className="shrink-0 text-[11px] text-content/40">{item.shortcut}</span>
       ) : null}
     </button>
   );

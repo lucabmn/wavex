@@ -2,10 +2,7 @@ import { RefreshCw } from "./icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HarnessIcon } from "./HarnessIcon";
 import { Popover } from "./Popover";
-import {
-  fetchClaudeRateLimits,
-  fetchCodexRateLimits,
-} from "../lib/rateLimitsFetch";
+import { fetchClaudeRateLimits, fetchCodexRateLimits } from "../lib/rateLimitsFetch";
 import {
   clampUsedPercent,
   fetchingRateLimits,
@@ -20,10 +17,7 @@ import {
   type RateLimitWindow,
 } from "../lib/rateLimits";
 import { HARNESS_LABEL, HARNESS_TITLE, type HarnessId } from "../lib/session";
-import {
-  runningTerminalChipLabel,
-  type RunningTerminal,
-} from "../lib/terminalTab";
+import { runningTerminalChipLabel, type RunningTerminal } from "../lib/terminalTab";
 
 const CLOCK_MS = 30_000;
 
@@ -46,12 +40,8 @@ export function UsageFooter({
 }) {
   const wantClaude = providers.includes("claude");
   const wantCodex = providers.includes("codex");
-  const [claude, setClaude] = useState<ProviderRateLimits>(() =>
-    idleRateLimits("claude"),
-  );
-  const [codex, setCodex] = useState<ProviderRateLimits>(() =>
-    idleRateLimits("codex"),
-  );
+  const [claude, setClaude] = useState<ProviderRateLimits>(() => idleRateLimits("claude"));
+  const [codex, setCodex] = useState<ProviderRateLimits>(() => idleRateLimits("codex"));
   const [now, setNow] = useState(() => Date.now());
   const [refreshing, setRefreshing] = useState(false);
   const inflight = useRef<Promise<void> | null>(null);
@@ -60,43 +50,42 @@ export function UsageFooter({
   claudeRef.current = claude;
   codexRef.current = codex;
 
-  const refresh = useCallback((force = false) => {
-    if (inflight.current) return inflight.current;
-    const visible = document.visibilityState === "visible";
-    const fetchClaude =
-      wantClaude &&
-      shouldFetchProvider(claudeRef.current, { force, visible });
-    const fetchCodex =
-      wantCodex &&
-      shouldFetchProvider(codexRef.current, { force, visible });
-    if (!fetchClaude && !fetchCodex) return;
-    if (force) setRefreshing(true);
-    const jobs: Promise<void>[] = [];
-    if (fetchClaude) {
-      setClaude((current) => fetchingRateLimits("claude", current));
-      jobs.push(
-        fetchClaudeRateLimits().then((value) => {
-          setClaude(value);
-        }),
-      );
-    }
-    if (fetchCodex) {
-      setCodex((current) => fetchingRateLimits("codex", current));
-      jobs.push(
-        fetchCodexRateLimits().then((value) => {
-          setCodex(value);
-        }),
-      );
-    }
-    const run = Promise.allSettled(jobs)
-      .then(() => undefined)
-      .finally(() => {
-        inflight.current = null;
-        setRefreshing(false);
-      });
-    inflight.current = run;
-    return run;
-  }, [wantClaude, wantCodex]);
+  const refresh = useCallback(
+    (force = false) => {
+      if (inflight.current) return inflight.current;
+      const visible = document.visibilityState === "visible";
+      const fetchClaude = wantClaude && shouldFetchProvider(claudeRef.current, { force, visible });
+      const fetchCodex = wantCodex && shouldFetchProvider(codexRef.current, { force, visible });
+      if (!fetchClaude && !fetchCodex) return;
+      if (force) setRefreshing(true);
+      const jobs: Promise<void>[] = [];
+      if (fetchClaude) {
+        setClaude((current) => fetchingRateLimits("claude", current));
+        jobs.push(
+          fetchClaudeRateLimits().then((value) => {
+            setClaude(value);
+          }),
+        );
+      }
+      if (fetchCodex) {
+        setCodex((current) => fetchingRateLimits("codex", current));
+        jobs.push(
+          fetchCodexRateLimits().then((value) => {
+            setCodex(value);
+          }),
+        );
+      }
+      const run = Promise.allSettled(jobs)
+        .then(() => undefined)
+        .finally(() => {
+          inflight.current = null;
+          setRefreshing(false);
+        });
+      inflight.current = run;
+      return run;
+    },
+    [wantClaude, wantCodex],
+  );
 
   useEffect(() => {
     void refresh();
@@ -244,9 +233,7 @@ function RunningTerminalChip({
         }}
       >
         <TerminalLiveMark />
-        <span className="truncate font-mono text-[10px] tabular-nums">
-          {label}
-        </span>
+        <span className="truncate font-mono text-[10px] tabular-nums">{label}</span>
       </button>
       {menuOpen && many && !panelOpen ? (
         <Popover
@@ -280,16 +267,9 @@ function RunningTerminalChip({
   );
 }
 
-function ProviderChip({
-  limits,
-  now,
-}: {
-  limits: ProviderRateLimits;
-  now: number;
-}) {
+function ProviderChip({ limits, now }: { limits: ProviderRateLimits; now: number }) {
   const loading =
-    limits.status === "idle" ||
-    (limits.status === "fetching" && !limits.session && !limits.weekly);
+    limits.status === "idle" || (limits.status === "fetching" && !limits.session && !limits.weekly);
   const disconnected = limits.status === "unavailable";
   const windows = [
     limits.session ? { key: "session", window: limits.session } : null,
@@ -303,9 +283,7 @@ function ProviderChip({
     }
     return best;
   }, null);
-  const tooltip = windows
-    .map((entry) => rateLimitWindowTooltip(entry.window, now))
-    .join(" · ");
+  const tooltip = windows.map((entry) => rateLimitWindowTooltip(entry.window, now)).join(" · ");
 
   return (
     <span
@@ -313,11 +291,7 @@ function ProviderChip({
       title={
         tooltip ||
         limits.error ||
-        (disconnected
-          ? "Not connected"
-          : loading
-            ? "Loading usage…"
-            : undefined)
+        (disconnected ? "Not connected" : loading ? "Loading usage…" : undefined)
       }
     >
       <HarnessIcon harness={limits.provider} className="size-3 shrink-0" />
@@ -357,14 +331,8 @@ function emptyUsageLabel(limits: ProviderRateLimits): string {
 function MiniBar({ usedPct }: { usedPct: number }) {
   const pct = clampUsedPercent(usedPct);
   return (
-    <span
-      className="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-content/10"
-      aria-hidden
-    >
-      <span
-        className={`block h-full rounded-full ${barClass(pct)}`}
-        style={{ width: `${pct}%` }}
-      />
+    <span className="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-content/10" aria-hidden>
+      <span className={`block h-full rounded-full ${barClass(pct)}`} style={{ width: `${pct}%` }} />
     </span>
   );
 }

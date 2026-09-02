@@ -6,15 +6,9 @@ import {
   type FilePaneTab,
   type WorkspaceTab,
 } from "./layout";
-import {
-  normalizeProjectPath,
-  sameProjectPath,
-} from "./recents";
+import { normalizeProjectPath, sameProjectPath } from "./recents";
 import type { Session } from "./session";
-import {
-  applyTerminalMeta,
-  type TerminalMetaPatch,
-} from "./terminalTab";
+import { applyTerminalMeta, type TerminalMetaPatch } from "./terminalTab";
 import { workspaceTabCwd } from "./workspaceTabGroups";
 
 export type DockSide = "top" | "bottom" | "left" | "right";
@@ -38,12 +32,7 @@ const VERTICAL_MIN = 88;
 const HORIZONTAL_MIN = 180;
 
 export function isDockSide(value: unknown): value is DockSide {
-  return (
-    value === "top" ||
-    value === "bottom" ||
-    value === "left" ||
-    value === "right"
-  );
+  return value === "top" || value === "bottom" || value === "left" || value === "right";
 }
 
 export function isVerticalDock(side: DockSide): boolean {
@@ -106,10 +95,7 @@ export function addTerminalToDock(
   };
 }
 
-export function nextDockTerminalTitle(
-  dock: ProjectTerminalDock,
-  cwd: string,
-): string {
+export function nextDockTerminalTitle(dock: ProjectTerminalDock, cwd: string): string {
   return nextTerminalTitleFromFiles(dock.pane.files, cwd);
 }
 
@@ -128,14 +114,8 @@ export function closeTerminalInDock(
   return { ...dock, pane: { ...dock.pane, files, activeFileId } };
 }
 
-export function selectDockTerminal(
-  dock: ProjectTerminalDock,
-  fileId: string,
-): ProjectTerminalDock {
-  if (
-    !dock.pane.files.some((file) => file.id === fileId) ||
-    dock.pane.activeFileId === fileId
-  ) {
+export function selectDockTerminal(dock: ProjectTerminalDock, fileId: string): ProjectTerminalDock {
+  if (!dock.pane.files.some((file) => file.id === fileId) || dock.pane.activeFileId === fileId) {
     return dock;
   }
   return { ...dock, pane: { ...dock.pane, activeFileId: fileId } };
@@ -197,10 +177,7 @@ export function mapProjectTerminal(
   return found ? next : docks;
 }
 
-export function withDockOpen(
-  dock: ProjectTerminalDock,
-  open: boolean,
-): ProjectTerminalDock {
+export function withDockOpen(dock: ProjectTerminalDock, open: boolean): ProjectTerminalDock {
   return dock.open === open ? dock : { ...dock, open };
 }
 
@@ -226,9 +203,7 @@ export function withDockSize(
   return next === dock.size ? dock : { ...dock, size: next };
 }
 
-export function projectTerminalFileIds(
-  docks: ProjectTerminalDock[],
-): string[] {
+export function projectTerminalFileIds(docks: ProjectTerminalDock[]): string[] {
   const ids: string[] = [];
   for (const dock of docks) {
     for (const file of dock.pane.files) {
@@ -238,10 +213,7 @@ export function projectTerminalFileIds(
   return ids;
 }
 
-export function dockGridStyle(
-  side: DockSide | null,
-  size: number,
-): CSSProperties {
+export function dockGridStyle(side: DockSide | null, size: number): CSSProperties {
   if (!side) {
     return {
       gridTemplateRows: "minmax(0, 1fr)",
@@ -278,11 +250,7 @@ export function dockGridStyle(
   };
 }
 
-export function applyDockGridStyle(
-  el: HTMLElement,
-  side: DockSide | null,
-  size: number,
-): void {
+export function applyDockGridStyle(el: HTMLElement, side: DockSide | null, size: number): void {
   const style = dockGridStyle(side, size);
   el.style.gridTemplateRows = String(style.gridTemplateRows ?? "");
   el.style.gridTemplateColumns = String(style.gridTemplateColumns ?? "");
@@ -314,10 +282,7 @@ export function splitProjectTerminalsForMove(
   return { moving, remaining };
 }
 
-function projectPathsOf(
-  tabs: WorkspaceTab[],
-  sessions: Session[],
-): Set<string> {
+function projectPathsOf(tabs: WorkspaceTab[], sessions: Session[]): Set<string> {
   const paths = new Set<string>();
   for (const tab of tabs) {
     const cwd = workspaceTabCwd(tab, sessions);

@@ -12,8 +12,7 @@
  * is exactly what CodeMirror defaults to. It is kept so the editor still renders
  * if style-src nonce hardening is ever turned back on.
  */
-const styleNonce =
-  document.querySelector<HTMLStyleElement>("style[nonce]")?.nonce ?? "";
+const styleNonce = document.querySelector<HTMLStyleElement>("style[nonce]")?.nonce ?? "";
 
 export function cspStyleNonce(): string {
   return styleNonce;
