@@ -12,6 +12,8 @@
 
 </div>
 
+<img src="public/logo.png" alt="wavex" width="1024" height="576" />
+
 ---
 
 wavex drives the agent CLIs installed on your machine through your own
