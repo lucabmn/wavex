@@ -72,6 +72,29 @@ jobs:
           includeUpdaterJson: true
           args: --bundles app,dmg --target aarch64-apple-darwin
 
+      - name: Notarize and staple the disk image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          DMG=$(find target -type f -path '*/bundle/dmg/*.dmg' -print -quit)
+          [ -n "$DMG" ]
+
+          # Tauri notarizes and staples the .app, then only code-signs the disk
+          # image, so the DMG is submitted here or it reaches users without a
+          # ticket and Gatekeeper has to ask Apple online to open it.
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_PASSWORD" \
+            --wait
+          xcrun stapler staple "$DMG"
+
+          # tauri-action already uploaded the unstapled disk image, and stapling
+          # rewrites the file under an unchanged name, so the release asset is
+          # replaced before anything verifies or publishes it.
+          gh release upload "$GITHUB_REF_NAME" "$DMG" --clobber
+
       - name: Verify Gatekeeper and updater artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
