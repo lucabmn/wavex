@@ -3066,6 +3066,42 @@ fn write_attachment_sync(name: &str, data: &str) -> Result<String, String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Persist an image a turn generated. It lives in app data rather than the
+/// temp dir so the transcript can still show it after a restart.
+#[tauri::command]
+pub async fn write_generated_image(
+    app: tauri::AppHandle,
+    name: String,
+    data: String,
+) -> Result<String, String> {
+    use tauri::Manager;
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("generated-images");
+    tauri::async_runtime::spawn_blocking(move || {
+        let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &data)
+            .map_err(|_| "Image data is not valid base64.".to_string())?;
+        if bytes.len() as u64 > MAX_ATTACHMENT_EMBED_BYTES {
+            return Err(format!(
+                "Image is too large to store (maximum {} MB).",
+                MAX_ATTACHMENT_EMBED_BYTES / 1024 / 1024
+            ));
+        }
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let path = dir.join(format!("{}-{}", stamp, safe_attachment_name(&name)));
+        std::fs::write(&path, bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+        Ok(path.to_string_lossy().into_owned())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Write base64 bytes to a path the user picked in a save dialog.
 #[tauri::command]
 pub async fn write_file_base64(path: String, data: String) -> Result<(), String> {

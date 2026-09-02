@@ -623,7 +623,9 @@ function TitleBarComponent({
           </div>
         </>
       ) : null}
-      {mode && onModeChange ? (
+      {/* The rail owns the switch when it is open; this is the fallback for a
+          collapsed rail, matching how Go to File and New session appear there. */}
+      {railClosed && mode && onModeChange ? (
         <div className="flex shrink-0 items-center border-r border-content/10 px-2">
           <ModeSwitch mode={mode} onChange={onModeChange} />
         </div>

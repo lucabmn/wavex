@@ -118,6 +118,8 @@ export type Block = {
   secondOpinion?: SecondOpinionMeta;
   /** Note chip shown on this user turn. Body is not stored; the harness already received it. */
   noteCard?: NoteCardMeta;
+  /** This user turn asked for an image, so resending it must ask again. */
+  imageRequest?: boolean;
 };
 
 /**

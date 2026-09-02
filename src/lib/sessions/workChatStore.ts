@@ -24,6 +24,13 @@ import {
   type HarnessEvent,
 } from "../harness";
 import { cancelScheduledFlush, scheduleHarnessFlush, type ScheduledFlush } from "../harness/flush";
+import {
+  GENERATED_IMAGE_MIME,
+  buildImagePrompt,
+  extractGeneratedSvg,
+  generatedImageName,
+} from "../harness/imageGeneration";
+import { writeGeneratedImage } from "../fs";
 import type { ApprovalDecision } from "../harness/types";
 import { respondHarnessApproval, respondHarnessQuestion } from "../harness/registry";
 import type { UserQuestionReply } from "../userQuestion";
@@ -281,14 +288,23 @@ async function persist(id: string): Promise<void> {
   set({ summaries });
 }
 
+export type SendWorkChatOptions = {
+  /** Ask the harness for an image instead of an answer. */
+  image?: boolean;
+};
+
 export async function sendWorkChatTurn(
   id: string,
   text: string,
   attachments: Attachment[] = [],
+  options: SendWorkChatOptions = {},
 ): Promise<void> {
   const chat = findWorkChat(id);
   if (!chat || chat.busy) return;
   if (!text.trim() && attachments.length === 0) return;
+  // The transcript shows what the user asked for; the harness gets the
+  // output-shape instructions wrapped around it.
+  const harnessText = options.image ? buildImagePrompt(text) : text;
 
   const visible = displayAttachments(attachments);
   const seed = workChatTitleFromPrompt(text, visible);
@@ -318,7 +334,13 @@ export async function sendWorkChatTurn(
     return;
   }
 
-  patchChat(id, (current) => appendUser({ ...current, title: titled }, text, visible));
+  patchChat(id, (current) => {
+    const next = appendUser({ ...current, title: titled }, text, visible);
+    if (!options.image) return next;
+    const blocks = next.blocks.slice();
+    blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], imageRequest: true };
+    return { ...next, blocks };
+  });
   const generation = bumpTurn(id);
 
   if (firstTurn && titled === seed) {
@@ -343,7 +365,7 @@ export async function sendWorkChatTurn(
       model: chat.model,
       modelSettings: chat.modelSettings,
       runtimeMode: chat.runtimeMode,
-      text,
+      text: harnessText,
       attachments: prepared,
       onEvent: (event) => {
         if (turnGeneration.get(id) !== generation) return;
@@ -360,9 +382,54 @@ export async function sendWorkChatTurn(
     if (turnGeneration.get(id) === generation) {
       flushEvents();
       patchChat(id, stopStreaming);
+      if (options.image) await collectGeneratedImage(id, text);
       await persist(id);
     }
   }
+}
+
+/**
+ * Turn the SVG the agent just wrote into an image block.
+ *
+ * The markup is written to app data first, so the stored transcript keeps a
+ * file reference rather than the payload and the picture survives a restart.
+ * A reply that is not an image is left alone — the user still sees whatever
+ * the harness said, which is how they find out it refused.
+ */
+async function collectGeneratedImage(id: string, request: string): Promise<void> {
+  const chat = findWorkChat(id);
+  const last = chat?.blocks[chat.blocks.length - 1];
+  if (!last || last.role !== "assistant") return;
+  const svg = extractGeneratedSvg(last.text);
+  if (!svg) return;
+
+  const name = generatedImageName(request);
+  const data = btoa(unescape(encodeURIComponent(svg)));
+  const path = await writeGeneratedImage(name, data).catch(() => null);
+  if (!path) return;
+
+  patchChat(id, (current) => ({
+    ...current,
+    blocks: current.blocks.map((block) =>
+      block.id === last.id
+        ? {
+            ...block,
+            text: "",
+            attachments: [
+              {
+                id: crypto.randomUUID(),
+                name,
+                mimeType: GENERATED_IMAGE_MIME,
+                kind: "image" as const,
+                size: svg.length,
+                path,
+                data,
+              },
+            ],
+          }
+        : block,
+    ),
+  }));
 }
 
 export async function stopWorkChat(id: string): Promise<void> {
@@ -418,7 +485,9 @@ export async function resendWorkChatTurn(
   if (!prompt.trim() && attachments.length === 0) return;
 
   patchChat(id, (current) => ({ ...current, blocks: current.blocks.slice(0, index) }));
-  await sendWorkChatTurn(id, prompt, attachments);
+  // An image turn has to be resent as an image turn, or regenerating a picture
+  // answers with prose.
+  await sendWorkChatTurn(id, prompt, attachments, { image: source.imageRequest === true });
 }
 
 /** Regenerate the assistant reply to the user turn that produced `blockId`. */

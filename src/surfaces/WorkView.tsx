@@ -43,6 +43,8 @@ import { AgentTranscript } from "./AgentTranscript";
 type Props = {
   mode: AppMode;
   onModeChange: (mode: AppMode) => void;
+  /** The project rail is showing, so it owns the traffic lights and the switch. */
+  besideRail?: boolean;
 };
 
 /**
@@ -50,7 +52,7 @@ type Props = {
  * project, cwd, worktree, file, or source-control affordances. The whole
  * window belongs to it, so it carries its own top chrome.
  */
-export function WorkView({ mode, onModeChange }: Props) {
+export function WorkView({ mode, onModeChange, besideRail = false }: Props) {
   const state = useSyncExternalStore(subscribeWorkChats, getWorkChatState);
   const [query, setQuery] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -154,12 +156,14 @@ export function WorkView({ mode, onModeChange }: Props) {
       className="flex h-full min-h-0 min-w-0 flex-1 text-content"
     >
       <aside className="flex w-64 shrink-0 flex-col border-r border-content/10">
+        {/* With the rail open it already carries the traffic lights and the
+            switch; this strip only has to exist so the window stays draggable. */}
         <div
           className="flex h-10 shrink-0 select-none items-center gap-2 px-1.5"
           data-tauri-drag-region="deep"
         >
-          {IS_MAC ? <div className="w-[68px] shrink-0" /> : null}
-          <ModeSwitch mode={mode} onChange={onModeChange} />
+          {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
+          {besideRail ? null : <ModeSwitch mode={mode} onChange={onModeChange} />}
         </div>
 
         <div className="flex items-center gap-1 px-2 pb-2">
@@ -267,7 +271,9 @@ export function WorkView({ mode, onModeChange }: Props) {
               }
               onModelChange={(harness, model) => setWorkChatModel(active.id, harness, model)}
               onModelSettingsChange={(settings) => setWorkChatModelSettings(active.id, settings)}
-              onSubmit={(text, attachments) => void sendWorkChatTurn(active.id, text, attachments)}
+              onSubmit={(text, attachments, options) =>
+                void sendWorkChatTurn(active.id, text, attachments, options)
+              }
               onStop={() => void stopWorkChat(active.id)}
             />
           </>

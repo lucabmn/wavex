@@ -4,6 +4,7 @@ import type { HarnessEvent, SendTurnInput } from "@/lib/harness/types";
 const stored = new Map<string, unknown>();
 const deleted: string[] = [];
 const upserted: { id: string; title: string }[] = [];
+const written: string[] = [];
 const forgotten: string[] = [];
 const cancelled: string[] = [];
 let live = true;
@@ -74,6 +75,17 @@ vi.mock("@/lib/harness/flush", () => ({
   }),
 }));
 
+vi.mock("@/lib/fs", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/fs")>("@/lib/fs");
+  return {
+    ...actual,
+    writeGeneratedImage: async (name: string) => {
+      written.push(name);
+      return `/tmp/generated/${name}`;
+    },
+  };
+});
+
 vi.mock("@/lib/harness/registry", () => ({
   respondHarnessApproval: () => undefined,
   respondHarnessQuestion: () => undefined,
@@ -97,6 +109,7 @@ beforeEach(() => {
   stored.clear();
   deleted.length = 0;
   upserted.length = 0;
+  written.length = 0;
   forgotten.length = 0;
   cancelled.length = 0;
   listed = [];
@@ -177,6 +190,74 @@ describe("sendWorkChatTurn", () => {
     const blocks = store.findWorkChat(id)?.blocks ?? [];
     expect(blocks[blocks.length - 1].text).toBe("codex exploded");
     expect(store.findWorkChat(id)?.busy).toBe(false);
+  });
+});
+
+describe("image generation", () => {
+  it("asks the harness for an svg and lands it as an image block", async () => {
+    let asked = "";
+    turn = async (input) => {
+      asked = input.text;
+      input.onEvent({
+        type: "message.delta",
+        text: 'Here:\n```svg\n<svg viewBox="0 0 1 1"><rect /></svg>\n```',
+      });
+    };
+
+    const id = await store.createWorkChat("claude");
+    await store.sendWorkChatTurn(id, "a red circle", [], { image: true });
+    await settle();
+
+    // The transcript keeps what the user typed; the harness got the wrapper.
+    expect(asked).toContain("```svg");
+    expect(asked).toContain("a red circle");
+    expect(written).toEqual(["a-red-circle.svg"]);
+
+    const blocks = store.findWorkChat(id)?.blocks ?? [];
+    expect(blocks[0].text).toBe("a red circle");
+    expect(blocks[0].imageRequest).toBe(true);
+    expect(blocks[1].text).toBe("");
+    expect(blocks[1].attachments?.[0]).toMatchObject({
+      name: "a-red-circle.svg",
+      mimeType: "image/svg+xml",
+      kind: "image",
+      path: "/tmp/generated/a-red-circle.svg",
+    });
+  });
+
+  /** A refusal must stay readable rather than vanishing into an empty block. */
+  it("leaves a reply that is not an image alone", async () => {
+    turn = async (input) => {
+      input.onEvent({ type: "message.delta", text: "I cannot draw that." });
+    };
+    const id = await store.createWorkChat("claude");
+    await store.sendWorkChatTurn(id, "a red circle", [], { image: true });
+    await settle();
+
+    expect(written).toEqual([]);
+    expect(store.findWorkChat(id)?.blocks[1].text).toBe("I cannot draw that.");
+  });
+
+  it("regenerates an image turn as an image turn", async () => {
+    const prompts: string[] = [];
+    turn = async (input) => {
+      prompts.push(input.text);
+      input.onEvent({
+        type: "message.delta",
+        text: '```svg\n<svg viewBox="0 0 1 1"><rect /></svg>\n```',
+      });
+    };
+    const id = await store.createWorkChat("claude");
+    await store.sendWorkChatTurn(id, "a red circle", [], { image: true });
+    await settle();
+    const userBlock = store.findWorkChat(id)!.blocks[0];
+
+    await store.regenerateWorkChatTurn(id, userBlock.id);
+    await settle();
+
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toContain("```svg");
+    expect(store.findWorkChat(id)?.blocks[1].attachments).toHaveLength(1);
   });
 });
 

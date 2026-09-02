@@ -77,6 +77,8 @@ import { HarnessIcon } from "./HarnessIcon";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 import { ProjectMascot } from "./ProjectMascot";
 import { RailAction, RailSearch } from "./RailAction";
+import { ModeSwitch } from "./ModeSwitch";
+import type { AppMode } from "../lib/workspace/appMode";
 import { RemoveProjectDialog } from "./RemoveProjectDialog";
 import { DevModeSlot, TabVisitNav } from "./TitleBar";
 import { SidebarUpdateFooter } from "./SidebarUpdate";
@@ -143,11 +145,15 @@ type Props = {
   updateNotice?: InstalledUpdate | null;
   onOpenWhatsNew?: (version: string) => void;
   onDismissUpdate?: () => void;
+  mode?: AppMode;
+  onModeChange?: (mode: AppMode) => void;
 };
 
 export function ProjectRail({
   cwd,
   recents,
+  mode,
+  onModeChange,
   inboxUnseen = false,
   busyPaths,
   canGoBack = false,
@@ -401,6 +407,11 @@ export function ProjectRail({
       ) : (
         <>
           <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
+            {mode && onModeChange ? (
+              <div className="pb-1.5">
+                <ModeSwitch mode={mode} onChange={onModeChange} stretch />
+              </div>
+            ) : null}
             <RailSearch
               label="Search"
               icon={Search}

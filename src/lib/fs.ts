@@ -279,6 +279,11 @@ export async function pickFolder(title = "Open project"): Promise<string | null>
   return typeof selected === "string" && selected ? selected : null;
 }
 
+/** Store an image a turn generated, and return where it landed. */
+export function writeGeneratedImage(name: string, data: string): Promise<string> {
+  return invoke("write_generated_image", { name, data });
+}
+
 export function readFileBase64(path: string): Promise<string> {
   return invoke("read_file_base64", { path });
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
-import { ArrowUp, ImagePlus, Square } from "./icons";
+import { ArrowUp, ImagePlus, Square, WandSparkles } from "./icons";
 import { AttachmentChip } from "./AttachmentChip";
 import { ModelPicker } from "./ModelPicker";
 import { ModelSettings } from "./ModelSettings";
@@ -13,6 +13,7 @@ import {
   revokeAttachment,
 } from "../lib/attachments";
 import { pickFiles } from "../lib/fs";
+import { harnessGeneratesImages } from "../lib/harness/imageGeneration";
 import { harnessSupportsAttachments, type Attachment, type HarnessId } from "../lib/session";
 import type { UserQuestionPrompt, UserQuestionReply } from "../lib/userQuestion";
 
@@ -33,7 +34,7 @@ type Props = {
   handleRef?: Ref<ChatComposerHandle>;
   onModelChange: (harness: HarnessId, model: string) => void;
   onModelSettingsChange: (settings: Record<string, string>) => void;
-  onSubmit: (text: string, attachments: Attachment[]) => void;
+  onSubmit: (text: string, attachments: Attachment[], options: { image: boolean }) => void;
   onStop: () => void;
 };
 
@@ -62,7 +63,9 @@ export function ChatComposer({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [hasText, setHasText] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [imageMode, setImageMode] = useState(false);
   const attachmentsSupported = harnessSupportsAttachments(harness);
+  const canGenerateImages = harnessGeneratesImages(harness);
 
   useImperativeHandle(handleRef, () => ({ focus: () => field.current?.focus() }), []);
 
@@ -74,11 +77,16 @@ export function ChatComposer({
       el.style.height = "auto";
     }
     setHasText(false);
+    setImageMode(false);
     setAttachments((current) => {
       for (const file of current) revokeAttachment(file);
       return [];
     });
   }, [chatId]);
+
+  useEffect(() => {
+    if (!canGenerateImages) setImageMode(false);
+  }, [canGenerateImages]);
 
   const resize = useCallback((el: HTMLTextAreaElement) => {
     el.style.height = "auto";
@@ -96,8 +104,9 @@ export function ChatComposer({
   const submit = useCallback(() => {
     const el = field.current;
     const text = el?.value ?? "";
-    if (!text.trim() && attachments.length === 0) return;
-    onSubmit(text, attachments);
+    // An image request needs words; there is nothing to draw from a bare file.
+    if (!text.trim() && (imageMode || attachments.length === 0)) return;
+    onSubmit(text, attachments, { image: imageMode });
     if (el) {
       el.value = "";
       resize(el);
@@ -105,7 +114,7 @@ export function ChatComposer({
     setHasText(false);
     // Ownership moves to the transcript; the chips must not be revoked here.
     setAttachments([]);
-  }, [attachments, onSubmit, resize]);
+  }, [attachments, imageMode, onSubmit, resize]);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -172,7 +181,7 @@ export function ChatComposer({
           ref={field}
           rows={1}
           spellCheck={false}
-          placeholder="Ask anything…"
+          placeholder={imageMode ? "Describe an image…" : "Ask anything…"}
           aria-label="Message"
           className="max-h-50 w-full resize-none overflow-x-hidden whitespace-pre-wrap break-words bg-transparent px-3 py-3 font-sans text-sm leading-5.5 outline-none"
           onKeyDown={onKeyDown}
@@ -200,6 +209,30 @@ export function ChatComposer({
           >
             <ImagePlus className="size-3.5" strokeWidth={1.5} />
           </button>
+
+          {canGenerateImages ? (
+            <button
+              type="button"
+              aria-pressed={imageMode}
+              title={
+                imageMode
+                  ? "Answer with an image — click to go back to text"
+                  : "Answer with an image"
+              }
+              aria-label="Answer with an image"
+              className={`grid size-6.5 place-items-center rounded-md ${
+                imageMode
+                  ? "bg-content/15 text-content"
+                  : "text-content/50 hover:bg-content/10 hover:text-content"
+              }`}
+              onClick={() => {
+                setImageMode((on) => !on);
+                field.current?.focus();
+              }}
+            >
+              <WandSparkles className="size-3.5" strokeWidth={1.5} />
+            </button>
+          ) : null}
 
           <div className="flex min-w-0 flex-1 items-center gap-1">
             <ModelPicker
@@ -233,7 +266,7 @@ export function ChatComposer({
               type="button"
               title="Send"
               aria-label="Send"
-              disabled={!hasText && attachments.length === 0}
+              disabled={!hasText && (imageMode || attachments.length === 0)}
               onClick={submit}
               className="grid size-6.5 place-items-center rounded-md bg-white text-black hover:bg-white/90 disabled:cursor-default disabled:bg-white/30 disabled:text-black/40 disabled:hover:bg-white/30"
             >

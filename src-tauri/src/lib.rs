@@ -213,6 +213,7 @@ pub fn run() {
             fs::read_file_base64,
             fs::write_attachment,
             fs::write_file_base64,
+            fs::write_generated_image,
             fs::read_text_file,
             fs::write_text_file,
             skills::list_skills,
