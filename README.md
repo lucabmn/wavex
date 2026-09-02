@@ -69,12 +69,9 @@ macOS on Apple Silicon. Download the `.dmg` from
 [Releases](https://github.com/lucabmn/wavex/releases/latest), open it, and drag
 wavex to Applications.
 
-The build is not notarized yet. If Gatekeeper blocks the first launch, right
-click the app and choose **Open**, or clear the quarantine flag:
-
-```sh
-xattr -d com.apple.quarantine /Applications/wavex.app
-```
+Starting with v0.1.1, release builds are signed with a Developer ID certificate,
+notarized by Apple, and stapled before publication. wavex also verifies signed
+update bundles before installing them.
 
 ## Build from source
 

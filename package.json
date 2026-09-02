@@ -1,6 +1,6 @@
 {
   "name": "wavex-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "lint": "oxlint",
     "format": "oxlint --fix && oxfmt --write",
-    "check": "pnpm run check:web && pnpm run check:rust",
+    "check": "pnpm run check:distribution && pnpm run check:web && pnpm run check:rust",
+    "check:distribution": "node scripts/verify-distribution.mjs",
     "check:web": "oxlint && oxfmt --check && tsc --noEmit && vitest run && vite build",
     "check:rust": "cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test",
     "set-version": "node scripts/bump-version.mjs",

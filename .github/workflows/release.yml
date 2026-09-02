@@ -10,6 +10,14 @@ permissions:
 jobs:
   release:
     runs-on: macos-latest
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -18,26 +26,101 @@ jobs:
           node-version: 22
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Verify tag matches manifests and CHANGELOG
-        run: node scripts/verify-release.mjs "${GITHUB_REF_NAME#v}"
-
-      - run: pnpm exec tauri build --bundles app,dmg
-
-      - name: Publish GitHub Release
+      - name: Verify release inputs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          DMG=$(find target/release/bundle/dmg -maxdepth 1 -name '*.dmg' -print -quit)
-          [ -n "$DMG" ] || { echo "No .dmg produced" >&2; exit 1; }
-          node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/notes.md"
-          gh release create "$GITHUB_REF_NAME" \
-            --title "${GITHUB_REF_NAME}" \
-            --notes-file "$RUNNER_TEMP/notes.md" \
-            "$DMG"
+          node scripts/verify-release.mjs "${GITHUB_REF_NAME#v}"
+          node scripts/verify-distribution.mjs
+          for name in \
+            APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID \
+            TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+            [ -n "${!name:-}" ] || { echo "Missing required secret: $name" >&2; exit 1; }
+          done
+          [ "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = false ] || {
+            echo "GitHub Releases cannot serve the unauthenticated updater while $GITHUB_REPOSITORY is private." >&2
+            exit 1
+          }
+
+      - name: Read release notes
+        id: notes
+        run: |
+          delimiter="notes-$(openssl rand -hex 16)"
+          echo "body<<$delimiter" >> "$GITHUB_OUTPUT"
+          node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "$delimiter" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed and notarized release draft
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: wavex v__VERSION__
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+          args: --bundles app,dmg --target aarch64-apple-darwin
+
+      - name: Verify Gatekeeper and updater artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          APP=$(find target -type d -path '*/bundle/macos/wavex.app' -print -quit)
+          DMG=$(find target -type f -path '*/bundle/dmg/*.dmg' -print -quit)
+          UPDATE=$(find target -type f -path '*/bundle/macos/*.app.tar.gz' -print -quit)
+          [ -n "$APP" ] && [ -n "$DMG" ] && [ -n "$UPDATE" ]
+          [ -s "$UPDATE.sig" ]
+
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv --verbose=4 "$APP" 2> "$RUNNER_TEMP/codesign.txt"
+          grep -q 'Authority=Developer ID Application:' "$RUNNER_TEMP/codesign.txt"
+          grep -Eq 'flags=.*runtime' "$RUNNER_TEMP/codesign.txt"
+          xcrun stapler validate "$APP"
+          xcrun stapler validate "$DMG"
+          spctl --assess --type execute --verbose=4 "$APP"
+          spctl --assess --type open --context context:primary-signature --verbose=4 "$DMG"
+
+          ASSETS=$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')
+          grep -qx 'latest.json' <<< "$ASSETS"
+          grep -qE '\.dmg$' <<< "$ASSETS"
+          grep -qE '\.app\.tar\.gz$' <<< "$ASSETS"
+          grep -qE '\.app\.tar\.gz\.sig$' <<< "$ASSETS"
+
+      - name: Publish verified release
+        id: publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false
+
+      - name: Smoke-test the public updater feed
+        run: |
+          set -euo pipefail
+          FEED="$RUNNER_TEMP/latest.json"
+          curl --fail --location --retry 10 --retry-all-errors --retry-delay 3 \
+            "https://github.com/lucabmn/wavex/releases/latest/download/latest.json" \
+            --output "$FEED"
+          node - "$FEED" "${GITHUB_REF_NAME#v}" <<'NODE'
+          const [path, version] = process.argv.slice(2);
+          const feed = JSON.parse(require("node:fs").readFileSync(path, "utf8"));
+          const platform = feed.platforms?.["darwin-aarch64"];
+          if (feed.version !== version || !platform?.signature || !platform?.url) process.exit(1);
+          if (!platform.url.startsWith("https://github.com/lucabmn/wavex/releases/download/")) process.exit(1);
+          NODE
+
+      - name: Return a failed publication to draft
+        if: failure() && steps.publish.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=true

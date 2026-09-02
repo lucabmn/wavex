@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "wavex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.wavex.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -38,7 +38,7 @@
     }
   },
   "bundle": {
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": ["app", "dmg"],
     "icon": [
@@ -53,13 +53,13 @@
     },
     "macOS": {
       "entitlements": "Entitlements.plist",
-      "signingIdentity": "-"
+      "hardenedRuntime": true
     }
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
-      "endpoints": []
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM2MjI2NEQ0RjFGNkUwREIKUldUYjRQYngxR1FpTm5lYmhUVnBLcmcyUWdmSmhrbU9zbFV0ajZHcjhWWEVqeGJkcWxuMnN6M0MK",
+      "endpoints": ["https://github.com/lucabmn/wavex/releases/latest/download/latest.json"]
     }
   }
 }
