@@ -4,7 +4,6 @@ mod checkpoint;
 mod cursor_store;
 mod fs;
 mod harness;
-mod linear;
 #[cfg(target_os = "macos")]
 mod macos;
 mod menu;
@@ -189,13 +188,6 @@ pub fn run() {
             fs::git_github_work_item_thread,
             fs::git_github_work_item_comment,
             fs::git_github_pr_diff,
-            linear::linear_status,
-            linear::linear_set_token,
-            linear::linear_list_teams,
-            linear::linear_list_issues,
-            linear::linear_issue_details,
-            linear::linear_issue_thread,
-            linear::linear_issue_comment,
             fs::git_branches,
             fs::git_checkout,
             fs::git_create_branch,

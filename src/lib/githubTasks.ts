@@ -1,13 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  linearConnected,
-  linearTeamIdsForFetch,
-  listLinearIssues,
-  listLinearTeams,
-  loadHiddenLinearTeamIds,
-  type LinearIssue,
-} from "./linear";
-import {
   collectRailProjects,
   normalizeProjectPath,
   sameProjectPath,
@@ -15,7 +7,7 @@ import {
 } from "./recents";
 
 export type GithubTaskKind = "issue" | "pr";
-export type InboxKind = GithubTaskKind | "linear";
+export type InboxKind = GithubTaskKind;
 
 export type GithubLabel = {
   name: string;
@@ -40,17 +32,12 @@ export type GithubWorkItem = {
   repo: string;
 };
 
-export type InboxProvider = "github" | "linear";
+export type InboxProvider = "github";
 
 export type InboxItem = Omit<GithubWorkItem, "kind"> & {
   kind: InboxKind;
   projectPath: string;
   provider: InboxProvider;
-  id?: string;
-  identifier?: string;
-  teamId?: string;
-  teamName?: string;
-  stateType?: string;
 };
 
 export type GithubWorkItemDetails = {
@@ -107,9 +94,7 @@ export type GithubWorkItemQuery = {
   search: string;
 };
 
-export type InboxQuery = Omit<GithubWorkItemQuery, "kind"> & {
-  linearHiddenTeamIds?: string[];
-};
+export type InboxQuery = Omit<GithubWorkItemQuery, "kind">;
 
 export type InboxProviderErrors = Partial<Record<InboxProvider, string>>;
 
@@ -156,8 +141,7 @@ export function inboxListCacheKey(
     .map((project) => normalizeProjectPath(project.path))
     .sort()
     .join("|");
-  const teams = [...(query.linearHiddenTeamIds ?? [])].sort().join(",");
-  return `${query.assignedToMe ? 1 : 0}:${query.state}:${paths}:${teams}`;
+  return `${query.assignedToMe ? 1 : 0}:${query.state}:${paths}`;
 }
 
 export function peekInboxList(
@@ -182,10 +166,7 @@ export function inboxListIsFresh(
   now = Date.now(),
 ): boolean {
   const key = inboxListCacheKey(projects, query);
-  return (
-    inboxListCache?.key === key &&
-    now - inboxListCache.fetchedAt < INBOX_CACHE_FRESH_MS
-  );
+  return inboxListCache?.key === key && now - inboxListCache.fetchedAt < INBOX_CACHE_FRESH_MS;
 }
 
 export async function githubRepo(cwd: string): Promise<string> {
@@ -238,11 +219,7 @@ export function inboxPersonAvatarUrl(
   return "";
 }
 
-export function formatRelativeTime(
-  iso: string,
-  now = Date.now(),
-  locale?: string,
-): string {
+export function formatRelativeTime(iso: string, now = Date.now(), locale?: string): string {
   const then = Date.parse(iso);
   if (!Number.isFinite(then)) return "";
   const delta = Math.round((then - now) / 1000);
@@ -266,20 +243,13 @@ export function formatRelativeTime(
     amount = Math.abs(value);
   }
   try {
-    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
-      value,
-      unit,
-    );
+    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(value, unit);
   } catch {
     return "";
   }
 }
 
-export function detailsCacheKey(
-  cwd: string,
-  kind: GithubTaskKind,
-  number: number,
-): string {
+export function detailsCacheKey(cwd: string, kind: GithubTaskKind, number: number): string {
   return `${normalizeProjectPath(cwd)}:${kind}:${number}`;
 }
 
@@ -296,10 +266,11 @@ export async function githubWorkItemDetails(
   kind: GithubTaskKind,
   number: number,
 ): Promise<GithubWorkItemDetails> {
-  const details = await invoke<GithubWorkItemDetails>(
-    "git_github_work_item_details",
-    { cwd, kind, number },
-  );
+  const details = await invoke<GithubWorkItemDetails>("git_github_work_item_details", {
+    cwd,
+    kind,
+    number,
+  });
   detailsByKey.set(detailsCacheKey(cwd, kind, number), details);
   return details;
 }
@@ -393,17 +364,11 @@ export function prDiffCacheKey(cwd: string, number: number): string {
   return `${normalizeProjectPath(cwd)}:pr:${number}`;
 }
 
-export function peekGithubPrDiff(
-  cwd: string,
-  number: number,
-): GithubPrDiff | null {
+export function peekGithubPrDiff(cwd: string, number: number): GithubPrDiff | null {
   return prDiffByKey.get(prDiffCacheKey(cwd, number)) ?? null;
 }
 
-export async function githubPrDiff(
-  cwd: string,
-  number: number,
-): Promise<GithubPrDiff> {
+export async function githubPrDiff(cwd: string, number: number): Promise<GithubPrDiff> {
   const key = prDiffCacheKey(cwd, number);
   const pending = prDiffInflight.get(key);
   if (pending) return pending;
@@ -475,73 +440,17 @@ async function fetchInboxItems(
       }));
     }),
   );
-  const github = collectInboxResults(
-    await Promise.allSettled(githubJobs),
-    preferredPaths,
-  );
+  const github = collectInboxResults(await Promise.allSettled(githubJobs), preferredPaths);
   const errors: InboxProviderErrors = {};
   if (github.error && grouped.length > 0) errors.github = github.error;
 
-  let linearItems: InboxItem[] = [];
-  if ((await linearConnected()).connected) {
-    try {
-      linearItems = await fetchLinearInboxItems(query);
-    } catch (error) {
-      errors.linear = inboxErrorMessage(error);
-    }
-  }
-
   return {
-    items: dedupeInboxItems([...github.items, ...linearItems], preferredPaths),
+    items: dedupeInboxItems(github.items, preferredPaths),
     errors,
   };
 }
 
-async function fetchLinearInboxItems(query: InboxQuery): Promise<InboxItem[]> {
-  const hiddenIds = query.linearHiddenTeamIds ?? loadHiddenLinearTeamIds();
-  let teamIds: string[] | null = null;
-  if (hiddenIds.length > 0) {
-    teamIds = linearTeamIdsForFetch(await listLinearTeams(), hiddenIds);
-    if (teamIds?.length === 0) return [];
-  }
-  const issues = await listLinearIssues({
-    assignedToMe: query.assignedToMe,
-    state: query.state,
-    teamIds: teamIds ?? [],
-    limit: query.state === "all" ? INBOX_ALL_LIMIT : undefined,
-  });
-  const hidden = new Set(hiddenIds);
-  return issues
-    .filter((issue) => hidden.size === 0 || !hidden.has(issue.teamId))
-    .map(linearIssueToInboxItem);
-}
-
-function linearIssueToInboxItem(issue: LinearIssue): InboxItem {
-  return {
-    provider: "linear",
-    kind: "linear",
-    id: issue.id,
-    identifier: issue.identifier,
-    number: issue.number,
-    title: issue.title,
-    url: issue.url,
-    state: issue.state,
-    stateType: issue.stateType,
-    updatedAt: issue.updatedAt,
-    labels: issue.labels,
-    assignees: issue.assignees,
-    draft: false,
-    repo: issue.repo,
-    teamId: issue.teamId,
-    teamName: issue.teamName,
-    projectPath: issue.projectPath || "",
-  };
-}
-
-export function inboxProjectsForRail(
-  recents: RecentProject[],
-  cwd: string,
-): RecentProject[] {
+export function inboxProjectsForRail(recents: RecentProject[], cwd: string): RecentProject[] {
   const map = collectRailProjects(recents, cwd);
   const current = cwd ? map.get(normalizeProjectPath(cwd)) : undefined;
   const rest = [...map.values()].filter(
@@ -550,9 +459,7 @@ export function inboxProjectsForRail(
   return current ? [current, ...rest] : rest;
 }
 
-export function uniqueInboxProjects(
-  projects: readonly { path: string }[],
-): { path: string }[] {
+export function uniqueInboxProjects(projects: readonly { path: string }[]): { path: string }[] {
   const seen = new Set<string>();
   const unique: { path: string }[] = [];
   for (const project of projects) {
@@ -608,14 +515,7 @@ export function inboxIdentityKey(item: {
   number: number;
   repo: string;
   url: string;
-  identifier?: string;
-  id?: string;
 }): string {
-  if (item.provider === "linear") {
-    const identity = item.identifier?.trim() || item.id?.trim();
-    if (identity) return identity.toLowerCase();
-    return `linear:${item.number}`;
-  }
   const repo = item.repo.trim().toLowerCase();
   if (repo) return `${repo}:${item.kind}:${item.number}`;
   const url = item.url.trim().toLowerCase();
@@ -627,9 +527,7 @@ export function dedupeInboxItems(
   items: readonly InboxItem[],
   preferredPaths: readonly string[] = [],
 ): InboxItem[] {
-  const rank = new Map(
-    preferredPaths.map((path, index) => [normalizeProjectPath(path), index]),
-  );
+  const rank = new Map(preferredPaths.map((path, index) => [normalizeProjectPath(path), index]));
   const best = new Map<string, InboxItem>();
   for (const item of items) {
     const key = inboxIdentityKey(item);
@@ -639,25 +537,17 @@ export function dedupeInboxItems(
   return sortInboxItems([...best.values()]);
 }
 
-function preferInboxItem(
-  next: InboxItem,
-  current: InboxItem,
-  rank: Map<string, number>,
-): boolean {
-  const nextRank =
-    rank.get(normalizeProjectPath(next.projectPath)) ??
-    Number.POSITIVE_INFINITY;
+function preferInboxItem(next: InboxItem, current: InboxItem, rank: Map<string, number>): boolean {
+  const nextRank = rank.get(normalizeProjectPath(next.projectPath)) ?? Number.POSITIVE_INFINITY;
   const currentRank =
-    rank.get(normalizeProjectPath(current.projectPath)) ??
-    Number.POSITIVE_INFINITY;
+    rank.get(normalizeProjectPath(current.projectPath)) ?? Number.POSITIVE_INFINITY;
   if (nextRank !== currentRank) return nextRank < currentRank;
   return next.projectPath.localeCompare(current.projectPath) < 0;
 }
 
 export function sortInboxItems(items: InboxItem[]): InboxItem[] {
   return [...items].sort((a, b) => {
-    const updated =
-      (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0);
+    const updated = (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0);
     if (updated !== 0) return updated;
     if (a.projectPath !== b.projectPath) {
       return a.projectPath.localeCompare(b.projectPath);
@@ -675,17 +565,7 @@ export function githubWorkItemKey(item: GithubWorkItem): string {
   return `${item.repo}:${item.kind}:${item.number}`;
 }
 
-export function inboxItemStatus(item: {
-  kind: InboxKind;
-  state: string;
-  draft: boolean;
-  stateType?: string;
-}): string {
-  if (item.kind === "linear") {
-    const type = item.stateType?.trim().toLowerCase();
-    if (type === "completed" || type === "canceled") return "Closed";
-    return "Open";
-  }
+export function inboxItemStatus(item: { kind: InboxKind; state: string; draft: boolean }): string {
   if (item.draft) return "Draft";
   if (item.state === "merged") return "Merged";
   if (item.state === "closed") return "Closed";
@@ -695,18 +575,11 @@ export function inboxItemStatus(item: {
 export function matchesInboxQuery(item: InboxItem, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
-  const kind =
-    item.kind === "pr"
-      ? "pull request pr"
-      : item.kind === "linear"
-        ? "linear issue"
-        : "issue";
+  const kind = item.kind === "pr" ? "pull request pr" : "issue";
   const haystack = [
     item.title,
     item.repo,
     item.projectPath,
-    item.identifier,
-    item.teamName,
     kind,
     `#${item.number}`,
     String(item.number),
@@ -718,44 +591,18 @@ export function matchesInboxQuery(item: InboxItem, query: string): boolean {
   return haystack.includes(needle);
 }
 
-export function filterInboxItems(
-  items: readonly InboxItem[],
-  query: string,
-): InboxItem[] {
+export function filterInboxItems(items: readonly InboxItem[], query: string): InboxItem[] {
   return items.filter((item) => matchesInboxQuery(item, query));
 }
 
-export function inboxItemRef(item: {
-  provider?: InboxProvider;
-  number: number;
-  identifier?: string;
-}): string {
-  if (item.provider === "linear") {
-    return item.identifier?.trim() || `#${item.number}`;
-  }
+export function inboxItemRef(item: { number: number }): string {
   return `#${item.number}`;
 }
 
-export function inboxStartDraft(item: InboxItem, body?: string): string {
-  if (item.provider === "linear") {
-    const id = item.identifier?.trim() || `Linear #${item.number}`;
-    const title = item.title.trim() || id;
-    const lines = ["Work on this Linear issue:", "", `${id} ${title}`];
-    const url = item.url.trim();
-    if (url) lines.push(url);
-    const description = body?.trim();
-    if (description) {
-      lines.push("", description);
-    }
-    return `${lines.join("\n")}\n`;
-  }
+export function inboxStartDraft(item: InboxItem): string {
   const kind = item.kind === "pr" ? "pull request" : "issue";
   const title = item.title.trim() || `GitHub ${kind} #${item.number}`;
-  const lines = [
-    `Work on this GitHub ${kind}:`,
-    "",
-    `#${item.number} ${title}`,
-  ];
+  const lines = [`Work on this GitHub ${kind}:`, "", `#${item.number} ${title}`];
   const url = item.url.trim();
   if (url) lines.push(url);
   return `${lines.join("\n")}\n`;
@@ -773,27 +620,20 @@ export type InboxComposerCard = {
   prompt: string;
 };
 
-export function inboxComposerCard(
-  item: InboxItem,
-  body?: string,
-): InboxComposerCard {
-  const linear = item.provider === "linear";
+export function inboxComposerCard(item: InboxItem): InboxComposerCard {
   return {
     provider: item.provider,
     kind: item.kind,
     identifier: inboxItemRef(item),
     title: item.title.trim() || inboxItemRef(item),
     url: item.url.trim(),
-    source: linear ? item.teamName || item.repo : item.repo,
+    source: item.repo,
     labels: item.labels.slice(0, 2),
-    prompt: inboxStartDraft(item, body).trimEnd(),
+    prompt: inboxStartDraft(item).trimEnd(),
   };
 }
 
-export function composeInboxMessage(
-  card: InboxComposerCard | undefined,
-  text: string,
-): string {
+export function composeInboxMessage(card: InboxComposerCard | undefined, text: string): string {
   const prompt = card?.prompt.trim() ?? "";
   const note = text.trim();
   if (!prompt) return note;

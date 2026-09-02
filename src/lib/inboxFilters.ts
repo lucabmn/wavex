@@ -1,15 +1,6 @@
-import {
-  filterInboxItems,
-  inboxItemStatus,
-  type InboxItem,
-  type InboxKind,
-  type InboxProvider,
-} from "./githubTasks";
+import { filterInboxItems, inboxItemStatus, type InboxItem, type InboxKind } from "./githubTasks";
 import { normalizeProjectPath } from "./recents";
-import {
-  timeFilterStart,
-  type SessionTimeFilter,
-} from "./sessionFilters";
+import { timeFilterStart, type SessionTimeFilter } from "./sessionFilters";
 
 export type InboxTimeFilter = SessionTimeFilter;
 
@@ -43,27 +34,7 @@ export const DEFAULT_INBOX_FILTERS: InboxFilters = {
   status: DEFAULT_INBOX_STATUS_FILTER,
 };
 
-export type InboxSource = InboxProvider;
-
 const FILTERS_KEY = "wavex.inboxFilters";
-const SOURCE_KEY = "wavex.inboxSource";
-
-export function loadInboxSource(): InboxSource {
-  try {
-    const raw = localStorage.getItem(SOURCE_KEY);
-    return raw === "linear" ? "linear" : "github";
-  } catch {
-    return "github";
-  }
-}
-
-export function saveInboxSource(source: InboxSource) {
-  try {
-    localStorage.setItem(SOURCE_KEY, source);
-  } catch {
-    // private mode / quota
-  }
-}
 
 export function loadInboxFilters(): InboxFilters {
   try {
@@ -105,9 +76,7 @@ export function pruneInboxFilters(
   filters: InboxFilters,
   projectPaths: Iterable<string>,
 ): InboxFilters {
-  const known = new Set(
-    [...projectPaths].map((path) => normalizeProjectPath(path)),
-  );
+  const known = new Set([...projectPaths].map((path) => normalizeProjectPath(path)));
   const hiddenProjects = filters.hiddenProjects.filter((path) =>
     known.has(normalizeProjectPath(path)),
   );
@@ -115,21 +84,13 @@ export function pruneInboxFilters(
   return { ...filters, hiddenProjects };
 }
 
-export function hasActiveInboxFilters(
-  filters: InboxFilters,
-  source?: InboxSource,
-): boolean {
+export function hasActiveInboxFilters(filters: InboxFilters): boolean {
   const statusActive =
-    source === "linear"
-      ? filters.status.open || filters.status.closed
-      : filters.status.open ||
-        filters.status.draft ||
-        filters.status.closed ||
-        filters.status.merged;
+    filters.status.open || filters.status.draft || filters.status.closed || filters.status.merged;
   return (
     filters.assignedToMe ||
-    (source === "linear" ? false : filters.hiddenProjects.length > 0) ||
-    (source === "linear" ? false : filters.hiddenKinds.length > 0) ||
+    filters.hiddenProjects.length > 0 ||
+    filters.hiddenKinds.length > 0 ||
     filters.time !== "all" ||
     statusActive
   );
@@ -146,9 +107,7 @@ export function filterInboxByProject(
   items: readonly InboxItem[],
   hiddenProjects: Iterable<string>,
 ): InboxItem[] {
-  const hidden = new Set(
-    [...hiddenProjects].map((path) => normalizeProjectPath(path)),
-  );
+  const hidden = new Set([...hiddenProjects].map((path) => normalizeProjectPath(path)));
   if (hidden.size === 0) return [...items];
   return items.filter((item) => {
     const path = normalizeProjectPath(item.projectPath);
@@ -195,50 +154,26 @@ export function filterInboxByTime(
   });
 }
 
-export function filterInboxByProvider(
-  items: readonly InboxItem[],
-  source: InboxSource,
-): InboxItem[] {
-  return items.filter((item) => item.provider === source);
-}
-
 export function applyInboxFilters(
   items: readonly InboxItem[],
   filters: InboxFilters,
   query: string,
   now = Date.now(),
-  source?: InboxSource,
 ): InboxItem[] {
-  const scoped = source ? filterInboxByProvider(items, source) : [...items];
-  const hiddenProjects = source === "linear" ? [] : filters.hiddenProjects;
-  const hiddenKinds = source === "linear" ? [] : filters.hiddenKinds;
   return filterInboxItems(
     filterInboxByStatus(
       filterInboxByTime(
         filterInboxByKind(
-          filterInboxByProject(scoped, hiddenProjects),
-          hiddenKinds,
+          filterInboxByProject([...items], filters.hiddenProjects),
+          filters.hiddenKinds,
         ),
         filters.time,
         now,
       ),
-      statusFilterForSource(filters.status, source),
+      filters.status,
     ),
     query,
   );
-}
-
-export function statusFilterForSource(
-  status: InboxStatusFilter,
-  source?: InboxSource,
-): InboxStatusFilter {
-  if (source !== "linear") return status;
-  return {
-    open: status.open,
-    closed: status.closed,
-    draft: false,
-    merged: false,
-  };
 }
 
 function isGithubInboxKind(value: unknown): value is InboxKind {

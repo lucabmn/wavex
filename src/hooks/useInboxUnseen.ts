@@ -18,7 +18,6 @@ import {
   subscribeInboxSeen,
   type InboxSeenEntry,
 } from "../lib/inboxSeen";
-import { loadHiddenLinearTeamIds } from "../lib/linear";
 import type { RecentProject } from "../lib/recents";
 import { noteInboxUnseen } from "../lib/sounds";
 
@@ -63,7 +62,6 @@ export function useInboxUnseen(recents: RecentProject[], cwd: string): boolean {
         assignedToMe: filters.assignedToMe,
         state: inboxFetchState(filters),
         search: "",
-        linearHiddenTeamIds: loadHiddenLinearTeamIds(),
       };
       void listInboxItems(projects, query, { force })
         .then((listed) => {

@@ -11,7 +11,7 @@ type Props = {
 export function InboxMiniCard({ card, onDismiss }: Props) {
   const KindIcon = card.kind === "pr" ? GitPullRequest : CircleDot;
   const kindLabel = card.kind === "pr" ? "Pull request" : "Issue";
-  const providerLabel = card.provider === "linear" ? "Linear" : "GitHub";
+  const providerLabel = "GitHub";
 
   return (
     <div className="px-3 pt-2">
@@ -27,14 +27,8 @@ export function InboxMiniCard({ card, onDismiss }: Props) {
           className="flex w-full flex-col text-left disabled:cursor-default"
         >
           <span className="flex min-w-0 items-center gap-1.5">
-            <InboxProviderMark
-              provider={card.provider}
-              className="size-3.5 shrink-0"
-            />
-            <KindIcon
-              className="size-3 shrink-0 text-content/45"
-              strokeWidth={1.75}
-            />
+            <InboxProviderMark provider={card.provider} className="size-3.5 shrink-0" />
+            <KindIcon className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
             <span className="min-w-0 truncate text-[11px] text-content/50">
               {kindLabel} · {card.identifier}
             </span>
