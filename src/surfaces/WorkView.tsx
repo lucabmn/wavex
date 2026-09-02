@@ -6,47 +6,77 @@ import {
   useState,
   useSyncExternalStore,
   type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { ChatComposer, type ChatComposerHandle } from "../chrome/ChatComposer";
+import { Modal } from "../chrome/Modal";
 import { ModeSwitch } from "../chrome/ModeSwitch";
 import { DevModeSlot, IconButton, TabVisitNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import {
+  Archive,
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  FolderPlus,
   MessageSquare,
   PanelLeft,
   PenLine,
+  Pin,
   Plus,
   Search,
   Settings,
+  StickyNote,
   Trash2,
+  Undo2,
   X,
 } from "../chrome/icons";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
+import { setGrabbing, suppressTextSelection } from "../lib/drag";
+import { LAYER } from "../lib/layers";
 import { IS_MAC, MOD } from "../lib/platform";
 import type { AppMode } from "../lib/workspace/appMode";
 import {
+  createChatFolder,
   createWorkChat,
+  deleteChatFolder,
   deleteWorkChat,
+  dropChatOnTarget,
   getWorkChatState,
   loadWorkChats,
   regenerateWorkChatTurn,
+  renameChatFolder,
   renameWorkChat,
   resendWorkChatTurn,
   respondWorkChatApproval,
   respondWorkChatQuestion,
   selectWorkChat,
   sendWorkChatTurn,
+  setChatFolderCollapsed,
+  setChatFolderPrompt,
+  setWorkChatArchived,
   setWorkChatModel,
   setWorkChatModelSettings,
+  setWorkChatPinned,
   stopWorkChat,
   subscribeWorkChats,
 } from "../lib/sessions/workChatStore";
 import {
+  buildWorkChatList,
+  flattenWorkChatList,
+  type WorkChatDropTarget,
+  type WorkChatFolder,
+} from "../lib/sessions/workChatFolders";
+import {
   WORK_CHAT_COMMAND_EVENT,
   filterWorkChats,
   requestWorkChatCommand,
+  visibleWorkChats,
   workChatListItems,
   type WorkChatCommand,
+  type WorkChatListItem,
 } from "../lib/sessions/workChats";
 import { AgentTranscript } from "./AgentTranscript";
 
@@ -65,6 +95,10 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
   const state = useSyncExternalStore(subscribeWorkChats, getWorkChatState);
   const [query, setQuery] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [promptFolderId, setPromptFolderId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<WorkChatDropTarget | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [listOpen, setListOpen] = useState(true);
   const composer = useRef<ChatComposerHandle>(null);
   const searchField = useRef<HTMLInputElement>(null);
@@ -78,25 +112,49 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
     () => workChatListItems(state.summaries, state.chats),
     [state.chats, state.summaries],
   );
-  const visible = useMemo(() => filterWorkChats(items, query), [items, query]);
+  const searching = query.trim().length > 0;
+  const entries = useMemo(() => {
+    const listed = visibleWorkChats(items, showArchived);
+    // An empty project still paints so it can be filled by drag — except in a
+    // search, where nothing inside it matched and it is not a drop target. A
+    // project being named is the exception to the exception: hiding it would
+    // unmount the rename field the user is typing into.
+    return buildWorkChatList(state.folders, filterWorkChats(listed, query), {
+      hideEmptyFolders: searching && renamingFolderId == null,
+    });
+  }, [items, query, renamingFolderId, searching, showArchived, state.folders]);
+  const order = useMemo(() => flattenWorkChatList(entries), [entries]);
+  const archivedCount = useMemo(() => items.filter((item) => item.archived).length, [items]);
   // Read the subscribed snapshot, never the store's module state: rendering
   // from the global would paint values React was not told changed, and a
   // per-row lookup would repeat for every streamed token.
   const byId = useMemo(() => new Map(state.chats.map((chat) => [chat.id, chat])), [state.chats]);
   const active = state.activeId ? (byId.get(state.activeId) ?? null) : null;
+  const promptFolder = promptFolderId
+    ? (state.folders.find((folder) => folder.id === promptFolderId) ?? null)
+    : null;
 
-  const onNewChat = useCallback(() => {
-    void createWorkChat().then(() => composer.current?.focus());
+  const onNewChat = useCallback((folderId?: string) => {
+    void createWorkChat(undefined, undefined, folderId).then(() => composer.current?.focus());
+  }, []);
+
+  const onNewFolder = useCallback(() => {
+    setRenamingFolderId(createChatFolder());
+  }, []);
+
+  const onDrop = useCallback((draggedId: string, target: WorkChatDropTarget) => {
+    const createdId = dropChatOnTarget(draggedId, target);
+    if (createdId) setRenamingFolderId(createdId);
   }, []);
 
   const step = useCallback(
     (delta: 1 | -1) => {
-      if (visible.length === 0) return;
-      const index = visible.findIndex((item) => item.id === state.activeId);
-      const next = visible[(index + delta + visible.length) % visible.length];
-      if (next) void selectWorkChat(next.id);
+      if (order.length === 0) return;
+      const index = order.indexOf(state.activeId ?? "");
+      const next = order[(index + delta + order.length) % order.length];
+      if (next) void selectWorkChat(next);
     },
-    [state.activeId, visible],
+    [order, state.activeId],
   );
 
   const runCommand = useCallback(
@@ -157,6 +215,29 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
+
+  const renderChat = (item: WorkChatListItem) => (
+    <ChatRow
+      key={item.id}
+      item={item}
+      active={item.id === state.activeId}
+      renaming={renamingId === item.id}
+      busy={byId.get(item.id)?.busy === true}
+      dropTarget={dropTarget?.kind === "chat" && dropTarget.id === item.id}
+      onSelect={() => void selectWorkChat(item.id)}
+      onDrag={onDrop}
+      onDragTargetChange={setDropTarget}
+      onRenameStart={() => setRenamingId(item.id)}
+      onRenameCancel={() => setRenamingId(null)}
+      onRenameCommit={(title) => {
+        setRenamingId(null);
+        void renameWorkChat(item.id, title);
+      }}
+      onPin={() => void setWorkChatPinned(item.id, !item.pinned)}
+      onArchive={() => void setWorkChatArchived(item.id, !item.archived)}
+      onDelete={() => void deleteWorkChat(item.id)}
+    />
+  );
 
   return (
     <div
@@ -221,9 +302,18 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
               </div>
               <button
                 type="button"
+                title="New project"
+                aria-label="New project"
+                onClick={onNewFolder}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
+              >
+                <FolderPlus className="size-3.5" strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
                 title={`New chat (${MOD}T)`}
                 aria-label="New chat"
-                onClick={onNewChat}
+                onClick={() => onNewChat()}
                 className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
               >
                 <Plus className="size-3.5" strokeWidth={1.75} />
@@ -234,6 +324,7 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
 
         <div
           ref={listLock}
+          data-work-chat-root
           className={`min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-none px-2 pb-2 ${
             listOpen ? "flex" : "hidden"
           }`}
@@ -244,28 +335,53 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
           {state.error ? (
             <p className="px-1 py-2 text-[12px] text-red-400/90">{state.error}</p>
           ) : null}
-          {!state.loading && visible.length === 0 ? (
+          {!state.loading && entries.length === 0 ? (
             <p className="px-1 py-2 text-[12px] text-content/45">
               {query ? "No chats match." : "No chats yet."}
             </p>
           ) : null}
-          {visible.map((item) => (
-            <ChatRow
-              key={item.id}
-              title={item.title}
-              active={item.id === state.activeId}
-              renaming={renamingId === item.id}
-              busy={byId.get(item.id)?.busy === true}
-              onSelect={() => void selectWorkChat(item.id)}
-              onRenameStart={() => setRenamingId(item.id)}
-              onRenameCancel={() => setRenamingId(null)}
-              onRenameCommit={(title) => {
-                setRenamingId(null);
-                void renameWorkChat(item.id, title);
-              }}
-              onDelete={() => void deleteWorkChat(item.id)}
-            />
-          ))}
+          {entries.map((entry) =>
+            entry.kind === "chat" ? (
+              renderChat(entry.chat)
+            ) : (
+              <FolderSection
+                key={entry.folder.id}
+                folder={entry.folder}
+                count={entry.chats.length}
+                renaming={renamingFolderId === entry.folder.id}
+                dropTarget={dropTarget?.kind === "folder" && dropTarget.id === entry.folder.id}
+                onToggle={() => setChatFolderCollapsed(entry.folder.id, !entry.folder.collapsed)}
+                onRenameStart={() => setRenamingFolderId(entry.folder.id)}
+                onRenameCancel={() => setRenamingFolderId(null)}
+                onRenameCommit={(name) => {
+                  setRenamingFolderId(null);
+                  renameChatFolder(entry.folder.id, name);
+                }}
+                onEditPrompt={() => setPromptFolderId(entry.folder.id)}
+                onNewChat={() => onNewChat(entry.folder.id)}
+                onDelete={() => deleteChatFolder(entry.folder.id)}
+              >
+                {entry.folder.collapsed ? null : entry.chats.length === 0 ? (
+                  <p className="px-2 py-1.5 text-[11.5px] text-content/35">Drag chats here.</p>
+                ) : (
+                  entry.chats.map(renderChat)
+                )}
+              </FolderSection>
+            ),
+          )}
+          {archivedCount > 0 ? (
+            <button
+              type="button"
+              aria-pressed={showArchived}
+              onClick={() => setShowArchived((on) => !on)}
+              className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11.5px] text-content/45 hover:bg-content/5 hover:text-content/80"
+            >
+              <Archive className="size-3 shrink-0" strokeWidth={1.75} />
+              <span className="min-w-0 flex-1 truncate">
+                {showArchived ? "Hide archived" : `Archived (${archivedCount})`}
+              </span>
+            </button>
+          ) : null}
         </div>
 
         {onOpenSettings && listOpen ? (
@@ -342,7 +458,7 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
             </p>
             <button
               type="button"
-              onClick={onNewChat}
+              onClick={() => onNewChat()}
               className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
             >
               New chat
@@ -350,103 +466,471 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
           </div>
         )}
       </section>
+
+      {promptFolder ? (
+        <FolderPromptDialog
+          folder={promptFolder}
+          onClose={() => setPromptFolderId(null)}
+          onSave={(prompt) => {
+            setChatFolderPrompt(promptFolder.id, prompt);
+            setPromptFolderId(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
-function ChatRow({
-  title,
-  active,
-  busy,
+/**
+ * Which project or chat the pointer is over, resolved from the DOM rather than
+ * from React state — the list re-renders while a drag is in flight, so a
+ * captured element reference would go stale.
+ */
+function workChatDropFromPoint(x: number, y: number, draggedId: string): WorkChatDropTarget | null {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  const chat = el.closest("[data-work-chat]") as HTMLElement | null;
+  const chatId = chat?.dataset.workChat;
+  if (chatId === draggedId) return null;
+  const folder = el.closest("[data-work-folder]") as HTMLElement | null;
+  const folderId = folder?.dataset.workFolder;
+  if (folderId && chatId && chat && folder.contains(chat)) {
+    return { kind: "folder", id: folderId };
+  }
+  if (chatId) return { kind: "chat", id: chatId };
+  if (folderId) return { kind: "folder", id: folderId };
+  // Bare list background: dropping there takes the chat out of its project.
+  if (el.closest("[data-work-chat-root]")) return { kind: "root" };
+  return null;
+}
+
+function dropKey(target: WorkChatDropTarget | null): string {
+  if (target == null) return "";
+  return target.kind === "root" ? "root" : `${target.kind}:${target.id}`;
+}
+
+function FolderSection({
+  folder,
+  count,
   renaming,
-  onSelect,
+  dropTarget,
+  onToggle,
   onRenameStart,
   onRenameCancel,
   onRenameCommit,
+  onEditPrompt,
+  onNewChat,
+  onDelete,
+  children,
+}: {
+  folder: WorkChatFolder;
+  count: number;
+  renaming: boolean;
+  dropTarget: boolean;
+  onToggle: () => void;
+  onRenameStart: () => void;
+  onRenameCancel: () => void;
+  onRenameCommit: (name: string) => void;
+  onEditPrompt: () => void;
+  onNewChat: () => void;
+  onDelete: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div data-work-folder={folder.id} className="flex flex-col">
+      {renaming ? (
+        <RenameField
+          value={folder.name}
+          label="Project name"
+          onCancel={onRenameCancel}
+          onCommit={onRenameCommit}
+        />
+      ) : (
+        <div
+          className={`group relative flex items-center gap-1 rounded-md pr-1 ${
+            dropTarget ? "bg-accent/20 text-content" : "text-content/80 hover:bg-content/5"
+          }`}
+        >
+          <button
+            type="button"
+            title={folder.prompt ? `${folder.name} — has a brief` : folder.name}
+            aria-expanded={!folder.collapsed}
+            onClick={onToggle}
+            onDoubleClick={onRenameStart}
+            onKeyDown={(event) => {
+              if (event.key !== "F2") return;
+              event.preventDefault();
+              onRenameStart();
+            }}
+            className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1.5 text-left"
+          >
+            <span className="grid size-3.5 shrink-0 place-items-center text-content/55">
+              {folder.collapsed ? (
+                <ChevronRight className="size-3.5" strokeWidth={1.75} />
+              ) : (
+                <ChevronDown className="size-3.5" strokeWidth={1.75} />
+              )}
+            </span>
+            <Folder className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />
+            <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium">{folder.name}</span>
+            {folder.prompt ? (
+              <StickyNote className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+            ) : null}
+            <span className="shrink-0 text-[11px] tabular-nums text-content/40">{count}</span>
+          </button>
+          <button
+            type="button"
+            aria-label={`Edit brief for ${folder.name}`}
+            title="Project brief"
+            onClick={onEditPrompt}
+            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+          >
+            <StickyNote className="size-3" strokeWidth={1.75} />
+          </button>
+          <button
+            type="button"
+            aria-label={`New chat in ${folder.name}`}
+            onClick={onNewChat}
+            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+          >
+            <Plus className="size-3" strokeWidth={1.75} />
+          </button>
+          <button
+            type="button"
+            aria-label={`Delete project ${folder.name}`}
+            title="Delete project — its chats are kept"
+            onClick={onDelete}
+            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block"
+          >
+            <Trash2 className="size-3" strokeWidth={1.75} />
+          </button>
+        </div>
+      )}
+      <div className="flex flex-col gap-0.5 pl-3">{children}</div>
+    </div>
+  );
+}
+
+function FolderPromptDialog({
+  folder,
+  onClose,
+  onSave,
+}: {
+  folder: WorkChatFolder;
+  onClose: () => void;
+  onSave: (prompt: string) => void;
+}) {
+  const [draft, setDraft] = useState(folder.prompt);
+
+  return (
+    <Modal title="Project brief" description={folder.name} size="md" onClose={onClose}>
+      <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
+        <p className="text-[12px] leading-snug text-content/55">
+          Sent ahead of every message from a chat in this project, so each agent knows what it is
+          working on.
+        </p>
+        <textarea
+          // oxlint-disable-next-line jsx-a11y/no-autofocus -- the dialog exists to edit this field
+          autoFocus
+          value={draft}
+          aria-label="Project brief"
+          placeholder="We are redesigning the onboarding flow. Prefer short answers and cite files."
+          onChange={(event) => setDraft(event.target.value)}
+          className="h-48 w-full resize-none rounded-lg border border-content/10 bg-content/5 px-3 py-2 text-[12.5px] leading-relaxed outline-none focus-visible:border-content/25"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(draft)}
+            className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function RenameField({
+  value,
+  label,
+  onCancel,
+  onCommit,
+}: {
+  value: string;
+  label: string;
+  onCancel: () => void;
+  onCommit: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  return (
+    <input
+      // oxlint-disable-next-line jsx-a11y/no-autofocus -- rename is an explicit user action
+      autoFocus
+      value={draft}
+      aria-label={label}
+      onChange={(event) => setDraft(event.target.value)}
+      onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onCommit(draft);
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onCancel();
+        }
+      }}
+      onBlur={() => onCommit(draft)}
+      className="w-full rounded-md border border-content/20 bg-content/5 px-2 py-1.5 text-[12.5px] outline-none"
+    />
+  );
+}
+
+function ChatRow({
+  item,
+  active,
+  busy,
+  renaming,
+  dropTarget,
+  onSelect,
+  onDrag,
+  onDragTargetChange,
+  onRenameStart,
+  onRenameCancel,
+  onRenameCommit,
+  onPin,
+  onArchive,
   onDelete,
 }: {
-  title: string;
+  item: WorkChatListItem;
   active: boolean;
   busy: boolean;
   renaming: boolean;
+  dropTarget: boolean;
   onSelect: () => void;
+  onDrag: (draggedId: string, target: WorkChatDropTarget) => void;
+  onDragTargetChange: (target: WorkChatDropTarget | null) => void;
   onRenameStart: () => void;
   onRenameCancel: () => void;
   onRenameCommit: (title: string) => void;
+  onPin: () => void;
+  onArchive: () => void;
   onDelete: () => void;
 }) {
-  const [draft, setDraft] = useState(title);
+  const { id, title, pinned, archived } = item;
+  const skipClickUntil = useRef(0);
+  const row = useRef<HTMLDivElement>(null);
+  const ghost = useRef<HTMLDivElement>(null);
+  /** Where inside the row the pointer grabbed it, and how wide the row was. */
+  const grab = useRef({ x: 0, y: 0, width: 0 });
+  /** Latest pointer position, so a re-render mid-drag repaints in place. */
+  const point = useRef({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
 
-  useEffect(() => {
-    if (renaming) setDraft(title);
-  }, [renaming, title]);
+  // The preview is moved by writing `transform` straight onto the node. Going
+  // through state would re-render the row — and the list around it — on every
+  // pointer sample, for decoration that never changes anything else.
+  const placeGhost = () => {
+    const node = ghost.current;
+    if (!node) return;
+    node.style.transform = ghostTransform(point.current, grab.current);
+  };
 
-  const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      onRenameCommit(draft);
-      return;
+  // Pointer-driven rather than HTML5 drag: the composer on this surface binds
+  // `drop` for file attachments, and a native drag would cross into it.
+  const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const handle = event.currentTarget;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let activeDrag = false;
+    let last: WorkChatDropTarget | null = null;
+    const rect = row.current?.getBoundingClientRect();
+    grab.current = {
+      x: rect ? startX - rect.left : 0,
+      y: rect ? startY - rect.top : 0,
+      width: rect?.width ?? 0,
+    };
+    point.current = { x: startX, y: startY };
+    handle.setPointerCapture(pointerId);
+    const restoreSelection = suppressTextSelection();
+
+    const setTarget = (next: WorkChatDropTarget | null) => {
+      if (dropKey(next) === dropKey(last)) return;
+      last = next;
+      onDragTargetChange(next);
+    };
+
+    const onMove = (moved: PointerEvent) => {
+      point.current = { x: moved.clientX, y: moved.clientY };
+      if (!activeDrag) {
+        if (Math.hypot(moved.clientX - startX, moved.clientY - startY) < 5) return;
+        activeDrag = true;
+        setGrabbing(true);
+        setDragging(true);
+      }
+      placeGhost();
+      setTarget(workChatDropFromPoint(moved.clientX, moved.clientY, id));
+    };
+
+    const onUp = () => finish(true);
+    const onKey = (pressed: KeyboardEvent) => {
+      if (pressed.key !== "Escape") return;
+      pressed.preventDefault();
+      finish(false);
+    };
+
+    function finish(commit: boolean) {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("keydown", onKey);
+      restoreSelection();
+      setGrabbing(false);
+      setDragging(false);
+      onDragTargetChange(null);
+      try {
+        handle.releasePointerCapture(pointerId);
+      } catch {
+        /* already released */
+      }
+      const target = last;
+      last = null;
+      if (!activeDrag) return;
+      // The pointer travelled, so the click that follows is the tail of a drag
+      // and must not also open the chat.
+      skipClickUntil.current = performance.now() + 400;
+      if (commit && target) onDrag(id, target);
     }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onRenameCancel();
-    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("keydown", onKey);
   };
 
   if (renaming) {
     return (
-      <input
-        // oxlint-disable-next-line jsx-a11y/no-autofocus -- rename is an explicit user action
-        autoFocus
-        value={draft}
-        aria-label="Chat title"
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={onKeyDown}
-        onBlur={() => onRenameCommit(draft)}
-        className="w-full rounded-md border border-content/20 bg-content/5 px-2 py-1.5 text-[12.5px] outline-none"
+      <RenameField
+        value={title}
+        label="Chat title"
+        onCancel={onRenameCancel}
+        onCommit={onRenameCommit}
       />
     );
   }
 
   return (
-    <div
-      className={`group flex items-center gap-1 rounded-md pr-1 ${
-        active ? "bg-content/10 text-content" : "text-content/75 hover:bg-content/5"
-      }`}
-    >
-      <button
-        type="button"
-        title={title}
-        aria-current={active ? "true" : undefined}
-        onClick={onSelect}
-        onDoubleClick={onRenameStart}
-        className="min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[12.5px]"
+    <>
+      {dragging
+        ? createPortal(
+            <div
+              ref={ghost}
+              aria-hidden
+              style={{
+                width: grab.current.width || undefined,
+                transform: ghostTransform(point.current, grab.current),
+                zIndex: LAYER.drag,
+              }}
+              className="pointer-events-none fixed left-0 top-0 flex items-center gap-1.5 rounded-md border border-content/15 bg-background-base/90 px-2 py-1.5 text-[12.5px] text-content shadow-lg backdrop-blur-sm"
+            >
+              {pinned ? (
+                <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
+              ) : null}
+              <span className="min-w-0 flex-1 truncate">{title}</span>
+            </div>,
+            document.body,
+          )
+        : null}
+      <div
+        ref={row}
+        data-work-chat={id}
+        className={`group flex items-center gap-1 rounded-md pr-1 ${
+          dropTarget
+            ? "bg-accent/20 text-content"
+            : active
+              ? "bg-content/10 text-content"
+              : "text-content/75 hover:bg-content/5"
+        } ${dragging ? "opacity-40" : ""} ${archived ? "opacity-60" : ""}`}
       >
-        {title}
-      </button>
-      {busy ? (
-        <span
-          aria-label="Running"
-          className="size-1.5 shrink-0 rounded-full bg-accent"
-          title="Running"
-        />
-      ) : null}
-      <button
-        type="button"
-        aria-label={`Rename ${title}`}
-        onClick={onRenameStart}
-        className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
-      >
-        <PenLine className="size-3" strokeWidth={1.75} />
-      </button>
-      <button
-        type="button"
-        aria-label={`Delete ${title}`}
-        onClick={onDelete}
-        className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block"
-      >
-        <Trash2 className="size-3" strokeWidth={1.75} />
-      </button>
-    </div>
+        <button
+          type="button"
+          title={title}
+          aria-current={active ? "true" : undefined}
+          onPointerDown={onPointerDown}
+          onClick={() => {
+            if (performance.now() < skipClickUntil.current) return;
+            onSelect();
+          }}
+          onDoubleClick={onRenameStart}
+          className="flex min-w-0 flex-1 touch-none items-center gap-1.5 px-2 py-1.5 text-left text-[12.5px]"
+        >
+          {pinned ? <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} /> : null}
+          <span className="min-w-0 flex-1 truncate">{title}</span>
+        </button>
+        {busy ? (
+          <span
+            aria-label="Running"
+            className="size-1.5 shrink-0 rounded-full bg-accent"
+            title="Running"
+          />
+        ) : null}
+        <button
+          type="button"
+          aria-label={pinned ? `Unpin ${title}` : `Pin ${title}`}
+          aria-pressed={pinned}
+          onClick={onPin}
+          className={`shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block ${
+            pinned ? "block" : "hidden"
+          }`}
+        >
+          <Pin className="size-3" strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          aria-label={archived ? `Unarchive ${title}` : `Archive ${title}`}
+          onClick={onArchive}
+          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+        >
+          {archived ? (
+            <Undo2 className="size-3" strokeWidth={1.75} />
+          ) : (
+            <Archive className="size-3" strokeWidth={1.75} />
+          )}
+        </button>
+        <button
+          type="button"
+          aria-label={`Rename ${title}`}
+          onClick={onRenameStart}
+          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+        >
+          <PenLine className="size-3" strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          aria-label={`Delete ${title}`}
+          onClick={onDelete}
+          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block"
+        >
+          <Trash2 className="size-3" strokeWidth={1.75} />
+        </button>
+      </div>
+    </>
   );
+}
+
+/** Keeps the preview under the exact spot on the row the pointer grabbed. */
+function ghostTransform(point: { x: number; y: number }, grab: { x: number; y: number }): string {
+  return `translate3d(${point.x - grab.x}px, ${point.y - grab.y}px, 0)`;
 }

@@ -36,8 +36,32 @@ import { respondHarnessApproval, respondHarnessQuestion } from "../harness/regis
 import type { UserQuestionReply } from "../userQuestion";
 import { preferredModelSettings, resolveModel } from "../models";
 import type { Attachment, HarnessId, Session } from "../session";
-import { deleteSession, getSession, listSessionsByScope, upsertSession } from "./sessionStore";
+import {
+  deleteSession,
+  getSession,
+  listSessionsByScope,
+  setSessionArchived,
+  setSessionPinned,
+  upsertSession,
+} from "./sessionStore";
 import type { SessionSummary } from "./sessionStore";
+import {
+  addChatToFolder,
+  applyWorkChatDrop,
+  createWorkChatFolder,
+  deleteFolder,
+  folderPromptForChat,
+  injectFolderPrompt,
+  loadWorkChatFolders,
+  pruneWorkChatFolders,
+  removeChatFromFolders,
+  renameFolder,
+  saveWorkChatFolders,
+  setFolderCollapsed,
+  setFolderPrompt,
+  type WorkChatDropTarget,
+  type WorkChatFolder,
+} from "./workChatFolders";
 import {
   canReplaceWorkChatTitle,
   forgetWorkChatOrder,
@@ -52,6 +76,8 @@ export type WorkChatState = {
   chats: Session[];
   /** Stored chat rows, for the list. */
   summaries: SessionSummary[];
+  /** Projects: named groups of chats, each with a shared brief. */
+  folders: WorkChatFolder[];
   activeId: string | null;
   /** Directory the harness child runs in. Empty until Rust answers. */
   dir: string;
@@ -62,6 +88,7 @@ export type WorkChatState = {
 const EMPTY: WorkChatState = {
   chats: [],
   summaries: [],
+  folders: [],
   activeId: null,
   dir: "",
   loading: false,
@@ -133,8 +160,17 @@ async function loadOnce(): Promise<void> {
   set({ loading: true, error: null });
   try {
     const [dir, summaries] = await Promise.all([workChatDir(), listSessionsByScope("work")]);
-    set({ dir, summaries, loading: false });
-    if (!state.activeId && summaries[0]) await selectWorkChat(summaries[0].id);
+    // Projects live in localStorage; a chat deleted while the app was closed
+    // leaves a stale member id behind, so membership is reconciled here. The
+    // project itself is kept even when that empties it — it holds the brief.
+    const folders = pruneWorkChatFolders(
+      loadWorkChatFolders(),
+      new Set(summaries.map((row) => row.id)),
+    );
+    set({ dir, summaries, folders, loading: false });
+    saveWorkChatFolders(folders);
+    const first = summaries.find((row) => !row.archived);
+    if (!state.activeId && first) await selectWorkChat(first.id);
   } catch (error: unknown) {
     set({
       loading: false,
@@ -147,11 +183,67 @@ async function loadOnce(): Promise<void> {
 /* Chat lifecycle                                                             */
 /* -------------------------------------------------------------------------- */
 
-export async function createWorkChat(harness?: HarnessId, model?: string): Promise<string> {
+export async function createWorkChat(
+  harness?: HarnessId,
+  model?: string,
+  folderId?: string,
+): Promise<string> {
   const dir = state.dir || (await workChatDir().catch(() => "~"));
   const chat = newWorkChat(dir, harness, model);
   set({ dir, chats: [...state.chats, chat], activeId: chat.id });
+  if (folderId) commitFolders(addChatToFolder(state.folders, folderId, chat.id));
   return chat.id;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Projects                                                                   */
+/* -------------------------------------------------------------------------- */
+
+function commitFolders(folders: WorkChatFolder[]): void {
+  if (folders === state.folders) return;
+  set({ folders });
+  saveWorkChatFolders(folders);
+}
+
+export function createChatFolder(name?: string): string {
+  const { folders, id } = createWorkChatFolder(state.folders, name);
+  commitFolders(folders);
+  return id;
+}
+
+export function renameChatFolder(folderId: string, name: string): void {
+  commitFolders(renameFolder(state.folders, folderId, name));
+}
+
+/** Removes the project. Its chats survive and fall back to the flat list. */
+export function deleteChatFolder(folderId: string): void {
+  commitFolders(deleteFolder(state.folders, folderId));
+}
+
+export function setChatFolderPrompt(folderId: string, prompt: string): void {
+  commitFolders(setFolderPrompt(state.folders, folderId, prompt));
+}
+
+export function setChatFolderCollapsed(folderId: string, collapsed: boolean): void {
+  commitFolders(setFolderCollapsed(state.folders, folderId, collapsed));
+}
+
+export function moveChatToFolder(chatId: string, folderId: string | null): void {
+  commitFolders(
+    folderId
+      ? addChatToFolder(state.folders, folderId, chatId)
+      : removeChatFromFolders(state.folders, chatId),
+  );
+}
+
+/** Result of a drag in the chat list. Returns a project it had to create. */
+export function dropChatOnTarget(
+  draggedId: string,
+  target: WorkChatDropTarget,
+): string | undefined {
+  const { folders, createdId } = applyWorkChatDrop(state.folders, draggedId, target);
+  commitFolders(folders);
+  return createdId;
 }
 
 /** Load a stored chat into memory. A second caller reuses the first result. */
@@ -203,11 +295,36 @@ export async function deleteWorkChat(id: string): Promise<void> {
   const summaries = state.summaries.filter((row) => row.id !== id);
   const activeId =
     state.activeId === id
-      ? (chats[chats.length - 1]?.id ?? summaries[0]?.id ?? null)
+      ? (chats[chats.length - 1]?.id ?? summaries.find((row) => !row.archived)?.id ?? null)
       : state.activeId;
   set({ chats, summaries, activeId });
+  // The project stays even if that was its last chat.
+  commitFolders(removeChatFromFolders(state.folders, id));
   forgetWorkChatOrder([id]);
   await deleteSession(id).catch(() => undefined);
+}
+
+export async function setWorkChatPinned(id: string, pinned: boolean): Promise<void> {
+  if (!state.summaries.some((row) => row.id === id)) return;
+  set({
+    summaries: state.summaries.map((row) => (row.id === id ? { ...row, pinned } : row)),
+  });
+  await setSessionPinned(id, pinned).catch(() => undefined);
+}
+
+/**
+ * Archiving hides the chat from the list, so the transcript cannot keep
+ * showing it — selection falls back the same way a delete does.
+ */
+export async function setWorkChatArchived(id: string, archived: boolean): Promise<void> {
+  if (!state.summaries.some((row) => row.id === id)) return;
+  const summaries = state.summaries.map((row) => (row.id === id ? { ...row, archived } : row));
+  const activeId =
+    archived && state.activeId === id
+      ? (summaries.find((row) => !row.archived)?.id ?? null)
+      : state.activeId;
+  set({ summaries, activeId });
+  await setSessionArchived(id, archived).catch(() => undefined);
 }
 
 export function setWorkChatModel(id: string, harness: HarnessId, model: string): void {
@@ -303,8 +420,12 @@ export async function sendWorkChatTurn(
   if (!chat || chat.busy) return;
   if (!text.trim() && attachments.length === 0) return;
   // The transcript shows what the user asked for; the harness gets the
-  // output-shape instructions wrapped around it.
-  const harnessText = options.image ? buildImagePrompt(text) : text;
+  // output-shape instructions wrapped around it, and the project brief in
+  // front of the whole thing so every chat in a project knows what it is
+  // working on. `appendUser` below is still handed the bare `text`.
+  const project = folderPromptForChat(state.folders, id);
+  const shaped = options.image ? buildImagePrompt(text) : text;
+  const harnessText = project ? injectFolderPrompt(shaped, project) : shaped;
 
   const visible = displayAttachments(attachments);
   const seed = workChatTitleFromPrompt(text, visible);

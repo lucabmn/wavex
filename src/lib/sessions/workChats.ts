@@ -138,6 +138,8 @@ export type WorkChatListItem = {
   id: string;
   title: string;
   updatedAt: number;
+  pinned: boolean;
+  archived: boolean;
 };
 
 export function workChatListItems(
@@ -150,13 +152,17 @@ export function workChatListItems(
       id: summary.id,
       title: workChatDisplayTitle(summary.title),
       updatedAt: summary.updatedAt,
+      pinned: summary.pinned === true,
+      archived: summary.archived === true,
     });
   }
   // An open chat outranks its stored row: the title may have just changed and
-  // a brand-new chat has no row at all yet.
+  // a brand-new chat has no row at all yet. Pin and archive are not carried on
+  // the in-memory session, so the stored flags survive the merge.
   for (const session of open) {
     if (!isWorkChat(session)) continue;
-    let when = items.get(session.id)?.updatedAt;
+    const stored = items.get(session.id);
+    let when = stored?.updatedAt;
     if (when == null) {
       when = openedAt.get(session.id) ?? Date.now();
       openedAt.set(session.id, when);
@@ -165,9 +171,28 @@ export function workChatListItems(
       id: session.id,
       title: workChatDisplayTitle(session.title),
       updatedAt: when,
+      pinned: stored?.pinned === true,
+      archived: stored?.archived === true,
     });
   }
-  return [...items.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+  return [...items.values()].sort(compareWorkChats);
+}
+
+/** Pinned chats float to the top; everything else is most-recent-first. */
+export function compareWorkChats(a: WorkChatListItem, b: WorkChatListItem): number {
+  if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+  return b.updatedAt - a.updatedAt;
+}
+
+/**
+ * `session_list_by_scope` returns archived rows too — unlike project search it
+ * has no include flag — so the archive filter lives here.
+ */
+export function visibleWorkChats(
+  items: WorkChatListItem[],
+  showArchived: boolean,
+): WorkChatListItem[] {
+  return showArchived ? items : items.filter((item) => !item.archived);
 }
 
 /** Fuzzy, like the note and project pickers, and ranked before recency. */

@@ -8,6 +8,7 @@ import {
   isWorkChat,
   newWorkChat,
   normalizeWorkChatTitle,
+  visibleWorkChats,
   workChatListItems,
   workChatTitleFromPrompt,
 } from "@/lib/sessions/workChats";
@@ -101,13 +102,32 @@ describe("workChatListItems", () => {
     expect(items.map((item) => item.id)).toEqual(["b", "a"]);
   });
 
+  it("floats pinned chats above more recent ones", () => {
+    const items = workChatListItems([
+      summary({ id: "a", title: "Older", updatedAt: 10, pinned: true }),
+      summary({ id: "b", title: "Newer", updatedAt: 20 }),
+    ]);
+    expect(items.map((item) => item.id)).toEqual(["a", "b"]);
+  });
+
+  it("keeps the stored pin and archive flags when a chat is also open", () => {
+    const open = { ...newWorkChat("/tmp/work-chats", "claude"), id: "a", title: "Renamed" };
+    const items = workChatListItems(
+      [summary({ id: "a", title: "Stored", updatedAt: 10, pinned: true, archived: true })],
+      [open as Session],
+    );
+    expect(items[0]).toMatchObject({ title: "Renamed", pinned: true, archived: true });
+  });
+
   it("prefers the open chat's live title over the stored row", () => {
     const open = { ...newWorkChat("/tmp/work-chats", "claude"), id: "a", title: "Renamed" };
     const items = workChatListItems(
       [summary({ id: "a", title: "Stored", updatedAt: 10 })],
       [open as Session],
     );
-    expect(items).toEqual([{ id: "a", title: "Renamed", updatedAt: 10 }]);
+    expect(items).toEqual([
+      { id: "a", title: "Renamed", updatedAt: 10, pinned: false, archived: false },
+    ]);
   });
 
   it("ignores open coding sessions", () => {
@@ -160,5 +180,16 @@ describe("filterWorkChats", () => {
 
   it("ranks the stronger match first", () => {
     expect(filterWorkChats(items, "draft")[0].id).toBe("a");
+  });
+});
+
+describe("visibleWorkChats", () => {
+  it("hides archived chats until they are asked for", () => {
+    const items = workChatListItems([
+      summary({ id: "a", title: "Live", updatedAt: 20 }),
+      summary({ id: "b", title: "Filed", updatedAt: 10, archived: true }),
+    ]);
+    expect(visibleWorkChats(items, false).map((item) => item.id)).toEqual(["a"]);
+    expect(visibleWorkChats(items, true).map((item) => item.id)).toEqual(["a", "b"]);
   });
 });
