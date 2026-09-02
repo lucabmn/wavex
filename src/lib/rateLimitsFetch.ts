@@ -51,7 +51,16 @@ export async function fetchClaudeRateLimits(): Promise<ProviderRateLimits> {
   }
 }
 
-export async function fetchCodexRateLimits(): Promise<ProviderRateLimits> {
+/**
+ * Reads Codex's own rate-limit report over its app-server.
+ *
+ * `onRaw` hands the untouched payload to a second reader, so the plan-limit
+ * view and the status-bar chip share one probe instead of spawning the CLI
+ * twice for the same answer.
+ */
+export async function fetchCodexRateLimits(
+  onRaw?: (result: unknown) => void,
+): Promise<ProviderRateLimits> {
   let path: string;
   try {
     path = (await resolveCodexBinary()).path;
@@ -108,6 +117,7 @@ export async function fetchCodexRateLimits(): Promise<ProviderRateLimits> {
           {},
           REQUEST_TIMEOUT_MS,
         );
+        onRaw?.(result);
         const parsed = parseCodexRateLimits(result);
         if (parsed.session || parsed.weekly) return parsed;
         const rec = asRecord(result);

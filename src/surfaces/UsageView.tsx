@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { LoaderCircle, RefreshCw } from "../chrome/icons";
+import { PlanLimitCards } from "../chrome/PlanLimitCards";
 import { OverlayNav } from "../chrome/TitleBar";
 import { UsageChart, type UsageMetric } from "../chrome/UsageChart";
 import { WindowControls } from "../chrome/WindowControls";
@@ -20,6 +21,8 @@ import {
   formatTokens,
   formatUsd,
 } from "../lib/usage/usageFormat";
+import { loadingPlanLimits, PLAN_LIMIT_PROVIDERS, type PlanLimits } from "../lib/usage/planLimits";
+import { fetchClaudePlanLimits, fetchCodexPlanLimits } from "../lib/usage/planLimitsFetch";
 import { EMPTY_RATE_TABLE } from "../lib/usage/usagePricing";
 import { USAGE_PROVIDER_COLOR } from "../lib/usage/usageProviders";
 import {
@@ -31,6 +34,7 @@ import {
 } from "../lib/usage/usageReport";
 import {
   isUsageProvider,
+  USAGE_PROVIDERS,
   type UsageProvider,
   type UsageSource,
   type UsageSummary,
@@ -67,6 +71,11 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
   const [window_, setWindow] = useState<UsageWindow>(() => makeUsageWindow(rememberedDays));
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [rates, setRates] = useState<ModelRatesSnapshot | null>(null);
+  const [planLimits, setPlanLimits] = useState<PlanLimits[]>(() =>
+    PLAN_LIMIT_PROVIDERS.map(loadingPlanLimits),
+  );
+  // Reset countdowns are only useful if they tick.
+  const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const requestId = useRef(0);
@@ -87,6 +96,29 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
     };
     globalThis.addEventListener("keydown", onKey, true);
     return () => globalThis.removeEventListener("keydown", onKey, true);
+  }, []);
+
+  // Plan limits are the one part that does talk to the providers, so they are
+  // read on their own rather than on the scan's path: a slow or signed-out
+  // provider must not hold up the history.
+  const loadPlanLimits = useCallback(() => {
+    setPlanLimits(PLAN_LIMIT_PROVIDERS.map(loadingPlanLimits));
+    for (const [index, read] of [fetchClaudePlanLimits, fetchCodexPlanLimits].entries()) {
+      void read().then((result) => {
+        setPlanLimits((current) =>
+          current.map((entry, position) => (position === index ? result : entry)),
+        );
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPlanLimits();
+  }, [loadPlanLimits]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const load = useCallback(async (next: UsageWindow) => {
@@ -129,6 +161,7 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
   };
 
   const refresh = () => {
+    loadPlanLimits();
     // Rebuilding the window also rolls it forward when the day has turned
     // while the view sat open.
     setWindow(makeUsageWindow(days));
@@ -226,6 +259,7 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
 
       <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-8">
+          <PlanLimitCards limits={planLimits} now={now} />
           {error ? (
             <Notice>{error}</Notice>
           ) : !report ? (
@@ -511,6 +545,16 @@ function Footnotes({
   notes.push(
     "Cost is what these tokens would cost at published API rates — not what a subscription plan charged.",
   );
+  // Only Claude and Codex publish a plan limit. Naming the rest keeps the
+  // absence from reading as a failure to fetch one.
+  const withoutLimits = USAGE_PROVIDERS.filter(
+    (provider) => !(PLAN_LIMIT_PROVIDERS as string[]).includes(provider),
+  );
+  if (withoutLimits.length > 0) {
+    notes.push(
+      `${withoutLimits.map((provider) => HARNESS_LABEL[provider]).join(", ")} publish no plan limit, so only their token usage appears here.`,
+    );
+  }
   if (report.unpricedModels.length > 0) {
     notes.push(
       `No published rate for ${report.unpricedModels.slice(0, 3).join(", ")}${
