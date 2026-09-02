@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Block, HarnessId } from "../../../src/lib/session";
+import type { Block, HarnessId } from "@/lib/session";
 import {
   buildSecondOpinionCard,
   buildSecondOpinionPrompt,
@@ -8,7 +8,7 @@ import {
   turnEditedFiles,
   turnReport,
   turnUserRequest,
-} from "../../../src/lib/secondOpinion";
+} from "@/lib/secondOpinion";
 
 function user(id: string, text: string): Block {
   return { id, role: "user", text };

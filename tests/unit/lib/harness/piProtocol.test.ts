@@ -26,8 +26,8 @@ import {
   toolKindFromName,
   toolTitle,
   turnErrorFromEvent,
-} from "../../../../src/lib/harness/piProtocol";
-import { OMP_FLAVOR, PI_FLAVOR } from "../../../../src/lib/harness/piFlavor";
+} from "@/lib/harness/piProtocol";
+import { OMP_FLAVOR, PI_FLAVOR } from "@/lib/harness/piFlavor";
 
 describe("buildPiSpawnArgs", () => {
   it("starts RPC without stripping the user's extensions", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { piSkillContextForSession } from "../../../src/lib/sessionSkills";
+import { piSkillContextForSession } from "@/lib/sessionSkills";
 
 describe("piSkillContextForSession", () => {
   it("uses a Pi session worktree", () => {

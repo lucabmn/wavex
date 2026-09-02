@@ -18,8 +18,8 @@ import {
   pickAutoOption,
   planFromExitPlan,
   sessionIdFromResult,
-} from "../../../../src/lib/harness/grokProtocol";
-import { harnessSupportsAttachments } from "../../../../src/lib/session";
+} from "@/lib/harness/grokProtocol";
+import { harnessSupportsAttachments } from "@/lib/session";
 
 describe("grok protocol", () => {
   it("does not support attachments", () => {

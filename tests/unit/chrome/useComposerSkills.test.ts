@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { Skill } from "../../../src/lib/skills";
+import type { Skill } from "@/lib/skills";
 import {
   nextComposerSkillContextToken,
   pickerSkillLoadOptions,
   visibleComposerSkills,
-} from "../../../src/chrome/useComposerSkills";
+} from "@/chrome/useComposerSkills";
 
 const piSkill: Skill = {
   kind: "native",

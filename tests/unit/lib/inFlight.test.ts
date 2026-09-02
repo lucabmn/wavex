@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTab } from "../../../src/lib/layout";
+import { newTab } from "@/lib/layout";
 import {
   CONTINUE_PROMPT,
   INTERRUPT_MESSAGE,
@@ -11,8 +11,8 @@ import {
   quitWhileBusyMessage,
   shouldWriteInFlightSnapshot,
   workspaceFromResumed,
-} from "../../../src/lib/inFlight";
-import { newSession, type Session } from "../../../src/lib/session";
+} from "@/lib/inFlight";
+import { newSession, type Session } from "@/lib/session";
 
 function chat(cwd: string, patch: Partial<Session> = {}): Session {
   const session = newSession("cursor", cwd);

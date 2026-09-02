@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leaf, newTab, newTerminalFile } from "../../../src/lib/layout";
+import { leaf, newTab, newTerminalFile } from "@/lib/layout";
 import {
   addTerminalToDock,
   applyDockGridStyle,
@@ -16,8 +16,8 @@ import {
   splitProjectTerminalsForMove,
   withDockOpen,
   withDockSide,
-} from "../../../src/lib/projectTerminal";
-import type { Session } from "../../../src/lib/session";
+} from "@/lib/projectTerminal";
+import type { Session } from "@/lib/session";
 
 function chat(id: string, cwd: string): Session {
   return {

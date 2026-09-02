@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { INTERRUPT_MESSAGE } from "../../../src/lib/inFlight";
+import { INTERRUPT_MESSAGE } from "@/lib/inFlight";
 import {
   leaf,
   newFileTab,
   newReleaseNotesWorkspaceTab,
   newTab,
   newTerminalFile,
-} from "../../../src/lib/layout";
-import { createProjectTerminal } from "../../../src/lib/projectTerminal";
-import { newSession, type Session } from "../../../src/lib/session";
+} from "@/lib/layout";
+import { createProjectTerminal } from "@/lib/projectTerminal";
+import { newSession, type Session } from "@/lib/session";
 import {
   collectWorkspaceSnapshot,
   hydrateWorkspaceSnapshot,
   parseWorkspaceSnapshot,
-} from "../../../src/lib/workspaceSnapshot";
+} from "@/lib/workspaceSnapshot";
 
 function chat(id: string, cwd: string): Session {
   const session = newSession("cursor", cwd);

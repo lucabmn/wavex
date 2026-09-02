@@ -11,7 +11,7 @@ import {
   stateWithGitDoc,
   stateWithGitOriginal,
   stateWithGitOriginalUpdated,
-} from "../../../src/surfaces/editorGit";
+} from "@/surfaces/editorGit";
 
 describe("stageChunkText", () => {
   it("stages a whole added hunk and leaves later hunks unstaged", () => {

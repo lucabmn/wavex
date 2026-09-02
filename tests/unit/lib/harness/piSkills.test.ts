@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   writeChild: vi.fn(),
 }));
 
-vi.mock("../../../../src/lib/harness/child", () => ({
+vi.mock("@/lib/harness/child", () => ({
   acquireHarnessBridge: mocks.acquireHarnessBridge,
   killChild: mocks.killChild,
   resolveOmpBinary: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock("../../../../src/lib/harness/child", () => ({
   writeChild: mocks.writeChild,
 }));
 
-vi.mock("../../../../src/lib/harness/piClient", () => ({
+vi.mock("@/lib/harness/piClient", () => ({
   PiRpc: class {
     pushLine = mocks.pushLine;
     request = mocks.request;
@@ -39,7 +39,7 @@ vi.mock("../../../../src/lib/harness/piClient", () => ({
   },
 }));
 
-import { discoverPiSkills, piSkillsFromRpcData } from "../../../../src/lib/harness/piSkills";
+import { discoverPiSkills, piSkillsFromRpcData } from "@/lib/harness/piSkills";
 
 type Deferred<T> = {
   promise: Promise<T>;

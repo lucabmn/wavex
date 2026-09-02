@@ -12,9 +12,9 @@ vi.mock("@tauri-apps/api/app", () => ({ getVersion }));
 vi.mock("@tauri-apps/plugin-updater", () => ({ check }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ ask, message }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch }));
-vi.mock("../../../src/lib/sounds", () => ({ announceUpdateAvailable: vi.fn() }));
+vi.mock("@/lib/sounds", () => ({ announceUpdateAvailable: vi.fn() }));
 
-import { runUpdateFlow } from "../../../src/lib/updater";
+import { runUpdateFlow } from "@/lib/updater";
 
 describe("updater", () => {
   afterEach(() => {

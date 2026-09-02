@@ -5,11 +5,11 @@ const mocks = vi.hoisted(() => ({
   listSkills: vi.fn(),
 }));
 
-vi.mock("../../../src/lib/harness/piSkills", () => ({
+vi.mock("@/lib/harness/piSkills", () => ({
   discoverPiSkills: mocks.discoverPiSkills,
 }));
 
-vi.mock("../../../src/lib/fs", () => ({
+vi.mock("@/lib/fs", () => ({
   createPath: vi.fn(),
   homeDir: vi.fn(),
   listSkills: mocks.listSkills,
@@ -23,8 +23,8 @@ import {
   loadSkills,
   peekSkills,
   skillCatalogKey,
-} from "../../../src/lib/skills";
-import type { PiSkillCommand } from "../../../src/lib/harness/piSkills";
+} from "@/lib/skills";
+import type { PiSkillCommand } from "@/lib/harness/piSkills";
 
 function piSkill(name: string): PiSkillCommand {
   return {

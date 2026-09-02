@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextUnseenFinishedSessions } from "../../../src/lib/sessionDone";
+import { nextUnseenFinishedSessions } from "@/lib/sessionDone";
 
 describe("nextUnseenFinishedSessions", () => {
   it("marks a session done when it finishes while unfocused", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergePrDiff, parsePrPatch } from "../../../src/lib/prDiff";
+import { mergePrDiff, parsePrPatch } from "@/lib/prDiff";
 
 const SAMPLE = `diff --git a/next.config.ts b/next.config.ts
 index 1111111..2222222 100644

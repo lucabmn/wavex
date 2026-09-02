@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  modelsForClaudeVersion,
-  modelsFromClaudeListModels,
-} from "../../../../src/lib/harness/claudeCatalog";
+import { modelsForClaudeVersion, modelsFromClaudeListModels } from "@/lib/harness/claudeCatalog";
 import {
   applyClaudePromptEffortPrefix,
   askUserQuestionAllowInput,
@@ -36,7 +33,7 @@ import {
   toolStartFromEvent,
   toolTitle,
   turnStatusFromResult,
-} from "../../../../src/lib/harness/claudeProtocol";
+} from "@/lib/harness/claudeProtocol";
 
 describe("runtimeModeToPermission", () => {
   it("maps runtime modes onto Claude permission flags", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Tab } from "../../../src/chrome/TitleBar";
+import type { Tab } from "@/chrome/TitleBar";
 import {
   addTabToGroup,
   addTabsToNewGroup,
@@ -15,7 +15,7 @@ import {
   segmentTabs,
   sharedGroupProject,
   ungroupTabs,
-} from "../../../src/lib/tabGroups";
+} from "@/lib/tabGroups";
 
 function tab(id: string, project: string, groupId?: string): Tab {
   return {

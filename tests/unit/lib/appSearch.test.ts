@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { newSession } from "../../../src/lib/session";
-import type { SessionSummary } from "../../../src/lib/sessionStore";
+import { newSession } from "@/lib/session";
+import type { SessionSummary } from "@/lib/sessionStore";
 import {
   conversationRowsFrom,
   filterHitsByProject,
@@ -14,7 +14,7 @@ import {
   searchSessionMessages,
   snippetAround,
   type AppSearchHit,
-} from "../../../src/lib/appSearch";
+} from "@/lib/appSearch";
 
 function summary(id: string, cwd: string, title: string, updatedAt = 1): SessionSummary {
   return {

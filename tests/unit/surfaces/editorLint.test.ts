@@ -4,7 +4,7 @@ import { json } from "@codemirror/lang-json";
 import { python } from "@codemirror/lang-python";
 import { EditorState, type Extension } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
-import { isLintable, syntaxDiagnostics } from "../../../src/surfaces/editorLint";
+import { isLintable, syntaxDiagnostics } from "@/surfaces/editorLint";
 
 function stateWith(doc: string, language: Extension): EditorState {
   return EditorState.create({ doc, extensions: [language] });
@@ -124,7 +124,7 @@ describe("syntaxDiagnostics", () => {
 
   it("does not flag typeof import() type arguments", () => {
     const state = stateWith(
-      'const actual = await importOriginal<typeof import("../../../src/surfaces/fs")>();\n',
+      'const actual = await importOriginal<typeof import("@/surfaces/fs")>();\n',
       typescript(),
     );
     expect(syntaxDiagnostics(state)).toEqual([]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTerminalFile } from "../../../src/lib/layout";
+import { newTerminalFile } from "@/lib/layout";
 import {
   applyTerminalMeta,
   defaultTerminalTitle,
@@ -7,7 +7,7 @@ import {
   runningTerminalChipLabel,
   scanOscCwd,
   terminalTabLabel,
-} from "../../../src/lib/terminalTab";
+} from "@/lib/terminalTab";
 
 describe("defaultTerminalTitle", () => {
   it("uses the directory basename", () => {

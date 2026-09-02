@@ -5,7 +5,7 @@ import {
   consumeQuoteRequest,
   isMarkdownBlockquotePosition,
   type QuoteRequest,
-} from "../../../src/lib/quoteDraft";
+} from "@/lib/quoteDraft";
 
 describe("appendSelectionQuote", () => {
   it("formats a multiline selection and leaves room for a reply", () => {

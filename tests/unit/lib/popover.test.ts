@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { placePopover, type AnchorRect } from "../../../src/lib/popover";
+import { placePopover, type AnchorRect } from "@/lib/popover";
 
 function anchor(left: number, top: number, width: number, height: number): AnchorRect {
   return { left, top, width, height, right: left + width, bottom: top + height };

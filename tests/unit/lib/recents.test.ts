@@ -13,7 +13,7 @@ import {
   savePinnedProjects,
   saveProjectRailOrder,
   syncProjectRailOrder,
-} from "../../../src/lib/recents";
+} from "@/lib/recents";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();

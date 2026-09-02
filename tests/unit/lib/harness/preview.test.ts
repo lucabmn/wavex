@@ -7,7 +7,7 @@ import {
   extractToolPreview,
   isWeakToolTitle,
   titleFromToolInput,
-} from "../../../../src/lib/harness/preview";
+} from "@/lib/harness/preview";
 
 describe("extractToolPreview", () => {
   it("reads nested args bags from ACP tool calls", () => {

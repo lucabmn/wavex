@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { ModalPanel } from "../../../src/chrome/Modal";
+import { ModalPanel } from "@/chrome/Modal";
 
 describe("ModalPanel", () => {
   it("names the dialog and close action", () => {

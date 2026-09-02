@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Block } from "../../../src/lib/session";
+import type { Block } from "@/lib/session";
 import {
   activityPhaseTitle,
   activityStillRunning,
@@ -13,7 +13,7 @@ import {
   proseSummary,
   toolCallLabel,
   turnCopyText,
-} from "../../../src/surfaces/transcriptActivity";
+} from "@/surfaces/transcriptActivity";
 
 function shell(id: string, status = "completed", approval?: Block["approval"]): Block {
   return {

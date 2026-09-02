@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tabCommand } from "../../../src/lib/tabKeys";
+import { tabCommand } from "@/lib/tabKeys";
 
 function key(
   partial: Partial<

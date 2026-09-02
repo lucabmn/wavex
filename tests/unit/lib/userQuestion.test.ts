@@ -7,7 +7,7 @@ import {
   questionPromptTitle,
   questionsFromUnknown,
   selectedAnswerLabels,
-} from "../../../src/lib/userQuestion";
+} from "@/lib/userQuestion";
 
 describe("questionsFromUnknown", () => {
   it("parses Claude-style AskUserQuestion input", () => {

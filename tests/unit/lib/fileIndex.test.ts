@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectFile } from "../../../src/lib/fs";
-import {
-  invalidateProjectFiles,
-  rememberOpenedFile,
-  resolveOpenablePath,
-} from "../../../src/lib/fileIndex";
+import type { ProjectFile } from "@/lib/fs";
+import { invalidateProjectFiles, rememberOpenedFile, resolveOpenablePath } from "@/lib/fileIndex";
 
 const cwd = "/Users/me/project";
 const files: ProjectFile[] = [
@@ -25,8 +21,8 @@ const files: ProjectFile[] = [
   },
 ];
 
-vi.mock("../../../src/lib/fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../src/lib/fs")>();
+vi.mock("@/lib/fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/fs")>();
   return {
     ...actual,
     listProjectFiles: vi.fn(async () => files),

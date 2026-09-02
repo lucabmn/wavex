@@ -4,7 +4,7 @@ const sent: string[] = [];
 let onLine: ((line: string) => void) | undefined;
 let onExit: ((code: number | null) => void) | undefined;
 
-vi.mock("../../../../src/lib/harness/child", () => ({
+vi.mock("@/lib/harness/child", () => ({
   resolveFxBinary: async () => ({ path: "/fake/fx" }),
   spawnChild: async () => undefined,
   killChild: async () => undefined,
@@ -18,8 +18,8 @@ vi.mock("../../../../src/lib/harness/child", () => ({
   },
 }));
 
-const { sendFxTurn, stopFxSession } = await import("../../../../src/lib/harness/fx");
-import type { HarnessEvent } from "../../../../src/lib/harness/types";
+const { sendFxTurn, stopFxSession } = await import("@/lib/harness/fx");
+import type { HarnessEvent } from "@/lib/harness/types";
 
 function reply(id: number, result: unknown) {
   onLine!(JSON.stringify({ jsonrpc: "2.0", id, result }));

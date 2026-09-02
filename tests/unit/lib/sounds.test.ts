@@ -19,7 +19,7 @@ import {
   saveSoundsEnabled,
   SOUNDS_DEFAULT,
   SOUNDS_VOLUME,
-} from "../../../src/lib/sounds";
+} from "@/lib/sounds";
 
 const KEY = "wavex.sounds";
 

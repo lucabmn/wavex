@@ -13,7 +13,7 @@ import {
   noteTitle,
   rankNoteFiles,
   type Note,
-} from "../../../src/lib/notes";
+} from "@/lib/notes";
 
 function note(partial: Partial<Note> & Pick<Note, "id" | "slug" | "title">): Note {
   return {

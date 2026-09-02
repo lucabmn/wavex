@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { leaf, newTab, newTerminalFile, type WorkspaceTab } from "../../../src/lib/layout";
-import { createProjectTerminal } from "../../../src/lib/projectTerminal";
-import type { Session } from "../../../src/lib/session";
-import { collectWindowTransfer } from "../../../src/lib/windowTransfer";
+import { leaf, newTab, newTerminalFile, type WorkspaceTab } from "@/lib/layout";
+import { createProjectTerminal } from "@/lib/projectTerminal";
+import type { Session } from "@/lib/session";
+import { collectWindowTransfer } from "@/lib/windowTransfer";
 
 function session(id: string, cwd: string): Session {
   return {

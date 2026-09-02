@@ -3,7 +3,7 @@ import {
   consumeInstalledUpdate,
   rememberInstalledUpdate,
   type UpdateNoticeStore,
-} from "../../../src/lib/updateNotice";
+} from "@/lib/updateNotice";
 
 function memoryStore(): UpdateNoticeStore {
   const values = new Map<string, string>();

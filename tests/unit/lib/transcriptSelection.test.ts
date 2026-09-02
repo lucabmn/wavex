@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateTranscriptSelection } from "../../../src/lib/transcriptSelection";
+import { validateTranscriptSelection } from "@/lib/transcriptSelection";
 
 describe("validateTranscriptSelection", () => {
   it("accepts non-empty text within one settled response", () => {

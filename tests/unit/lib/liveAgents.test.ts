@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatLiveElapsed, liveAgentsFromSessions } from "../../../src/lib/liveAgents";
-import { newSession, type Block, type Session } from "../../../src/lib/session";
+import { formatLiveElapsed, liveAgentsFromSessions } from "@/lib/liveAgents";
+import { newSession, type Block, type Session } from "@/lib/session";
 
 function chat(cwd: string, patch: Partial<Session> = {}): Session {
   const session = newSession("claude", cwd);

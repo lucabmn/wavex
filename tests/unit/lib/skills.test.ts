@@ -13,7 +13,7 @@ import {
   slashTokenAt,
   slugSkillName,
   type Skill,
-} from "../../../src/lib/skills";
+} from "@/lib/skills";
 
 const review: Skill = {
   kind: "file",

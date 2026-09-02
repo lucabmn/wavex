@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { WhatsNewBody } from "../../../src/chrome/WhatsNewDialog";
+import { WhatsNewBody } from "@/chrome/WhatsNewDialog";
 
 describe("WhatsNewBody", () => {
   it("renders the version notes without the changelog heading", () => {

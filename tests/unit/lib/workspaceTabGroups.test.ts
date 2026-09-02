@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { leaf, leafIds, newTab, type WorkspaceTab } from "../../../src/lib/layout";
-import type { Session } from "../../../src/lib/session";
+import { leaf, leafIds, newTab, type WorkspaceTab } from "@/lib/layout";
+import type { Session } from "@/lib/session";
 import {
   applyDeletedSessionToWorkspace,
   applyPlaceSessionOnPane,
@@ -9,7 +9,7 @@ import {
   planWorkspaceTabClose,
   replaceGroupInTabOrder,
   workspaceTabProject,
-} from "../../../src/lib/workspaceTabGroups";
+} from "@/lib/workspaceTabGroups";
 
 function session(id: string, cwd: string): Session {
   return {

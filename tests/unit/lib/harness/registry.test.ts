@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetHarnessModelOverlays, setHarnessModels } from "../../../../src/lib/models";
+import { resetHarnessModelOverlays, setHarnessModels } from "@/lib/models";
 import {
   HARNESS_IDLE_PARK_MS,
   isLiveHarness,
@@ -9,8 +9,8 @@ import {
   resetHarnessIdlePark,
   sendHarnessTurn,
   type HarnessAdapter,
-} from "../../../../src/lib/harness/registry";
-import type { SendTurnInput, SteerTurnInput } from "../../../../src/lib/harness/types";
+} from "@/lib/harness/registry";
+import type { SendTurnInput, SteerTurnInput } from "@/lib/harness/types";
 
 function stub(
   id: "cursor" | "codex" | "claude" | "pi",

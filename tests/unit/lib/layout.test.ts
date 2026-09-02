@@ -25,7 +25,7 @@ import {
   splitPane,
   splitSizesAtBoundary,
   updateTerminalTab,
-} from "../../../src/lib/layout";
+} from "@/lib/layout";
 
 describe("splitSizesAtBoundary", () => {
   it("moves only the adjacent panes and preserves their total", () => {

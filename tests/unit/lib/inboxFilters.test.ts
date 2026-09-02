@@ -9,8 +9,8 @@ import {
   hasActiveInboxFilters,
   inboxFetchState,
   pruneInboxFilters,
-} from "../../../src/lib/inboxFilters";
-import type { InboxItem } from "../../../src/lib/githubTasks";
+} from "@/lib/inboxFilters";
+import type { InboxItem } from "@/lib/githubTasks";
 
 function item(overrides: Partial<InboxItem> & Pick<InboxItem, "number" | "updatedAt">): InboxItem {
   return {

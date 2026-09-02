@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { newReleaseNotesWorkspaceTab } from "../../../src/lib/layout";
-import { releaseNotesTitle } from "../../../src/lib/releaseNotes";
-import { appendProblems, surfaceTabPresentation } from "../../../src/chrome/SurfaceTabs";
+import { newReleaseNotesWorkspaceTab } from "@/lib/layout";
+import { releaseNotesTitle } from "@/lib/releaseNotes";
+import { appendProblems, surfaceTabPresentation } from "@/chrome/SurfaceTabs";
 
 describe("surfaceTabPresentation", () => {
   it("labels release notes from their version", () => {

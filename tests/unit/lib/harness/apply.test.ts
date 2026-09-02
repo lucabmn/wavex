@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { newSession } from "../../../../src/lib/session";
-import {
-  appendUser,
-  applyHarnessEvent,
-  appendSteerUser,
-  stopStreaming,
-} from "../../../../src/lib/harness/apply";
+import { newSession } from "@/lib/session";
+import { appendUser, applyHarnessEvent, appendSteerUser, stopStreaming } from "@/lib/harness/apply";
 
 let now = 0;
 

@@ -37,7 +37,7 @@ function installResolvedListeners() {
 
 async function loadChild() {
   vi.resetModules();
-  return import("../../../../src/lib/harness/child");
+  return import("@/lib/harness/child");
 }
 
 async function flush() {

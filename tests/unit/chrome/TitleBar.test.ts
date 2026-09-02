@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tabCopy, tabStripOverflow, type Tab } from "../../../src/chrome/TitleBar";
+import { tabCopy, tabStripOverflow, type Tab } from "@/chrome/TitleBar";
 
 function tab(overrides: Partial<Tab> = {}): Tab {
   return {

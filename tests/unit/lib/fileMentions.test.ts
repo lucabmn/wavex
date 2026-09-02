@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ProjectFile } from "../../../src/lib/fs";
+import type { ProjectFile } from "@/lib/fs";
 import {
   buildMentionIndex,
   fileMentionParts,
@@ -9,7 +9,7 @@ import {
   rankMentionFiles,
   replaceMentionToken,
   withMentionDirectories,
-} from "../../../src/lib/fileMentions";
+} from "@/lib/fileMentions";
 
 const files: ProjectFile[] = [
   {

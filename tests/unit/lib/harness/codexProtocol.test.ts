@@ -8,8 +8,8 @@ import {
   mapCodexNotification,
   runtimeModeToCodexConfig,
   toCodexApprovalDecision,
-} from "../../../../src/lib/harness/codexProtocol";
-import { parseCodexModelList } from "../../../../src/lib/harness/codexCatalog";
+} from "@/lib/harness/codexProtocol";
+import { parseCodexModelList } from "@/lib/harness/codexCatalog";
 
 describe("runtimeModeToCodexConfig", () => {
   it("maps supervised to untrusted read-only", () => {

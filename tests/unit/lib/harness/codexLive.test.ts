@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sent: string[] = [];
 let onLine: ((line: string) => void) | undefined;
 
-vi.mock("../../../../src/lib/harness/child", () => ({
+vi.mock("@/lib/harness/child", () => ({
   resolveCodexBinary: async () => ({ path: "/fake/codex" }),
   spawnChild: async () => undefined,
   killChild: async () => undefined,
@@ -16,9 +16,8 @@ vi.mock("../../../../src/lib/harness/child", () => ({
   },
 }));
 
-const { sendCodexTurn, stopCodexSession, __codexTestReset } =
-  await import("../../../../src/lib/harness/codex");
-import type { HarnessEvent } from "../../../../src/lib/harness/types";
+const { sendCodexTurn, stopCodexSession, __codexTestReset } = await import("@/lib/harness/codex");
+import type { HarnessEvent } from "@/lib/harness/types";
 
 function parse() {
   return sent.map((line) => JSON.parse(line) as Record<string, unknown>);

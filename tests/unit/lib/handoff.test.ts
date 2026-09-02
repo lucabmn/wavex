@@ -17,8 +17,8 @@ import {
   shouldAskOutgoingAgent,
   userMessagesAfterHandoff,
   wrapHandoffPrompt,
-} from "../../../src/lib/handoff";
-import { newSession, type Block, type Session } from "../../../src/lib/session";
+} from "@/lib/handoff";
+import { newSession, type Block, type Session } from "@/lib/session";
 
 function sessionWith(blocks: Block[], extra?: Partial<Session>): Session {
   return {

@@ -4,7 +4,7 @@ const sent: string[] = [];
 let onLine: ((line: string) => void) | undefined;
 let onExit: ((code: number | null) => void) | undefined;
 
-vi.mock("../../../../src/lib/harness/child", () => ({
+vi.mock("@/lib/harness/child", () => ({
   resolveGrokBinary: async () => ({ path: "/fake/grok" }),
   spawnChild: async () => undefined,
   killChild: async () => undefined,
@@ -18,9 +18,8 @@ vi.mock("../../../../src/lib/harness/child", () => ({
   },
 }));
 
-const { sendGrokTurn, respondGrokApproval, stopGrokSession } =
-  await import("../../../../src/lib/harness/grok");
-import type { HarnessEvent } from "../../../../src/lib/harness/types";
+const { sendGrokTurn, respondGrokApproval, stopGrokSession } = await import("@/lib/harness/grok");
+import type { HarnessEvent } from "@/lib/harness/types";
 
 function reply(id: number, result: unknown) {
   onLine!(JSON.stringify({ jsonrpc: "2.0", id, result }));

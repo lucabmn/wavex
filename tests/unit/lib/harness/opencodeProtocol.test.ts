@@ -3,7 +3,7 @@ import {
   flattenOpenCodeModels,
   parseAgentListCliOutput,
   parseModelsCliOutput,
-} from "../../../../src/lib/harness/opencodeCatalog";
+} from "@/lib/harness/opencodeCatalog";
 import {
   buildOpenCodePermissionRules,
   compareSemver,
@@ -17,7 +17,7 @@ import {
   parseOpenCodeVersion,
   parseServerUrlFromOutput,
   toOpenCodePermissionReply,
-} from "../../../../src/lib/harness/opencodeProtocol";
+} from "@/lib/harness/opencodeProtocol";
 
 describe("parseOpenCodeModelSlug", () => {
   it("splits provider/model", () => {

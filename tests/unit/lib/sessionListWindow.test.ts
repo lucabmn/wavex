@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SESSION_LIST_PAGE, sessionListWindow } from "../../../src/lib/sessionListWindow";
+import { SESSION_LIST_PAGE, sessionListWindow } from "@/lib/sessionListWindow";
 
 describe("sessionListWindow", () => {
   it("returns 0 for an empty list", () => {

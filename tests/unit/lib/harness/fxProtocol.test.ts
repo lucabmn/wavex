@@ -12,8 +12,8 @@ import {
   permissionRequestFromAcp,
   readConfigOptions,
   sessionIdFromResult,
-} from "../../../../src/lib/harness/fxProtocol";
-import { harnessSupportsAttachments } from "../../../../src/lib/session";
+} from "@/lib/harness/fxProtocol";
+import { harnessSupportsAttachments } from "@/lib/session";
 
 describe("fx protocol", () => {
   // fx's "ask" mode stops for every read and command, and we surface none of

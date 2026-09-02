@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { FsEntry } from "../../../src/lib/fs";
+import type { FsEntry } from "@/lib/fs";
 import {
   forgetDir,
   listCachedDir,
@@ -8,7 +8,7 @@ import {
   refreshCachedDirs,
   refreshDir,
   subscribeDirsChanged,
-} from "../../../src/lib/fileTree";
+} from "@/lib/fileTree";
 
 const root = "/tmp/empty-project";
 
@@ -23,8 +23,8 @@ function entry(name: string): FsEntry {
 
 const listDir = vi.fn<(path: string) => Promise<FsEntry[]>>();
 
-vi.mock("../../../src/lib/fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../src/lib/fs")>();
+vi.mock("@/lib/fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/fs")>();
   return {
     ...actual,
     listDir: (path: string) => listDir(path),

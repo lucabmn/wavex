@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { trimReplay } from "../../../src/lib/pty";
+import { trimReplay } from "@/lib/pty";
 
 const KB = 1024;
 

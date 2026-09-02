@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { HarnessId } from "../../../src/lib/session";
+import type { HarnessId } from "@/lib/session";
 import {
   coerceModelPickerTab,
   defaultModelId,
@@ -23,7 +23,7 @@ import {
   showProviderInModelPicker,
   stepModelPickerTab,
   type AgentModel,
-} from "../../../src/lib/models";
+} from "@/lib/models";
 
 const opus: AgentModel = {
   id: "claude:opus-5",

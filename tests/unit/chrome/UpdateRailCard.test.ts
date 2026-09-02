@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { UpdateRailCard } from "../../../src/chrome/UpdateRailCard";
+import { UpdateRailCard } from "@/chrome/UpdateRailCard";
 
 describe("UpdateRailCard", () => {
   it("announces the version and names both actions", () => {

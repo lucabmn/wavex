@@ -33,7 +33,7 @@ import {
   stunDone,
   stunShake,
   stunStars,
-} from "../../../src/lib/composerRunner";
+} from "@/lib/composerRunner";
 
 const BOX = { left: 100, right: 500, top: 200, bottom: 320, width: 400 };
 

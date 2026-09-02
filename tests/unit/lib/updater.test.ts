@@ -17,8 +17,8 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: mocks.relaunch }));
 vi.mock("@tauri-apps/plugin-updater", () => ({ check: mocks.check }));
-vi.mock("../../../src/lib/sounds", () => ({ announceUpdateAvailable: mocks.announce }));
-vi.mock("../../../src/lib/updateNotice", () => ({ rememberInstalledUpdate: mocks.remember }));
+vi.mock("@/lib/sounds", () => ({ announceUpdateAvailable: mocks.announce }));
+vi.mock("@/lib/updateNotice", () => ({ rememberInstalledUpdate: mocks.remember }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -34,7 +34,7 @@ async function updaterWithPendingUpdate() {
     downloadAndInstall: mocks.downloadAndInstall,
   };
   mocks.check.mockResolvedValue(update);
-  const updater = await import("../../../src/lib/updater");
+  const updater = await import("@/lib/updater");
   await updater.probeForUpdate();
   return updater;
 }
@@ -65,7 +65,7 @@ describe("installPendingUpdate", () => {
   });
 
   it("does not record when no update is pending", async () => {
-    const updater = await import("../../../src/lib/updater");
+    const updater = await import("@/lib/updater");
 
     expect((await updater.installPendingUpdate()).phase).toBe("idle");
     expect(mocks.remember).not.toHaveBeenCalled();

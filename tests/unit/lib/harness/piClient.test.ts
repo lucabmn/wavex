@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ writeChild: vi.fn() }));
 
-vi.mock("../../../../src/lib/harness/child", () => ({ writeChild: mocks.writeChild }));
+vi.mock("@/lib/harness/child", () => ({ writeChild: mocks.writeChild }));
 
-import { PiRpc } from "../../../../src/lib/harness/piClient";
+import { PiRpc } from "@/lib/harness/piClient";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

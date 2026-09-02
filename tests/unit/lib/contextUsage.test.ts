@@ -6,7 +6,7 @@ import {
   dropContextWindow,
   formatTokens,
   mergeContextUsage,
-} from "../../../src/lib/contextUsage";
+} from "@/lib/contextUsage";
 
 describe("contextRatio", () => {
   it("divides used by the window", () => {

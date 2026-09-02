@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sent: string[] = [];
 let onLine: ((line: string) => void) | undefined;
 
-vi.mock("../../../../src/lib/harness/child", () => ({
+vi.mock("@/lib/harness/child", () => ({
   resolveClaudeBinary: async () => ({ path: "/fake/claude" }),
   spawnChild: async () => undefined,
   killChild: async () => undefined,
@@ -17,8 +17,8 @@ vi.mock("../../../../src/lib/harness/child", () => ({
 }));
 
 const { sendClaudeTurn, stopClaudeSession, __claudeTestReset } =
-  await import("../../../../src/lib/harness/claude");
-import type { HarnessEvent } from "../../../../src/lib/harness/types";
+  await import("@/lib/harness/claude");
+import type { HarnessEvent } from "@/lib/harness/types";
 
 function parse() {
   return sent.map((line) => JSON.parse(line) as Record<string, unknown>);

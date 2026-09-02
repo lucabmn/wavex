@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCheckoutBlockedByChanges } from "../../../src/lib/fs";
+import { isCheckoutBlockedByChanges } from "@/lib/fs";
 
 describe("isCheckoutBlockedByChanges", () => {
   it("detects git's tracked-file checkout error", () => {

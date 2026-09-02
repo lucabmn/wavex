@@ -9,7 +9,7 @@ import {
   saveComposerRunner,
   saveLiveAgentsEnabled,
   saveNotesEnabled,
-} from "../../../src/lib/settings";
+} from "@/lib/settings";
 
 const KEY = "wavex.composerRunner";
 const NOTES_KEY = "wavex.notesEnabled";

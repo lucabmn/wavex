@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { newSession } from "../../../src/lib/session";
-import { rememberLoadedSession } from "../../../src/lib/sessionCache";
+import { newSession } from "@/lib/session";
+import { rememberLoadedSession } from "@/lib/sessionCache";
 
 function chat(id: string): ReturnType<typeof newSession> {
   const session = newSession("cursor", "/tmp/project");

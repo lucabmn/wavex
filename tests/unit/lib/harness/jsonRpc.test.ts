@@ -4,11 +4,11 @@ const transport = vi.hoisted(() => ({
   onWrite: async (_sessionId: string, _line: string): Promise<void> => {},
 }));
 
-vi.mock("../../../../src/lib/harness/child", () => ({
+vi.mock("@/lib/harness/child", () => ({
   writeChild: (sessionId: string, line: string) => transport.onWrite(sessionId, line),
 }));
 
-import { JsonRpcClient } from "../../../../src/lib/harness/jsonRpc";
+import { JsonRpcClient } from "@/lib/harness/jsonRpc";
 
 describe("JsonRpcClient", () => {
   beforeEach(() => {

@@ -16,7 +16,7 @@ import {
   rateLimitWindowTooltip,
   shouldFetchProvider,
   shouldFetchRateLimits,
-} from "../../../src/lib/rateLimits";
+} from "@/lib/rateLimits";
 
 describe("formatWindowLabel", () => {
   it("uses the compact 5h / wk labels", () => {

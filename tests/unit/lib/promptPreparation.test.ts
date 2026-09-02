@@ -8,20 +8,20 @@ const mocks = vi.hoisted(() => ({
   warmPiSkills: vi.fn(),
 }));
 
-vi.mock("../../../src/lib/fileMentions", () => ({
+vi.mock("@/lib/fileMentions", () => ({
   applyFileMentionsToTurn: mocks.applyFileMentionsToTurn,
 }));
 
-vi.mock("../../../src/lib/notes", () => ({
+vi.mock("@/lib/notes", () => ({
   applyNotesToTurn: mocks.applyNotesToTurn,
 }));
 
-vi.mock("../../../src/lib/skills", () => ({
+vi.mock("@/lib/skills", () => ({
   applySkillsToTurn: mocks.applySkillsToTurn,
   warmPiSkills: mocks.warmPiSkills,
 }));
 
-import { preparePrompt } from "../../../src/lib/promptPreparation";
+import { preparePrompt } from "@/lib/promptPreparation";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

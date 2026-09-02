@@ -10,7 +10,7 @@ import {
   saveThemePreference,
   resolveColorScheme,
   THEME_PREFERENCE_DEFAULT,
-} from "../../../src/lib/appearance";
+} from "@/lib/appearance";
 
 const KEY = "wavex.transcriptLayout";
 const SCHEME_KEY = "wavex.colorScheme";

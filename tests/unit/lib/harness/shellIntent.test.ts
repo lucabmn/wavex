@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatShellIntent, inferShellIntent } from "../../../../src/lib/harness/shellIntent";
+import { formatShellIntent, inferShellIntent } from "@/lib/harness/shellIntent";
 
 describe("inferShellIntent", () => {
   it("reads a file from cat / head / sed -n", () => {

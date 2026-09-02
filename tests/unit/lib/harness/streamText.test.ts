@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  joinStreamText,
-  snapshotRemainder,
-  streamTextDelta,
-} from "../../../../src/lib/harness/streamText";
+import { joinStreamText, snapshotRemainder, streamTextDelta } from "@/lib/harness/streamText";
 
 describe("joinStreamText", () => {
   it("appends tokens, including doubled letters and punctuation", () => {

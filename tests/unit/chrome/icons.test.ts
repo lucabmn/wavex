@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { FilePlus, FoldVertical, UnfoldVertical } from "../../../src/chrome/icons";
+import { FilePlus, FoldVertical, UnfoldVertical } from "@/chrome/icons";
 
 const SRC = fileURLToPath(new URL("..", import.meta.url));
 const CATALOG = "chrome/icons.tsx";
