@@ -1263,21 +1263,21 @@ umsortiert werden. Ab Phase 6 ist die Reihenfolge bindend.
 
 Stand 2026-09-02. Der Branch ist `chore/repo-rework`.
 
-| Phase | Status | Anmerkung |
-| --- | --- | --- |
-| 0 Toolchain | erledigt | oxlint auf 1.80.0 gepinnt; 1.81.0 war jünger als pnpms `minimumReleaseAge` und ließ `pnpm install` scheitern |
-| 1 Branding | erledigt | |
-| 2 Versionen | erledigt | 0.1.0 in allen vier Manifesten, CHANGELOG auf Englisch |
-| 3 Tests nach `tests/` | erledigt | Nachgezogen: die Imports gehen jetzt wirklich über `@/`, vorher waren es relative Pfade zurück nach `src/` |
-| 4a Arcade | erledigt | |
-| 4b Linux | erledigt | |
-| 4c Linear | erledigt | |
-| 5 Actions/Vorlagen | erledigt | `--notes-file` schreibt jetzt in eine echte Datei; Process Substitution hätte den Exit-Code des Skripts verschluckt |
-| 6 Struktur | erledigt, abweichend | siehe unten |
-| 7 Harness-Duplikate | erledigt | −680 Zeilen netto |
-| 8 `App.tsx` | Schritt 1 erledigt | Hilfsfunktionen extrahiert und getestet; die Stores stehen aus |
-| 9 README | erledigt | |
-| 10 Abschluss | teilweise | siehe unten |
+| Phase                 | Status               | Anmerkung                                                                                                           |
+| --------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 0 Toolchain           | erledigt             | oxlint auf 1.80.0 gepinnt; 1.81.0 war jünger als pnpms `minimumReleaseAge` und ließ `pnpm install` scheitern        |
+| 1 Branding            | erledigt             |                                                                                                                     |
+| 2 Versionen           | erledigt             | 0.1.0 in allen vier Manifesten, CHANGELOG auf Englisch                                                              |
+| 3 Tests nach `tests/` | erledigt             | Nachgezogen: die Imports gehen jetzt wirklich über `@/`, vorher waren es relative Pfade zurück nach `src/`          |
+| 4a Arcade             | erledigt             |                                                                                                                     |
+| 4b Linux              | erledigt             |                                                                                                                     |
+| 4c Linear             | erledigt             |                                                                                                                     |
+| 5 Actions/Vorlagen    | erledigt             | `--notes-file` schreibt jetzt in eine echte Datei; Process Substitution hätte den Exit-Code des Skripts verschluckt |
+| 6 Struktur            | erledigt, abweichend | siehe unten                                                                                                         |
+| 7 Harness-Duplikate   | erledigt             | −680 Zeilen netto                                                                                                   |
+| 8 `App.tsx`           | Schritt 1 erledigt   | Hilfsfunktionen extrahiert und getestet; die Stores stehen aus                                                      |
+| 9 README              | erledigt             |                                                                                                                     |
+| 10 Abschluss          | teilweise            | siehe unten                                                                                                         |
 
 ### Abweichung in Phase 6
 
@@ -1285,14 +1285,14 @@ Der Plan wollte `src/lib` vollständig in `features/` und `shared/` aufteilen un
 dabei unter anderem `session.ts` nach `features/session/` und `fs.ts` nach
 `features/files/` legen. Der tatsächliche Importgraph spricht dagegen:
 
-| Modul | Importeure |
-| --- | --- |
-| `session` | 73 |
-| `fs` | 39 |
-| `paths` | 31 |
-| `recents` | 31 |
-| `models` | 29 |
-| `platform` | 22 |
+| Modul      | Importeure |
+| ---------- | ---------- |
+| `session`  | 73         |
+| `fs`       | 39         |
+| `paths`    | 31         |
+| `recents`  | 31         |
+| `models`   | 29         |
+| `platform` | 22         |
 
 Ein Modul, das von 73 der rund 250 Dateien importiert wird, ist kein
 Feature-Modul, sondern das gemeinsame Vokabular. Hinter eine Feature-Grenze
@@ -1323,7 +1323,7 @@ Teil, bei dem ein Fehler dem Typechecker entgeht, und ein halb migrierter
 Session-Store ist schlechter als gar keiner.
 
 **Wichtig für den nächsten Durchgang:** Das Gate dieser Phase verlangt eine
-React-DevTools-Messung *vor* Beginn — was rendert alles neu, wenn man ein
+React-DevTools-Messung _vor_ Beginn — was rendert alles neu, wenn man ein
 Zeichen in den Composer tippt. Diese Messung wurde nicht aufgenommen und lässt
 sich nicht nachholen. Sie muss vor dem ersten Store-Commit erfolgen, sonst gibt
 es keinen Beleg für die Performance-Wirkung.
