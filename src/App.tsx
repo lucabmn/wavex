@@ -3514,7 +3514,9 @@ export default function App({
     );
   }, [currentProjectDock, dockVisible]);
 
-  const workMode = appMode === "work";
+  // Settings renders inside the coding shell, so Work steps aside for it
+  // rather than hiding the surface that is supposed to show it.
+  const workMode = appMode === "work" && !settingsOpen;
 
   return (
     <div
@@ -3523,7 +3525,7 @@ export default function App({
       }`}
     >
       <Sidebar
-        workMode={workMode}
+        workMode={appMode === "work"}
         mode={appMode}
         onModeChange={setAppMode}
         cwd={sidebarCwd}
@@ -3834,7 +3836,7 @@ export default function App({
       </div>
 
       {workMode ? (
-        <WorkView mode={appMode} onModeChange={setAppMode} besideRail={projectRailOpen} />
+        <WorkView mode={appMode} onModeChange={setAppMode} onOpenSettings={onOpenSettings} />
       ) : null}
 
       {filePickerOpen ? (

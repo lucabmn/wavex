@@ -198,7 +198,7 @@ type Props = {
   notesEnabled?: boolean;
   usageActive?: boolean;
   onToggleProjectRail?: () => void;
-  /** Work is in front: keep the rail, drop the project-scoped panel. */
+  /** Work is in front: it brings its own left column, so this one stands down. */
   workMode?: boolean;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
@@ -1223,7 +1223,9 @@ function SidebarComponent({
   return (
     <div
       className={`flex h-full shrink-0 ${
-        railVisible || (sidebarVisible && !workMode) ? "" : "hidden"
+        // Settings is a coding-shell overlay and hangs its nav off the rail, so
+        // the rail comes back for it even when Work is the surface underneath.
+        !(workMode && !settingsOpen) && (railVisible || sidebarVisible) ? "" : "hidden"
       }`}
     >
       {railVisible && onSelectProject && onOpenProject ? (
@@ -1264,7 +1266,7 @@ function SidebarComponent({
           onDismissUpdate={onDismissUpdate}
         />
       ) : null}
-      {sidebarVisible && !workMode ? sidebarContent : null}
+      {sidebarVisible ? sidebarContent : null}
     </div>
   );
 }

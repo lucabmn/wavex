@@ -10,7 +10,7 @@ import {
 import { ChatComposer, type ChatComposerHandle } from "../chrome/ChatComposer";
 import { ModeSwitch } from "../chrome/ModeSwitch";
 import { WindowControls } from "../chrome/WindowControls";
-import { MessageSquare, PenLine, Plus, Search, Trash2, X } from "../chrome/icons";
+import { MessageSquare, PenLine, Plus, Search, Settings, Trash2, X } from "../chrome/icons";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { IS_MAC, MOD } from "../lib/platform";
 import type { AppMode } from "../lib/workspace/appMode";
@@ -43,8 +43,7 @@ import { AgentTranscript } from "./AgentTranscript";
 type Props = {
   mode: AppMode;
   onModeChange: (mode: AppMode) => void;
-  /** The project rail is showing, so it owns the traffic lights and the switch. */
-  besideRail?: boolean;
+  onOpenSettings?: () => void;
 };
 
 /**
@@ -52,7 +51,7 @@ type Props = {
  * project, cwd, worktree, file, or source-control affordances. The whole
  * window belongs to it, so it carries its own top chrome.
  */
-export function WorkView({ mode, onModeChange, besideRail = false }: Props) {
+export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
   const state = useSyncExternalStore(subscribeWorkChats, getWorkChatState);
   const [query, setQuery] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -155,15 +154,19 @@ export function WorkView({ mode, onModeChange, besideRail = false }: Props) {
       data-app-work
       className="flex h-full min-h-0 min-w-0 flex-1 text-content"
     >
-      <aside className="flex w-64 shrink-0 flex-col border-r border-content/10">
-        {/* With the rail open it already carries the traffic lights and the
-            switch; this strip only has to exist so the window stays draggable. */}
+      {/* Work replaces the project rail rather than sitting beside it, so this
+          column owns the traffic lights and carries the mode switch itself.
+          `sidebar-glass` is what makes it opaque — without it the window's
+          macOS vibrancy shows whatever is behind wavex. */}
+      <aside className="sidebar-glass flex w-64 shrink-0 flex-col border-r border-content/10">
         <div
           className="flex h-10 shrink-0 select-none items-center gap-2 px-1.5"
           data-tauri-drag-region="deep"
         >
-          {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-          {besideRail ? null : <ModeSwitch mode={mode} onChange={onModeChange} />}
+          {IS_MAC ? <div className="w-[70px] shrink-0" /> : null}
+          <div className="min-w-0 flex-1">
+            <ModeSwitch mode={mode} onChange={onModeChange} stretch />
+          </div>
         </div>
 
         <div className="flex items-center gap-1 px-2 pb-2">
@@ -232,9 +235,23 @@ export function WorkView({ mode, onModeChange, besideRail = false }: Props) {
             />
           ))}
         </div>
+
+        {onOpenSettings ? (
+          <div className="shrink-0 border-t border-content/10 p-2">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-content/70 hover:bg-content/5 hover:text-content"
+            >
+              <Settings className="size-3.5 shrink-0" strokeWidth={1.75} />
+              <span className="min-w-0 flex-1 text-left">Settings</span>
+              <span className="shrink-0 text-[11px] text-content/35">{MOD},</span>
+            </button>
+          </div>
+        ) : null}
       </aside>
 
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <section className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
         <div
           className="flex h-10 shrink-0 select-none items-center px-3"
           data-tauri-drag-region="deep"
