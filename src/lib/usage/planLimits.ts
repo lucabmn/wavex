@@ -139,6 +139,7 @@ const CLAUDE_WINDOW_LABELS: Record<string, string> = {
   session: "5-hour session",
   five_hour: "5-hour session",
   weekly: "Weekly",
+  weekly_all: "Weekly",
   seven_day: "Weekly",
   weekly_opus: "Weekly · Opus",
   seven_day_opus: "Weekly · Opus",
@@ -148,7 +149,7 @@ const CLAUDE_WINDOW_LABELS: Record<string, string> = {
   opus: "Weekly · Opus",
 };
 
-const CLAUDE_WINDOW_ORDER = ["session", "five_hour", "weekly", "seven_day"];
+const CLAUDE_WINDOW_ORDER = ["session", "five_hour", "weekly", "weekly_all", "seven_day"];
 
 function claudeWindowLabel(kind: string): string {
   const known = CLAUDE_WINDOW_LABELS[kind];
@@ -167,9 +168,11 @@ function claudeWindowRank(id: string): number {
 /**
  * Reads the OAuth usage payload.
  *
- * The `limits` array is preferred when present: it is the plan's own list, so
- * a plan with an extra weekly cap reports it without this needing to know the
- * name. The named fields are the fallback for older responses.
+ * The named `five_hour` / `seven_day*` fields are read first. The `limits`
+ * array looked like the better source because it is the plan's own list, but
+ * it marks a live weekly window `is_active: false` — a real percentage and a
+ * real reset arrive under a flag that would drop it — so it is the fallback
+ * for payloads that carry no named field.
  */
 export function parseClaudePlanLimits(body: string): PlanLimits {
   let parsed: unknown;
@@ -181,7 +184,8 @@ export function parseClaudePlanLimits(body: string): PlanLimits {
   const rec = asRecord(parsed);
   if (!rec) return errorPlanLimits("claude", "Claude usage response was empty");
 
-  const windows = claudeWindowsFromLimits(rec) ?? claudeWindowsFromFields(rec);
+  const named = claudeWindowsFromFields(rec);
+  const windows = named.length > 0 ? named : (claudeWindowsFromLimits(rec) ?? []);
   if (windows.length === 0) {
     return unavailablePlanLimits("claude", "Claude reported no plan limits");
   }
@@ -204,8 +208,10 @@ function claudeWindowsFromLimits(rec: Record<string, unknown>): PlanLimitWindow[
   for (const entry of limits) {
     const limit = asRecord(entry);
     if (!limit) continue;
-    // An inactive limit belongs to a plan feature the account does not have.
-    if (limit.is_active === false) continue;
+    // A scoped limit caps one model or surface rather than the plan, and it
+    // reports zero for accounts that never reach it. `is_active` is not the
+    // test: the live weekly window arrives with it set to false.
+    if (limit.scope != null) continue;
     const id =
       (typeof limit.kind === "string" && limit.kind.trim()) ||
       (typeof limit.group === "string" && limit.group.trim()) ||
@@ -223,9 +229,20 @@ function claudeWindowsFromLimits(rec: Record<string, unknown>): PlanLimitWindow[
   return windows.length > 0 ? windows : null;
 }
 
+/**
+ * Reads the named windows.
+ *
+ * `five_hour` plus every `seven_day*` bucket: the endpoint carries more of the
+ * latter than any one plan uses and adds new ones over time, and the unused
+ * ones are null. The prefix is the filter rather than a fixed list so a new
+ * weekly bucket shows up on its own; it also keeps out the codename keys the
+ * payload carries for unreleased features, which report a flat zero with no
+ * reset and would each render a card.
+ */
 function claudeWindowsFromFields(rec: Record<string, unknown>): PlanLimitWindow[] {
+  const keys = ["five_hour", ...Object.keys(rec).filter((key) => key.startsWith("seven_day"))];
   const windows: PlanLimitWindow[] = [];
-  for (const key of ["five_hour", "seven_day", "seven_day_opus", "seven_day_sonnet"]) {
+  for (const key of keys) {
     const field = asRecord(rec[key]);
     if (!field) continue;
     const percent = numberField(field, "utilization") ?? numberField(field, "used_percentage");

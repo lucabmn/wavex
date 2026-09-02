@@ -11,37 +11,58 @@ import {
 } from "@/lib/usage/planLimits";
 
 describe("parseClaudePlanLimits", () => {
-  it("prefers the plan's own limits array", () => {
+  it("reads the weekly window the limits array reports as inactive", () => {
+    // Shape of a live response: the weekly window carries a real percentage
+    // and a real reset while `is_active` is false, so the named fields are
+    // the source and the array only fills in for payloads without them.
     const limits = parseClaudePlanLimits(
       JSON.stringify({
-        five_hour: { utilization: 9, resets_at: "2026-09-02T22:59:59Z" },
-        seven_day: { utilization: 1, resets_at: "2026-09-04T03:59:59Z" },
+        five_hour: { utilization: 11, resets_at: "2026-09-02T22:59:59.816124+00:00" },
+        seven_day: { utilization: 2, resets_at: "2026-09-04T03:59:59.816147+00:00" },
+        seven_day_opus: null,
+        seven_day_sonnet: null,
+        nimbus_quill: { utilization: 0, resets_at: null },
         limits: [
+          { kind: "session", group: "session", percent: 11, is_active: true },
+          { kind: "weekly_all", group: "weekly", percent: 2, is_active: false },
           {
-            kind: "weekly",
-            percent: 41,
-            resets_at: "2026-09-04T03:59:59Z",
-            is_active: true,
+            kind: "weekly_scoped",
+            group: "weekly",
+            percent: 0,
+            scope: { model: { display_name: "Fable" } },
+            is_active: false,
           },
-          { kind: "session", percent: 9, resets_at: "2026-09-02T22:59:59Z", is_active: true },
         ],
       }),
     );
     expect(limits.status).toBe("ok");
-    // The session window is read first regardless of the payload's order.
-    expect(limits.windows.map((window) => window.id)).toEqual(["session", "weekly"]);
+    expect(limits.windows.map((window) => window.id)).toEqual(["five_hour", "seven_day"]);
     expect(limits.windows[0]?.label).toBe("5-hour session");
-    expect(limits.windows[0]?.usedPercent).toBe(9);
+    expect(limits.windows[0]?.usedPercent).toBe(11);
     expect(limits.windows[1]?.label).toBe("Weekly");
-    expect(limits.windows[1]?.resetsAt).toBe(Date.parse("2026-09-04T03:59:59Z"));
+    expect(limits.windows[1]?.usedPercent).toBe(2);
+    expect(limits.windows[1]?.resetsAt).toBe(Date.parse("2026-09-04T03:59:59.816147+00:00"));
   });
 
-  it("skips limits the account does not have", () => {
+  it("keeps an inactive plan window when the array is the only source", () => {
     const limits = parseClaudePlanLimits(
       JSON.stringify({
         limits: [
           { kind: "session", percent: 5, is_active: true },
-          { kind: "weekly_opus", percent: 0, is_active: false },
+          { kind: "weekly_all", percent: 2, is_active: false },
+        ],
+      }),
+    );
+    expect(limits.windows.map((window) => window.id)).toEqual(["session", "weekly_all"]);
+    expect(limits.windows[1]?.label).toBe("Weekly");
+  });
+
+  it("skips a scoped limit, which caps one model rather than the plan", () => {
+    const limits = parseClaudePlanLimits(
+      JSON.stringify({
+        limits: [
+          { kind: "session", percent: 5, is_active: true },
+          { kind: "weekly_scoped", percent: 0, scope: { model: { display_name: "Fable" } } },
         ],
       }),
     );
@@ -55,15 +76,19 @@ describe("parseClaudePlanLimits", () => {
     expect(limits.windows[0]?.label).toBe("Monthly Agent");
   });
 
-  it("falls back to the named fields when no limits array is present", () => {
+  it("reads a weekly bucket it has no fixed name for", () => {
     const limits = parseClaudePlanLimits(
       JSON.stringify({
-        five_hour: { utilization: 9, resets_at: "2026-09-02T22:59:59Z" },
-        seven_day: { utilization: 1, resets_at: "2026-09-04T03:59:59Z" },
-        seven_day_opus: null,
+        five_hour: { utilization: 9 },
+        seven_day: { utilization: 1 },
+        seven_day_cowork: { utilization: 4 },
       }),
     );
-    expect(limits.windows.map((window) => window.label)).toEqual(["5-hour session", "Weekly"]);
+    expect(limits.windows.map((window) => window.label)).toEqual([
+      "5-hour session",
+      "Weekly",
+      "Seven Day Cowork",
+    ]);
   });
 
   it("reports a payload with no windows as unavailable rather than as zero usage", () => {
