@@ -181,6 +181,46 @@ pub fn enable_glass(window: &WebviewWindow) {
     apply_blur(window, BLUR_RADIUS.load(Ordering::Relaxed));
 }
 
+/// Glass for a window whose card does not fill its own square frame.
+///
+/// `prepare_glass`'s tiny-alpha background covers the whole rectangle, so the
+/// desktop blur and the native shadow are square. Behind a rounded popover
+/// card that reads as a second frame around the first. Here the window
+/// background stays fully clear and the content view's layer carries the
+/// corner radius instead, so blur and shadow follow the card exactly.
+pub fn enable_popover_glass(window: &WebviewWindow, radius: f64) {
+    let Some(ns_window) = ns_window(window) else {
+        return;
+    };
+    ns_window.setOpaque(false);
+    ns_window.setBackgroundColor(Some(&NSColor::clearColor()));
+    ns_window.setHasShadow(true);
+    round_content_view(&ns_window, radius);
+    ns_window.invalidateShadow();
+    apply_blur(window, BLUR_RADIUS.load(Ordering::Relaxed));
+}
+
+fn round_content_view(ns_window: &NSWindow, radius: f64) {
+    let Some(view) = ns_window.contentView() else {
+        return;
+    };
+    unsafe {
+        view.setWantsLayer(true);
+        let layer: *mut objc2::runtime::AnyObject = msg_send![&*view, layer];
+        if layer.is_null() {
+            return;
+        }
+        let _: () = msg_send![layer, setCornerRadius: radius];
+        let _: () = msg_send![layer, setMasksToBounds: true];
+        // Same tiny alpha as `prepare_glass`, for the same reason — a fully
+        // clear surface under a native shadow chamfers the corners. On the
+        // layer it follows the rounded mask instead of the square frame.
+        let color = NSColor::clearColor().colorWithAlphaComponent(0.01);
+        let cg_color: *const c_void = msg_send![&*color, CGColor];
+        let _: () = msg_send![layer, setBackgroundColor: cg_color];
+    }
+}
+
 fn prepare_glass(window: &WebviewWindow) {
     let Some(ns_window) = ns_window(window) else {
         return;

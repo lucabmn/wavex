@@ -37,6 +37,7 @@ stay at the root; cohesive machinery lives in a subdirectory:
   belong to
 - `src/lib/updates/`: updater state and release notes
 - `src/lib/project/`: project logos, mascots, and metadata
+- `src/lib/usage/`: local provider usage summaries
 
 `src/chrome/` contains application chrome and reusable controls,
 `src/surfaces/` the main views, `src/hooks/` React hooks, and

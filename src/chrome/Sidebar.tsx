@@ -1,4 +1,5 @@
 import {
+  BarChart,
   Check,
   ChevronDown,
   ChevronRight,
@@ -188,11 +189,13 @@ type Props = {
   onSearch?: () => void;
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
+  onOpenUsage?: () => void;
   onGoToFile?: () => void;
   searchActive?: boolean;
   inboxActive?: boolean;
   notesActive?: boolean;
   notesEnabled?: boolean;
+  usageActive?: boolean;
   onToggleProjectRail?: () => void;
   projectRailOpen?: boolean;
   unseenFinishedIds?: Set<string>;
@@ -254,11 +257,13 @@ function SidebarComponent({
   onSearch,
   onOpenInbox,
   onOpenNotes,
+  onOpenUsage,
   onGoToFile,
   searchActive = false,
   inboxActive = false,
   notesActive = false,
   notesEnabled = true,
+  usageActive = false,
   onToggleProjectRail,
   projectRailOpen = true,
   unseenFinishedIds: unseenFinishedIdsProp,
@@ -398,7 +403,13 @@ function SidebarComponent({
   // A blank session has no project to browse, so the shell stands alone until
   // one is picked — whether or not the rail is open.
   const sidebarVisible =
-    open && !searchActive && !inboxActive && !notesActive && !settingsOpen && inProject;
+    open &&
+    !searchActive &&
+    !inboxActive &&
+    !notesActive &&
+    !usageActive &&
+    !settingsOpen &&
+    inProject;
   const gitStatuses = useGitFileStatuses(gitRoot, open && tab === "files");
   const changeStats = useProjectDiffStats(gitRoot, open);
 
@@ -878,9 +889,11 @@ function SidebarComponent({
               onSearch={onSearch}
               onOpenInbox={onOpenInbox}
               onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+              onOpenUsage={onOpenUsage}
               searchActive={searchActive}
               inboxActive={inboxActive}
               notesActive={notesActive}
+              usageActive={usageActive}
               inboxUnseen={inboxUnseen}
             />
           ) : null}
@@ -1221,6 +1234,8 @@ function SidebarComponent({
           notesEnabled={notesEnabled}
           onOpenNotes={onOpenNotes}
           notesActive={notesActive}
+          onOpenUsage={onOpenUsage}
+          usageActive={usageActive}
           onTogglePanel={onToggleProjectRail}
           onSelectProject={onSelectProject}
           onOpenProject={onOpenProject}
@@ -1251,9 +1266,11 @@ function SidebarProjectPicker({
   onSearch,
   onOpenInbox,
   onOpenNotes,
+  onOpenUsage,
   searchActive = false,
   inboxActive = false,
   notesActive = false,
+  usageActive = false,
   inboxUnseen = false,
 }: {
   cwd: string;
@@ -1264,9 +1281,11 @@ function SidebarProjectPicker({
   onSearch?: () => void;
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
+  onOpenUsage?: () => void;
   searchActive?: boolean;
   inboxActive?: boolean;
   notesActive?: boolean;
+  usageActive?: boolean;
   inboxUnseen?: boolean;
 }) {
   const [groupLabels] = useState(loadTabGroupLabels);
@@ -1337,6 +1356,11 @@ function SidebarProjectPicker({
         {onOpenNotes ? (
           <IconButton label="Notes" active={notesActive} onClick={onOpenNotes}>
             <StickyNote className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
+        ) : null}
+        {onOpenUsage ? (
+          <IconButton label="Usage" active={usageActive} onClick={onOpenUsage}>
+            <BarChart className="size-3.5" strokeWidth={1.75} />
           </IconButton>
         ) : null}
       </div>

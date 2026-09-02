@@ -7,6 +7,7 @@ mod harness;
 #[cfg(target_os = "macos")]
 mod macos;
 mod menu;
+mod menu_bar;
 mod notes;
 mod project_logo;
 mod pty;
@@ -14,6 +15,7 @@ mod rate_limits;
 mod search;
 mod session_store;
 mod skills;
+mod usage;
 mod window;
 mod window_transfer;
 mod worktree;
@@ -145,6 +147,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 macos::install_dock_menu(app.handle());
+                menu_bar::install(app.handle())?;
                 if let Some(window) = app.get_webview_window("main") {
                     macos::install(&window);
                 }
@@ -214,6 +217,8 @@ pub fn run() {
             skills::list_skills,
             search::search_project,
             cursor_store::cursor_tool_calls,
+            usage::usage_summary,
+            usage::usage_model_rates,
             harness::harness_resolve_cursor,
             harness::harness_resolve_codex,
             harness::harness_resolve_opencode,
@@ -232,6 +237,12 @@ pub fn run() {
             harness::harness_sse_close,
             harness::harness_exec,
             rate_limits::fetch_claude_usage,
+            rate_limits::codex_usage_cache_read,
+            rate_limits::codex_usage_cache_write,
+            menu_bar::menu_bar_agents,
+            menu_bar::menu_bar_update_agents,
+            menu_bar::menu_bar_open_app,
+            menu_bar::menu_bar_focus_agent,
             pty::pty_spawn,
             pty::pty_write,
             pty::pty_resize,
@@ -278,10 +289,9 @@ pub fn run() {
 
     app.run(|handle, event| match event {
         #[cfg(target_os = "macos")]
-        tauri::RunEvent::Reopen {
-            has_visible_windows: false,
-            ..
-        } => {
+        tauri::RunEvent::Reopen { .. } => {
+            // A visible menu-bar popover is not an app workspace. Dock clicks
+            // still need to reveal or create a normal wavex window.
             let _ = window::show_hidden_or_open_new(handle);
         }
         tauri::RunEvent::Ready => {
@@ -298,9 +308,15 @@ pub fn run() {
             event: tauri::WindowEvent::Destroyed,
             ..
         } => {
-            let other_window = handle.webview_windows().keys().any(|name| name != &label);
-            if !other_window {
-                reap_harness_children(handle);
+            menu_bar::remove_source(handle, &label);
+            if window::is_app_window(&label) {
+                let other_window = handle
+                    .webview_windows()
+                    .keys()
+                    .any(|name| name != &label && window::is_app_window(name));
+                if !other_window {
+                    reap_harness_children(handle);
+                }
             }
         }
         tauri::RunEvent::ExitRequested { api, code, .. } => {

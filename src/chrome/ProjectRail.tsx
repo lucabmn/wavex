@@ -5,6 +5,7 @@ import {
   ChevronUp,
   CircleAlert,
   FolderOpen,
+  BarChart,
   GitBranch,
   Inbox,
   MoreHorizontal,
@@ -125,6 +126,8 @@ type Props = {
   notesEnabled?: boolean;
   onOpenNotes?: () => void;
   notesActive?: boolean;
+  onOpenUsage?: () => void;
+  usageActive?: boolean;
   onTogglePanel?: () => void;
   onSelectProject: (path: string) => void;
   onOpenProject: () => void;
@@ -158,6 +161,8 @@ export function ProjectRail({
   notesEnabled = true,
   onOpenNotes,
   notesActive = false,
+  onOpenUsage,
+  usageActive = false,
   onTogglePanel,
   onSelectProject,
   onOpenProject,
@@ -422,6 +427,13 @@ export function ProjectRail({
                 ariaLabel="Notes"
               />
             ) : null}
+            <RailAction
+              label="Usage"
+              icon={BarChart}
+              onClick={onOpenUsage}
+              active={usageActive}
+              ariaLabel="Usage"
+            />
           </div>
 
           <div
@@ -440,7 +452,7 @@ export function ProjectRail({
                 busy={busy}
                 sortable={pinnedSortable}
                 pinned
-                searchActive={searchActive || inboxActive || notesActive}
+                searchActive={searchActive || inboxActive || notesActive || usageActive}
                 onSelect={onSelectProject}
                 onTogglePin={onTogglePin}
                 onContextMenu={onProjectContextMenu}
@@ -464,7 +476,7 @@ export function ProjectRail({
               busy={busy}
               sortable={projectSortable}
               pinned={false}
-              searchActive={searchActive || inboxActive || notesActive}
+              searchActive={searchActive || inboxActive || notesActive || usageActive}
               onSelect={onSelectProject}
               onTogglePin={onTogglePin}
               onContextMenu={onProjectContextMenu}
