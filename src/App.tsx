@@ -14,7 +14,7 @@ import {
 import { Sidebar } from "./chrome/Sidebar";
 import { ApprovalToasts } from "./chrome/ApprovalToasts";
 import { WhatsNewDialog } from "./chrome/WhatsNewDialog";
-import { TitleBar, type Tab as TitleTab } from "./chrome/TitleBar";
+import { TitleBar } from "./chrome/TitleBar";
 import { MenuBar } from "./chrome/MenuBar";
 import { FilePicker } from "./chrome/FilePicker";
 import { UsageFooter } from "./chrome/UsageFooter";
@@ -35,6 +35,27 @@ import {
   rememberOpenedFile,
   resolveOpenablePath,
 } from "./lib/files/fileIndex";
+import { sameSettings, setsEqual } from "./lib/equality";
+import {
+  cancelScheduledFlush,
+  scheduleHarnessFlush,
+  type ScheduledFlush,
+} from "./lib/harness/flush";
+import {
+  dropOpenFiles,
+  nudgeOpenEditors,
+  nudgeWorkspace,
+  trackSessionEdits,
+} from "./lib/workspace/workspaceEffects";
+import { lastUserBlockId, userTurnCards, withHarnessChoice } from "./lib/sessions/sessionChoice";
+import {
+  isBlankSession,
+  isBlankWorkspaceTab,
+  openSessionIds,
+  titleTabsEqual,
+  toTitleTab,
+  type TitleTab,
+} from "./lib/workspace/titleTab";
 import {
   closeLeaf,
   findSurfacePane,
@@ -42,7 +63,6 @@ import {
   focusedFileTab,
   isolateTerminalPanes,
   isFilesystemTab,
-  isTerminalTab,
   leaf,
   leafIds,
   movePane,
@@ -63,14 +83,13 @@ import {
   surfacePanes,
   updateTerminalTab,
   withSurfacePanes,
-  type EditorPane,
   type FilePaneTab,
   type FocusDir,
   type PaneEdge,
   type SplitDir,
   type WorkspaceTab,
 } from "./lib/workspace/layout";
-import { releaseNotesForVersion, releaseNotesTitle } from "./lib/updates/releaseNotes";
+import { releaseNotesForVersion } from "./lib/updates/releaseNotes";
 import { orderByIds } from "./lib/reorder";
 import {
   addTerminalToDock,
@@ -97,11 +116,7 @@ import {
 } from "./lib/workspace/tabGroups";
 import { type WindowTransferPayload } from "./lib/windowTransfer";
 import { confirmCloseTerminal, confirmCloseTerminals } from "./lib/terminal/terminalClose";
-import {
-  listRunningTerminals,
-  terminalTabLabel,
-  type TerminalMetaPatch,
-} from "./lib/terminal/terminalTab";
+import { listRunningTerminals, type TerminalMetaPatch } from "./lib/terminal/terminalTab";
 import {
   applyHarnessEvent,
   appendUser,
@@ -145,15 +160,12 @@ import {
   wrapHandoffPrompt,
 } from "./lib/handoff";
 import { requestOutgoingHandoff } from "./lib/handoffTurn";
-import { isEditTool } from "./lib/harness/preview";
 import {
   beginSessionTurn,
-  captureSessionCheckpoint,
   keepSessionChanges,
   notifyReviewChanged,
   syncSessionCheckpoint,
 } from "./lib/checkpoint";
-import { notifyDirsChanged } from "./lib/files/fileTree";
 import { nudgeWatchedFiles } from "./lib/files/fileWatch";
 import { type EditorNavigationTarget, type OpenFileFn } from "./lib/search";
 import {
@@ -163,13 +175,7 @@ import {
   saveLastModelSettings,
 } from "./lib/models";
 import { planTitle } from "./lib/plan";
-import {
-  displayPath,
-  isEqualOrInside,
-  projectName,
-  rebasePath,
-  resolveWorkspacePath,
-} from "./lib/paths";
+import { displayPath, isEqualOrInside, projectName, rebasePath } from "./lib/paths";
 import { removeProjectData } from "./lib/project/projectData";
 import {
   archiveProject,
@@ -206,7 +212,6 @@ import {
   type SecondOpinionMeta,
   type Session,
 } from "./lib/session";
-import { dropContextWindow } from "./lib/contextUsage";
 import {
   deleteSession,
   getSession,
@@ -239,12 +244,7 @@ import {
 import { preparePrompt } from "./lib/promptPreparation";
 import { warmPiSkills } from "./lib/skills";
 import { piSkillContextForSession } from "./lib/sessions/sessionSkills";
-import {
-  ADD_NOTE_TO_CHAT_EVENT,
-  composeNoteMessage,
-  noteCardMeta,
-  type NoteComposerCard,
-} from "./lib/notes";
+import { ADD_NOTE_TO_CHAT_EVENT, composeNoteMessage, type NoteComposerCard } from "./lib/notes";
 import {
   SECOND_OPINION_TITLE,
   buildSecondOpinionCard,
@@ -300,88 +300,6 @@ import {
   setQuitWorkspace,
   type ResumedWorkspace,
 } from "./lib/appLifecycle";
-
-function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
-  if (a.size !== b.size) return false;
-  for (const value of a) {
-    if (!b.has(value)) return false;
-  }
-  return true;
-}
-
-type ScheduledFlush = { kind: "raf" | "timeout"; id: number };
-
-function cancelScheduledFlush(handle: ScheduledFlush | null) {
-  if (!handle) return;
-  if (handle.kind === "raf") cancelAnimationFrame(handle.id);
-  else clearTimeout(handle.id);
-}
-
-function scheduleHarnessFlush(run: () => void): ScheduledFlush {
-  if (document.hidden) {
-    return { kind: "timeout", id: window.setTimeout(run, 32) };
-  }
-  return { kind: "raf", id: requestAnimationFrame(run) };
-}
-
-function userTurnCards(noteCard: NoteComposerCard | undefined, secondOpinion?: SecondOpinionMeta) {
-  if (!noteCard && !secondOpinion) return undefined;
-  return {
-    ...(secondOpinion ? { secondOpinion } : {}),
-    ...(noteCard ? { noteCard: noteCardMeta(noteCard) } : {}),
-  };
-}
-
-function withHarnessChoice(
-  session: Session,
-  harness: HarnessId,
-  model: string,
-  modelSettings: Record<string, string>,
-): Session {
-  return {
-    ...session,
-    harness,
-    model,
-    modelSettings,
-    title:
-      session.blocks.length === 0
-        ? HARNESS_LABEL[harness]
-        : formatSessionTitle(harness, sessionDisplayTitle(session.title, session.harness)),
-    ...(session.model === model ? {} : { context: dropContextWindow(session.context) }),
-    ...(session.harness === harness ? {} : { providerSessionId: undefined }),
-  };
-}
-
-function openSessionIds(tabs: WorkspaceTab[]): Set<string> {
-  const ids = new Set<string>();
-  for (const tab of tabs) {
-    for (const id of leafIds(tab.layout)) ids.add(id);
-  }
-  return ids;
-}
-
-function titleTabsEqual(a: TitleTab[], b: TitleTab[]): boolean {
-  if (a.length !== b.length) return false;
-  return a.every((tab, index) => {
-    const other = b[index];
-    return (
-      other != null &&
-      tab.id === other.id &&
-      tab.project === other.project &&
-      tab.title === other.title &&
-      tab.sessionCount === other.sessionCount &&
-      tab.dirty === other.dirty &&
-      tab.more.join("\u0000") === other.more.join("\u0000") &&
-      tab.harnesses.join("\u0000") === other.harnesses.join("\u0000") &&
-      tab.busyHarnesses.join("\u0000") === other.busyHarnesses.join("\u0000") &&
-      tab.files.join("\u0000") === other.files.join("\u0000") &&
-      tab.multiPane === other.multiPane &&
-      tab.fileFocused === other.fileFocused &&
-      tab.terminal === other.terminal &&
-      tab.groupId === other.groupId
-    );
-  });
-}
 
 export default function App({
   windowTransfer = null,
@@ -3762,223 +3680,8 @@ export default function App({
   );
 }
 
-function conversationTitle(session: Session): string {
-  const title = sessionDisplayTitle(session.title, session.harness);
-  return title === "New session" ? "" : title;
-}
-
-function lastUserBlockId(session: Session): string | undefined {
-  for (let i = session.blocks.length - 1; i >= 0; i--) {
-    if (session.blocks[i]?.role === "user") return session.blocks[i]?.id;
-  }
-  return undefined;
-}
-
-function isBlankSession(session: Session | undefined): boolean {
-  if (!session || session.busy) return false;
-  return !session.blocks.some((block) => block.role === "user");
-}
-
 function selectedChangePath(tab: WorkspaceTab, gitCwd?: string): string | undefined {
   const file = focusedFileTab(tab);
   if (!file || !isFilesystemTab(file) || !file.review) return undefined;
   return displayPath(file.path, gitCwd || file.cwd);
-}
-
-function isBlankWorkspaceTab(tab: WorkspaceTab, sessions: Session[]): boolean {
-  if (tab.editorPanes.some((pane) => pane.files.length > 0)) return false;
-  if ((tab.terminalPanes ?? []).some((pane) => pane.files.length > 0)) return false;
-  const ids = leafIds(tab.layout);
-  if (ids.length !== 1) return false;
-  return isBlankSession(sessions.find((entry) => entry.id === ids[0]));
-}
-
-function toTitleTab(tab: WorkspaceTab, sessions: Session[], dirtyFiles: Set<string>): TitleTab {
-  const paneIds = leafIds(tab.layout);
-  const multiPane = paneIds.length > 1;
-  const tabSessions = paneIds
-    .map((id) => sessions.find((session) => session.id === id))
-    .filter((session): session is Session => session != null);
-  const sessionFocused = tabSessions.some((session) => session.id === tab.focusedId);
-  const fileFocused =
-    !sessionFocused &&
-    (tab.editorPanes.some((pane) => pane.id === tab.focusedId) ||
-      (tab.terminalPanes ?? []).some((pane) => pane.id === tab.focusedId));
-  const focused = sessions.find((session) => session.id === tab.focusedId) ?? tabSessions[0];
-
-  const seen = new Set<HarnessId>();
-  const harnesses: HarnessId[] = [];
-  const busySeen = new Set<HarnessId>();
-  const busyHarnesses: HarnessId[] = [];
-  const ordered = focused
-    ? [focused, ...tabSessions.filter((session) => session.id !== focused.id)]
-    : tabSessions;
-  for (const session of ordered) {
-    if (session.busy && !sessionNeedsInput(session) && !busySeen.has(session.harness)) {
-      busySeen.add(session.harness);
-      busyHarnesses.push(session.harness);
-    }
-    if (seen.has(session.harness)) continue;
-    seen.add(session.harness);
-    harnesses.push(session.harness);
-  }
-
-  const files: string[] = [];
-  const seenKeys = new Set<string>();
-  const pushFile = (file: FilePaneTab) => {
-    const key = file.terminal
-      ? `terminal:${file.id}`
-      : file.plan
-        ? `plan:${file.plan.blockId}`
-        : file.releaseNotes
-          ? `release-notes:${file.releaseNotes.version}`
-          : file.path;
-    if (seenKeys.has(key)) return;
-    seenKeys.add(key);
-    files.push(
-      file.plan?.title?.trim() ||
-        (file.releaseNotes
-          ? releaseNotesTitle(file.releaseNotes.version)
-          : file.terminal
-            ? terminalTabLabel(file)
-            : basename(file.path)),
-    );
-  };
-  const focusedPane =
-    tab.editorPanes.find((pane) => pane.id === tab.focusedId) ??
-    (tab.terminalPanes ?? []).find((pane) => pane.id === tab.focusedId);
-  const otherPanes = [
-    ...tab.editorPanes.filter((pane) => pane.id !== focusedPane?.id),
-    ...(tab.terminalPanes ?? []).filter((pane) => pane.id !== focusedPane?.id),
-  ];
-  const panes = focusedPane ? [focusedPane, ...otherPanes] : otherPanes;
-  for (const pane of panes) {
-    const active = pane.files.find((file) => file.id === pane.activeFileId);
-    if (active) pushFile(active);
-  }
-  for (const pane of panes) {
-    for (const file of pane.files) pushFile(file);
-  }
-
-  const more = tabSessions
-    .filter((session) => session.id !== focused?.id)
-    .map(conversationTitle)
-    .filter(Boolean);
-
-  const hasTerminal = (tab.terminalPanes ?? []).some((pane) => pane.files.some(isTerminalTab));
-  const focusedFile = focusedFileTab(tab);
-
-  return {
-    id: tab.id,
-    project: focused ? projectName(focused.cwd) : focusedFile ? projectName(focusedFile.cwd) : "~",
-    title: focused ? conversationTitle(focused) : "",
-    more,
-    sessionCount: tabSessions.length,
-    harnesses,
-    busyHarnesses,
-    files,
-    multiPane,
-    fileFocused,
-    dirty: tab.editorPanes.some((pane) =>
-      pane.files.some((file) => isFilesystemTab(file) && dirtyFiles.has(file.id)),
-    ),
-    terminal: hasTerminal && harnesses.length === 0,
-    groupId: tab.groupId,
-  };
-}
-
-function dropOpenFiles(tab: WorkspaceTab, shouldDrop: (path: string) => boolean): WorkspaceTab {
-  let layout = tab.layout;
-  let focusedId = tab.focusedId;
-  const editorPanes: EditorPane[] = [];
-  for (const pane of tab.editorPanes) {
-    const files = pane.files.filter((file) => !isFilesystemTab(file) || !shouldDrop(file.path));
-    if (files.length === 0) {
-      const sibling = siblingLeafId(layout, pane.id);
-      const withoutPane = removePane(layout, pane.id);
-      if (withoutPane) {
-        layout = withoutPane;
-        if (focusedId === pane.id) focusedId = sibling ?? firstLeafId(withoutPane);
-      }
-      continue;
-    }
-    editorPanes.push({
-      ...pane,
-      files,
-      activeFileId: files.some((file) => file.id === pane.activeFileId)
-        ? pane.activeFileId
-        : files[0].id,
-    });
-  }
-  return { ...tab, layout, focusedId, editorPanes };
-}
-
-function trackSessionEdits(sessionId: string, cwd: string, event: HarnessEvent) {
-  if (event.type !== "tool.updated") return;
-  const completed = event.status === "completed" || event.status === "success";
-  if (!completed) return;
-  const kind = event.kind?.trim().toLowerCase();
-  if (kind === "execute" || event.preview?.kind === "shell") {
-    void syncSessionCheckpoint(sessionId, cwd)
-      .catch(() => undefined)
-      .then(() => notifyReviewChanged(sessionId));
-    return;
-  }
-  if (!isEditTool(event.kind, event.title, event.preview)) return;
-  const path = event.preview?.path;
-  if (path && cwd !== "~") {
-    void captureSessionCheckpoint(sessionId, cwd, [path])
-      .catch(() => undefined)
-      .then(() => notifyReviewChanged(sessionId));
-    return;
-  }
-  notifyReviewChanged(sessionId);
-}
-
-function nudgeWorkspace(cwd?: string) {
-  invalidateProjectFiles(cwd);
-  notifyDirsChanged();
-}
-
-function nudgeOpenEditors(event: HarnessEvent, cwd: string) {
-  if (event.type !== "tool.updated") return;
-  const completed = event.status === "completed" || event.status === "success";
-
-  const kind = event.kind?.trim().toLowerCase();
-  if (kind === "execute" || event.preview?.kind === "shell") {
-    if (!completed) return;
-    nudgeWatchedFiles();
-    window.setTimeout(() => nudgeWatchedFiles(), 150);
-    notifyGitChanged();
-    nudgeWorkspace(cwd);
-    window.setTimeout(() => nudgeWorkspace(cwd), 150);
-    return;
-  }
-
-  if (!isEditTool(event.kind, event.title, event.preview)) return;
-  const raw = event.preview?.path;
-  const resolved = raw ? (resolveWorkspacePath(raw, cwd) ?? raw) : undefined;
-  if (resolved) {
-    nudgeWatchedFiles([resolved]);
-  } else if (completed) {
-    nudgeWatchedFiles();
-  }
-  if (completed) {
-    window.setTimeout(() => nudgeWatchedFiles(), 150);
-    notifyGitChanged();
-    nudgeWorkspace(cwd);
-  }
-}
-
-function sameSettings(
-  a: Record<string, string> | undefined,
-  b: Record<string, string> | undefined,
-): boolean {
-  const left = a ?? {};
-  const right = b ?? {};
-  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
-  for (const key of keys) {
-    if (left[key] !== right[key]) return false;
-  }
-  return true;
 }

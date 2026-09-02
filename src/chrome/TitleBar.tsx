@@ -27,6 +27,7 @@ import { CwdPicker } from "./CwdPicker";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useSortable } from "../hooks/useSortable";
 import { FileTypeIcon } from "./FileTypeIcon";
+import type { TitleTab } from "../lib/workspace/titleTab";
 import { HarnessIcon } from "./HarnessIcon";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { TerminalSpinner } from "./TerminalSpinner";
@@ -34,32 +35,10 @@ import { WindowControls } from "./WindowControls";
 import { IS_MAC, MOD } from "../lib/platform";
 import type { RecentProject } from "../lib/recents";
 
-export type Tab = {
-  id: string;
-  /** Project folder name, e.g. `agent-terminal`. */
-  project: string;
-  /** Focused conversation title; empty for a fresh session. */
-  title: string;
-  /** Other conversation titles in this tab, focused session omitted. */
-  more: string[];
-  sessionCount: number;
-  harnesses: HarnessId[];
-  /** Harnesses with an in-flight turn in this tab. */
-  busyHarnesses: HarnessId[];
-  /** Open file basenames, active files first. */
-  files: string[];
-  /** Split layout with more than one pane in this tab. */
-  multiPane?: boolean;
-  /** Focus is on a file/terminal pane rather than a conversation pane. */
-  fileFocused?: boolean;
-  /** Explicit tab group; absent means ungrouped. */
-  groupId?: string;
-  dirty?: boolean;
-  terminal?: boolean;
-};
+export type { TitleTab as Tab };
 
 type Props = {
-  tabs: Tab[];
+  tabs: TitleTab[];
   activeId: string;
   cwd: string;
   projectRailOpen?: boolean;
@@ -79,13 +58,13 @@ type Props = {
   onSelectProject?: (path: string) => void;
 };
 
-function sessionMeta(tab: Tab): string {
+function sessionMeta(tab: TitleTab): string {
   if (tab.more.length === 1) return tab.more[0];
   if (tab.sessionCount > 1) return `${tab.sessionCount} sessions`;
   return "";
 }
 
-export function tabCopy(tab: Tab): {
+export function tabCopy(tab: TitleTab): {
   headline: string;
   meta: string;
   tooltip: string;
@@ -199,7 +178,7 @@ function TitleTabItem({
   onClose,
   itemRef,
 }: {
-  tab: Tab;
+  tab: TitleTab;
   index: number;
   active: boolean;
   closable: boolean;
