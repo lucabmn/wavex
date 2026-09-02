@@ -289,6 +289,8 @@ import {
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
+import { otherAppMode, type AppMode } from "./lib/workspace/appMode";
+import { WorkView } from "./surfaces/WorkView";
 import type { InstalledUpdate } from "./lib/updates/updateNotice";
 import {
   bindResumedSessions,
@@ -340,6 +342,9 @@ export default function App({
     () => windowTransfer?.projectTerminals ?? resumed?.projectTerminals ?? [],
   );
   const [projectTerminalFocused, setProjectTerminalFocused] = useState(false);
+  // Work vs Coding. The coding workspace stays mounted behind Work so live
+  // terminals, editors, and streaming turns survive a mode switch.
+  const [appMode, setAppMode] = useState<AppMode>(() => resumed?.mode ?? "coding");
   const [activeTabId, setActiveTabId] = useState(
     () => windowTransfer?.activeTabId ?? resumed?.activeTabId ?? seed.tab.id,
   );
@@ -409,6 +414,8 @@ export default function App({
   activeTabIdRef.current = activeTabId;
   const projectCwdRef = useRef(projectCwd);
   projectCwdRef.current = projectCwd;
+  const appModeRef = useRef(appMode);
+  appModeRef.current = appMode;
   const searchViewOpenRef = useRef(searchViewOpen);
   searchViewOpenRef.current = searchViewOpen;
   const inboxViewOpenRef = useRef(inboxViewOpen);
@@ -526,6 +533,7 @@ export default function App({
         projectCwdRef.current,
         "unload",
         projectTerminalsRef.current,
+        appModeRef.current,
       ).finally(() => {
         void reapWindowRuntime(sessionsRef.current, tabsRef.current, projectTerminalsRef.current);
       });
@@ -717,6 +725,7 @@ export default function App({
       () => projectCwdRef.current,
       () => projectTerminalsRef.current,
       flushHarnessEvents,
+      () => appModeRef.current,
     );
     void getCurrentWindow()
       .onCloseRequested((event) => {
@@ -736,6 +745,7 @@ export default function App({
           projectCwdRef.current,
           "unload",
           projectTerminalsRef.current,
+          appModeRef.current,
         ).finally(() => {
           void closeCurrentWindow();
         });
@@ -872,6 +882,7 @@ export default function App({
       activeTabId,
       projectCwd,
       projectTerminals,
+      appMode,
     );
     const key = workspaceSnapshotKey(snapshot);
     if (workspaceSyncKey.current === key) return;
@@ -880,7 +891,7 @@ export default function App({
       void saveWorkspaceSnapshot(snapshot).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [tabs, sessions, activeTabId, projectCwd, projectTerminals, windowTransfer]);
+  }, [tabs, sessions, activeTabId, projectCwd, projectTerminals, appMode, windowTransfer]);
 
   useEffect(() => {
     if (lastProjectPath()) return;
@@ -3262,6 +3273,9 @@ export default function App({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const cmd = tabCommand(e);
+      // Work owns its own chat bindings; the workspace ones would act on tabs
+      // the user cannot see.
+      if (cmd && appModeRef.current === "work") return;
       if (cmd) {
         const target = e.target instanceof Element ? e.target : null;
         if (
@@ -3338,6 +3352,12 @@ export default function App({
         e.preventDefault();
         e.stopPropagation();
         run("open_settings", () => actions.current.openSettings());
+        return;
+      }
+      if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        e.stopPropagation();
+        run("toggle_mode", () => setAppMode(otherAppMode(appModeRef.current)));
         return;
       }
       if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "f") {
@@ -3428,311 +3448,335 @@ export default function App({
     );
   }, [currentProjectDock, dockVisible]);
 
+  const workMode = appMode === "work";
+
   return (
     <div
-      className={`flex h-full text-content ${
+      className={`relative flex h-full text-content ${
         IS_MAC ? "bg-background-base/40" : "bg-background-base"
       }`}
     >
-      <Sidebar
-        cwd={sidebarCwd}
-        gitCwd={gitCwd}
-        open
-        tab={sidebarTab}
-        onTabChange={setSidebarTab}
-        filesSearchOpen={filesSearchOpen}
-        onFilesSearchOpenChange={setFilesSearchOpen}
-        onOpenFilesSearch={onFindInProject}
-        searchFocusToken={searchFocusToken}
-        sessions={sidebarHistory}
-        busySessionIds={busySessionIds}
-        approvalSessionIds={approvalSessionIds}
-        activeSessionId={active?.id}
-        status={historyFailed ? "error" : "idle"}
-        pending={historyPending}
-        onSelectSession={onSelectHistorySession}
-        onPlaceSessionOnPane={onPlaceSessionOnPane}
-        onRenameSession={onRenameHistorySession}
-        onArchiveSession={onArchiveHistorySession}
-        onPinSession={onPinHistorySession}
-        onDeleteSession={onDeleteHistorySession}
-        onOpenFile={onOpenFile}
-        onOpenTerminal={(cwd) => onOpenTerminal(cwd)}
-        onFileMoved={onFileMoved}
-        onFileDeleted={onFileDeleted}
-        canGoBack={
-          tabVisitNav.canBack ||
-          searchViewOpen ||
-          settingsOpen ||
-          inboxViewOpen ||
-          notesViewOpen ||
-          usageViewOpen
-        }
-        canGoForward={tabVisitNav.canForward}
-        onGoBack={onRailBack}
-        onGoForward={onRailForward}
-        onOpenDiff={onOpenDiff}
-        onShowSourceControl={onToggleChanges}
-        selectedDiffPath={activeTab ? selectedChangePath(activeTab, gitCwd) : undefined}
-        textHarness={pickTextHarness(active?.harness)}
-        recents={recents}
-        busyProjectPaths={sessions.flatMap((session) =>
-          session.busy && session.cwd ? [session.cwd] : [],
-        )}
-        liveAgents={liveAgents}
-        onSelectAgent={onSelectLiveAgent}
-        onSelectProject={onSelectProject}
-        onOpenProject={pickProject}
-        onRemoveProject={onRemoveProject}
-        onNew={onNew}
-        openSessions={openProjectSessions}
-        onNewTerminal={onNewTerminal}
-        onSearch={onOpenSearch}
-        onOpenInbox={onOpenInbox}
-        onOpenNotes={notesEnabled ? onOpenNotes : undefined}
-        onOpenUsage={onOpenUsage}
-        onGoToFile={onGoToFile}
-        searchActive={searchViewOpen}
-        inboxActive={inboxViewOpen}
-        notesActive={notesViewOpen}
-        usageActive={usageViewOpen}
-        notesEnabled={notesEnabled}
-        projectRailOpen={projectRailOpen}
-        onToggleProjectRail={onToggleProjectRail}
-        unseenFinishedIds={unseenFinishedIds}
-        settingsOpen={settingsOpen}
-        settingsSection={settingsSection}
-        onOpenSettings={onOpenSettings}
-        onSelectSettingsSection={onSelectSettingsSection}
-        onCloseSettings={onCloseSettings}
-        updateNotice={updateNotice}
-        onOpenWhatsNew={onOpenWhatsNew}
-        onDismissUpdate={() => setUpdateNotice(null)}
-      />
-
-      <div className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
-        <div
-          className={
-            searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
-              ? "hidden"
-              : "flex min-h-0 min-w-0 flex-1 flex-col"
-          }
-          aria-hidden={
-            searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
-          }
-          inert={
+      {/* Coding stays mounted while Work is in front — terminals, editors, and
+          streaming turns must not be torn down by a mode switch — but it is
+          inert so focus cannot land behind the chat surface. */}
+      <div className="flex min-h-0 min-w-0 flex-1" inert={workMode || undefined}>
+        <Sidebar
+          cwd={sidebarCwd}
+          gitCwd={gitCwd}
+          open
+          tab={sidebarTab}
+          onTabChange={setSidebarTab}
+          filesSearchOpen={filesSearchOpen}
+          onFilesSearchOpenChange={setFilesSearchOpen}
+          onOpenFilesSearch={onFindInProject}
+          searchFocusToken={searchFocusToken}
+          sessions={sidebarHistory}
+          busySessionIds={busySessionIds}
+          approvalSessionIds={approvalSessionIds}
+          activeSessionId={active?.id}
+          status={historyFailed ? "error" : "idle"}
+          pending={historyPending}
+          onSelectSession={onSelectHistorySession}
+          onPlaceSessionOnPane={onPlaceSessionOnPane}
+          onRenameSession={onRenameHistorySession}
+          onArchiveSession={onArchiveHistorySession}
+          onPinSession={onPinHistorySession}
+          onDeleteSession={onDeleteHistorySession}
+          onOpenFile={onOpenFile}
+          onOpenTerminal={(cwd) => onOpenTerminal(cwd)}
+          onFileMoved={onFileMoved}
+          onFileDeleted={onFileDeleted}
+          canGoBack={
+            tabVisitNav.canBack ||
             searchViewOpen ||
             settingsOpen ||
             inboxViewOpen ||
             notesViewOpen ||
-            usageViewOpen ||
-            undefined
+            usageViewOpen
           }
-        >
-          {!IS_MAC ? (
-            <MenuBar
+          canGoForward={tabVisitNav.canForward}
+          onGoBack={onRailBack}
+          onGoForward={onRailForward}
+          onOpenDiff={onOpenDiff}
+          onShowSourceControl={onToggleChanges}
+          selectedDiffPath={activeTab ? selectedChangePath(activeTab, gitCwd) : undefined}
+          textHarness={pickTextHarness(active?.harness)}
+          recents={recents}
+          busyProjectPaths={sessions.flatMap((session) =>
+            session.busy && session.cwd ? [session.cwd] : [],
+          )}
+          liveAgents={liveAgents}
+          onSelectAgent={onSelectLiveAgent}
+          onSelectProject={onSelectProject}
+          onOpenProject={pickProject}
+          onRemoveProject={onRemoveProject}
+          onNew={onNew}
+          openSessions={openProjectSessions}
+          onNewTerminal={onNewTerminal}
+          onSearch={onOpenSearch}
+          onOpenInbox={onOpenInbox}
+          onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+          onOpenUsage={onOpenUsage}
+          onGoToFile={onGoToFile}
+          searchActive={searchViewOpen}
+          inboxActive={inboxViewOpen}
+          notesActive={notesViewOpen}
+          usageActive={usageViewOpen}
+          notesEnabled={notesEnabled}
+          projectRailOpen={projectRailOpen}
+          onToggleProjectRail={onToggleProjectRail}
+          unseenFinishedIds={unseenFinishedIds}
+          settingsOpen={settingsOpen}
+          settingsSection={settingsSection}
+          onOpenSettings={onOpenSettings}
+          onSelectSettingsSection={onSelectSettingsSection}
+          onCloseSettings={onCloseSettings}
+          updateNotice={updateNotice}
+          onOpenWhatsNew={onOpenWhatsNew}
+          onDismissUpdate={() => setUpdateNotice(null)}
+        />
+
+        <div className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
+          <div
+            className={
+              searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
+                ? "hidden"
+                : "flex min-h-0 min-w-0 flex-1 flex-col"
+            }
+            aria-hidden={
+              searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
+            }
+            inert={
+              searchViewOpen ||
+              settingsOpen ||
+              inboxViewOpen ||
+              notesViewOpen ||
+              usageViewOpen ||
+              undefined
+            }
+          >
+            {!IS_MAC ? (
+              <MenuBar
+                onNew={onNew}
+                onNewTerminal={onNewTerminal}
+                onToggleTerminal={onToggleProjectTerminal}
+                onGoToFile={onGoToFile}
+                onToggleSidebar={onToggleSidebar}
+                onShowSourceControl={onToggleChanges}
+                onCloseCurrentTab={activeTabId ? () => onCloseTab(activeTabId) : undefined}
+                onPickProject={pickProject}
+                onFindInProject={onFindInProject}
+                onSearch={onOpenSearch}
+                onOpenInbox={onOpenInbox}
+                onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+              />
+            ) : null}
+            <TitleBar
+              tabs={titleTabs}
+              activeId={activeTabId}
+              cwd={sidebarCwd}
+              projectRailOpen={projectRailOpen}
+              onToggleSidebar={onToggleSidebar}
+              onSelect={activateTab}
               onNew={onNew}
               onNewTerminal={onNewTerminal}
-              onToggleTerminal={onToggleProjectTerminal}
-              onGoToFile={onGoToFile}
-              onToggleSidebar={onToggleSidebar}
-              onShowSourceControl={onToggleChanges}
-              onCloseCurrentTab={activeTabId ? () => onCloseTab(activeTabId) : undefined}
-              onPickProject={pickProject}
-              onFindInProject={onFindInProject}
-              onSearch={onOpenSearch}
+              onShowTerminal={onShowProjectTerminal}
+              projectTerminalActive={
+                !!currentProjectDock && currentProjectDock.pane.files.length > 0
+              }
+              onOpenSettings={onOpenSettings}
               onOpenInbox={onOpenInbox}
               onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+              onClose={onCloseTab}
+              onReorder={onReorderTabs}
+              onGoToFile={onGoToFile}
+              recents={recents}
+              onSelectProject={onSelectProject}
+              mode={appMode}
+              onModeChange={setAppMode}
             />
-          ) : null}
-          <TitleBar
-            tabs={titleTabs}
-            activeId={activeTabId}
-            cwd={sidebarCwd}
-            projectRailOpen={projectRailOpen}
-            onToggleSidebar={onToggleSidebar}
-            onSelect={activateTab}
-            onNew={onNew}
-            onNewTerminal={onNewTerminal}
-            onShowTerminal={onShowProjectTerminal}
-            projectTerminalActive={!!currentProjectDock && currentProjectDock.pane.files.length > 0}
-            onOpenSettings={onOpenSettings}
-            onOpenInbox={onOpenInbox}
-            onOpenNotes={notesEnabled ? onOpenNotes : undefined}
-            onClose={onCloseTab}
-            onReorder={onReorderTabs}
-            onGoToFile={onGoToFile}
-            recents={recents}
-            onSelectProject={onSelectProject}
-          />
 
-          <main className="relative min-h-0 min-w-0 flex-1">
-            <div ref={dockGridRef} className="absolute inset-0 grid h-full min-h-0 min-w-0">
-              {projectTerminals.map((dock) => {
-                const show = dock.open && sameProjectPath(dock.projectPath, projectCwd);
-                return (
-                  <div
-                    key={dock.projectPath}
-                    className={show ? "h-full min-h-0 min-w-0 w-full overflow-hidden" : "hidden"}
-                    style={show ? { gridArea: "dock" } : undefined}
-                    aria-hidden={!show}
-                  >
-                    <ProjectTerminalDock
-                      dock={dock}
-                      focused={show && projectTerminalFocused}
-                      onFocus={focusProjectTerminal}
-                      onHide={onHideProjectTerminal}
-                      onSideChange={onProjectTerminalSide}
-                      onSizePaint={paintDockSize}
-                      onSizeCommit={commitDockSize}
-                      onAddTerminal={() => onOpenTerminal(active?.cwd ?? projectCwd)}
-                      onSelectTerminal={onSelectProjectTerminal}
-                      onCloseTerminal={onCloseProjectTerminal}
-                      onReorderTerminals={onReorderProjectTerminals}
-                      onTerminalMetaChange={onTerminalMetaChange}
-                    />
-                  </div>
-                );
-              })}
-              <div className="relative flex min-h-0 min-w-0 flex-row" style={{ gridArea: "main" }}>
-                <div className="relative min-h-0 min-w-0 flex-1">
-                  {tabs.map((tab) => (
+            <main className="relative min-h-0 min-w-0 flex-1">
+              <div ref={dockGridRef} className="absolute inset-0 grid h-full min-h-0 min-w-0">
+                {projectTerminals.map((dock) => {
+                  const show = dock.open && sameProjectPath(dock.projectPath, projectCwd);
+                  return (
                     <div
-                      key={tab.id}
-                      aria-hidden={tab.id !== activeTabId}
-                      className={
-                        tab.id === activeTabId
-                          ? "absolute inset-0 flex h-full min-h-0 flex-col"
-                          : "hidden"
-                      }
+                      key={dock.projectPath}
+                      className={show ? "h-full min-h-0 min-w-0 w-full overflow-hidden" : "hidden"}
+                      style={show ? { gridArea: "dock" } : undefined}
+                      aria-hidden={!show}
                     >
-                      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-                        <PaneTree
-                          visible={tab.id === activeTabId}
-                          layout={tab.layout}
-                          sessions={sessions}
-                          editorPanes={[...tab.editorPanes, ...(tab.terminalPanes ?? [])]}
-                          dirtyFileIds={dirtyFiles}
-                          fileErrorCounts={fileErrorCounts}
-                          focusedId={
-                            tab.id === activeTabId && !tab.diffFocused && !projectTerminalFocused
-                              ? tab.focusedId
-                              : ""
-                          }
-                          composerFocused={composerFocused && !projectTerminalFocused}
-                          recents={recents}
-                          hideProjectPicker
-                          onFocus={onFocusPane}
-                          onClose={onClosePane}
-                          onSelectFile={onSelectFileSurface}
-                          onCloseFile={onCloseFile}
-                          onReorderFiles={onReorderFiles}
-                          onFileDirtyChange={onFileDirtyChange}
-                          onFileErrorCountChange={onFileErrorCountChange}
-                          onRatio={(splitId, index, ratio) =>
-                            onRatio(tab.id, splitId, index, ratio)
-                          }
-                          onCwdChange={onCwdChange}
-                          onBranchChange={onBranchChange}
-                          onModelChange={onModelChange}
-                          onModelSettingsChange={onModelSettingsChange}
-                          onRuntimeModeChange={onRuntimeModeChange}
-                          onSubmit={onSubmit}
-                          onStop={onStop}
-                          onInboxCardDismiss={onInboxCardDismiss}
-                          onNoteCardDismiss={onNoteCardDismiss}
-                          onHandoffCardDismiss={onHandoffCardDismiss}
-                          onApproval={onApproval}
-                          onQuestionReply={onQuestionReply}
-                          onOpenFile={onOpenFile}
-                          editorNavigation={editorNavigation}
-                          onOpenDiff={onOpenDiff}
-                          onOpenPlan={onOpenPlan}
-                          onSecondOpinion={onSecondOpinion}
-                          onHandoff={onHandoff}
-                          onMovePane={onMovePane}
-                          onNewTerminal={onNewTerminalInSession}
-                          onTerminalMetaChange={onTerminalMetaChange}
-                        />
-                      </div>
+                      <ProjectTerminalDock
+                        dock={dock}
+                        focused={show && projectTerminalFocused}
+                        onFocus={focusProjectTerminal}
+                        onHide={onHideProjectTerminal}
+                        onSideChange={onProjectTerminalSide}
+                        onSizePaint={paintDockSize}
+                        onSizeCommit={commitDockSize}
+                        onAddTerminal={() => onOpenTerminal(active?.cwd ?? projectCwd)}
+                        onSelectTerminal={onSelectProjectTerminal}
+                        onCloseTerminal={onCloseProjectTerminal}
+                        onReorderTerminals={onReorderProjectTerminals}
+                        onTerminalMetaChange={onTerminalMetaChange}
+                      />
                     </div>
-                  ))}
+                  );
+                })}
+                <div
+                  className="relative flex min-h-0 min-w-0 flex-row"
+                  style={{ gridArea: "main" }}
+                >
+                  <div className="relative min-h-0 min-w-0 flex-1">
+                    {tabs.map((tab) => (
+                      <div
+                        key={tab.id}
+                        aria-hidden={tab.id !== activeTabId}
+                        className={
+                          tab.id === activeTabId
+                            ? "absolute inset-0 flex h-full min-h-0 flex-col"
+                            : "hidden"
+                        }
+                      >
+                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+                          <PaneTree
+                            visible={tab.id === activeTabId}
+                            layout={tab.layout}
+                            sessions={sessions}
+                            editorPanes={[...tab.editorPanes, ...(tab.terminalPanes ?? [])]}
+                            dirtyFileIds={dirtyFiles}
+                            fileErrorCounts={fileErrorCounts}
+                            focusedId={
+                              tab.id === activeTabId && !tab.diffFocused && !projectTerminalFocused
+                                ? tab.focusedId
+                                : ""
+                            }
+                            composerFocused={composerFocused && !projectTerminalFocused}
+                            recents={recents}
+                            hideProjectPicker
+                            onFocus={onFocusPane}
+                            onClose={onClosePane}
+                            onSelectFile={onSelectFileSurface}
+                            onCloseFile={onCloseFile}
+                            onReorderFiles={onReorderFiles}
+                            onFileDirtyChange={onFileDirtyChange}
+                            onFileErrorCountChange={onFileErrorCountChange}
+                            onRatio={(splitId, index, ratio) =>
+                              onRatio(tab.id, splitId, index, ratio)
+                            }
+                            onCwdChange={onCwdChange}
+                            onBranchChange={onBranchChange}
+                            onModelChange={onModelChange}
+                            onModelSettingsChange={onModelSettingsChange}
+                            onRuntimeModeChange={onRuntimeModeChange}
+                            onSubmit={onSubmit}
+                            onStop={onStop}
+                            onInboxCardDismiss={onInboxCardDismiss}
+                            onNoteCardDismiss={onNoteCardDismiss}
+                            onHandoffCardDismiss={onHandoffCardDismiss}
+                            onApproval={onApproval}
+                            onQuestionReply={onQuestionReply}
+                            onOpenFile={onOpenFile}
+                            editorNavigation={editorNavigation}
+                            onOpenDiff={onOpenDiff}
+                            onOpenPlan={onOpenPlan}
+                            onSecondOpinion={onSecondOpinion}
+                            onHandoff={onHandoff}
+                            onMovePane={onMovePane}
+                            onNewTerminal={onNewTerminalInSession}
+                            onTerminalMetaChange={onTerminalMetaChange}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </main>
+            </main>
+          </div>
+          {searchViewOpen ? (
+            <SearchView
+              open
+              cwd={sidebarCwd}
+              recents={recents}
+              history={projectHistory}
+              sessions={sessions}
+              focusToken={searchViewFocusToken}
+              besideRail={projectRailOpen}
+              onClose={onLeaveSearch}
+              onToggleSidebar={onToggleSidebar}
+              onOpenFile={onOpenFile}
+              onOpenSession={onSelectHistorySession}
+              onOpenProject={onSelectProject}
+            />
+          ) : null}
+          {inboxViewOpen ? (
+            <InboxView
+              cwd={sidebarCwd}
+              recents={recents}
+              besideRail={projectRailOpen}
+              onClose={onLeaveInbox}
+              onToggleSidebar={onToggleSidebar}
+              onStart={onStartInboxItem}
+            />
+          ) : null}
+          {usageViewOpen ? (
+            <UsageView
+              besideRail={projectRailOpen}
+              onClose={onLeaveUsage}
+              onToggleSidebar={onToggleSidebar}
+            />
+          ) : null}
+          {notesViewOpen ? (
+            <NotesView
+              besideRail={projectRailOpen}
+              cwd={projectCwd}
+              onClose={onLeaveNotes}
+              onToggleSidebar={onToggleSidebar}
+            />
+          ) : null}
+          {settingsOpen ? (
+            <SettingsView
+              section={settingsSection}
+              cwd={sidebarCwd}
+              sessions={sidebarHistory}
+              besideRail
+              onClose={onCloseSettings}
+              onOpenSession={onOpenArchivedSession}
+              onArchiveSession={onArchiveHistorySession}
+              onDeleteSession={onDeleteHistorySession}
+              onRestoreProject={onRestoreProject}
+              onDeleteProject={(path) => onRemoveProject(path, { purgeData: true })}
+              onOpenWhatsNew={onOpenWhatsNew}
+            />
+          ) : null}
+          {searchViewOpen ||
+          inboxViewOpen ||
+          notesViewOpen ||
+          usageViewOpen ||
+          settingsOpen ? null : (
+            <UsageFooter
+              providers={usageProviders}
+              onOpenUsage={onOpenUsage}
+              session={usageSession}
+              terminals={runningTerminals}
+              terminalOpen={runningTerminalOpen}
+              onToggleTerminal={onToggleRunningTerminal}
+            />
+          )}
         </div>
-        {searchViewOpen ? (
-          <SearchView
-            open
-            cwd={sidebarCwd}
-            recents={recents}
-            history={projectHistory}
-            sessions={sessions}
-            focusToken={searchViewFocusToken}
-            besideRail={projectRailOpen}
-            onClose={onLeaveSearch}
-            onToggleSidebar={onToggleSidebar}
-            onOpenFile={onOpenFile}
-            onOpenSession={onSelectHistorySession}
-            onOpenProject={onSelectProject}
-          />
-        ) : null}
-        {inboxViewOpen ? (
-          <InboxView
-            cwd={sidebarCwd}
-            recents={recents}
-            besideRail={projectRailOpen}
-            onClose={onLeaveInbox}
-            onToggleSidebar={onToggleSidebar}
-            onStart={onStartInboxItem}
-          />
-        ) : null}
-        {usageViewOpen ? (
-          <UsageView
-            besideRail={projectRailOpen}
-            onClose={onLeaveUsage}
-            onToggleSidebar={onToggleSidebar}
-          />
-        ) : null}
-        {notesViewOpen ? (
-          <NotesView
-            besideRail={projectRailOpen}
-            cwd={projectCwd}
-            onClose={onLeaveNotes}
-            onToggleSidebar={onToggleSidebar}
-          />
-        ) : null}
-        {settingsOpen ? (
-          <SettingsView
-            section={settingsSection}
-            cwd={sidebarCwd}
-            sessions={sidebarHistory}
-            besideRail
-            onClose={onCloseSettings}
-            onOpenSession={onOpenArchivedSession}
-            onArchiveSession={onArchiveHistorySession}
-            onDeleteSession={onDeleteHistorySession}
-            onRestoreProject={onRestoreProject}
-            onDeleteProject={(path) => onRemoveProject(path, { purgeData: true })}
-            onOpenWhatsNew={onOpenWhatsNew}
-          />
-        ) : null}
-        {searchViewOpen ||
-        inboxViewOpen ||
-        notesViewOpen ||
-        usageViewOpen ||
-        settingsOpen ? null : (
-          <UsageFooter
-            providers={usageProviders}
-            onOpenUsage={onOpenUsage}
-            session={usageSession}
-            terminals={runningTerminals}
-            terminalOpen={runningTerminalOpen}
-            onToggleTerminal={onToggleRunningTerminal}
-          />
-        )}
       </div>
+
+      {workMode ? (
+        <div
+          className={`absolute inset-0 z-40 flex ${
+            IS_MAC ? "bg-background-base/40" : "bg-background-base"
+          }`}
+        >
+          <WorkView mode={appMode} onModeChange={setAppMode} />
+        </div>
+      ) : null}
 
       {filePickerOpen ? (
         <FilePicker

@@ -7,6 +7,7 @@ import {
   Minus,
   Bot,
   PenLine,
+  RefreshCw,
   Search,
   Sparkles,
   Terminal,
@@ -85,6 +86,10 @@ type Props = {
   onOpenPlan?: (blockId: string) => void;
   onSecondOpinion?: (harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (harness: HarnessId, turn: Block[], model: string) => void;
+  /** Rewrite a user turn and send it again. Enables the pencil on that turn. */
+  onEditTurn?: (blockId: string, text: string) => void;
+  /** Ask for a fresh answer to the user turn this reply belongs to. */
+  onRegenerateTurn?: (userBlockId: string) => void;
   onJumpToBottomChange?: (show: boolean) => void;
   onJumpToBottomReady?: (jump: () => void) => void;
   /** False while another tab is in front. Hidden tabs stay laid out. */
@@ -105,6 +110,8 @@ export function AgentTranscript({
   onOpenPlan,
   onSecondOpinion,
   onHandoff,
+  onEditTurn,
+  onRegenerateTurn,
   onJumpToBottomChange,
   onJumpToBottomReady,
   visible = true,
@@ -343,6 +350,7 @@ export function AgentTranscript({
                     onOpenFile={onOpenFile}
                     onOpenDiff={onOpenDiff}
                     onOpenPlan={onOpenPlan}
+                    onEditTurn={onEditTurn}
                     cwd={cwd}
                   />
                 ),
@@ -362,6 +370,9 @@ export function AgentTranscript({
                   }
                   onHandoff={
                     onHandoff ? (target, model) => onHandoff(target, turn, model) : undefined
+                  }
+                  onRegenerate={
+                    onRegenerateTurn && userBlock ? () => onRegenerateTurn(userBlock.id) : undefined
                   }
                 />
               ) : null}
@@ -424,6 +435,7 @@ function TurnDuration({
   fromHarness,
   onSecondOpinion,
   onHandoff,
+  onRegenerate,
 }: {
   elapsedMs: number | null;
   live?: boolean;
@@ -437,6 +449,7 @@ function TurnDuration({
   fromHarness?: HarnessId;
   onSecondOpinion?: (harness: HarnessId, model: string) => void;
   onHandoff?: (harness: HarnessId, model: string) => void;
+  onRegenerate?: () => void;
 }) {
   const label = waiting
     ? (waitingLabel ?? "Waiting for approval")
@@ -466,6 +479,17 @@ function TurnDuration({
           ) : null}
           {fromHarness && onSecondOpinion ? (
             <SecondOpinionButton from={fromHarness} onPick={onSecondOpinion} />
+          ) : null}
+          {onRegenerate ? (
+            <button
+              type="button"
+              title="Regenerate"
+              aria-label="Regenerate"
+              className="rounded-md p-1 text-content/40 hover:bg-content/8 hover:text-content/70"
+              onClick={onRegenerate}
+            >
+              <RefreshCw className="size-3.5" strokeWidth={1.75} />
+            </button>
           ) : null}
         </span>
       ) : (
@@ -576,6 +600,7 @@ const TranscriptBlock = memo(function TranscriptBlock({
   onOpenFile,
   onOpenDiff,
   onOpenPlan,
+  onEditTurn,
 }: {
   block: Block;
   layout: TranscriptLayout;
@@ -586,9 +611,17 @@ const TranscriptBlock = memo(function TranscriptBlock({
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
   onOpenPlan?: (blockId: string) => void;
+  onEditTurn?: (blockId: string, text: string) => void;
 }) {
   if (block.role === "user") {
-    return <UserMessageBlock block={block} layout={layout} stickyIndex={stickyIndex} />;
+    return (
+      <UserMessageBlock
+        block={block}
+        layout={layout}
+        stickyIndex={stickyIndex}
+        onEdit={onEditTurn}
+      />
+    );
   }
 
   if (block.role === "tool") {
@@ -664,13 +697,17 @@ function UserMessageBlock({
   block,
   layout,
   stickyIndex,
+  onEdit,
 }: {
   block: Block;
   layout: TranscriptLayout;
   stickyIndex: number;
+  onEdit?: (blockId: string, text: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(block.text);
   const textRef = useRef<HTMLPreElement>(null);
   const card = block.secondOpinion;
   const note = block.noteCard;
@@ -691,8 +728,82 @@ function UserMessageBlock({
     if (overflows) setExpanded((value) => !value);
   };
 
+  // Editing replaces the turn and everything after it, so it only makes sense
+  // where the caller can actually resend — the Work surface.
+  const canEdit = Boolean(onEdit) && !card && !note;
+
+  if (editing && onEdit) {
+    return (
+      <div className={chat ? "flex justify-end pt-1.5 pr-4 pb-4 pl-14" : "p-1.5 pb-3"}>
+        <div
+          className={`min-w-0 bg-content/10 px-3 py-2 font-sans text-content ${
+            chat ? "w-full max-w-xl rounded-xl" : "w-full rounded-lg border border-content/10"
+          }`}
+        >
+          <textarea
+            // oxlint-disable-next-line jsx-a11y/no-autofocus -- editing is an explicit user action
+            autoFocus
+            value={draft}
+            aria-label="Edit message"
+            className="min-h-16 w-full resize-none bg-transparent font-sans text-sm outline-none"
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setEditing(false);
+                setDraft(block.text);
+                return;
+              }
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                setEditing(false);
+                onEdit(block.id, draft);
+              }
+            }}
+          />
+          <div className="mt-1 flex justify-end gap-2 text-[11px]">
+            <button
+              type="button"
+              className="rounded px-2 py-0.5 text-content/50 hover:text-content"
+              onClick={() => {
+                setEditing(false);
+                setDraft(block.text);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded bg-content px-2 py-0.5 text-background-base hover:bg-content/80"
+              onClick={() => {
+                setEditing(false);
+                onEdit(block.id, draft);
+              }}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={chat ? "flex justify-end pt-1.5 pr-4 pb-4 pl-14" : "p-1.5 pb-3"}>
+    <div className={`group ${chat ? "flex justify-end pt-1.5 pr-4 pb-4 pl-14" : "p-1.5 pb-3"}`}>
+      {canEdit ? (
+        <button
+          type="button"
+          title="Edit and resend"
+          aria-label="Edit and resend"
+          className="mt-1 mr-1 hidden h-fit shrink-0 self-start rounded-md p-1 text-content/35 hover:bg-content/8 hover:text-content/70 group-hover:block"
+          onClick={() => {
+            setDraft(block.text);
+            setEditing(true);
+          }}
+        >
+          <PenLine className="size-3.5" strokeWidth={1.75} />
+        </button>
+      ) : null}
       <div
         className={`min-w-0 bg-content/10 px-3 py-2 font-sans text-content ${
           chat ? "w-fit max-w-xl rounded-xl" : "rounded-lg border border-content/10"
