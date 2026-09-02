@@ -1,7 +1,7 @@
 import { fuzzyMatch } from "../fuzzy";
 import { projectName } from "../paths";
 import { sameProjectPath } from "../recents";
-import { sessionDisplayTitle, sessionNeedsInput, type Session } from "../session";
+import { sessionDisplayTitle, sessionNeedsInput, sessionScope, type Session } from "../session";
 import { shouldPersistSession, type SessionSummary } from "./sessionStore";
 
 export type SessionGitHint = {
@@ -96,6 +96,7 @@ export function summaryFromSession(session: Session, git?: SessionGitHint): Sess
     ...(git?.repo ? { repo: git.repo } : {}),
     createdAt: 0,
     updatedAt: Date.now(),
+    scope: sessionScope(session),
   };
 }
 

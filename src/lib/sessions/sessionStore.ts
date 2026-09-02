@@ -10,8 +10,9 @@ import type {
   RuntimeMode,
   SecondOpinionMeta,
   Session,
+  SessionScope,
 } from "../session";
-import { HARNESSES, RUNTIME_MODES } from "../session";
+import { HARNESSES, RUNTIME_MODES, sessionScope } from "../session";
 
 export type SessionSummary = {
   id: string;
@@ -29,6 +30,7 @@ export type SessionSummary = {
   updatedAt: number;
   archived?: boolean;
   pinned?: boolean;
+  scope: SessionScope;
 };
 
 type SessionRecord = {
@@ -45,6 +47,7 @@ type SessionRecord = {
   contextWindow?: number | null;
   branch?: string | null;
   worktreeCwd?: string | null;
+  scope?: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -63,11 +66,17 @@ type SessionUpsertPayload = {
   contextWindow?: number;
   branch?: string;
   worktreeCwd?: string;
+  scope?: SessionScope;
 };
 
-/** Only real chats belong in project history — blank tabs stay ephemeral. */
+/**
+ * Only real chats belong in history — blank tabs stay ephemeral. A coding
+ * session also needs a project; a work chat has none, so its scratch cwd
+ * carries no meaning and cannot gate the write.
+ */
 export function shouldPersistSession(session: Session): boolean {
-  return session.cwd !== "~" && session.blocks.some((block) => block.role === "user");
+  if (!session.blocks.some((block) => block.role === "user")) return false;
+  return sessionScope(session) === "work" || session.cwd !== "~";
 }
 
 /** Matches Rust `validate_id` — a path here fails the whole upsert. */
@@ -91,6 +100,7 @@ function persistableMeta(session: Session): Omit<SessionUpsertPayload, "blocks">
     ...(session.context?.window ? { contextWindow: session.context.window } : {}),
     ...(session.branch ? { branch: session.branch } : {}),
     ...(session.worktreeCwd ? { worktreeCwd: session.worktreeCwd } : {}),
+    scope: sessionScope(session),
   };
 }
 
@@ -154,6 +164,12 @@ export async function listSessionsByProject(cwd: string): Promise<SessionSummary
   return rows.map(normalizeSummary);
 }
 
+/** Work chats have no project, so they list by scope instead of by cwd. */
+export async function listSessionsByScope(scope: SessionScope): Promise<SessionSummary[]> {
+  const rows = await invoke<SessionSummary[]>("session_list_by_scope", { scope });
+  return rows.map(normalizeSummary);
+}
+
 export type SessionSearchHit = {
   kind: "conversation" | "message";
   sessionId: string;
@@ -175,6 +191,8 @@ export async function searchSessions(options: {
   query: string;
   cwd?: string;
   includeArchived?: boolean;
+  /** Defaults to coding so project search never surfaces a work chat. */
+  scope?: SessionScope;
 }): Promise<SessionSearchResult> {
   const query = options.query.trim();
   if (!query) return { hits: [], truncated: false };
@@ -183,6 +201,7 @@ export async function searchSessions(options: {
       query,
       ...(options.cwd && options.cwd !== "~" ? { cwd: normalizeProjectPath(options.cwd) } : {}),
       ...(options.includeArchived ? { includeArchived: true } : {}),
+      scope: options.scope ?? "coding",
     },
   });
   return {
@@ -308,6 +327,7 @@ function normalizeSummary(summary: SessionSummary): SessionSummary {
     deletions: summary.deletions ?? 0,
     archived: summary.archived || undefined,
     pinned: summary.pinned || undefined,
+    scope: asScope(summary.scope),
   };
 }
 
@@ -329,6 +349,7 @@ function recordToSession(record: SessionRecord): Session {
     ...(record.providerSessionId ? { providerSessionId: record.providerSessionId } : {}),
     ...(record.branch ? { branch: record.branch } : {}),
     ...(record.worktreeCwd ? { worktreeCwd: record.worktreeCwd } : {}),
+    ...(asScope(record.scope) === "work" ? { scope: "work" as const } : {}),
     ...contextFromRecord(record),
   };
 }
@@ -349,6 +370,11 @@ function contextFromRecord(record: SessionRecord): { context: ContextUsage } | u
         ? { used, window }
         : { used },
   };
+}
+
+/** An unknown scope reads as coding, matching the Rust normalizer. */
+function asScope(value: unknown): SessionScope {
+  return value === "work" ? "work" : "coding";
 }
 
 function asHarness(value: string): HarnessId {

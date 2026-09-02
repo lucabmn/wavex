@@ -4,7 +4,9 @@ import {
   isPersistableId,
   persistFingerprint,
   sanitizeSessionForPersist,
+  shouldPersistSession,
 } from "@/lib/sessions/sessionStore";
+import { newWorkChat } from "@/lib/sessions/workChats";
 
 describe("isPersistableId", () => {
   it("accepts alphanumeric ids with hyphens and underscores", () => {
@@ -17,7 +19,48 @@ describe("isPersistableId", () => {
   });
 });
 
+describe("shouldPersistSession", () => {
+  it("keeps a blank tab out of history", () => {
+    expect(shouldPersistSession(newSession("cursor", "/tmp/project"))).toBe(false);
+  });
+
+  it("persists a coding session once the user has spoken", () => {
+    const session = newSession("cursor", "/tmp/project");
+    session.blocks = [{ id: "u1", role: "user", text: "hey" }];
+    expect(shouldPersistSession(session)).toBe(true);
+  });
+
+  it("still refuses a coding session with no project", () => {
+    const session = newSession("cursor", "~");
+    session.blocks = [{ id: "u1", role: "user", text: "hey" }];
+    expect(shouldPersistSession(session)).toBe(false);
+  });
+
+  // A work chat has no project, so cwd cannot gate its write.
+  it("persists a work chat regardless of cwd", () => {
+    const chat = newWorkChat("~", "cursor");
+    chat.blocks = [{ id: "u1", role: "user", text: "hey" }];
+    expect(shouldPersistSession(chat)).toBe(true);
+  });
+
+  it("keeps an empty work chat ephemeral", () => {
+    expect(shouldPersistSession(newWorkChat("/tmp/work-chats", "cursor"))).toBe(false);
+  });
+});
+
 describe("sanitizeSessionForPersist", () => {
+  it("records the scope so a work chat can be listed without a project", () => {
+    const chat = newWorkChat("/tmp/work-chats", "cursor");
+    chat.blocks = [{ id: "u1", role: "user", text: "hey" }];
+    expect(sanitizeSessionForPersist(chat).scope).toBe("work");
+  });
+
+  it("marks a session with no scope as coding", () => {
+    const session = newSession("cursor", "/tmp/project");
+    session.blocks = [{ id: "u1", role: "user", text: "hey" }];
+    expect(sanitizeSessionForPersist(session).scope).toBe("coding");
+  });
+
   it("omits a path-like provider session id so upsert can still snapshot git", () => {
     const session = newSession("pi", "/tmp/project");
     session.providerSessionId = "/Users/me/.pi/agent/sessions/abc.jsonl";
@@ -216,5 +259,46 @@ describe("persistFingerprint", () => {
     expect(persistFingerprint({ ...session, context: { used: 10, window: 0 } })).toBe(
       persistFingerprint({ ...session, context: { used: 10 } }),
     );
+  });
+});
+
+describe("shouldPersistSession", () => {
+  const userTurn: Block = { id: "b1", role: "user", text: "hi" };
+
+  it("keeps a coding session out of history until it has a project", () => {
+    const session: Session = { ...newSession("claude", "~"), blocks: [userTurn] };
+    expect(shouldPersistSession(session)).toBe(false);
+    expect(shouldPersistSession({ ...session, cwd: "/tmp/repo" })).toBe(true);
+  });
+
+  // A work chat has no project, so cwd cannot gate the write.
+  it("persists a work chat regardless of cwd", () => {
+    const chat: Session = {
+      ...newSession("claude", "~"),
+      scope: "work",
+      blocks: [userTurn],
+    };
+    expect(shouldPersistSession(chat)).toBe(true);
+  });
+
+  it("still needs a user turn", () => {
+    const chat: Session = { ...newSession("claude", "~"), scope: "work", blocks: [] };
+    expect(shouldPersistSession(chat)).toBe(false);
+  });
+});
+
+describe("sanitizeSessionForPersist scope", () => {
+  it("defaults to the coding scope", () => {
+    expect(sanitizeSessionForPersist(newSession("claude", "/tmp/repo")).scope).toBe("coding");
+  });
+
+  it("carries the work scope through", () => {
+    const chat: Session = { ...newSession("claude", "/tmp/work-chats"), scope: "work" };
+    expect(sanitizeSessionForPersist(chat).scope).toBe("work");
+  });
+
+  it("changes the fingerprint when the scope changes", () => {
+    const session = newSession("claude", "/tmp/repo");
+    expect(persistFingerprint({ ...session, scope: "work" })).not.toBe(persistFingerprint(session));
   });
 });
