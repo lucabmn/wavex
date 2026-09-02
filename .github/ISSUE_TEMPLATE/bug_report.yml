@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a problem in wavecode
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        wavecode is macOS (Apple Silicon) only. Linux and Windows are out of scope.
+
+  - type: input
+    id: version
+    attributes:
+      label: wavecode version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "15.5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider CLI
+      options:
+        - Claude Code
+        - Codex
+        - Cursor
+        - Grok Build
+        - OpenCode
+        - Pi
+        - omp
+        - fx
+        - Multiple / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
