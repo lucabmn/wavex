@@ -9,7 +9,7 @@ import {
   rankMentionFiles,
   replaceMentionToken,
   withMentionDirectories,
-} from "@/lib/fileMentions";
+} from "@/lib/files/fileMentions";
 
 const files: ProjectFile[] = [
   {

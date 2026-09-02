@@ -6,8 +6,8 @@ import {
   readAppVersion,
   runUpdateFlow,
   type UpdaterSnapshot,
-} from "../lib/updater";
-import type { InstalledUpdate } from "../lib/updateNotice";
+} from "../lib/updates/updater";
+import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import { UpdateRailCard } from "./UpdateRailCard";
 
 export function SidebarUpdateFooter({

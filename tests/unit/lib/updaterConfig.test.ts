@@ -14,7 +14,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ ask, message }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch }));
 vi.mock("@/lib/sounds", () => ({ announceUpdateAvailable: vi.fn() }));
 
-import { runUpdateFlow } from "@/lib/updater";
+import { runUpdateFlow } from "@/lib/updates/updater";
 
 describe("updater", () => {
   afterEach(() => {

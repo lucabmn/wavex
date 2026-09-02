@@ -4,7 +4,7 @@ import { json } from "@codemirror/lang-json";
 import { python } from "@codemirror/lang-python";
 import { EditorState, type Extension } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
-import { isLintable, syntaxDiagnostics } from "@/surfaces/editorLint";
+import { isLintable, syntaxDiagnostics } from "@/lib/editor/editorLint";
 
 function stateWith(doc: string, language: Extension): EditorState {
   return EditorState.create({ doc, extensions: [language] });

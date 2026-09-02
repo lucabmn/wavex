@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { newTerminalFile } from "@/lib/layout";
-import { confirmCloseTerminal, confirmCloseTerminals } from "@/lib/terminalClose";
+import { newTerminalFile } from "@/lib/workspace/layout";
+import { confirmCloseTerminal, confirmCloseTerminals } from "@/lib/terminal/terminalClose";
 
 const getPtyStatus = vi.fn();
 const ask = vi.fn();
 
-vi.mock("@/lib/pty", () => ({
+vi.mock("@/lib/terminal/pty", () => ({
   getPtyStatus: (...args: unknown[]) => getPtyStatus(...args),
 }));
 

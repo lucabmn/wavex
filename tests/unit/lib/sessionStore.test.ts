@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { newSession, type Block, type Session } from "@/lib/session";
-import { isPersistableId, persistFingerprint, sanitizeSessionForPersist } from "@/lib/sessionStore";
+import {
+  isPersistableId,
+  persistFingerprint,
+  sanitizeSessionForPersist,
+} from "@/lib/sessions/sessionStore";
 
 describe("isPersistableId", () => {
   it("accepts alphanumeric ids with hyphens and underscores", () => {

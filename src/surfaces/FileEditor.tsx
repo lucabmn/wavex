@@ -38,14 +38,14 @@ import {
   subscribeGitChanged,
   writeTextFile,
 } from "../lib/fs";
-import { syncWatchedMtime, watchFile } from "../lib/fileWatch";
+import { syncWatchedMtime, watchFile } from "../lib/files/fileWatch";
 import { displayPath } from "../lib/paths";
 import type { EditorNavigation } from "../lib/search";
 import { MarkdownPreview } from "./AgentMarkdown";
-import { editorAutocomplete } from "./editorAutocomplete";
-import { languageForPath, schemeExtensions } from "./editorChrome";
-import { preserveEditorViewport, replaceEditorDoc } from "./editorDoc";
-import { editorMatching, editorTyping, tryExpandEmmet } from "./editorEditing";
+import { editorAutocomplete } from "../lib/editor/editorAutocomplete";
+import { languageForPath, schemeExtensions } from "../lib/editor/editorChrome";
+import { preserveEditorViewport, replaceEditorDoc } from "../lib/editor/editorDoc";
+import { editorMatching, editorTyping, tryExpandEmmet } from "../lib/editor/editorEditing";
 import {
   diffActiveChunkIndex,
   diffLineStatsForView,
@@ -54,9 +54,9 @@ import {
   diffScrollToChunk,
   editorGit,
   setGitOriginal,
-} from "./editorGit";
-import { editorLint } from "./editorLint";
-import { editorSearch } from "./editorSearch";
+} from "../lib/editor/editorGit";
+import { editorLint } from "../lib/editor/editorLint";
+import { editorSearch } from "../lib/editor/editorSearch";
 
 type EditorNavigationRequest = EditorNavigation & { token: number };
 

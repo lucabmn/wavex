@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { gitDiffIndex, subscribeGitChanged, type GitDiffIndex } from "../lib/fs";
-import { subscribeDirsChanged } from "../lib/fileTree";
+import { subscribeDirsChanged } from "../lib/files/fileTree";
 import { parentPath } from "../lib/paths";
 
 export type GitStatusMap = {

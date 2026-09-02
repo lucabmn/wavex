@@ -1,5 +1,5 @@
 import { X } from "./icons";
-import type { InstalledUpdate } from "../lib/updateNotice";
+import type { InstalledUpdate } from "../lib/updates/updateNotice";
 
 type Props = {
   update: InstalledUpdate | null;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { newReleaseNotesWorkspaceTab } from "@/lib/layout";
-import { releaseNotesTitle } from "@/lib/releaseNotes";
+import { newReleaseNotesWorkspaceTab } from "@/lib/workspace/layout";
+import { releaseNotesTitle } from "@/lib/updates/releaseNotes";
 import { appendProblems, surfaceTabPresentation } from "@/chrome/SurfaceTabs";
 
 describe("surfaceTabPresentation", () => {

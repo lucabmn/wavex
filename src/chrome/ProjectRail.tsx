@@ -57,7 +57,7 @@ import {
   saveTabGroupCustomColor,
   saveTabGroupLabel,
   saveTabGroupMascot,
-} from "../lib/tabGroups";
+} from "../lib/workspace/tabGroups";
 import { formatLiveElapsed, type LiveAgent } from "../lib/liveAgents";
 import { HarnessIcon } from "./HarnessIcon";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
@@ -66,7 +66,7 @@ import { RailAction, RailSearch } from "./RailAction";
 import { RemoveProjectDialog } from "./RemoveProjectDialog";
 import { DevModeSlot, TabVisitNav } from "./TitleBar";
 import { SidebarUpdateFooter } from "./SidebarUpdate";
-import type { InstalledUpdate } from "../lib/updateNotice";
+import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import { SettingsNav } from "./SettingsRail";
 import { Shimmer } from "../surfaces/Shimmer";
 import { TabGroupMenu, type TabGroupMenuExtraItem } from "./TabGroupMenu";

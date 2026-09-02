@@ -6,7 +6,7 @@ import {
   writeTextFile,
   type DiscoveredSkill,
 } from "./fs";
-import { invalidateProjectFiles } from "./fileIndex";
+import { invalidateProjectFiles } from "./files/fileIndex";
 import { fuzzyMatch } from "./fuzzy";
 import { joinPath } from "./paths";
 import { looksLikeProject, normalizeProjectPath } from "./recents";

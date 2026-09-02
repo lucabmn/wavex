@@ -6,14 +6,14 @@ import {
   newReleaseNotesWorkspaceTab,
   newTab,
   newTerminalFile,
-} from "@/lib/layout";
-import { createProjectTerminal } from "@/lib/projectTerminal";
+} from "@/lib/workspace/layout";
+import { createProjectTerminal } from "@/lib/terminal/projectTerminal";
 import { newSession, type Session } from "@/lib/session";
 import {
   collectWorkspaceSnapshot,
   hydrateWorkspaceSnapshot,
   parseWorkspaceSnapshot,
-} from "@/lib/workspaceSnapshot";
+} from "@/lib/workspace/workspaceSnapshot";
 
 function chat(id: string, cwd: string): Session {
   const session = newSession("cursor", cwd);

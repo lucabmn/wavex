@@ -6,9 +6,9 @@ import {
   mergeHistorySummary,
   mergeProjectHistorySummary,
   replaceProjectHistory,
-} from "@/lib/sessionHistory";
+} from "@/lib/sessions/sessionHistory";
 import { newSession } from "@/lib/session";
-import type { SessionSummary } from "@/lib/sessionStore";
+import type { SessionSummary } from "@/lib/sessions/sessionStore";
 
 function summary(id: string, cwd: string, updatedAt = 1): SessionSummary {
   return {

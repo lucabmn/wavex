@@ -1,4 +1,8 @@
-import { formatReleaseDate, presentReleaseNotes, releaseNotesTitle } from "../lib/releaseNotes";
+import {
+  formatReleaseDate,
+  presentReleaseNotes,
+  releaseNotesTitle,
+} from "../lib/updates/releaseNotes";
 import { AgentMarkdown } from "../surfaces/AgentMarkdown";
 import { Modal } from "./Modal";
 

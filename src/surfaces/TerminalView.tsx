@@ -1,15 +1,26 @@
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef } from "react";
-import { getPtyStatus, killPty, resizePty, spawnPty, subscribePty, writePty } from "../lib/pty";
-import { isOscColorQuery, oscColorReply } from "../lib/terminalChrome";
-import { defaultTerminalTitle, scanOscCwd, type TerminalMetaPatch } from "../lib/terminalTab";
+import {
+  getPtyStatus,
+  killPty,
+  resizePty,
+  spawnPty,
+  subscribePty,
+  writePty,
+} from "../lib/terminal/pty";
+import { isOscColorQuery, oscColorReply } from "../lib/terminal/terminalChrome";
+import {
+  defaultTerminalTitle,
+  scanOscCwd,
+  type TerminalMetaPatch,
+} from "../lib/terminal/terminalTab";
 import { isLightScheme, SCHEME_CHANGE_EVENT } from "../lib/appearance";
 import {
   applyTerminalChrome,
   fitTerminal,
   resetGridStretch,
   type TerminalFitMode,
-} from "../lib/terminalLayout";
+} from "../lib/terminal/terminalLayout";
 import { IS_MAC } from "../lib/platform";
 import "@xterm/xterm/css/xterm.css";
 

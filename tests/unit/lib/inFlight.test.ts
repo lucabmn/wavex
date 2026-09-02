@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTab } from "@/lib/layout";
+import { newTab } from "@/lib/workspace/layout";
 import {
   CONTINUE_PROMPT,
   INTERRUPT_MESSAGE,

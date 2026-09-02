@@ -82,9 +82,12 @@ import {
   type ArchivedProject,
 } from "../lib/recents";
 import { HARNESSES, HARNESS_TITLE, sessionDisplayTitle, type HarnessId } from "../lib/session";
-import { loadSessionSidebarFilters, saveSessionSidebarFilters } from "../lib/sessionFilters";
-import type { SessionSummary } from "../lib/sessionStore";
-import { loadTabGroupLabels, resolveTabGroupLabel } from "../lib/tabGroups";
+import {
+  loadSessionSidebarFilters,
+  saveSessionSidebarFilters,
+} from "../lib/sessions/sessionFilters";
+import type { SessionSummary } from "../lib/sessions/sessionStore";
+import { loadTabGroupLabels, resolveTabGroupLabel } from "../lib/workspace/tabGroups";
 import {
   filterKeybindings,
   KEYBINDINGS,
@@ -106,7 +109,7 @@ import {
   readAppVersion,
   runUpdateFlow,
   type UpdaterSnapshot,
-} from "../lib/updater";
+} from "../lib/updates/updater";
 
 type Props = {
   section: SettingsSectionId;

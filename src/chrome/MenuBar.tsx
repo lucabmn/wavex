@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { MOD, SHIFT } from "../lib/platform";
-import { runUpdateFlow } from "../lib/updater";
+import { runUpdateFlow } from "../lib/updates/updater";
 
 type MenuKey = "file" | "view" | "terminal";
 

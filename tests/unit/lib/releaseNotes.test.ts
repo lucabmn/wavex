@@ -5,7 +5,7 @@ import {
   releaseNotesForVersion,
   releaseNotesMarkdown,
   releaseNotesTitle,
-} from "@/lib/releaseNotes";
+} from "@/lib/updates/releaseNotes";
 
 const fixture = `# Changelog
 

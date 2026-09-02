@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isOscColorQuery, oscColorReply } from "@/lib/terminalChrome";
+import { isOscColorQuery, oscColorReply } from "@/lib/terminal/terminalChrome";
 
 describe("osc color query", () => {
   it("detects a palette request", () => {

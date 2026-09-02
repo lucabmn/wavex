@@ -5,7 +5,7 @@ import {
   isInboxEntryUnseen,
   markInboxItemSeen,
   seedInboxSeenIfNeeded,
-} from "@/lib/inboxSeen";
+} from "@/lib/inbox/inboxSeen";
 
 const KEY = "wavex.inboxSeen";
 

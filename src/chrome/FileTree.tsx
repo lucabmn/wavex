@@ -17,7 +17,12 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
-import { leafName, validateFileName, wellFormedFileName, type NameIssue } from "../lib/fileName";
+import {
+  leafName,
+  validateFileName,
+  wellFormedFileName,
+  type NameIssue,
+} from "../lib/files/fileName";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import {
   createParentOf,
@@ -33,7 +38,7 @@ import {
   saveExpanded,
   saveSelected,
   subscribeDirsChanged,
-} from "../lib/fileTree";
+} from "../lib/files/fileTree";
 import {
   basename,
   copyPath,

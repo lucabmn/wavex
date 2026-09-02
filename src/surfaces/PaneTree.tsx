@@ -7,7 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { setGrabbing, suppressTextSelection } from "../lib/drag";
-import { paneDropFromPoint, useExternalPaneDrop } from "../lib/paneDrop";
+import { paneDropFromPoint, useExternalPaneDrop } from "../lib/workspace/paneDrop";
 import type { ApprovalDecision, UserQuestionReply } from "../lib/harness";
 import type { EditorNavigationTarget } from "../lib/search";
 import {
@@ -18,9 +18,9 @@ import {
   type LayoutNode,
   type LayoutSash,
   type PaneEdge,
-} from "../lib/layout";
+} from "../lib/workspace/layout";
 import type { RecentProject } from "../lib/recents";
-import type { TerminalMetaPatch } from "../lib/terminalTab";
+import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
 import type { Attachment, Block, HarnessId, RuntimeMode, Session } from "../lib/session";
 import { FilePane } from "./FilePane";
 import { SessionPane } from "./SessionPane";

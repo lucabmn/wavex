@@ -1,7 +1,7 @@
 import { Folder, type IconComponent } from "./icons";
 import { useEffect, useState } from "react";
-import { projectLogoSrc } from "../lib/projectLogos";
-import { TAB_GROUP_LOGOS_CHANGED, tabGroupLogoDisplayRevision } from "../lib/tabGroups";
+import { projectLogoSrc } from "../lib/project/projectLogos";
+import { TAB_GROUP_LOGOS_CHANGED, tabGroupLogoDisplayRevision } from "../lib/workspace/tabGroups";
 
 type Props = {
   path?: string | null;

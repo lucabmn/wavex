@@ -7,8 +7,8 @@ import {
   undoSessionChanges,
   type CheckpointFile,
 } from "../lib/checkpoint";
-import { invalidateProjectFiles } from "../lib/fileIndex";
-import { invalidateWatchedFiles } from "../lib/fileWatch";
+import { invalidateProjectFiles } from "../lib/files/fileIndex";
+import { invalidateWatchedFiles } from "../lib/files/fileWatch";
 import { basename, notifyGitChanged, subscribeGitChanged } from "../lib/fs";
 import { FileTypeIcon } from "./FileTypeIcon";
 

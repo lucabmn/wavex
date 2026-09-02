@@ -1,12 +1,12 @@
 import { Check, CircleDot, GitPullRequest } from "./icons";
 import { type ReactNode } from "react";
-import type { InboxKind } from "../lib/githubTasks";
+import type { InboxKind } from "../lib/inbox/githubTasks";
 import {
   DEFAULT_INBOX_FILTERS,
   hasActiveInboxFilters,
   type InboxFilters,
   type InboxTimeFilter,
-} from "../lib/inboxFilters";
+} from "../lib/inbox/inboxFilters";
 import { Popover } from "./Popover";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 

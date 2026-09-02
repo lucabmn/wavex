@@ -6,7 +6,7 @@ import {
   githubReviewStateLabel,
   inboxPersonAvatarUrl,
   type InboxProvider,
-} from "../lib/githubTasks";
+} from "../lib/inbox/githubTasks";
 import { MOD } from "../lib/platform";
 import { AgentMarkdown } from "./AgentMarkdown";
 

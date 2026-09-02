@@ -8,9 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import { normalizeHex } from "../lib/colorUtils";
-import { clearProjectLogo, pickAndSetProjectLogo } from "../lib/projectLogos";
-import { PROJECT_MASCOTS, projectMascot } from "../lib/projectMascots";
-import { TAB_GROUP_COLORS } from "../lib/tabGroups";
+import { clearProjectLogo, pickAndSetProjectLogo } from "../lib/project/projectLogos";
+import { PROJECT_MASCOTS, projectMascot } from "../lib/project/projectMascots";
+import { TAB_GROUP_COLORS } from "../lib/workspace/tabGroups";
 import { ColorPickerPopover, ColorSwatchRow } from "./ColorPickerPopover";
 import { Popover } from "./Popover";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";

@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   warmPiSkills: vi.fn(),
 }));
 
-vi.mock("@/lib/fileMentions", () => ({
+vi.mock("@/lib/files/fileMentions", () => ({
   applyFileMentionsToTurn: mocks.applyFileMentionsToTurn,
 }));
 

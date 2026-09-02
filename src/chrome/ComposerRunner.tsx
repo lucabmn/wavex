@@ -40,7 +40,7 @@ import {
   loadTabGroupMascots,
   resolveTabGroupColor,
   resolveTabGroupMascot,
-} from "../lib/tabGroups";
+} from "../lib/workspace/tabGroups";
 import { ProjectMascot } from "./ProjectMascot";
 
 type Props = {

@@ -11,7 +11,7 @@ import {
   resolveTabGroupColor,
   resolveTabGroupLogo,
   resolveTabGroupMascot,
-} from "../lib/tabGroups";
+} from "../lib/workspace/tabGroups";
 
 type Props = {
   card: NoteCardMeta;

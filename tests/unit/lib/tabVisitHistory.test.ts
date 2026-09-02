@@ -7,7 +7,7 @@ import {
   recordTabVisit,
   tabVisitBack,
   tabVisitForward,
-} from "@/lib/tabVisitHistory";
+} from "@/lib/workspace/tabVisitHistory";
 
 describe("tab visit history", () => {
   it("returns to the previous tab", () => {

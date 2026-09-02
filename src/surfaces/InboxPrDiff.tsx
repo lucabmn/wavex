@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, FoldVertical, UnfoldVertical } from "../chro
 import { useMemo, useState } from "react";
 import { FileTypeIcon } from "../chrome/FileTypeIcon";
 import { basename } from "../lib/fs";
-import type { GithubPrDiff } from "../lib/githubTasks";
+import type { GithubPrDiff } from "../lib/inbox/githubTasks";
 import { mergePrDiff, parsePrPatch, type PrDiffFile, type PrDiffLine } from "../lib/prDiff";
 
 const MAX_DISPLAY_LINES = 2000;

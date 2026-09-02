@@ -50,7 +50,7 @@ import {
   type InboxItem,
   type InboxProviderErrors,
   type InboxQuery,
-} from "../lib/githubTasks";
+} from "../lib/inbox/githubTasks";
 import {
   applyInboxFilters,
   hasActiveInboxFilters,
@@ -59,11 +59,11 @@ import {
   pruneInboxFilters,
   saveInboxFilters,
   type InboxFilters,
-} from "../lib/inboxFilters";
+} from "../lib/inbox/inboxFilters";
 import { projectName } from "../lib/paths";
 import { IS_MAC } from "../lib/platform";
 import type { RecentProject } from "../lib/recents";
-import { isInboxEntryUnseen, markInboxItemSeen, useInboxSeenTick } from "../lib/inboxSeen";
+import { isInboxEntryUnseen, markInboxItemSeen, useInboxSeenTick } from "../lib/inbox/inboxSeen";
 import {
   loadTabGroupColors,
   loadTabGroupCustomColors,
@@ -71,7 +71,7 @@ import {
   resolveTabGroupColor,
   resolveTabGroupLogo,
   resolveTabGroupMascot,
-} from "../lib/tabGroups";
+} from "../lib/workspace/tabGroups";
 import { AgentMarkdown } from "./AgentMarkdown";
 import { InboxComments, InboxCommentForm, type InboxReplyTarget } from "./InboxComments";
 import { InboxPrDiff } from "./InboxPrDiff";

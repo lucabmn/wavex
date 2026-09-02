@@ -37,7 +37,7 @@ import {
 } from "../lib/fs";
 import type { HarnessId } from "../lib/session";
 import { generateCommitMessage, generatePrContent } from "../lib/harness";
-import { invalidateWatchedFiles } from "../lib/fileWatch";
+import { invalidateWatchedFiles } from "../lib/files/fileWatch";
 import { MOD } from "../lib/platform";
 import { applyProjectDiffStats } from "../hooks/useProjectDiffStats";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";

@@ -15,7 +15,7 @@ import {
   segmentTabs,
   sharedGroupProject,
   ungroupTabs,
-} from "@/lib/tabGroups";
+} from "@/lib/workspace/tabGroups";
 
 function tab(id: string, project: string, groupId?: string): Tab {
   return {

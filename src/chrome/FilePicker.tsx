@@ -14,7 +14,7 @@ import {
   rankProjectFiles,
   recentOpenedFiles,
   type RankedFile,
-} from "../lib/fileIndex";
+} from "../lib/files/fileIndex";
 import { LAYER } from "../lib/layers";
 import { looksLikeProject } from "../lib/recents";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";

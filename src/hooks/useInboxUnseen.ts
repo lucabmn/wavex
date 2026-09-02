@@ -5,19 +5,19 @@ import {
   listInboxItems,
   type InboxItem,
   type InboxQuery,
-} from "../lib/githubTasks";
+} from "../lib/inbox/githubTasks";
 import {
   applyInboxFilters,
   inboxFetchState,
   loadInboxFilters,
   pruneInboxFilters,
-} from "../lib/inboxFilters";
+} from "../lib/inbox/inboxFilters";
 import {
   inboxHasUnseenItems,
   seedInboxSeenIfNeeded,
   subscribeInboxSeen,
   type InboxSeenEntry,
-} from "../lib/inboxSeen";
+} from "../lib/inbox/inboxSeen";
 import type { RecentProject } from "../lib/recents";
 import { noteInboxUnseen } from "../lib/sounds";
 

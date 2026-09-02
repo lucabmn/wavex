@@ -26,7 +26,7 @@ import {
   type SidebarTabId,
 } from "./lib/appearance";
 import { IS_MAC } from "./lib/platform";
-import { runUpdateFlow } from "./lib/updater";
+import { runUpdateFlow } from "./lib/updates/updater";
 import { displayAttachments, prepareAttachments } from "./lib/attachments";
 import { basename, notifyGitChanged, pickFolder, restoreSessionCheckout } from "./lib/fs";
 import {
@@ -34,7 +34,7 @@ import {
   prefetchProjectFiles,
   rememberOpenedFile,
   resolveOpenablePath,
-} from "./lib/fileIndex";
+} from "./lib/files/fileIndex";
 import {
   closeLeaf,
   findSurfacePane,
@@ -69,8 +69,8 @@ import {
   type PaneEdge,
   type SplitDir,
   type WorkspaceTab,
-} from "./lib/layout";
-import { releaseNotesForVersion, releaseNotesTitle } from "./lib/releaseNotes";
+} from "./lib/workspace/layout";
+import { releaseNotesForVersion, releaseNotesTitle } from "./lib/updates/releaseNotes";
 import { orderByIds } from "./lib/reorder";
 import {
   addTerminalToDock,
@@ -88,16 +88,20 @@ import {
   withDockSize,
   type DockSide,
   type ProjectTerminalDock as ProjectTerminal,
-} from "./lib/projectTerminal";
+} from "./lib/terminal/projectTerminal";
 import {
   applyGroupedReorder,
   insertTabBesideActive,
   removeTabFromGroup,
   tabGroupProject,
-} from "./lib/tabGroups";
+} from "./lib/workspace/tabGroups";
 import { type WindowTransferPayload } from "./lib/windowTransfer";
-import { confirmCloseTerminal, confirmCloseTerminals } from "./lib/terminalClose";
-import { listRunningTerminals, terminalTabLabel, type TerminalMetaPatch } from "./lib/terminalTab";
+import { confirmCloseTerminal, confirmCloseTerminals } from "./lib/terminal/terminalClose";
+import {
+  listRunningTerminals,
+  terminalTabLabel,
+  type TerminalMetaPatch,
+} from "./lib/terminal/terminalTab";
 import {
   applyHarnessEvent,
   appendUser,
@@ -149,8 +153,8 @@ import {
   notifyReviewChanged,
   syncSessionCheckpoint,
 } from "./lib/checkpoint";
-import { notifyDirsChanged } from "./lib/fileTree";
-import { nudgeWatchedFiles } from "./lib/fileWatch";
+import { notifyDirsChanged } from "./lib/files/fileTree";
+import { nudgeWatchedFiles } from "./lib/files/fileWatch";
 import { type EditorNavigationTarget, type OpenFileFn } from "./lib/search";
 import {
   mergeModelSettings,
@@ -166,7 +170,7 @@ import {
   rebasePath,
   resolveWorkspacePath,
 } from "./lib/paths";
-import { removeProjectData } from "./lib/projectData";
+import { removeProjectData } from "./lib/project/projectData";
 import {
   archiveProject,
   forgetProject,
@@ -184,7 +188,7 @@ import {
   findTabForProject,
   planWorkspaceTabClose,
   workspaceTabCwd,
-} from "./lib/workspaceTabGroups";
+} from "./lib/workspace/workspaceTabGroups";
 import {
   HARNESS_LABEL,
   canReplaceSessionTitle,
@@ -215,13 +219,13 @@ import {
   shouldPersistSession,
   upsertSession,
   type SessionSummary,
-} from "./lib/sessionStore";
+} from "./lib/sessions/sessionStore";
 import { syncDockBadge } from "./lib/dockBadge";
 import { liveAgentsFromSessions } from "./lib/liveAgents";
 import { hiddenApprovalNotices } from "./lib/approvalToast";
-import { nextUnseenFinishedSessions } from "./lib/sessionDone";
+import { nextUnseenFinishedSessions } from "./lib/sessions/sessionDone";
 import { playCue } from "./lib/sounds";
-import { tabCommand } from "./lib/tabKeys";
+import { tabCommand } from "./lib/workspace/tabKeys";
 import {
   canTabVisitBack,
   canTabVisitForward,
@@ -231,10 +235,10 @@ import {
   tabVisitBack,
   tabVisitForward,
   type TabVisitHistory,
-} from "./lib/tabVisitHistory";
+} from "./lib/workspace/tabVisitHistory";
 import { preparePrompt } from "./lib/promptPreparation";
 import { warmPiSkills } from "./lib/skills";
-import { piSkillContextForSession } from "./lib/sessionSkills";
+import { piSkillContextForSession } from "./lib/sessions/sessionSkills";
 import {
   ADD_NOTE_TO_CHAT_EVENT,
   composeNoteMessage,
@@ -256,7 +260,7 @@ import { SearchView } from "./surfaces/SearchView";
 import { SettingsView } from "./surfaces/SettingsView";
 import { InboxView } from "./surfaces/InboxView";
 import { NotesView } from "./surfaces/NotesView";
-import { inboxComposerCard, type InboxItem } from "./lib/githubTasks";
+import { inboxComposerCard, type InboxItem } from "./lib/inbox/githubTasks";
 import {
   loadLiveAgentsEnabled,
   loadNotesEnabled,
@@ -266,7 +270,7 @@ import {
   subscribeNotesEnabled,
   type SettingsSectionId,
 } from "./lib/settings";
-import { handleEditorFindKey, openFindInActiveEditor } from "./surfaces/editorSearch";
+import { handleEditorFindKey, openFindInActiveEditor } from "./lib/editor/editorSearch";
 
 import {
   mergeHistorySummary,
@@ -274,7 +278,7 @@ import {
   replaceProjectHistory,
   historyWithLiveSessions,
   summaryFromSession,
-} from "./lib/sessionHistory";
+} from "./lib/sessions/sessionHistory";
 import {
   CONTINUE_PROMPT,
   canAutoContinue,
@@ -282,8 +286,8 @@ import {
   inFlightSnapshotKey,
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
-import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspaceSnapshot";
-import type { InstalledUpdate } from "./lib/updateNotice";
+import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
+import type { InstalledUpdate } from "./lib/updates/updateNotice";
 import {
   bindResumedSessions,
   hasInFlightSessions,

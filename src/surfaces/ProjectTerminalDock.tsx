@@ -19,9 +19,9 @@ import {
   isVerticalDock,
   type DockSide,
   type ProjectTerminalDock,
-} from "../lib/projectTerminal";
+} from "../lib/terminal/projectTerminal";
 import { MOD } from "../lib/platform";
-import type { TerminalMetaPatch } from "../lib/terminalTab";
+import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
 import { TerminalView } from "./TerminalView";
 
 type Props = {

@@ -6,8 +6,8 @@ import {
   filterSessionsByTime,
   hasActiveSessionFilters,
   timeFilterStart,
-} from "@/lib/sessionFilters";
-import type { SessionSummary } from "@/lib/sessionStore";
+} from "@/lib/sessions/sessionFilters";
+import type { SessionSummary } from "@/lib/sessions/sessionStore";
 
 function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
   return {

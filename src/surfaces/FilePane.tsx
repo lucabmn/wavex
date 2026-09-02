@@ -8,8 +8,8 @@ import {
   isTerminalTab,
   type EditorPane,
   type FilePaneTab,
-} from "../lib/layout";
-import type { TerminalMetaPatch } from "../lib/terminalTab";
+} from "../lib/workspace/layout";
+import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
 import type { EditorNavigationTarget } from "../lib/search";
 import { editorPathsEqual } from "../lib/search";
 import type { Session } from "../lib/session";

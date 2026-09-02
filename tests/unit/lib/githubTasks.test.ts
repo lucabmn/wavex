@@ -19,7 +19,7 @@ import {
   sortInboxItems,
   uniqueInboxProjects,
   type InboxItem,
-} from "@/lib/githubTasks";
+} from "@/lib/inbox/githubTasks";
 
 function item(overrides: Partial<InboxItem> & Pick<InboxItem, "number" | "updatedAt">): InboxItem {
   return {

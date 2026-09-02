@@ -1,4 +1,4 @@
-import { leafIds, type WorkspaceTab } from "./layout";
+import { leafIds, type WorkspaceTab } from "./workspace/layout";
 import type { Block, Session } from "./session";
 import { toolCallLabel } from "../surfaces/transcriptActivity";
 

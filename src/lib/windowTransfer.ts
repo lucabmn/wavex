@@ -1,5 +1,5 @@
-import { leafIds, type WorkspaceTab } from "./layout";
-import type { ProjectTerminalDock } from "./projectTerminal";
+import { leafIds, type WorkspaceTab } from "./workspace/layout";
+import type { ProjectTerminalDock } from "./terminal/projectTerminal";
 import type { Session } from "./session";
 
 export type WindowTransferPayload = {

@@ -17,7 +17,7 @@ import {
   type RateLimitWindow,
 } from "../lib/rateLimits";
 import { HARNESS_LABEL, HARNESS_TITLE, type HarnessId } from "../lib/session";
-import { runningTerminalChipLabel, type RunningTerminal } from "../lib/terminalTab";
+import { runningTerminalChipLabel, type RunningTerminal } from "../lib/terminal/terminalTab";
 
 const CLOCK_MS = 30_000;
 

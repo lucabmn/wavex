@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { terminalScrollbarWidth } from "@/lib/terminalLayout";
+import { terminalScrollbarWidth } from "@/lib/terminal/terminalLayout";
 
 describe("terminalScrollbarWidth", () => {
   it("defaults to 14px when overview ruler width is unset", () => {

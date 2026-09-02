@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { SessionSummary } from "@/lib/sessionStore";
+import type { SessionSummary } from "@/lib/sessions/sessionStore";
 import {
   addSessionToFolder,
   applySessionListDrop,
@@ -22,7 +22,7 @@ import {
   ungroupedSessions,
   uniqueFolderName,
   type SessionFolder,
-} from "@/lib/sessionFolders";
+} from "@/lib/sessions/sessionFolders";
 
 function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
   return {

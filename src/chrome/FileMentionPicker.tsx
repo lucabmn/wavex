@@ -1,6 +1,6 @@
 import { StickyNote } from "./icons";
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
-import type { RankedFile } from "../lib/fileIndex";
+import type { RankedFile } from "../lib/files/fileIndex";
 import { isNoteMentionPath } from "../lib/notes";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { FileTypeIcon } from "./FileTypeIcon";

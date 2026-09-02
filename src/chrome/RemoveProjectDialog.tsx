@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LAYER } from "../lib/layers";
 import { prettyCwd } from "../lib/paths";
-import { projectSessionCount } from "../lib/projectData";
+import { projectSessionCount } from "../lib/project/projectData";
 
 type Props = {
   name: string;

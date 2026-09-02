@@ -1,7 +1,7 @@
 import type { ContextUsage } from "./contextUsage";
 import type { UserQuestionPrompt } from "./userQuestion";
 import type { HandoffComposerCard } from "./handoff";
-import type { InboxComposerCard } from "./githubTasks";
+import type { InboxComposerCard } from "./inbox/githubTasks";
 import type { NoteCardMeta, NoteComposerCard } from "./notes";
 import {
   defaultSessionChoice,

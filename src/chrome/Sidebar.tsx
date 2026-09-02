@@ -29,15 +29,15 @@ import { IS_MAC, MOD } from "../lib/platform";
 import { resolveModel } from "../lib/models";
 import { projectName } from "../lib/paths";
 import { sessionDisplayTitle } from "../lib/session";
-import { nextUnseenFinishedSessions } from "../lib/sessionDone";
-import { paneDropFromPoint, setExternalPaneDrop } from "../lib/paneDrop";
-import type { PaneEdge } from "../lib/layout";
+import { nextUnseenFinishedSessions } from "../lib/sessions/sessionDone";
+import { paneDropFromPoint, setExternalPaneDrop } from "../lib/workspace/paneDrop";
+import type { PaneEdge } from "../lib/workspace/layout";
 import { suppressTextSelection } from "../lib/drag";
 import {
   compareSessionSummaries,
   filterSessionsByArchive,
   filterSessionsByQuery,
-} from "../lib/sessionHistory";
+} from "../lib/sessions/sessionHistory";
 import {
   addSessionToFolder,
   applySessionListDrop,
@@ -60,8 +60,8 @@ import {
   ungroupedSessions,
   type SessionFolder,
   type SessionListDropTarget,
-} from "../lib/sessionFolders";
-import { SESSION_LIST_PAGE, sessionListWindow } from "../lib/sessionListWindow";
+} from "../lib/sessions/sessionFolders";
+import { SESSION_LIST_PAGE, sessionListWindow } from "../lib/sessions/sessionListWindow";
 import {
   filterSessionsByHarness,
   filterSessionsByStatus,
@@ -71,12 +71,12 @@ import {
   loadSessionSidebarFilters,
   saveSessionSidebarFilters,
   type SessionSidebarFilters,
-} from "../lib/sessionFilters";
+} from "../lib/sessions/sessionFilters";
 import type { HarnessId } from "../lib/session";
 import type { LiveAgent } from "../lib/liveAgents";
-import type { SessionSummary } from "../lib/sessionStore";
+import type { SessionSummary } from "../lib/sessions/sessionStore";
 import type { SettingsSectionId } from "../lib/settings";
-import type { InstalledUpdate } from "../lib/updateNotice";
+import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import {
   loadTabGroupColors,
   loadTabGroupCustomColors,
@@ -87,7 +87,7 @@ import {
   resolveTabGroupLogo,
   resolveTabGroupMascot,
   TAB_GROUP_COLORS,
-} from "../lib/tabGroups";
+} from "../lib/workspace/tabGroups";
 import { useDragResize } from "../hooks/useDragResize";
 import { useGitFileStatuses } from "../hooks/useGitFileStatuses";
 import { useInboxUnseen } from "../hooks/useInboxUnseen";

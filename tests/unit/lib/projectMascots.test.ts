@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MASCOT_GRID, PROJECT_MASCOTS, mascotPath, projectMascot } from "@/lib/projectMascots";
+import {
+  MASCOT_GRID,
+  PROJECT_MASCOTS,
+  mascotPath,
+  projectMascot,
+} from "@/lib/project/projectMascots";
 
 describe("projectMascots", () => {
   it("keeps every sprite on the shared grid", () => {

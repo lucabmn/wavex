@@ -7,7 +7,7 @@ import {
   isSearchTool,
   isWeakToolTitle,
 } from "../lib/harness/preview";
-import { leafName } from "../lib/fileName";
+import { leafName } from "../lib/files/fileName";
 import { displayPath } from "../lib/paths";
 import type { Block } from "../lib/session";
 

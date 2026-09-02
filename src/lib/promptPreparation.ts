@@ -1,4 +1,4 @@
-import { applyFileMentionsToTurn } from "./fileMentions";
+import { applyFileMentionsToTurn } from "./files/fileMentions";
 import { applyNotesToTurn } from "./notes";
 import { applySkillsToTurn, warmPiSkills, type SkillCatalogContext } from "./skills";
 

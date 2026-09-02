@@ -8,8 +8,8 @@ import {
   type HarnessId,
   type Session,
 } from "./session";
-import type { SessionSearchHit, SessionSummary } from "./sessionStore";
-import type { RankedFile } from "./fileIndex";
+import type { SessionSearchHit, SessionSummary } from "./sessions/sessionStore";
+import type { RankedFile } from "./files/fileIndex";
 import type { ProjectSearchMatch } from "./search";
 
 export type SearchScope = "all" | "conversations" | "files" | "projects";

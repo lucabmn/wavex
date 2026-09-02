@@ -8,7 +8,7 @@ import {
   refreshCachedDirs,
   refreshDir,
   subscribeDirsChanged,
-} from "@/lib/fileTree";
+} from "@/lib/files/fileTree";
 
 const root = "/tmp/empty-project";
 

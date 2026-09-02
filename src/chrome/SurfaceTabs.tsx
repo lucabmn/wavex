@@ -8,9 +8,9 @@ import {
   isReviewTab,
   isTerminalTab,
   type FilePaneTab,
-} from "../lib/layout";
-import { releaseNotesTitle } from "../lib/releaseNotes";
-import { terminalTabLabel } from "../lib/terminalTab";
+} from "../lib/workspace/layout";
+import { releaseNotesTitle } from "../lib/updates/releaseNotes";
+import { terminalTabLabel } from "../lib/terminal/terminalTab";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useSortable } from "../hooks/useSortable";
 import { FileTypeIcon } from "./FileTypeIcon";

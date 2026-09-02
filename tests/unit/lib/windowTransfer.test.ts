@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { leaf, newTab, newTerminalFile, type WorkspaceTab } from "@/lib/layout";
-import { createProjectTerminal } from "@/lib/projectTerminal";
+import { leaf, newTab, newTerminalFile, type WorkspaceTab } from "@/lib/workspace/layout";
+import { createProjectTerminal } from "@/lib/terminal/projectTerminal";
 import type { Session } from "@/lib/session";
 import { collectWindowTransfer } from "@/lib/windowTransfer";
 

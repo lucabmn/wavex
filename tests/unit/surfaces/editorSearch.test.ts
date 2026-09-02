@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isHiddenEditorHost } from "@/surfaces/editorSearch";
+import { isHiddenEditorHost } from "@/lib/editor/editorSearch";
 
 describe("isHiddenEditorHost", () => {
   it("treats FilePane's hidden inactive tabs as unusable", () => {

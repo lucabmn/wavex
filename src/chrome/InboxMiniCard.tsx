@@ -1,6 +1,6 @@
 import { CircleDot, GitPullRequest, X } from "./icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { GithubLabel, InboxComposerCard } from "../lib/githubTasks";
+import type { GithubLabel, InboxComposerCard } from "../lib/inbox/githubTasks";
 import { InboxProviderMark } from "./InboxProviderMark";
 
 type Props = {

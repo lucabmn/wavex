@@ -1,5 +1,5 @@
-import { leafIds, newTab, type WorkspaceTab } from "./layout";
-import type { ProjectTerminalDock } from "./projectTerminal";
+import { leafIds, newTab, type WorkspaceTab } from "./workspace/layout";
+import type { ProjectTerminalDock } from "./terminal/projectTerminal";
 import { sessionNeedsInput, type Session } from "./session";
 import { stopStreaming } from "./harness/apply";
 

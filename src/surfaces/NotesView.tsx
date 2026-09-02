@@ -16,7 +16,7 @@ import { WindowControls } from "../chrome/WindowControls";
 import { useDragResize } from "../hooks/useDragResize";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useTabGroupLogos } from "../hooks/useTabGroupLogos";
-import { formatRelativeTime } from "../lib/githubTasks";
+import { formatRelativeTime } from "../lib/inbox/githubTasks";
 import {
   createNote,
   deleteNote,
@@ -37,7 +37,7 @@ import {
   resolveTabGroupColor,
   resolveTabGroupLogo,
   resolveTabGroupMascot,
-} from "../lib/tabGroups";
+} from "../lib/workspace/tabGroups";
 import { AgentMarkdown, MarkdownSourceHighlight } from "./AgentMarkdown";
 
 const MIN_WIDTH = 240;

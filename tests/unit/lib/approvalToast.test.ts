@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTab, splitPane } from "@/lib/layout";
+import { newTab, splitPane } from "@/lib/workspace/layout";
 import {
   hiddenApprovalNotices,
   isSessionConversationFocused,

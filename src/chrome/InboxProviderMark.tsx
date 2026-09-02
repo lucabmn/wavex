@@ -1,5 +1,5 @@
 import { Inbox } from "./icons";
-import type { InboxProvider } from "../lib/githubTasks";
+import type { InboxProvider } from "../lib/inbox/githubTasks";
 
 export function InboxProviderMark({
   provider,

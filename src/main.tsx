@@ -6,7 +6,7 @@ import App from "./App";
 import { initAppearance } from "./lib/appearance";
 import { initSounds } from "./lib/sounds";
 import { handleQuitRequested, loadBootWorkspace } from "./lib/appLifecycle";
-import { consumeInstalledUpdate } from "./lib/updateNotice";
+import { consumeInstalledUpdate } from "./lib/updates/updateNotice";
 import "./index.css";
 
 initAppearance();

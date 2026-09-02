@@ -9,7 +9,7 @@ import {
   parsePrContent,
   type PrContent,
 } from "../gitText";
-import { buildThreadTitlePrompt, parseGeneratedThreadTitle } from "../sessionTitle";
+import { buildThreadTitlePrompt, parseGeneratedThreadTitle } from "../sessions/sessionTitle";
 
 /**
  * A harness's one-shot text call. Every harness exposes the same shape, so the

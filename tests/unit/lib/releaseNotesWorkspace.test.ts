@@ -7,8 +7,8 @@ import {
   newTab,
   splitPane,
   type WorkspaceTab,
-} from "@/lib/layout";
-import { focusReleaseNotesTarget, planReleaseNotesOpen } from "@/lib/releaseNotesWorkspace";
+} from "@/lib/workspace/layout";
+import { focusReleaseNotesTarget, planReleaseNotesOpen } from "@/lib/updates/releaseNotesWorkspace";
 
 function tabWithHiddenRelease(): WorkspaceTab {
   const tab = newReleaseNotesWorkspaceTab({ version: "0.1.23" });

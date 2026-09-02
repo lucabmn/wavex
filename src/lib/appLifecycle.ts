@@ -15,9 +15,9 @@ import {
   workspaceFromResumed,
   type ResumedWorkspace,
 } from "./inFlight";
-import { leafIds, type WorkspaceTab } from "./layout";
-import { killPty } from "./pty";
-import { projectTerminalFileIds, type ProjectTerminalDock } from "./projectTerminal";
+import { leafIds, type WorkspaceTab } from "./workspace/layout";
+import { killPty } from "./terminal/pty";
+import { projectTerminalFileIds, type ProjectTerminalDock } from "./terminal/projectTerminal";
 import { sessionWorkCwd, type Session } from "./session";
 import { restoreSessionCheckout } from "./fs";
 import { sessionChildHarnesses } from "./handoff";
@@ -31,12 +31,12 @@ import {
   shouldPersistSession,
   upsertSession,
   type SessionSummary,
-} from "./sessionStore";
+} from "./sessions/sessionStore";
 import {
   collectWorkspaceSnapshot,
   hydrateWorkspaceSnapshot,
   parseWorkspaceSnapshot,
-} from "./workspaceSnapshot";
+} from "./workspace/workspaceSnapshot";
 import { loadWindowTransfer } from "./windowTransferBootstrap";
 import type { WindowTransferPayload } from "./windowTransfer";
 import { lastProjectPath, normalizeProjectPath, sameProjectPath } from "./recents";

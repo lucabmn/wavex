@@ -1,6 +1,6 @@
 import { EditorState } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
-import { editorDocChanges } from "@/surfaces/editorDoc";
+import { editorDocChanges } from "@/lib/editor/editorDoc";
 
 describe("editorDocChanges", () => {
   it("returns no changes when the documents match", () => {

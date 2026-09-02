@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newSession } from "@/lib/session";
-import type { SessionSummary } from "@/lib/sessionStore";
+import type { SessionSummary } from "@/lib/sessions/sessionStore";
 import {
   conversationRowsFrom,
   filterHitsByProject,

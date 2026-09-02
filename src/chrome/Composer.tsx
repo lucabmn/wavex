@@ -21,7 +21,7 @@ import {
   revokeAttachment,
 } from "../lib/attachments";
 import type { ContextUsage } from "../lib/contextUsage";
-import { loadProjectFiles, peekProjectFiles, recentOpenedFiles } from "../lib/fileIndex";
+import { loadProjectFiles, peekProjectFiles, recentOpenedFiles } from "../lib/files/fileIndex";
 import {
   buildMentionIndex,
   fileMentionParts,
@@ -31,9 +31,9 @@ import {
   replaceMentionToken,
   type MentionIndex,
   type MentionToken,
-} from "../lib/fileMentions";
+} from "../lib/files/fileMentions";
 import type { ProjectFile } from "../lib/fs";
-import { composeInboxMessage, type InboxComposerCard } from "../lib/githubTasks";
+import { composeInboxMessage, type InboxComposerCard } from "../lib/inbox/githubTasks";
 import type { HandoffComposerCard } from "../lib/handoff";
 import { looksLikeProject, type RecentProject } from "../lib/recents";
 import type { Attachment, HarnessId, RuntimeMode } from "../lib/session";
@@ -81,7 +81,7 @@ import {
   type Note,
   type NoteComposerCard,
 } from "../lib/notes";
-import { resolveTabGroupLogo } from "../lib/tabGroups";
+import { resolveTabGroupLogo } from "../lib/workspace/tabGroups";
 import { useComposerSkills } from "./useComposerSkills";
 
 type Props = {

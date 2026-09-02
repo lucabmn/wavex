@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectFile } from "@/lib/fs";
-import { invalidateProjectFiles, rememberOpenedFile, resolveOpenablePath } from "@/lib/fileIndex";
+import {
+  invalidateProjectFiles,
+  rememberOpenedFile,
+  resolveOpenablePath,
+} from "@/lib/files/fileIndex";
 
 const cwd = "/Users/me/project";
 const files: ProjectFile[] = [
