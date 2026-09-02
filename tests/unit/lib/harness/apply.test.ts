@@ -277,3 +277,64 @@ describe("clarifying questions", () => {
     expect(session.pendingQuestion).toBeUndefined();
   });
 });
+
+describe("image events", () => {
+  it("lands as its own assistant block carrying an image attachment", () => {
+    let session = appendUser(newSession("cursor", "/tmp"), "draw me a chart");
+    session = applyHarnessEvent(session, {
+      type: "image",
+      mimeType: "image/png",
+      data: "aGVsbG8=",
+    });
+
+    const block = session.blocks[session.blocks.length - 1];
+    expect(block.role).toBe("assistant");
+    expect(block.text).toBe("");
+    expect(block.attachments).toEqual([
+      {
+        id: expect.any(String),
+        name: "image.png",
+        mimeType: "image/png",
+        kind: "image",
+        size: 0,
+        data: "aGVsbG8=",
+      },
+    ]);
+  });
+
+  it("keeps the adapter's name and path", () => {
+    let session = newSession("cursor", "/tmp");
+    session = applyHarnessEvent(session, {
+      type: "image",
+      mimeType: "image/webp",
+      name: "diagram.webp",
+      path: "/tmp/diagram.webp",
+    });
+
+    expect(session.blocks[0].attachments?.[0]).toMatchObject({
+      name: "diagram.webp",
+      path: "/tmp/diagram.webp",
+    });
+  });
+
+  it("ignores an image with no bytes and no path", () => {
+    const session = newSession("cursor", "/tmp");
+    expect(applyHarnessEvent(session, { type: "image", mimeType: "image/png" })).toBe(session);
+  });
+
+  /** Prose after an image must not be appended into the image block. */
+  it("starts a new prose block after an image", () => {
+    let session = newSession("cursor", "/tmp");
+    session = applyHarnessEvent(session, {
+      type: "image",
+      mimeType: "image/png",
+      data: "aGVsbG8=",
+    });
+    session = applyHarnessEvent(session, { type: "message.delta", text: "Here it is." });
+
+    expect(session.blocks).toHaveLength(2);
+    expect(session.blocks[0].attachments).toHaveLength(1);
+    expect(session.blocks[1].text).toBe("Here it is.");
+    expect(session.blocks[1].attachments).toBeUndefined();
+  });
+});

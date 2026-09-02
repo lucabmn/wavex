@@ -3066,6 +3066,24 @@ fn write_attachment_sync(name: &str, data: &str) -> Result<String, String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Write base64 bytes to a path the user picked in a save dialog.
+#[tauri::command]
+pub async fn write_file_base64(path: String, data: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || write_file_base64_sync(&path, &data))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn write_file_base64_sync(path: &str, data: &str) -> Result<(), String> {
+    let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, data)
+        .map_err(|_| "File data is not valid base64.".to_string())?;
+    let target = expand_home(path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(&target, bytes).map_err(|e| format!("{}: {e}", target.display()))
+}
+
 fn safe_attachment_name(name: &str) -> String {
     let leaf = Path::new(name)
         .file_name()

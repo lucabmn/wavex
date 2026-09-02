@@ -55,6 +55,18 @@ export type HarnessEvent =
       decision: "answered" | "skipped" | "cancelled";
     }
   | { type: "plan"; text: string }
+  /**
+   * An image the turn produced. Adapters that can write the bytes to disk
+   * should send `path`; `data` alone renders for this session but is not kept
+   * in the stored transcript, which holds text and file references.
+   */
+  | {
+      type: "image";
+      mimeType: string;
+      name?: string;
+      data?: string;
+      path?: string;
+    }
   /** Context-window level after the harness's latest request. */
   | { type: "context"; used?: number; window?: number };
 

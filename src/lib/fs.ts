@@ -279,6 +279,10 @@ export async function pickFolder(title = "Open project"): Promise<string | null>
   return typeof selected === "string" && selected ? selected : null;
 }
 
+export function writeFileBase64(path: string, data: string): Promise<void> {
+  return invoke("write_file_base64", { path, data });
+}
+
 export async function pickFiles(title = "Attach files"): Promise<string[] | null> {
   const selected = await open({
     multiple: true,

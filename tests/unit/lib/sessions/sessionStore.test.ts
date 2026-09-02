@@ -302,3 +302,44 @@ describe("sanitizeSessionForPersist scope", () => {
     expect(persistFingerprint({ ...session, scope: "work" })).not.toBe(persistFingerprint(session));
   });
 });
+
+describe("image attachments in a stored transcript", () => {
+  /**
+   * `blocks_json` holds text and file references. Inlining a generated image's
+   * base64 would put megabytes of payload into every save of that chat.
+   */
+  it("keeps the path and drops inline bytes", () => {
+    const session = newSession("cursor", "/tmp/project");
+    session.blocks = [
+      { id: "u1", role: "user", text: "draw" },
+      {
+        id: "a1",
+        role: "assistant",
+        text: "",
+        attachments: [
+          {
+            id: "img",
+            name: "chart.png",
+            mimeType: "image/png",
+            kind: "image",
+            size: 12,
+            path: "/tmp/chart.png",
+            data: "aGVsbG8=",
+          },
+        ],
+      },
+    ];
+
+    const saved = sanitizeSessionForPersist(session);
+    expect(saved.blocks[1].attachments).toEqual([
+      {
+        id: "img",
+        name: "chart.png",
+        mimeType: "image/png",
+        kind: "image",
+        size: 12,
+        path: "/tmp/chart.png",
+      },
+    ]);
+  });
+});

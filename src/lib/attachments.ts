@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { basename, pickFiles as pickFilePaths } from "./fs";
+import { save } from "@tauri-apps/plugin-dialog";
+import { basename, pickFiles as pickFilePaths, writeFileBase64 } from "./fs";
 import type { Attachment, AttachmentKind } from "./session";
 
 export const MAX_ATTACHMENTS = 20;
@@ -122,6 +123,21 @@ export function displayAttachments(files: Attachment[]): Attachment[] {
     ...(file.previewUrl ? { previewUrl: file.previewUrl } : {}),
     ...(file.data ? { data: file.data } : {}),
   }));
+}
+
+/**
+ * Save an attachment somewhere the user chose. Bytes come from `data` when the
+ * attachment is still in memory, otherwise they are read back from its path.
+ * Returns the destination, or null when the dialog was dismissed.
+ */
+export async function saveAttachmentAs(file: Attachment): Promise<string | null> {
+  const target = await save({ defaultPath: file.name });
+  if (!target) return null;
+  const data =
+    file.data ?? (file.path ? await invoke<string>("read_file_base64", { path: file.path }) : null);
+  if (!data) throw new Error(`${file.name} has no contents to save.`);
+  await writeFileBase64(target, data);
+  return target;
 }
 
 export function attachmentPreviewSrc(file: Attachment): string | undefined {

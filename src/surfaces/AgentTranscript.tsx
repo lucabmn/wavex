@@ -15,7 +15,10 @@ import {
   X,
 } from "../chrome/icons";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { AttachmentChip } from "../chrome/AttachmentChip";
+import { Modal } from "../chrome/Modal";
+import { attachmentPreviewSrc, saveAttachmentAs } from "../lib/attachments";
 import { FilePreview } from "../chrome/FilePreview";
 import { FileTypeIcon } from "../chrome/FileTypeIcon";
 import { PlanPreview } from "../chrome/PlanPreview";
@@ -33,6 +36,7 @@ import { Shimmer } from "./Shimmer";
 import {
   hasPendingApproval,
   HARNESS_TITLE,
+  type Attachment,
   type Block,
   type HarnessId,
   type ToolPreview,
@@ -678,20 +682,104 @@ const TranscriptBlock = memo(function TranscriptBlock({
 
   if (!block.text && block.streaming) return null;
 
+  const images = block.attachments?.filter((file) => file.kind === "image") ?? [];
+  if (!block.text && images.length === 0) return null;
+
   return (
     <div
       data-selectable-agent-response={block.streaming ? undefined : block.id}
       className={`min-w-0 px-4 pb-1 text-content ${compactTop ? "pt-2" : "pt-3"}`}
     >
-      <AgentMarkdown
-        text={block.text}
-        streaming={block.streaming}
-        cwd={cwd}
-        onOpenFile={onOpenFile}
-      />
+      {block.text ? (
+        <AgentMarkdown
+          text={block.text}
+          streaming={block.streaming}
+          cwd={cwd}
+          onOpenFile={onOpenFile}
+        />
+      ) : null}
+      {images.map((file) => (
+        <ResponseImage key={file.id} file={file} />
+      ))}
     </div>
   );
 });
+
+/**
+ * An image the turn produced, shown at readable size in the flow of the
+ * answer. Click enlarges it; the overlay can write it anywhere on disk.
+ */
+function ResponseImage({ file }: { file: Attachment }) {
+  const [src, setSrc] = useState(() => attachmentPreviewSrc(file));
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const inline = attachmentPreviewSrc(file);
+    if (inline) {
+      setSrc(inline);
+      return;
+    }
+    if (!file.path) return;
+    let cancelled = false;
+    // A stored image keeps only its path; read the bytes back to display it.
+    void invoke<string>("read_file_base64", { path: file.path })
+      .then((data) => {
+        if (!cancelled) setSrc(`data:${file.mimeType};base64,${data}`);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [file]);
+
+  const onSave = () => {
+    setError(null);
+    void saveAttachmentAs(file).catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : "Could not save the image.");
+    });
+  };
+
+  if (!src) {
+    return <p className="py-2 text-sm text-content/45">{file.name} is unavailable.</p>;
+  }
+
+  return (
+    <div className="py-2">
+      <button
+        type="button"
+        title="Enlarge"
+        onClick={() => setOpen(true)}
+        className="block max-w-full overflow-hidden rounded-lg border border-content/10"
+      >
+        <img src={src} alt={file.name} className="max-h-96 max-w-full object-contain" />
+      </button>
+      <div className="mt-1 flex items-center gap-2 text-[11px] text-content/45">
+        <span className="min-w-0 truncate">{file.name}</span>
+        <button type="button" onClick={onSave} className="shrink-0 hover:text-content">
+          Save…
+        </button>
+      </div>
+      {error ? <p className="mt-1 text-[11px] text-red-400/90">{error}</p> : null}
+      {open ? (
+        <Modal onClose={() => setOpen(false)} title={file.name}>
+          <div className="flex flex-col gap-3">
+            <img src={src} alt={file.name} className="max-h-[70vh] w-full object-contain" />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onSave}
+                className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+              >
+                Save to disk
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+    </div>
+  );
+}
 
 function UserMessageBlock({
   block,
