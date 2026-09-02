@@ -232,6 +232,8 @@ pub fn run() {
             harness::harness_sse_close,
             harness::harness_exec,
             rate_limits::fetch_claude_usage,
+            rate_limits::codex_usage_cache_read,
+            rate_limits::codex_usage_cache_write,
             menu_bar::menu_bar_agents,
             menu_bar::menu_bar_update_agents,
             menu_bar::menu_bar_open_app,

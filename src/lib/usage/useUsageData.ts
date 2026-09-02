@@ -42,11 +42,11 @@ export function useUsageData(days: UsageWindowDays, active = true) {
     setWindow(makeUsageWindow(days));
   }, [days]);
 
-  const loadPlanLimits = useCallback(() => {
+  const loadPlanLimits = useCallback((force = false) => {
     planLimitsLoaded.current = true;
     setPlanLimits(PLAN_LIMIT_PROVIDERS.map(loadingPlanLimits));
     for (const [index, read] of [fetchClaudePlanLimits, fetchCodexPlanLimits].entries()) {
-      void read().then((result) => {
+      void read(force).then((result) => {
         setPlanLimits((current) =>
           current.map((entry, position) => (position === index ? result : entry)),
         );
@@ -99,7 +99,8 @@ export function useUsageData(days: UsageWindowDays, active = true) {
   }, [active, rates]);
 
   const refresh = useCallback(() => {
-    loadPlanLimits();
+    // The button is the way past the host's short plan-limit cache.
+    loadPlanLimits(true);
     const next = makeUsageWindow(days);
     if (windowKey(next) === key) {
       void load(next);

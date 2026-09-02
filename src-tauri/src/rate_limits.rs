@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -13,6 +14,12 @@ const OAUTH_BETA: &str = "oauth-2025-04-20";
 const USER_AGENT: &str = "claude-code/2.1.0";
 const HTTP_TIMEOUT: Duration = Duration::from_secs(10);
 const TOKEN_REFRESH_BUFFER_MS: i64 = 5 * 60 * 1000;
+/// Every app window, the status-bar chip, and the menu-bar popover ask for the
+/// same subscription report, and each ask is a request to the provider. One
+/// short shared TTL keeps that off the provider's rate limit while staying far
+/// below the resolution of a five-hour window. The cache lives in the host so
+/// the windows share it; each WebView has its own module state.
+const USAGE_CACHE_TTL: Duration = Duration::from_secs(60);
 
 #[cfg(target_os = "macos")]
 const KEYCHAIN_TIMEOUT: Duration = Duration::from_secs(5);
@@ -21,7 +28,7 @@ const LEGACY_KEYCHAIN_SERVICE: &str = "Claude Code-credentials";
 #[cfg(target_os = "macos")]
 const KEYCHAIN_FALLBACK_USER: &str = "claude-code-user";
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClaudeUsageFetch {
     pub status: String,
@@ -62,13 +69,70 @@ fn usage_result(
     }
 }
 
+struct CacheEntry<T> {
+    value: T,
+    stored_at: Instant,
+}
+
+fn claude_usage_cache() -> &'static Mutex<Option<CacheEntry<ClaudeUsageFetch>>> {
+    static CACHE: OnceLock<Mutex<Option<CacheEntry<ClaudeUsageFetch>>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(None))
+}
+
+fn codex_usage_cache() -> &'static Mutex<Option<CacheEntry<String>>> {
+    static CACHE: OnceLock<Mutex<Option<CacheEntry<String>>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(None))
+}
+
+fn read_cache<T: Clone>(cache: &Mutex<Option<CacheEntry<T>>>) -> Option<T> {
+    let guard = cache.lock().unwrap_or_else(|error| error.into_inner());
+    let entry = guard.as_ref()?;
+    (entry.stored_at.elapsed() < USAGE_CACHE_TTL).then(|| entry.value.clone())
+}
+
+fn write_cache<T>(cache: &Mutex<Option<CacheEntry<T>>>, value: T) {
+    let mut guard = cache.lock().unwrap_or_else(|error| error.into_inner());
+    *guard = Some(CacheEntry {
+        value,
+        stored_at: Instant::now(),
+    });
+}
+
+/// A signed-out answer is as stable as a real report, so both are worth
+/// holding. A transient failure is not: caching it would freeze the surface on
+/// an error for the whole window.
+pub(crate) fn is_cacheable_status(status: &str) -> bool {
+    matches!(status, "ok" | "unavailable")
+}
+
+/// Codex reports over its app-server, which the TypeScript harness client
+/// drives, so the host only holds the raw payload it hands back.
+#[tauri::command]
+pub fn codex_usage_cache_read() -> Option<String> {
+    read_cache(codex_usage_cache())
+}
+
+#[tauri::command]
+pub fn codex_usage_cache_write(raw: String) {
+    write_cache(codex_usage_cache(), raw);
+}
+
 /// Fetch Claude Code 5-hour / weekly usage via the local OAuth token.
 /// The token never leaves the host process.
 #[tauri::command]
-pub async fn fetch_claude_usage() -> Result<ClaudeUsageFetch, String> {
-    tauri::async_runtime::spawn_blocking(fetch_claude_usage_sync)
+pub async fn fetch_claude_usage(force: Option<bool>) -> Result<ClaudeUsageFetch, String> {
+    if !force.unwrap_or(false) {
+        if let Some(cached) = read_cache(claude_usage_cache()) {
+            return Ok(cached);
+        }
+    }
+    let fetched = tauri::async_runtime::spawn_blocking(fetch_claude_usage_sync)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())??;
+    if is_cacheable_status(&fetched.status) {
+        write_cache(claude_usage_cache(), fetched.clone());
+    }
+    Ok(fetched)
 }
 
 fn fetch_claude_usage_sync() -> Result<ClaudeUsageFetch, String> {
@@ -484,6 +548,26 @@ fn run_with_timeout(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn caches_settled_answers_but_not_transient_failures() {
+        assert!(is_cacheable_status("ok"));
+        assert!(is_cacheable_status("unavailable"));
+        assert!(!is_cacheable_status("error"));
+    }
+
+    #[test]
+    fn cached_value_expires_with_the_ttl() {
+        let cache = Mutex::new(None);
+        assert_eq!(read_cache(&cache), None::<String>);
+        write_cache(&cache, "payload".to_string());
+        assert_eq!(read_cache(&cache).as_deref(), Some("payload"));
+        {
+            let mut guard = cache.lock().unwrap();
+            guard.as_mut().unwrap().stored_at = Instant::now() - USAGE_CACHE_TTL;
+        }
+        assert_eq!(read_cache(&cache), None::<String>);
+    }
 
     #[test]
     fn extract_access_token_from_claude_credentials() {

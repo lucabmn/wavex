@@ -54,9 +54,9 @@ type ClaudeUsageFetch = {
   error?: string | null;
 };
 
-export async function fetchClaudeRateLimits(): Promise<ProviderRateLimits> {
+export async function fetchClaudeRateLimits(force = false): Promise<ProviderRateLimits> {
   try {
-    const result = await invoke<ClaudeUsageFetch>("fetch_claude_usage");
+    const result = await invoke<ClaudeUsageFetch>("fetch_claude_usage", { force });
     if (result.status === "ok" && result.body) {
       const parsed = parseClaudeOAuthUsage(result.body);
       if (parsed.session || parsed.weekly) return parsed;
@@ -83,10 +83,22 @@ export async function fetchClaudeRateLimits(): Promise<ProviderRateLimits> {
  * `onRaw` hands the untouched payload to a second reader, so the plan-limit
  * view and the status-bar chip share one probe instead of spawning the CLI
  * twice for the same answer.
+ *
+ * The host holds the last payload for a short TTL, which is what keeps a
+ * second window or a tab switch from spawning the CLI again. `force` is the
+ * explicit refresh and skips it.
  */
 export async function fetchCodexRateLimits(
   onRaw?: (result: unknown) => void,
+  force = false,
 ): Promise<ProviderRateLimits> {
+  if (!force) {
+    const cached = await readCachedCodexPayload();
+    if (cached !== undefined) {
+      onRaw?.(cached);
+      return parseCodexRateLimits(cached);
+    }
+  }
   if (!inflightProbe) {
     const probe = probeCodexRateLimits();
     inflightProbe = probe;
@@ -99,6 +111,24 @@ export async function fetchCodexRateLimits(
   const { limits, raw } = await inflightProbe;
   if (raw !== undefined) onRaw?.(raw);
   return limits;
+}
+
+async function readCachedCodexPayload(): Promise<unknown> {
+  try {
+    const raw = await invoke<string | null>("codex_usage_cache_read");
+    if (!raw) return undefined;
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+function cacheCodexPayload(raw: unknown) {
+  try {
+    void invoke("codex_usage_cache_write", { raw: JSON.stringify(raw) }).catch(() => undefined);
+  } catch {
+    // A payload that will not serialize simply stays uncached.
+  }
 }
 
 async function probeCodexRateLimits(): Promise<CodexProbe> {
@@ -186,7 +216,12 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
         );
         raw = result;
         const parsed = parseCodexRateLimits(result);
-        if (parsed.session || parsed.weekly) return done(parsed);
+        // Only a payload that actually carried windows is worth holding; the
+        // cached read reparses it and must reach the same answer.
+        if (parsed.session || parsed.weekly) {
+          cacheCodexPayload(result);
+          return done(parsed);
+        }
         const rec = asRecord(result);
         if (rec && !parsed.session && !parsed.weekly) {
           return done(unavailableRateLimits("codex", "No Codex usage data"));
