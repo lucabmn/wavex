@@ -14,6 +14,7 @@ import {
   saveProjectRailOrder,
   syncProjectRailOrder,
 } from "@/lib/recents";
+import { rememberWorktrees } from "@/lib/worktrees/worktreeIndex";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();
@@ -194,5 +195,38 @@ describe("looksLikeProject", () => {
     expect(looksLikeProject("/Users/me/code/app")).toBe(true);
     expect(looksLikeProject("/Users/me/Desktop")).toBe(true);
     expect(looksLikeProject("/tmp/scratch")).toBe(true);
+  });
+});
+
+describe("worktrees on the rail", () => {
+  beforeEach(() => {
+    mockLocalStorage();
+  });
+
+  afterEach(() => {
+    mockLocalStorage();
+  });
+
+  it("lists a worktree under its repository instead of beside it", () => {
+    rememberProject("/Users/me/code/app");
+    rememberWorktrees("/Users/me/code/app", ["/Users/me/.wavex/worktrees/app/login"]);
+
+    const items = projectRailItems(loadRecents(), "/Users/me/.wavex/worktrees/app/login");
+    expect(items.map((item) => item.path)).toEqual(["/Users/me/code/app"]);
+  });
+
+  it("keeps a worktree reachable when its repository is not on the rail", () => {
+    rememberWorktrees("/Users/me/code/app", ["/Users/me/.wavex/worktrees/app/login"]);
+
+    const items = projectRailItems(loadRecents(), "/Users/me/.wavex/worktrees/app/login");
+    expect(items.map((item) => item.path)).toEqual(["/Users/me/.wavex/worktrees/app/login"]);
+  });
+
+  it("does not spend a recents slot on a worktree", () => {
+    rememberWorktrees("/Users/me/code/app", ["/Users/me/.wavex/worktrees/app/login"]);
+    rememberProject("/Users/me/code/app");
+    rememberProject("/Users/me/.wavex/worktrees/app/login");
+
+    expect(loadRecents().map((item) => item.path)).toEqual(["/Users/me/code/app"]);
   });
 });

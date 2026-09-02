@@ -22,6 +22,8 @@ Cohesive clusters live in their own directory beneath it:
 - `src/lib/inbox/`: GitHub issues and pull requests
 - `src/lib/updates/`: updater and release notes
 - `src/lib/project/`: project logos, mascots, metadata
+- `src/lib/worktrees/`: git worktrees, their folders, and the repository they
+  belong to
 
 `src/chrome/` is application chrome and reusable controls, `src/surfaces/` the
 main views, `src/hooks/` React hooks, and `src-tauri/src/` the Rust backend.
