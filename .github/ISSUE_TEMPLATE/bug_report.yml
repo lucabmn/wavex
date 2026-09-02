@@ -49,6 +49,13 @@ body:
       required: true
 
   - type: textarea
+    id: logs
+    attributes:
+      label: Logs or console output
+      description: Paste any relevant logs or console output. Redact secrets.
+      render: text
+
+  - type: textarea
     id: repro
     attributes:
       label: Steps to reproduce

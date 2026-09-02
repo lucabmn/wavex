@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an improvement for wavex
+labels: [enhancement]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Problem or motivation
+      description: What problem would this feature solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior or experience you would like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Considered alternatives
+      description: What other approaches or workarounds did you consider?
+    validations:
+      required: true

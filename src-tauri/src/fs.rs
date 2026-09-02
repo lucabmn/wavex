@@ -3472,8 +3472,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let dir =
-            std::env::temp_dir().join(format!("wavex-editor-{}-{stamp}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("wavex-editor-{}-{stamp}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("example.rs");
         std::fs::write(&path, "fn old() {}\n").unwrap();
@@ -4269,8 +4268,8 @@ mod tests {
     #[test]
     fn split_github_repo_reads_owner_and_name() {
         assert_eq!(
-            split_github_repo(" hardbeat920/wavex ").unwrap(),
-            ("hardbeat920".into(), "wavex".into())
+            split_github_repo(" lucabmn/wavex ").unwrap(),
+            ("lucabmn".into(), "wavex".into())
         );
         assert!(split_github_repo("wavex").is_err());
         assert!(split_github_repo("acme/web extra").is_err());

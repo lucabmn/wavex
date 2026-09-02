@@ -5,13 +5,7 @@ import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updat
 import { announceUpdateAvailable } from "./sounds";
 import { rememberInstalledUpdate } from "./updateNotice";
 
-export type UpdaterPhase =
-  | "idle"
-  | "checking"
-  | "current"
-  | "available"
-  | "downloading"
-  | "error";
+export type UpdaterPhase = "idle" | "checking" | "current" | "available" | "downloading" | "error";
 
 export type UpdaterSnapshot = {
   phase: UpdaterPhase;
@@ -90,7 +84,7 @@ export async function runUpdateFlow(
       onProgress?.(idle);
       if (manual) {
         await message(
-          "Automatic updates aren't configured for this build.\n\nDownload releases at https://github.com/hardbeat920/wavex/releases/latest",
+          "Automatic updates aren't configured for this build.\n\nDownload releases at https://github.com/lucabmn/wavex/releases/latest",
           { title: "wavex" },
         );
       }

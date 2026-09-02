@@ -3,9 +3,9 @@ name = "wavex"
 version.workspace = true
 edition.workspace = true
 description = "wavex — one UI for every agent harness"
-authors = ["Nick"]
-repository = "https://github.com/hardbeat920/wavex"
-homepage = "https://usemono.dev"
+authors = ["Luca B."]
+repository = "https://github.com/lucabmn/wavex"
+homepage = "https://github.com/lucabmn/wavex"
 license.workspace = true
 
 [lib]
@@ -32,7 +32,22 @@ libc = "0.2"
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6.2"
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSButton", "NSColor", "NSControl", "NSDockTile", "NSImage", "NSLayoutAnchor", "NSLayoutConstraint", "NSMenu", "NSMenuItem", "NSResponder", "NSView", "NSWindow", "objc2-core-foundation"] }
+objc2-app-kit = { version = "0.3", features = [
+  "NSApplication",
+  "NSButton",
+  "NSColor",
+  "NSControl",
+  "NSDockTile",
+  "NSImage",
+  "NSLayoutAnchor",
+  "NSLayoutConstraint",
+  "NSMenu",
+  "NSMenuItem",
+  "NSResponder",
+  "NSView",
+  "NSWindow",
+  "objc2-core-foundation",
+] }
 objc2-foundation = { version = "0.3", features = ["NSGeometry", "NSError", "NSString"] }
 objc2-user-notifications = { version = "0.3.2", features = ["UNUserNotificationCenter", "block2"] }
 raw-window-handle = "0.6"

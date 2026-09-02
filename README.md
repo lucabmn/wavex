@@ -1,66 +1,77 @@
 <p align="center">
-  <img src="public/monocode.png" alt="MonoCode" width="88" />
+  <img src="public/wavecode.png" alt="wavex" width="88" />
 </p>
 
-<h1 align="center">MonoCode</h1>
+<h1 align="center">wavex</h1>
 
 <p align="center">
   <strong>A desktop UI for your coding agents.</strong>
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.jpg" alt="MonoCode with sessions, agent chat, diffs, terminal, and editor" width="920" />
+  <img src="docs/screenshot.jpg" alt="wavex with agent sessions, diffs, terminal, and editor" width="920" />
 </p>
 
-Works with your subscriptions on Claude Code, Codex, Cursor, Grok Build, OpenCode, Pi, omp, and fx. If they’re installed and logged in, MonoCode can run them. Tabs are sessions. The composer is the input. MonoCode does not sell tokens.
+wavex runs installed coding-agent CLIs through the subscriptions you already have. It does not sell tokens. Supported providers include Claude Code, Codex, Cursor, Grok Build, OpenCode, Pi, omp, and fx.
 
-## Install
+## Prerequisites
 
-> Install and log in to at least one provider first:
->
-> - [Claude Code](https://claude.com/product/claude-code) - `claude auth login`
-> - [Codex](https://developers.openai.com/codex/cli) - `codex login`
-> - [Cursor CLI](https://cursor.com/cli) - `agent login`
-> - [Grok Build](https://docs.x.ai/build/overview) - `curl -fsSL https://x.ai/cli/install.sh | bash` then `grok login`
-> - [OpenCode](https://opencode.ai) - `opencode auth login`
-> - [Pi](https://pi.dev/) - `npm install -g @earendil-works/pi-coding-agent`
-> - [omp](https://omp.sh) - `curl -fsSL https://omp.sh/install | sh`
-> - [fx](https://fx.sh) - `curl -fsSL https://fx.sh/setup.sh | bash` then `fx login`
+Install and log in to at least one provider first:
 
-macOS (Apple Silicon): download [MonoCode.dmg](https://dl.usemono.dev/MonoCode.dmg), open it, drag MonoCode to Applications.
+- [Claude Code](https://claude.com/product/claude-code) — `claude auth login`
+- [Codex](https://developers.openai.com/codex/cli) — `codex login`
+- [Cursor CLI](https://cursor.com/cli) — `agent login`
+- [Grok Build](https://docs.x.ai/build/overview) — `curl -fsSL https://x.ai/cli/install.sh | bash`, then `grok login`
+- [OpenCode](https://opencode.ai) — `opencode auth login`
+- [Pi](https://pi.dev/) — `pnpm add -g @earendil-works/pi-coding-agent`
+- [omp](https://omp.sh) — `curl -fsSL https://omp.sh/install | sh`
+- [fx](https://fx.sh) — `curl -fsSL https://fx.sh/setup.sh | bash`, then `fx login`
 
-Linux (x86_64): download the `.deb` or AppImage from [GitHub Releases](https://github.com/hardbeat920/monocode/releases/latest). Install the `.deb` with `sudo apt install ./MonoCode_*.deb`, or make the AppImage executable with `chmod +x MonoCode_*.AppImage` and run it directly.
+## Installation
 
-## Some notes
+wavex currently supports macOS on Apple Silicon. Download the `.dmg` from [GitHub Releases](https://github.com/lucabmn/wavex/releases/latest), open it, and drag wavex to Applications.
 
-This is very early and you should expect bugs.
+The release is not notarized. If Gatekeeper blocks the first launch, use **Open** from the context menu in Finder, or remove the quarantine attribute:
 
-Small, focused pull requests are welcome. Anything large is worth an issue first - see [CONTRIBUTING.md](CONTRIBUTING.md).
+```sh
+xattr -d com.apple.quarantine /Applications/wavex.app
+```
 
 ## Build from source
 
-Supports macOS and Linux.
+Requirements: Node.js 22+, pnpm, Rust stable, and Xcode Command Line Tools.
 
-Need Node.js 20+ and a current stable Rust toolchain. On Linux, ensure standard Tauri prerequisites are installed (e.g. `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libsoup-3.0-dev`, `libjavascriptcoregtk-4.1-dev`).
-
-```bash
-npm install
-npm run tauri dev
+```sh
+pnpm install
+pnpm tauri dev
 ```
 
-### Ubuntu / Debian packages
+## Project structure
 
-On an Ubuntu/Debian workstation, the repository can install the native Tauri prerequisites and build distributable Linux packages directly:
+| Directory          | Purpose                                  |
+| ------------------ | ---------------------------------------- |
+| `src/lib/`         | Domain and application logic             |
+| `src/lib/harness/` | Provider adapters and wire protocols     |
+| `src/chrome/`      | Application chrome and reusable controls |
+| `src/surfaces/`    | Main views and editor surfaces           |
+| `src/hooks/`       | React hooks                              |
+| `src-tauri/src/`   | macOS desktop backend                    |
+| `tests/unit/`      | TypeScript unit logic tests              |
 
-```bash
-npm run setup:linux:deb
-npm ci
-npm run build:linux
+## Development
+
+```sh
+pnpm check
+pnpm test
+pnpm format
 ```
 
-The Linux build emits `.deb` and AppImage bundles under `target/release/bundle/`.
-Tauri loads `src-tauri/tauri.linux.conf.json` automatically for Linux development and builds.
+A lefthook pre-commit hook runs oxlint, oxfmt, and rustfmt on staged files.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Small, focused pull requests are welcome.
 
 ## License
 
-[MIT](LICENSE). Provider names and logos are trademarks of their owners - see [NOTICE](NOTICE).
+wavex is released under the [MIT License](LICENSE). Provider names and logos are trademarks of their respective owners; see [NOTICE](NOTICE).
