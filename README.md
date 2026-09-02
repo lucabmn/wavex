@@ -48,15 +48,23 @@ pnpm tauri dev
 
 ## Project structure
 
-| Directory          | Purpose                                  |
-| ------------------ | ---------------------------------------- |
-| `src/lib/`         | Domain and application logic             |
-| `src/lib/harness/` | Provider adapters and wire protocols     |
-| `src/chrome/`      | Application chrome and reusable controls |
-| `src/surfaces/`    | Main views and editor surfaces           |
-| `src/hooks/`       | React hooks                              |
-| `src-tauri/src/`   | macOS desktop backend                    |
-| `tests/unit/`      | TypeScript unit logic tests              |
+| Directory            | Purpose                                                            |
+| -------------------- | ------------------------------------------------------------------ |
+| `src/lib/`           | Shared domain vocabulary: sessions, files, paths, projects, models |
+| `src/lib/harness/`   | Provider adapters and wire protocols                               |
+| `src/lib/sessions/`  | Session list, history, filters, and persistence                    |
+| `src/lib/workspace/` | Tabs, panes, splits, and workspace snapshots                       |
+| `src/lib/terminal/`  | PTY plumbing and the terminal dock                                 |
+| `src/lib/editor/`    | Editor document, git gutter, lint, and search                      |
+| `src/lib/files/`     | File index, tree, mentions, and watching                           |
+| `src/lib/inbox/`     | GitHub issues and pull requests                                    |
+| `src/lib/updates/`   | Updater and release notes                                          |
+| `src/lib/project/`   | Project identity: logos, mascots, metadata                         |
+| `src/chrome/`        | Application chrome and reusable controls                           |
+| `src/surfaces/`      | Main views                                                         |
+| `src/hooks/`         | React hooks                                                        |
+| `src-tauri/src/`     | macOS desktop backend                                              |
+| `tests/unit/`        | Logic tests, mirroring `src/`                                      |
 
 ## Development
 
