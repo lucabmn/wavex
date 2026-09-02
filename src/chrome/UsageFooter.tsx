@@ -31,12 +31,15 @@ export function UsageFooter({
   terminals = [],
   terminalOpen = false,
   onToggleTerminal,
+  onOpenUsage,
 }: {
   providers: RateLimitProvider[];
   session?: UsageFooterSession;
   terminals?: RunningTerminal[];
   terminalOpen?: boolean;
   onToggleTerminal?: (fileId: string) => void;
+  /** Opens the usage view. The chips are already about usage, so they lead there. */
+  onOpenUsage?: () => void;
 }) {
   const wantClaude = providers.includes("claude");
   const wantCodex = providers.includes("codex");
@@ -123,8 +126,8 @@ export function UsageFooter({
     >
       {showUsage ? (
         <>
-          {wantClaude ? <ProviderChip limits={claude} now={now} /> : null}
-          {wantCodex ? <ProviderChip limits={codex} now={now} /> : null}
+          {wantClaude ? <ProviderChip limits={claude} now={now} onOpen={onOpenUsage} /> : null}
+          {wantCodex ? <ProviderChip limits={codex} now={now} onOpen={onOpenUsage} /> : null}
         </>
       ) : session ? (
         <SessionChip session={session} />
@@ -267,7 +270,15 @@ function RunningTerminalChip({
   );
 }
 
-function ProviderChip({ limits, now }: { limits: ProviderRateLimits; now: number }) {
+function ProviderChip({
+  limits,
+  now,
+  onOpen,
+}: {
+  limits: ProviderRateLimits;
+  now: number;
+  onOpen?: () => void;
+}) {
   const loading =
     limits.status === "idle" || (limits.status === "fetching" && !limits.session && !limits.weekly);
   const disconnected = limits.status === "unavailable";
@@ -285,14 +296,21 @@ function ProviderChip({ limits, now }: { limits: ProviderRateLimits; now: number
   }, null);
   const tooltip = windows.map((entry) => rateLimitWindowTooltip(entry.window, now)).join(" · ");
 
+  const hint =
+    tooltip ||
+    limits.error ||
+    (disconnected ? "Not connected" : loading ? "Loading usage…" : undefined);
+  const Chip = onOpen ? "button" : "span";
+
   return (
-    <span
-      className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap"
-      title={
-        tooltip ||
-        limits.error ||
-        (disconnected ? "Not connected" : loading ? "Loading usage…" : undefined)
-      }
+    <Chip
+      type={onOpen ? "button" : undefined}
+      onClick={onOpen}
+      aria-label={onOpen ? `${HARNESS_LABEL[limits.provider]} usage — open usage` : undefined}
+      className={`inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap ${
+        onOpen ? "-mx-1 rounded px-1 hover:bg-content/10 hover:text-content" : ""
+      }`}
+      title={onOpen && hint ? `${hint} · Open usage` : hint}
     >
       <HarnessIcon harness={limits.provider} className="size-3 shrink-0" />
       {loading ? (
@@ -317,7 +335,7 @@ function ProviderChip({ limits, now }: { limits: ProviderRateLimits; now: number
           </span>
         </>
       )}
-    </span>
+    </Chip>
   );
 }
 
