@@ -8,6 +8,7 @@ import {
   type ProviderRateLimits,
 } from "./rateLimits";
 import {
+  acquireHarnessBridge,
   killChild,
   resolveCodexBinary,
   spawnChild,
@@ -35,6 +36,16 @@ type CodexProbe = { limits: ProviderRateLimits; raw: unknown };
  */
 let inflightProbe: Promise<CodexProbe> | null = null;
 let probeCount = 0;
+const probeInstance =
+  typeof globalThis.crypto?.randomUUID === "function"
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+/** Each WebView has its own module state, so the instance token is required. */
+export function codexUsageChildId(instance: string, count: number): string {
+  const safeInstance = instance.replace(/[^A-Za-z0-9_-]/g, "-");
+  return `${USAGE_CHILD_PREFIX}-${safeInstance}-${count}`;
+}
 
 type ClaudeUsageFetch = {
   status: "ok" | "error" | "unavailable" | string;
@@ -93,7 +104,7 @@ export async function fetchCodexRateLimits(
 async function probeCodexRateLimits(): Promise<CodexProbe> {
   // A private child id per probe: cleanup can then only ever kill its own
   // process, even against a second window whose module state is separate.
-  const childId = `${USAGE_CHILD_PREFIX}-${(probeCount += 1)}`;
+  const childId = codexUsageChildId(probeInstance, (probeCount += 1));
   let raw: unknown;
   const done = (limits: ProviderRateLimits): CodexProbe => ({ limits, raw });
   let path: string;
@@ -110,6 +121,16 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
     return done(errorRateLimits("codex", error instanceof Error ? error.message : String(error)));
   }
 
+  // The menu-bar WebView never mounts the app shell, so nothing else installs
+  // the harness event listeners there and every probe reply was dropped:
+  // `initialize` timed out. The probe now owns a bridge lease of its own.
+  let releaseBridge: () => void;
+  try {
+    releaseBridge = await acquireHarnessBridge();
+  } catch (error) {
+    return done(errorRateLimits("codex", error instanceof Error ? error.message : String(error)));
+  }
+
   const rpc = new JsonRpcClient(
     childId,
     {
@@ -120,10 +141,17 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
     { includeJsonrpc: false, label: "codex-usage" },
   );
 
+  // A timeout runs cleanup from both the race and the `finally`, and the
+  // bridge lease is counted: releasing it twice would tear the listeners out
+  // from under the app window.
+  let stopped = false;
   const stop = async () => {
+    if (stopped) return;
+    stopped = true;
     rpc.close();
     unwatchChild(childId);
     await killChild(childId).catch(() => undefined);
+    releaseBridge();
   };
 
   watchChild(
