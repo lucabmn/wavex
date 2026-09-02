@@ -17,9 +17,24 @@ import {
 import { asRecord } from "./harness/codexProtocol";
 import { JsonRpcClient } from "./harness/jsonRpc";
 
-const USAGE_CHILD_ID = "wavex-codex-usage";
+const USAGE_CHILD_PREFIX = "wavex-codex-usage";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 12_000;
+
+type CodexProbe = { limits: ProviderRateLimits; raw: unknown };
+
+/**
+ * The one probe in flight, shared by every caller.
+ *
+ * Two probes at once used to fail each other: they spawned under one child id,
+ * so the second one's cleanup killed the first one's process and its next
+ * `harness_write` came back as `Harness process is not running`. The status-bar
+ * chip and the usage view ask at the same moment whenever the view is opened,
+ * which is exactly that case. The slot is cleared only after the probe's own
+ * cleanup has run, so a follow-up can never spawn into a pending teardown.
+ */
+let inflightProbe: Promise<CodexProbe> | null = null;
+let probeCount = 0;
 
 type ClaudeUsageFetch = {
   status: "ok" | "error" | "unavailable" | string;
@@ -61,16 +76,42 @@ export async function fetchClaudeRateLimits(): Promise<ProviderRateLimits> {
 export async function fetchCodexRateLimits(
   onRaw?: (result: unknown) => void,
 ): Promise<ProviderRateLimits> {
+  if (!inflightProbe) {
+    const probe = probeCodexRateLimits();
+    inflightProbe = probe;
+    void probe
+      .catch(() => undefined)
+      .finally(() => {
+        if (inflightProbe === probe) inflightProbe = null;
+      });
+  }
+  const { limits, raw } = await inflightProbe;
+  if (raw !== undefined) onRaw?.(raw);
+  return limits;
+}
+
+async function probeCodexRateLimits(): Promise<CodexProbe> {
+  // A private child id per probe: cleanup can then only ever kill its own
+  // process, even against a second window whose module state is separate.
+  const childId = `${USAGE_CHILD_PREFIX}-${(probeCount += 1)}`;
+  let raw: unknown;
+  const done = (limits: ProviderRateLimits): CodexProbe => ({ limits, raw });
   let path: string;
   try {
     path = (await resolveCodexBinary()).path;
   } catch {
-    return unavailableRateLimits("codex", "Codex CLI not found");
+    return done(unavailableRateLimits("codex", "Codex CLI not found"));
   }
 
-  const cwd = await homeDir();
+  let cwd: string;
+  try {
+    cwd = await homeDir();
+  } catch (error) {
+    return done(errorRateLimits("codex", error instanceof Error ? error.message : String(error)));
+  }
+
   const rpc = new JsonRpcClient(
-    USAGE_CHILD_ID,
+    childId,
     {
       onRequest: (id) => {
         void rpc.respond(id, {}).catch(() => undefined);
@@ -81,20 +122,18 @@ export async function fetchCodexRateLimits(
 
   const stop = async () => {
     rpc.close();
-    unwatchChild(USAGE_CHILD_ID);
-    await killChild(USAGE_CHILD_ID).catch(() => undefined);
+    unwatchChild(childId);
+    await killChild(childId).catch(() => undefined);
   };
 
-  await killChild(USAGE_CHILD_ID).catch(() => undefined);
-
   watchChild(
-    USAGE_CHILD_ID,
+    childId,
     (line) => rpc.pushLine(line),
     () => rpc.close(new Error("Codex usage probe exited")),
   );
 
   try {
-    await spawnChild(USAGE_CHILD_ID, path, ["app-server"], cwd);
+    await spawnChild(childId, path, ["app-server"], cwd);
     return await withTimeout(
       DISCOVERY_TIMEOUT_MS,
       async () => {
@@ -117,14 +156,14 @@ export async function fetchCodexRateLimits(
           {},
           REQUEST_TIMEOUT_MS,
         );
-        onRaw?.(result);
+        raw = result;
         const parsed = parseCodexRateLimits(result);
-        if (parsed.session || parsed.weekly) return parsed;
+        if (parsed.session || parsed.weekly) return done(parsed);
         const rec = asRecord(result);
         if (rec && !parsed.session && !parsed.weekly) {
-          return unavailableRateLimits("codex", "No Codex usage data");
+          return done(unavailableRateLimits("codex", "No Codex usage data"));
         }
-        return parsed;
+        return done(parsed);
       },
       () => {
         void stop();
@@ -133,12 +172,12 @@ export async function fetchCodexRateLimits(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/not signed in|chatgpt authentication required|not authenticated/i.test(message)) {
-      return unavailableRateLimits("codex", "Codex not signed in");
+      return done(unavailableRateLimits("codex", "Codex not signed in"));
     }
     if (/ENOENT|not found|could not run/i.test(message)) {
-      return unavailableRateLimits("codex", "Codex CLI not found");
+      return done(unavailableRateLimits("codex", "Codex CLI not found"));
     }
-    return errorRateLimits("codex", message);
+    return done(errorRateLimits("codex", message));
   } finally {
     await stop();
   }
