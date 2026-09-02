@@ -32,6 +32,7 @@ import {
   upsertSession,
   type SessionSummary,
 } from "./sessions/sessionStore";
+import type { AppMode } from "./workspace/appMode";
 import {
   collectWorkspaceSnapshot,
   hydrateWorkspaceSnapshot,
@@ -63,6 +64,7 @@ let liveWorkspace: {
   activeTabId: () => string;
   projectCwd: () => string;
   projectTerminals: () => ProjectTerminalDock[];
+  appMode: () => AppMode;
   flush: () => void;
 } | null = null;
 
@@ -77,6 +79,7 @@ export function setQuitWorkspace(
   projectCwd: () => string,
   projectTerminals: () => ProjectTerminalDock[],
   flush: () => void,
+  appMode: () => AppMode = () => "coding",
 ): () => void {
   liveWorkspace = {
     sessions,
@@ -84,6 +87,7 @@ export function setQuitWorkspace(
     activeTabId,
     projectCwd,
     projectTerminals,
+    appMode,
     flush,
   };
   bootingResumed = null;
@@ -101,6 +105,7 @@ export async function handleQuitRequested(): Promise<void> {
       liveWorkspace.activeTabId(),
       liveWorkspace.projectCwd(),
       liveWorkspace.projectTerminals(),
+      liveWorkspace.appMode(),
     );
     return;
   }
@@ -270,6 +275,7 @@ export async function persistQuitState(
   projectCwd: string,
   mode: "quit" | "unload" = "quit",
   projectTerminals: ProjectTerminalDock[] = [],
+  appMode: AppMode = "coding",
 ): Promise<void> {
   const refs = inFlightRefs(sessions, tabs);
   const interrupted = new Set(refs.map((ref) => ref.sessionId));
@@ -281,7 +287,7 @@ export async function persistQuitState(
     }),
   );
   await saveWorkspaceSnapshot(
-    collectWorkspaceSnapshot(tabs, sessions, activeTabId, projectCwd, projectTerminals),
+    collectWorkspaceSnapshot(tabs, sessions, activeTabId, projectCwd, projectTerminals, appMode),
   ).catch(() => undefined);
   // Vite/webview reload must not wipe a restored snapshot: those chats are idle
   // in this process until Continue runs.
@@ -303,6 +309,7 @@ async function persistBootingResume(workspace: ResumedWorkspace): Promise<void> 
       workspace.activeTabId,
       workspace.projectCwd,
       workspace.projectTerminals ?? [],
+      workspace.mode,
     ),
   ).catch(() => undefined);
   await replaceInFlightSessions(
@@ -319,6 +326,7 @@ async function confirmQuitAndExit(
   activeTabId: string,
   projectCwd: string,
   projectTerminals: ProjectTerminalDock[] = [],
+  appMode: AppMode = "coding",
 ): Promise<void> {
   if (quitDialogOpen) return;
   quitDialogOpen = true;
@@ -334,7 +342,15 @@ async function confirmQuitAndExit(
     }
     quitting = true;
     try {
-      await persistQuitState(sessions, tabs, activeTabId, projectCwd, "quit", projectTerminals);
+      await persistQuitState(
+        sessions,
+        tabs,
+        activeTabId,
+        projectCwd,
+        "quit",
+        projectTerminals,
+        appMode,
+      );
       await invoke("confirm_quit");
     } catch {
       quitting = false;
