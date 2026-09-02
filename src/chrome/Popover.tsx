@@ -195,8 +195,7 @@ export function Popover({
       if (!target) return;
       if (surface.current?.contains(target)) return;
       if (anchorElement(anchorRef.current)?.contains(target)) return;
-      const el =
-        target instanceof Element ? target : (target.parentElement ?? null);
+      const el = target instanceof Element ? target : (target.parentElement ?? null);
       if (ignore && el?.closest(ignore)) return;
       dismissRef.current?.("outside");
     };

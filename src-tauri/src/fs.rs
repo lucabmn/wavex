@@ -1513,7 +1513,7 @@ fn with_temp_markdown(
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    let path = std::env::temp_dir().join(format!("wavecode-comment-{stamp}.md"));
+    let path = std::env::temp_dir().join(format!("wavex-comment-{stamp}.md"));
     std::fs::write(&path, body).map_err(|error| error.to_string())?;
     let path_str = path.to_string_lossy().into_owned();
     let result = run(&path_str);
@@ -2071,7 +2071,7 @@ fn git_pr_create_for(root: &Path, input: &GitPrCreateInput) -> Result<String, St
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    let body_path = std::env::temp_dir().join(format!("wavecode-pr-{stamp}.md"));
+    let body_path = std::env::temp_dir().join(format!("wavex-pr-{stamp}.md"));
     std::fs::write(&body_path, input.body.trim()).map_err(|e| e.to_string())?;
     let result = gh_checked(
         root,
@@ -3050,7 +3050,7 @@ fn write_attachment_sync(name: &str, data: &str) -> Result<String, String> {
             MAX_ATTACHMENT_EMBED_BYTES / 1024 / 1024
         ));
     }
-    let dir = std::env::temp_dir().join("wavecode-attachments");
+    let dir = std::env::temp_dir().join("wavex-attachments");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -3158,7 +3158,7 @@ fn write_text_file_sync(path: &str, content: &str) -> Result<(), String> {
     let mut temporary = None;
     for attempt in 0..100 {
         let candidate = parent.join(format!(
-            ".{name}.wavecode-{}-{stamp}-{attempt}.tmp",
+            ".{name}.wavex-{}-{stamp}-{attempt}.tmp",
             std::process::id()
         ));
         match std::fs::OpenOptions::new()
@@ -3285,7 +3285,7 @@ fn rename_path_sync(path: &str, name: &str) -> Result<String, String> {
             .unwrap_or_default()
             .as_nanos();
         let tmp = parent.join(format!(
-            ".{}.wavecode-rename-{stamp}",
+            ".{}.wavex-rename-{stamp}",
             file_label(&from, "tmp")
         ));
         std::fs::rename(&from, &tmp).map_err(|e| e.to_string())?;
@@ -3472,8 +3472,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let dir =
-            std::env::temp_dir().join(format!("wavecode-editor-{}-{stamp}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("wavex-editor-{}-{stamp}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("example.rs");
         std::fs::write(&path, "fn old() {}\n").unwrap();
@@ -3532,7 +3531,7 @@ mod tests {
                 .as_nanos();
             let seq = TMP_SEQ.fetch_add(1, Ordering::Relaxed);
             let dir = std::env::temp_dir().join(format!(
-                "wavecode-{label}-{}-{stamp}-{seq}",
+                "wavex-{label}-{}-{stamp}-{seq}",
                 std::process::id()
             ));
             match std::fs::create_dir(&dir) {
@@ -3710,8 +3709,8 @@ mod tests {
                 return false;
             }
         }
-        git(dir, &["config", "user.name", "wavecode"])
-            && git(dir, &["config", "user.email", "wavecode@test"])
+        git(dir, &["config", "user.name", "wavex"])
+            && git(dir, &["config", "user.email", "wavex@test"])
             && git(dir, &["config", "commit.gpgsign", "false"])
     }
 
@@ -3748,18 +3747,18 @@ mod tests {
         Command::new("git")
             .args([
                 "-c",
-                "user.name=wavecode",
+                "user.name=wavex",
                 "-c",
-                "user.email=wavecode@test",
+                "user.email=wavex@test",
                 "-c",
                 "commit.gpgsign=false",
             ])
             .args(args)
             .current_dir(dir)
-            .env("GIT_AUTHOR_NAME", "wavecode")
-            .env("GIT_AUTHOR_EMAIL", "wavecode@test")
-            .env("GIT_COMMITTER_NAME", "wavecode")
-            .env("GIT_COMMITTER_EMAIL", "wavecode@test")
+            .env("GIT_AUTHOR_NAME", "wavex")
+            .env("GIT_AUTHOR_EMAIL", "wavex@test")
+            .env("GIT_COMMITTER_NAME", "wavex")
+            .env("GIT_COMMITTER_EMAIL", "wavex@test")
             .status()
             .map(|status| status.success())
             .unwrap_or(false)
@@ -4150,8 +4149,8 @@ mod tests {
                 .status()
                 .map(|status| !status.success())
                 .unwrap_or(true)
-            || !git(&b.0, &["config", "user.name", "wavecode"])
-            || !git(&b.0, &["config", "user.email", "wavecode@test"])
+            || !git(&b.0, &["config", "user.name", "wavex"])
+            || !git(&b.0, &["config", "user.email", "wavex@test"])
             || !git(&b.0, &["config", "commit.gpgsign", "false"])
         {
             return;
@@ -4269,10 +4268,10 @@ mod tests {
     #[test]
     fn split_github_repo_reads_owner_and_name() {
         assert_eq!(
-            split_github_repo(" hardbeat920/wavecode ").unwrap(),
-            ("hardbeat920".into(), "wavecode".into())
+            split_github_repo(" lucabmn/wavex ").unwrap(),
+            ("lucabmn".into(), "wavex".into())
         );
-        assert!(split_github_repo("wavecode").is_err());
+        assert!(split_github_repo("wavex").is_err());
         assert!(split_github_repo("acme/web extra").is_err());
     }
 

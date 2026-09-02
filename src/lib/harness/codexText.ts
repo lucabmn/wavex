@@ -1,11 +1,5 @@
 import { modelsFor } from "../models";
-import {
-  killChild,
-  resolveCodexBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, resolveCodexBinary, spawnChild, unwatchChild, watchChild } from "./child";
 import {
   asRecord,
   buildThreadStartParams,
@@ -15,7 +9,7 @@ import {
 import { JsonRpcClient, type JsonRpcId } from "./jsonRpc";
 import { mergeStream, streamTextDelta } from "./streamText";
 
-const TEXT_CHILD_ID = "wavecode-codex-text";
+const TEXT_CHILD_ID = "wavex-codex-text";
 const INIT_TIMEOUT_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 45_000;
 const TEXT_RUNTIME_MODE = "supervised" as const;
@@ -63,9 +57,11 @@ export async function stopCodexTextPrompt(): Promise<void> {
 /** Start the shared Codex app-server in the background so the first prompt is fast. */
 export function warmupCodexText(cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns.catch(() => undefined).then(async () => {
-    await ensureLive(cwd);
-  });
+  const run = turns
+    .catch(() => undefined)
+    .then(async () => {
+      await ensureLive(cwd);
+    });
   turns = run.then(
     () => undefined,
     () => undefined,
@@ -118,10 +114,7 @@ async function promptOnLive(input: {
     await Promise.race([
       turnPromise,
       new Promise<void>((_, reject) => {
-        setTimeout(
-          () => reject(new Error("Codex text generation timed out")),
-          timeoutMs,
-        );
+        setTimeout(() => reject(new Error("Codex text generation timed out")), timeoutMs);
       }),
     ]);
 
@@ -210,8 +203,8 @@ async function startLive(cwd: string): Promise<LiveText> {
       "initialize",
       {
         clientInfo: {
-          name: "wavecode-text",
-          title: "wavecode",
+          name: "wavex-text",
+          title: "wavex",
           version: "0.1.0",
         },
         capabilities: { experimentalApi: true },
@@ -258,11 +251,7 @@ async function dropLive(): Promise<void> {
   await killChild(TEXT_CHILD_ID).catch(() => undefined);
 }
 
-function handleNotification(
-  session: LiveText | null,
-  method: string,
-  params: unknown,
-): void {
+function handleNotification(session: LiveText | null, method: string, params: unknown): void {
   if (!session || !session.collecting) {
     if (session && method === "turn/completed") {
       session.turnDone?.();
@@ -282,8 +271,7 @@ function handleNotification(
     const turn = asRecord(asRecord(params)?.turn);
     const status = stringField(turn, "status") ?? "completed";
     if (status === "failed") {
-      const message =
-        stringField(asRecord(turn?.error), "message") ?? "Codex turn failed";
+      const message = stringField(asRecord(turn?.error), "message") ?? "Codex turn failed";
       session.turnFailed?.(new Error(message));
     } else {
       session.turnDone?.();

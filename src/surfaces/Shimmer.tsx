@@ -15,10 +15,7 @@ function ShimmerComponent({
   duration = 2,
   spread = 2,
 }: ShimmerProps) {
-  const dynamicSpread = useMemo(
-    () => (children?.length ?? 0) * spread,
-    [children, spread],
-  );
+  const dynamicSpread = useMemo(() => (children?.length ?? 0) * spread, [children, spread]);
 
   return (
     <Component

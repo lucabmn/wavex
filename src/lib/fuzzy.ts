@@ -60,11 +60,7 @@ function isUpper(ch: string): boolean {
 }
 
 /** Prefer filename hits over directory-only hits. Positions index `relative`. */
-export function scorePath(
-  query: string,
-  relative: string,
-  name: string,
-): FuzzyHit | null {
+export function scorePath(query: string, relative: string, name: string): FuzzyHit | null {
   const needle = query.trim();
   if (!needle) return { score: 0, positions: [] };
 

@@ -8,11 +8,7 @@ import {
 } from "react";
 import { basename } from "../lib/fs";
 import { prettyCwd, prettyParent } from "../lib/paths";
-import {
-  looksLikeProject,
-  sameProjectPath,
-  type RecentProject,
-} from "../lib/recents";
+import { looksLikeProject, sameProjectPath, type RecentProject } from "../lib/recents";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { LAYER } from "../lib/layers";
 import { Popover } from "./Popover";
@@ -44,10 +40,7 @@ const HOVER_CLOSE_MS = 100;
 /* Both menus sit outside the trigger, so neither counts as a click-away. */
 const SELF = "[data-cwd-picker],[data-cwd-submenu]";
 
-type Row =
-  | { kind: "recent"; path: string }
-  | { kind: "more" }
-  | { kind: "new-terminal" };
+type Row = { kind: "recent"; path: string } | { kind: "more" } | { kind: "new-terminal" };
 
 export function CwdPicker({
   cwd,
@@ -76,8 +69,7 @@ export function CwdPicker({
   const inProject = looksLikeProject(cwd);
   const label = prettyCwd(cwd);
   const otherRecents = useMemo(
-    () =>
-      recents.filter((item) => !inProject || !sameProjectPath(item.path, cwd)),
+    () => recents.filter((item) => !inProject || !sameProjectPath(item.path, cwd)),
     [cwd, inProject, recents],
   );
   const previewRecents = otherRecents.slice(0, PREVIEW);
@@ -114,8 +106,7 @@ export function CwdPicker({
   };
 
   const scheduleCloseMore = () => {
-    if (closeMoreTimer.current != null)
-      window.clearTimeout(closeMoreTimer.current);
+    if (closeMoreTimer.current != null) window.clearTimeout(closeMoreTimer.current);
     closeMoreTimer.current = window.setTimeout(() => {
       closeMoreTimer.current = null;
       setMoreOpen(false);
@@ -175,16 +166,11 @@ export function CwdPicker({
     }
   };
 
-  const newTerminalIndex = onNewTerminal
-    ? previewRecents.length + (hasMore ? 1 : 0)
-    : -1;
+  const newTerminalIndex = onNewTerminal ? previewRecents.length + (hasMore ? 1 : 0) : -1;
   const moreIndex = hasMore ? previewRecents.length : -1;
 
   return (
-    <div
-      ref={root}
-      className={`relative flex h-full min-w-0${className ? ` ${className}` : ""}`}
-    >
+    <div ref={root} className={`relative flex h-full min-w-0${className ? ` ${className}` : ""}`}>
       <button
         type="button"
         title={cwd}
@@ -215,18 +201,13 @@ export function CwdPicker({
       >
         {children ?? (
           <>
-            <ProjectLogoIcon
-              path={projectLogoPath}
-              fallbackStrokeWidth={1.5}
-            />
+            <ProjectLogoIcon path={projectLogoPath} fallbackStrokeWidth={1.5} />
             <span className="truncate font-mono text-[12px]">{label}</span>
           </>
         )}
         {chevron ? (
           <ChevronDown
-            className={`size-3 shrink-0 text-content/50 ${
-              open ? "rotate-180" : ""
-            }`}
+            className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
             strokeWidth={1.75}
           />
         ) : null}
@@ -244,22 +225,15 @@ export function CwdPicker({
           data-cwd-picker
           className="flex flex-col overflow-hidden"
         >
-          <div
-            ref={lockOverscroll}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-none py-1"
-          >
+          <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none py-1">
             {inProject ? (
               <>
                 <p className="px-2.5 pb-1 pt-2 text-[10px] uppercase tracking-widest text-content/50">
                   Current project
                 </p>
                 <div className="px-2.5 py-1.5 text-content/50">
-                  <p className="truncate text-[13px] text-content">
-                    {basename(cwd)}
-                  </p>
-                  <p className="truncate font-mono text-[11px]">
-                    {prettyParent(cwd)}
-                  </p>
+                  <p className="truncate text-[13px] text-content">{basename(cwd)}</p>
+                  <p className="truncate font-mono text-[11px]">{prettyParent(cwd)}</p>
                 </div>
               </>
             ) : null}
@@ -286,9 +260,7 @@ export function CwdPicker({
                         : "text-content/80 hover:bg-content/5"
                     }`}
                   >
-                    <span className="min-w-0 truncate text-[13px]">
-                      {basename(item.path)}
-                    </span>
+                    <span className="min-w-0 truncate text-[13px]">{basename(item.path)}</span>
                     <span className="max-w-28 shrink-0 truncate font-mono text-[11px] text-content/45">
                       {prettyParent(item.path)}
                     </span>
@@ -320,10 +292,7 @@ export function CwdPicker({
                 }`}
               >
                 <span className="text-[13px]">More Projects</span>
-                <ChevronRight
-                  className="size-3.5 shrink-0"
-                  strokeWidth={1.75}
-                />
+                <ChevronRight className="size-3.5 shrink-0" strokeWidth={1.75} />
               </button>
             ) : null}
           </div>
@@ -345,9 +314,7 @@ export function CwdPicker({
                 }`}
               >
                 <span className="text-[13px]">New terminal</span>
-                <span className="shrink-0 font-mono text-[11px] text-content/45">
-                  {MOD}`
-                </span>
+                <span className="shrink-0 font-mono text-[11px] text-content/45">{MOD}`</span>
               </button>
             </div>
           ) : null}
@@ -378,9 +345,7 @@ export function CwdPicker({
               onClick={() => pick({ kind: "recent", path: item.path })}
               className="flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left text-content/80 hover:bg-content/5 hover:text-content"
             >
-              <span className="min-w-0 truncate text-[13px]">
-                {basename(item.path)}
-              </span>
+              <span className="min-w-0 truncate text-[13px]">{basename(item.path)}</span>
               <span className="max-w-28 shrink-0 truncate font-mono text-[11px] text-content/45">
                 {prettyParent(item.path)}
               </span>

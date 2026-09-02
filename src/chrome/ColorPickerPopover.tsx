@@ -35,8 +35,7 @@ export function ColorSwatchRow({
     <div className="flex items-center justify-between gap-1 px-0.5">
       {colors.map((color, index) => {
         const selected =
-          customColor == null &&
-          (colorIndex === index || (colorIndex == null && index === 0));
+          customColor == null && (colorIndex === index || (colorIndex == null && index === 0));
         return (
           <button
             key={color}
@@ -50,9 +49,7 @@ export function ColorSwatchRow({
           >
             <span
               className={`size-3.5 rounded-full ${
-                selected
-                  ? "ring-2 ring-content/80 ring-offset-1 ring-offset-transparent"
-                  : ""
+                selected ? "ring-2 ring-content/80 ring-offset-1 ring-offset-transparent" : ""
               }`}
               style={{ background: color }}
             />
@@ -71,16 +68,13 @@ export function ColorSwatchRow({
       >
         <span
           className={`grid size-3.5 place-items-center overflow-hidden rounded-full ${
-            pipetteActive
-              ? "ring-2 ring-content/80 ring-offset-1 ring-offset-transparent"
-              : ""
+            pipetteActive ? "ring-2 ring-content/80 ring-offset-1 ring-offset-transparent" : ""
           }`}
           style={
             customColor
               ? { background: customColor }
               : {
-                  background:
-                    "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                  background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
                 }
           }
         >
@@ -100,9 +94,7 @@ export function ColorPickerPopover({ value, onChange }: Props) {
 
   useEffect(() => {
     const hex = normalizeHex(value);
-    setHsv((prev) =>
-      hsvToHex(prev.h, prev.s, prev.v) === hex ? prev : hexToHsv(hex),
-    );
+    setHsv((prev) => (hsvToHex(prev.h, prev.s, prev.v) === hex ? prev : hexToHsv(hex)));
   }, [value]);
 
   const applyHsv = useCallback(
@@ -211,8 +203,7 @@ export function ColorPickerPopover({ value, onChange }: Props) {
         aria-valuenow={Math.round(hsv.h)}
         className="relative mt-2 h-3 w-full cursor-ew-resize touch-none rounded-full"
         style={{
-          background:
-            "linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)",
+          background: "linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)",
         }}
         onPointerDown={onHuePointer}
       >

@@ -1,11 +1,6 @@
 import { acceptCompletion, completionStatus } from "@codemirror/autocomplete";
 import { indentLess, indentMore } from "@codemirror/commands";
-import {
-  foldGutter,
-  foldKeymap,
-  getIndentUnit,
-  indentUnit,
-} from "@codemirror/language";
+import { foldGutter, foldKeymap, getIndentUnit, indentUnit } from "@codemirror/language";
 import {
   Annotation,
   Compartment,
@@ -26,18 +21,10 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import {
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-  RotateCcw,
-} from "../chrome/icons";
+import { AlertCircle, ChevronDown, ChevronUp, RotateCcw } from "../chrome/icons";
 import { minimalSetup } from "codemirror";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  MarkdownViewShell,
-  useMarkdownMode,
-} from "../chrome/MarkdownModeToggle";
+import { MarkdownViewShell, useMarkdownMode } from "../chrome/MarkdownModeToggle";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { isLightScheme } from "../lib/appearance";
@@ -51,14 +38,14 @@ import {
   subscribeGitChanged,
   writeTextFile,
 } from "../lib/fs";
-import { syncWatchedMtime, watchFile } from "../lib/fileWatch";
+import { syncWatchedMtime, watchFile } from "../lib/files/fileWatch";
 import { displayPath } from "../lib/paths";
 import type { EditorNavigation } from "../lib/search";
 import { MarkdownPreview } from "./AgentMarkdown";
-import { editorAutocomplete } from "./editorAutocomplete";
-import { languageForPath, schemeExtensions } from "./editorChrome";
-import { preserveEditorViewport, replaceEditorDoc } from "./editorDoc";
-import { editorMatching, editorTyping, tryExpandEmmet } from "./editorEditing";
+import { editorAutocomplete } from "../lib/editor/editorAutocomplete";
+import { languageForPath, schemeExtensions } from "../lib/editor/editorChrome";
+import { preserveEditorViewport, replaceEditorDoc } from "../lib/editor/editorDoc";
+import { editorMatching, editorTyping, tryExpandEmmet } from "../lib/editor/editorEditing";
 import {
   diffActiveChunkIndex,
   diffLineStatsForView,
@@ -67,9 +54,9 @@ import {
   diffScrollToChunk,
   editorGit,
   setGitOriginal,
-} from "./editorGit";
-import { editorLint } from "./editorLint";
-import { editorSearch } from "./editorSearch";
+} from "../lib/editor/editorGit";
+import { editorLint } from "../lib/editor/editorLint";
+import { editorSearch } from "../lib/editor/editorSearch";
 
 type EditorNavigationRequest = EditorNavigation & { token: number };
 
@@ -91,9 +78,7 @@ type LoadState =
   | { status: "ready"; content: string }
   | { status: "error"; message: string };
 
-type SaveState =
-  | { status: "idle" | "saving" | "saved" }
-  | { status: "error"; message: string };
+type SaveState = { status: "idle" | "saving" | "saved" } | { status: "error"; message: string };
 
 export function FileEditor({
   path,
@@ -271,9 +256,7 @@ export function FileEditor({
     async (content: string) => {
       const generation = ++saveGeneration.current;
       setSaveState({ status: "saving" });
-      const operation = saveQueue.current.then(() =>
-        writeTextFile(path, content),
-      );
+      const operation = saveQueue.current.then(() => writeTextFile(path, content));
       saveQueue.current = operation.catch(() => {});
       try {
         await operation;
@@ -316,9 +299,7 @@ export function FileEditor({
       dirtyRef.current = dirty;
       onDirtyChange(path, dirty);
       if (dirty) {
-        setSaveState((current) =>
-          current.status === "saving" ? current : { status: "idle" },
-        );
+        setSaveState((current) => (current.status === "saving" ? current : { status: "idle" }));
         return;
       }
       if (pendingDiskRef.current) {
@@ -334,9 +315,7 @@ export function FileEditor({
     [onErrorCountChange, path],
   );
 
-  const relativePath = path.startsWith(`${cwd}/`)
-    ? path.slice(cwd.length + 1)
-    : path;
+  const relativePath = path.startsWith(`${cwd}/`) ? path.slice(cwd.length + 1) : path;
 
   if (loadState.status === "loading") {
     return (
@@ -351,12 +330,8 @@ export function FileEditor({
       <div className="grid h-full place-items-center p-6">
         <div className="max-w-md text-center">
           <AlertCircle className="mx-auto mb-3 size-5 text-red-400" />
-          <p className="text-[13px] text-content">
-            Couldn’t open {basename(path)}
-          </p>
-          <p className="mt-1 text-[12px] leading-5 text-content/50">
-            {loadState.message}
-          </p>
+          <p className="text-[13px] text-content">Couldn’t open {basename(path)}</p>
+          <p className="mt-1 text-[12px] leading-5 text-content/50">{loadState.message}</p>
           <button
             type="button"
             onClick={() => setReloadKey((value) => value + 1)}
@@ -376,9 +351,7 @@ export function FileEditor({
         <MarkdownViewShell
           mode={mode}
           onModeChange={setMode}
-          preview={
-            <MarkdownPreview text={draft} cwd={cwd} onOpenFile={onOpenFile} />
-          }
+          preview={<MarkdownPreview text={draft} cwd={cwd} onOpenFile={onOpenFile} />}
           source={
             <div className="flex h-full min-h-0 min-w-0 flex-col">
               <CodeMirrorEditor
@@ -422,10 +395,7 @@ export function FileEditor({
         ) : saveState.status === "saved" ? (
           <span>Saved</span>
         ) : saveState.status === "error" ? (
-          <span
-            className="max-w-64 truncate text-red-400"
-            title={saveState.message}
-          >
+          <span className="max-w-64 truncate text-red-400" title={saveState.message}>
             Save failed: {saveState.message}
           </span>
         ) : null}
@@ -507,12 +477,7 @@ function CodeMirrorEditor({
       return;
     }
     let index = chunkNavPinnedRef.current;
-    if (
-      fromScroll ||
-      index === null ||
-      index < 0 ||
-      index >= positions.length
-    ) {
+    if (fromScroll || index === null || index < 0 || index >= positions.length) {
       index = diffActiveChunkIndex(view, positions);
     }
     chunkNavPinnedRef.current = index;
@@ -535,10 +500,7 @@ function CodeMirrorEditor({
     (delta: number) => {
       const view = viewRef.current;
       if (!view || !chunkNav || chunkNav.positions.length === 0) return;
-      const next = Math.min(
-        chunkNav.positions.length - 1,
-        Math.max(0, chunkNav.index + delta),
-      );
+      const next = Math.min(chunkNav.positions.length - 1, Math.max(0, chunkNav.index + delta));
       if (next === chunkNav.index) return;
       chunkNavPinnedRef.current = next;
       diffScrollToChunk(view, chunkNav.positions[next]);
@@ -576,24 +538,13 @@ function CodeMirrorEditor({
       const generation = ++saveGeneration;
       void (async () => {
         const before = view.state.doc.toString();
-        const result = await formatText(
-          path,
-          before,
-          view.state.selection.main.head,
-        );
+        const result = await formatText(path, before, view.state.selection.main.head);
         if (disposed || generation !== saveGeneration) return;
 
-        if (
-          result &&
-          result.formatted !== before &&
-          view.state.doc.toString() === before
-        ) {
+        if (result && result.formatted !== before && view.state.doc.toString() === before) {
           replaceEditorDoc(view, result.formatted, {
             selection: {
-              anchor: Math.min(
-                Math.max(0, result.cursorOffset),
-                result.formatted.length,
-              ),
+              anchor: Math.min(Math.max(0, result.cursorOffset), result.formatted.length),
             },
           });
         }
@@ -645,10 +596,7 @@ function CodeMirrorEditor({
             {
               key: "Tab",
               run: (view) => {
-                if (
-                  completionStatus(view.state) === "active" &&
-                  acceptCompletion(view)
-                ) {
+                if (completionStatus(view.state) === "active" && acceptCompletion(view)) {
                   return true;
                 }
                 return tryExpandEmmet(view) || indentOrInsertTab(view);
@@ -785,11 +733,7 @@ function CodeMirrorEditor({
     if (!view) return;
     view.requestMeasure();
     const activeEl = document.activeElement;
-    if (
-      activeEl &&
-      view.dom.contains(activeEl) &&
-      activeEl !== view.contentDOM
-    ) {
+    if (activeEl && view.dom.contains(activeEl) && activeEl !== view.contentDOM) {
       return;
     }
     view.focus();
@@ -865,24 +809,14 @@ function DiffChunkNav({
   );
 }
 
-function DiffChunkStat({
-  additions,
-  deletions,
-}: {
-  additions: number;
-  deletions: number;
-}) {
+function DiffChunkStat({ additions, deletions }: { additions: number; deletions: number }) {
   if (additions <= 0 && deletions <= 0) {
     return <span className="min-w-0 flex-1" />;
   }
   return (
     <span className="flex min-w-0 shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums">
-      {additions > 0 ? (
-        <span className="text-emerald-400">+{additions}</span>
-      ) : null}
-      {deletions > 0 ? (
-        <span className="text-red-400">-{deletions}</span>
-      ) : null}
+      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
+      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
     </span>
   );
 }
@@ -924,10 +858,7 @@ function indentOrInsertTab(view: EditorView): boolean {
     state.update(
       state.changeByRange((range) => {
         const line = state.doc.lineAt(range.head);
-        const column = countColumn(
-          line.text.slice(0, range.head - line.from),
-          state.tabSize,
-        );
+        const column = countColumn(line.text.slice(0, range.head - line.from), state.tabSize);
         const insert = " ".repeat(width - (column % width) || width);
         return {
           changes: { from: range.head, insert },
@@ -944,10 +875,7 @@ type LineRange = { from: number; to: number };
 
 const wrappedLineIndent = StateField.define<DecorationSet>({
   create(state) {
-    return Decoration.set(
-      indentDecorations(state, [{ from: 0, to: state.doc.length }]),
-      true,
-    );
+    return Decoration.set(indentDecorations(state, [{ from: 0, to: state.doc.length }]), true);
   },
   update(decorations, transaction) {
     if (!transaction.docChanged) return decorations;
@@ -959,8 +887,7 @@ const wrappedLineIndent = StateField.define<DecorationSet>({
     });
     const changedLines = mergeLineRanges(ranges);
     return decorations.map(transaction.changes).update({
-      filter: (from) =>
-        !changedLines.some((range) => from >= range.from && from <= range.to),
+      filter: (from) => !changedLines.some((range) => from >= range.from && from <= range.to),
       add: indentDecorations(transaction.state, changedLines),
       sort: true,
     });

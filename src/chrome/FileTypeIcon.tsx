@@ -41,22 +41,12 @@ function getSnapshot() {
 }
 
 /** VS Code Material Icon Theme — filename maps to the matching icon. */
-export function FileTypeIcon({
-  name,
-  isDir,
-  isOpen = false,
-  isRoot = false,
-  size = 16,
-}: Props) {
+export function FileTypeIcon({ name, isDir, isOpen = false, isRoot = false, size = 16 }: Props) {
   const icons = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   if (!icons) {
     return (
-      <span
-        aria-hidden
-        className="inline-block shrink-0"
-        style={{ width: size, height: size }}
-      />
+      <span aria-hidden className="inline-block shrink-0" style={{ width: size, height: size }} />
     );
   }
 
@@ -73,11 +63,7 @@ export function FileTypeIcon({
   }
 
   return (
-    <icons.MaterialIcon
-      name={resolveFileIcon(icons, name)}
-      size={size}
-      className="shrink-0"
-    />
+    <icons.MaterialIcon name={resolveFileIcon(icons, name)} size={size} className="shrink-0" />
   );
 }
 

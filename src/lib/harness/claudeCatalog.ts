@@ -1,9 +1,5 @@
 import { homeDir } from "../fs";
-import {
-  setHarnessModels,
-  type AgentModel,
-  type ModelSetting,
-} from "../models";
+import { setHarnessModels, type AgentModel, type ModelSetting } from "../models";
 import {
   execChild,
   killChild,
@@ -194,9 +190,9 @@ export const CLAUDE_MODEL_CATALOG: AgentModel[] = [
   },
 ];
 
-const PROBE_ID = "wavecode-claude-probe";
-const LIST_MODELS_REQUEST_ID = "wavecode_list_models";
-const INIT_REQUEST_ID = "wavecode_init";
+const PROBE_ID = "wavex-claude-probe";
+const LIST_MODELS_REQUEST_ID = "wavex_list_models";
+const INIT_REQUEST_ID = "wavex_init";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 
 const EFFORT_LABELS: Record<string, string> = {
@@ -216,7 +212,7 @@ export function refreshClaudeCatalog(): Promise<void> {
       if (models.length > 0) setHarnessModels("claude", models);
     })
     .catch((error: unknown) => {
-      console.debug("[wavecode] claude catalog", error);
+      console.debug("[wavex] claude catalog", error);
     })
     .finally(() => {
       inflight = null;
@@ -226,7 +222,7 @@ export function refreshClaudeCatalog(): Promise<void> {
 
 async function discoverClaudeModels(): Promise<AgentModel[]> {
   const listed = await discoverViaListModels().catch((error: unknown) => {
-    console.debug("[wavecode] claude list_models catalog failed", error);
+    console.debug("[wavex] claude list_models catalog failed", error);
     return [];
   });
   if (listed.length > 0) return listed;
@@ -251,9 +247,7 @@ async function discoverViaListModels(): Promise<AgentModel[]> {
     asked = true;
     void writeChild(
       PROBE_ID,
-      JSON.stringify(
-        buildControlRequest(LIST_MODELS_REQUEST_ID, { subtype: "list_models" }),
-      ),
+      JSON.stringify(buildControlRequest(LIST_MODELS_REQUEST_ID, { subtype: "list_models" })),
     ).catch((error: unknown) => {
       failed?.(error instanceof Error ? error : new Error(String(error)));
     });
@@ -279,17 +273,10 @@ async function discoverViaListModels(): Promise<AgentModel[]> {
   );
 
   try {
-    await spawnChild(
-      PROBE_ID,
-      path,
-      buildClaudeSpawnArgs({ isolated: true, sessionId }),
-      cwd,
-    );
+    await spawnChild(PROBE_ID, path, buildClaudeSpawnArgs({ isolated: true, sessionId }), cwd);
     await writeChild(
       PROBE_ID,
-      JSON.stringify(
-        buildControlRequest(INIT_REQUEST_ID, { subtype: "initialize" }),
-      ),
+      JSON.stringify(buildControlRequest(INIT_REQUEST_ID, { subtype: "initialize" })),
     );
     return await withTimeout(DISCOVERY_TIMEOUT_MS, pending, () => {
       void stop();
@@ -307,11 +294,7 @@ async function discoverViaVersion(): Promise<AgentModel[]> {
   return modelsForClaudeVersion(version);
 }
 
-function withTimeout<T>(
-  ms: number,
-  promise: Promise<T>,
-  onTimeout: () => void,
-): Promise<T> {
+function withTimeout<T>(ms: number, promise: Promise<T>, onTimeout: () => void): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       onTimeout();
@@ -369,10 +352,7 @@ function modelFromListRow(raw: unknown): AgentModel | null {
   };
 }
 
-function settingsFromListRow(
-  rec: Record<string, unknown>,
-  context1m: boolean,
-): ModelSetting[] {
+function settingsFromListRow(rec: Record<string, unknown>, context1m: boolean): ModelSetting[] {
   const settings: ModelSetting[] = [];
   const levels = advertisedEffortLevels(rec);
   if (rec.supportsEffort === true || levels.length > 0) {
@@ -393,9 +373,10 @@ function advertisedEffortLevels(rec: Record<string, unknown>): string[] {
 
 function effortSetting(levels: string[]): ModelSetting {
   const known = levels.filter((level) => EFFORT_LABELS[level]);
-  const options = (known.length > 0 ? known : ["low", "medium", "high", "max"]).map(
-    (value) => ({ value, label: EFFORT_LABELS[value] ?? value }),
-  );
+  const options = (known.length > 0 ? known : ["low", "medium", "high", "max"]).map((value) => ({
+    value,
+    label: EFFORT_LABELS[value] ?? value,
+  }));
   if (options.some((option) => option.value === "xhigh")) {
     options.push({ value: "ultracode", label: "Ultracode" });
   }
@@ -412,11 +393,7 @@ function effortSetting(levels: string[]): ModelSetting {
   };
 }
 
-function pickerName(
-  displayName: string,
-  description: string,
-  fallback: string,
-): string {
+function pickerName(displayName: string, description: string, fallback: string): string {
   const name = displayName.trim();
   const head = description.split("·")[0]?.trim() ?? "";
   if (
@@ -441,30 +418,20 @@ function claudeCatalogId(nativeId: string): string {
   return `claude:${slug}`;
 }
 
-export function modelsForClaudeVersion(
-  version: string | null | undefined,
-): AgentModel[] {
+export function modelsForClaudeVersion(version: string | null | undefined): AgentModel[] {
   return CLAUDE_MODEL_CATALOG.filter((model) => {
     const slug = model.nativeId ?? "";
     if (slug === "claude-opus-5") {
-      return version
-        ? compareSemver(version, MINIMUM_CLAUDE_OPUS_5_VERSION) >= 0
-        : false;
+      return version ? compareSemver(version, MINIMUM_CLAUDE_OPUS_5_VERSION) >= 0 : false;
     }
     if (slug === "claude-fable-5") {
-      return version
-        ? compareSemver(version, MINIMUM_CLAUDE_FABLE_5_VERSION) >= 0
-        : false;
+      return version ? compareSemver(version, MINIMUM_CLAUDE_FABLE_5_VERSION) >= 0 : false;
     }
     if (slug === "claude-opus-4-8") {
-      return version
-        ? compareSemver(version, MINIMUM_CLAUDE_OPUS_4_8_VERSION) >= 0
-        : false;
+      return version ? compareSemver(version, MINIMUM_CLAUDE_OPUS_4_8_VERSION) >= 0 : false;
     }
     if (slug === "claude-opus-4-7") {
-      return version
-        ? compareSemver(version, MINIMUM_CLAUDE_OPUS_4_7_VERSION) >= 0
-        : false;
+      return version ? compareSemver(version, MINIMUM_CLAUDE_OPUS_4_7_VERSION) >= 0 : false;
     }
     return true;
   });

@@ -2,18 +2,8 @@ import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { promptBlocks } from "../attachments";
 import { AcpClient, type AcpHandlers } from "./acp";
-import {
-  killChild,
-  resolveCursorBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
-import {
-  readStoredCursorToolCalls,
-  type StoredCursorToolCall,
-} from "./cursorStore";
-import { stopCursorTitleGeneration } from "./cursorTitle";
+import { killChild, resolveCursorBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import { readStoredCursorToolCalls, type StoredCursorToolCall } from "./cursorStore";
 import type { ApprovalDecision, HarnessEvent, SendTurnInput, SteerTurnInput } from "./types";
 import {
   CUSTOM_OPTION_ID,
@@ -95,19 +85,21 @@ export async function sendCursorTurn(input: SendTurnInput): Promise<void> {
 
   live.onEvent = input.onEvent;
   live.runtimeMode = input.runtimeMode;
-  live.turns = live.turns.catch(() => undefined).then(async () => {
-    live.cancelled = false;
-    live.muteUpdates = false;
-    scheduleCursorToolEnrichment(live, 0);
-    try {
-      await applyModelSelection(live, input);
-      if (live.cancelled) return;
-      await prompt(live, input);
-    } catch (error) {
-      if (live.cancelled) return;
-      throw error;
-    }
-  });
+  live.turns = live.turns
+    .catch(() => undefined)
+    .then(async () => {
+      live.cancelled = false;
+      live.muteUpdates = false;
+      scheduleCursorToolEnrichment(live, 0);
+      try {
+        await applyModelSelection(live, input);
+        if (live.cancelled) return;
+        await prompt(live, input);
+      } catch (error) {
+        if (live.cancelled) return;
+        throw error;
+      }
+    });
   await live.turns;
 }
 
@@ -160,9 +152,7 @@ export async function cancelCursorTurn(sessionId: string): Promise<void> {
   live.approvals.clear();
   for (const [, resolve] of live.questions) resolve({ kind: "skipped" });
   live.questions.clear();
-  await live.acp
-    .notify("session/cancel", { sessionId: live.acpSessionId })
-    .catch(() => undefined);
+  await live.acp.notify("session/cancel", { sessionId: live.acpSessionId }).catch(() => undefined);
   live.acp.rejectPending(new Error("cancelled"));
 }
 
@@ -189,15 +179,10 @@ export async function stopCursorSession(sessionId: string): Promise<void> {
 export async function forgetCursorSession(sessionId: string): Promise<void> {
   resumeByThread.delete(sessionId);
   await stopCursorSession(sessionId);
-  await stopCursorTitleGeneration(sessionId);
 }
 
-/** Seed ACP resume state for a restored wavecode session. */
-export function bindCursorSession(
-  threadId: string,
-  acpSessionId: string,
-  cwd: string,
-): void {
+/** Seed ACP resume state for a restored wavex session. */
+export function bindCursorSession(threadId: string, acpSessionId: string, cwd: string): void {
   const sessionId = acpSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
   resumeByThread.set(threadId, { acpSessionId: sessionId, cwd });
@@ -255,11 +240,9 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     await acp.request("initialize", {
       protocolVersion: 1,
       clientCapabilities: CLIENT_CAPABILITIES,
-      clientInfo: { name: "wavecode", version: "0.1.0" },
+      clientInfo: { name: "wavex", version: "0.1.0" },
     });
-    await acp
-      .request("authenticate", { methodId: "cursor_login" })
-      .catch(() => undefined);
+    await acp.request("authenticate", { methodId: "cursor_login" }).catch(() => undefined);
 
     let setup: SessionSetupResult | undefined;
     let acpSessionId: string | undefined;
@@ -330,10 +313,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
   }
 }
 
-async function applyModelSelection(
-  live: Live,
-  input: SendTurnInput,
-): Promise<void> {
+async function applyModelSelection(live: Live, input: SendTurnInput): Promise<void> {
   const base = nativeModelId(input.model);
   const settings = input.modelSettings ?? {};
 
@@ -363,14 +343,11 @@ async function setConfigOption(
   const current = live.configOptions.find((option) => option.id === configId);
   if (current && String(current.currentValue ?? "") === String(value)) return;
 
-  const result = await live.acp.request<SessionSetupResult>(
-    "session/set_config_option",
-    {
-      sessionId: live.acpSessionId,
-      configId,
-      value,
-    },
-  );
+  const result = await live.acp.request<SessionSetupResult>("session/set_config_option", {
+    sessionId: live.acpSessionId,
+    configId,
+    value,
+  });
   if (result?.configOptions) {
     live.configOptions = readConfigOptions(result.configOptions);
     live.modelConfigId = extractModelConfigId(result) || live.modelConfigId;
@@ -421,12 +398,7 @@ function handleNotification(live: Live, method: string, params: unknown) {
   }
 }
 
-async function handleRequest(
-  live: Live,
-  id: number,
-  method: string,
-  params: unknown,
-) {
+async function handleRequest(live: Live, id: number, method: string, params: unknown) {
   if (method === "session/request_permission") {
     await handlePermission(live, id, params);
     return;
@@ -445,16 +417,11 @@ async function handleRequest(
   await live.acp.respond(id, {}).catch(() => undefined);
 }
 
-async function handleAskQuestion(
-  live: Live,
-  id: number,
-  params: unknown,
-) {
+async function handleAskQuestion(live: Live, id: number, params: unknown) {
   const rec = asRecord(params);
   const questions = questionsFromUnknown(params);
   const title =
-    (typeof rec?.title === "string" && rec.title.trim()) ||
-    questionPromptTitle(questions);
+    (typeof rec?.title === "string" && rec.title.trim()) || questionPromptTitle(questions);
   const callId =
     typeof rec?.toolCallId === "string"
       ? rec.toolCallId
@@ -479,9 +446,7 @@ async function handleAskQuestion(
     decision: reply.kind,
   });
 
-  await live.acp
-    .respond(id, cursorAskQuestionResponse(reply, questions))
-    .catch(() => undefined);
+  await live.acp.respond(id, cursorAskQuestionResponse(reply, questions)).catch(() => undefined);
 }
 
 function cursorAskQuestionResponse(
@@ -508,11 +473,7 @@ async function handlePermission(live: Live, id: number, params: unknown) {
   const rec = asRecord(params);
   const subject = asRecord(rec?.subject);
   const tool =
-    asRecord(rec?.toolCall) ??
-    asRecord(subject?.toolCall) ??
-    asRecord(subject) ??
-    rec ??
-    {};
+    asRecord(rec?.toolCall) ?? asRecord(subject?.toolCall) ?? asRecord(subject) ?? rec ?? {};
   const command = stringField(subject ?? {}, "command");
   const kind = stringField(tool, "kind") ?? stringField(subject ?? {}, "kind");
   const preview = mergeToolPreview(
@@ -523,25 +484,10 @@ async function handlePermission(live: Live, id: number, params: unknown) {
     composeToolTitle({
       kind,
       title: toolLabel(tool, subject ?? tool) ?? command ?? stringField(rec ?? {}, "title"),
-      command:
-        command ??
-        extractShellCommand(
-          tool.rawInput,
-          tool.raw_input,
-          tool.input,
-          subject,
-        ),
-      skill: extractSkillName(
-        tool.rawInput,
-        tool.raw_input,
-        tool.input,
-        subject,
-      ),
+      command: command ?? extractShellCommand(tool.rawInput, tool.raw_input, tool.input, subject),
+      skill: extractSkillName(tool.rawInput, tool.raw_input, tool.input, subject),
       path: preview?.path,
-      query:
-        preview?.query ??
-        extractSearchQuery(tool) ??
-        extractSearchQuery(subject),
+      query: preview?.query ?? extractSearchQuery(tool) ?? extractSearchQuery(subject),
       previewKind: preview?.kind,
     }) || "Permission";
   const callId =
@@ -611,9 +557,7 @@ function handleSessionUpdate(live: Live, params: unknown) {
   const rec = asRecord(params);
   const update = asRecord(rec?.update) ?? rec;
   if (!update) return;
-  const kind = String(
-    update.sessionUpdate ?? update.session_update ?? update.type ?? "",
-  );
+  const kind = String(update.sessionUpdate ?? update.session_update ?? update.type ?? "");
 
   if (kind === "agent_message_chunk" || kind === "agent_message") {
     // Whole-message arrays contain distinct content blocks; chunks are exact deltas.
@@ -635,17 +579,11 @@ function handleSessionUpdate(live: Live, params: unknown) {
   if (kind === "tool_call" || kind === "tool_call_update" || kind === "tool_call_content_chunk") {
     const tool = asRecord(update.toolCall) ?? asRecord(update.tool_call) ?? update;
     const callId = String(
-      tool.toolCallId ??
-        tool.tool_call_id ??
-        update.toolCallId ??
-        update.tool_call_id ??
-        "",
+      tool.toolCallId ?? tool.tool_call_id ?? update.toolCallId ?? update.tool_call_id ?? "",
     );
     if (!callId) return;
-    const toolKind =
-      coerceMaybeString(update, "kind") ?? coerceMaybeString(tool, "kind");
-    const status =
-      coerceMaybeString(update, "status") ?? coerceMaybeString(tool, "status");
+    const toolKind = coerceMaybeString(update, "kind") ?? coerceMaybeString(tool, "kind");
+    const status = coerceMaybeString(update, "status") ?? coerceMaybeString(tool, "status");
     if (status) live.toolStatuses.set(callId, status);
     const detail = toolDetail(update, tool);
     const preview = extractToolPreview(update, tool);
@@ -716,11 +654,7 @@ function needsCursorToolEnrichment(
   return !title || isWeakToolTitle(title);
 }
 
-function queueCursorToolEnrichment(
-  live: Live,
-  callId: string,
-  kind?: string,
-): void {
+function queueCursorToolEnrichment(live: Live, callId: string, kind?: string): void {
   if (live.enrichedTools.has(callId)) return;
   const pending = live.pendingToolEnrichments.get(callId);
   live.pendingToolEnrichments.set(callId, {
@@ -752,20 +686,13 @@ function wakeCursorToolEnrichment(live: Live): void {
 }
 
 async function refreshCursorToolEnrichments(live: Live): Promise<void> {
-  if (
-    live.muteUpdates ||
-    live.toolEnrichmentRunning ||
-    live.pendingToolEnrichments.size === 0
-  ) {
+  if (live.muteUpdates || live.toolEnrichmentRunning || live.pendingToolEnrichments.size === 0) {
     return;
   }
   live.toolEnrichmentRunning = true;
   const callIds = [...live.pendingToolEnrichments.keys()].slice(0, 256);
   try {
-    const storedCalls = await readStoredCursorToolCalls(
-      live.acpSessionId,
-      callIds,
-    ).catch(() => []);
+    const storedCalls = await readStoredCursorToolCalls(live.acpSessionId, callIds).catch(() => []);
     if (live.muteUpdates) return;
 
     for (const stored of storedCalls) {
@@ -831,26 +758,13 @@ function applyStoredCursorToolCall(
   return true;
 }
 
-function kindFromCursorToolName(
-  name: string | undefined,
-  fallback?: string,
-): string | undefined {
+function kindFromCursorToolName(name: string | undefined, fallback?: string): string | undefined {
   const key = (name ?? "").toLowerCase();
-  if (
-    key === "grep" ||
-    key === "glob" ||
-    key === "rg" ||
-    key.includes("search")
-  ) {
+  if (key === "grep" || key === "glob" || key === "rg" || key.includes("search")) {
     return "search";
   }
   if (key === "read") return "read";
-  if (
-    key === "edit" ||
-    key === "write" ||
-    key === "strreplace" ||
-    key === "applypatch"
-  ) {
+  if (key === "edit" || key === "write" || key === "strreplace" || key === "applypatch") {
     return "edit";
   }
   if (key === "shell" || key === "bash") return "execute";
@@ -904,8 +818,7 @@ function readConfigOptions(raw: unknown): SessionConfigOption[] {
         id,
         category: typeof rec?.category === "string" ? rec.category : undefined,
         currentValue:
-          typeof rec?.currentValue === "string" ||
-          typeof rec?.currentValue === "boolean"
+          typeof rec?.currentValue === "string" || typeof rec?.currentValue === "boolean"
             ? rec.currentValue
             : undefined,
       },
@@ -937,17 +850,14 @@ function resolveSettingConfigId(
   }
   if (needle === "fast" || needle === "fastmode") {
     return options.find(
-      (option) =>
-        option.id === "fast" || option.id.toLowerCase().includes("fast"),
+      (option) => option.id === "fast" || option.id.toLowerCase().includes("fast"),
     )?.id;
   }
   if (needle === "thinking") {
     return options.find((option) => option.id === "thinking")?.id;
   }
   if (needle === "context" || needle === "contextwindow") {
-    return options.find(
-      (option) => option.id === "context" || option.id === "context_size",
-    )?.id;
+    return options.find((option) => option.id === "context" || option.id === "context_size")?.id;
   }
   return undefined;
 }
@@ -997,9 +907,7 @@ function toolDetail(
   update: Record<string, unknown>,
   tool: Record<string, unknown>,
 ): string | undefined {
-  const content =
-    textFromContent(update.content, "\n") ||
-    textFromContent(tool.content, "\n");
+  const content = textFromContent(update.content, "\n") || textFromContent(tool.content, "\n");
   if (content.trim()) return capToolDetail(content);
   const output = update.rawOutput ?? tool.rawOutput;
   if (typeof output === "string" && output.trim()) return capToolDetail(output);
@@ -1037,9 +945,7 @@ function inputLabel(value: unknown): string | undefined {
 
   const from = stringField(raw, "old_path") ?? stringField(raw, "from");
   const to =
-    stringField(raw, "new_path") ??
-    stringField(raw, "to") ??
-    stringField(raw, "destination");
+    stringField(raw, "new_path") ?? stringField(raw, "to") ?? stringField(raw, "destination");
   if (from && to) return `${shortPath(from)} → ${shortPath(to)}`;
 
   const path =
@@ -1065,9 +971,7 @@ function inputLabel(value: unknown): string | undefined {
   if (name && query) return `${name} ${query}`;
   if (query) return query;
 
-  const nested = inputLabel(
-    raw.arguments ?? raw.args ?? raw.input ?? raw.params,
-  );
+  const nested = inputLabel(raw.arguments ?? raw.args ?? raw.input ?? raw.params);
   if (name && nested) return `${name} ${nested}`;
   if (nested) return nested;
   if (name) return name;
@@ -1076,12 +980,7 @@ function inputLabel(value: unknown): string | undefined {
 
 function firstStringArg(raw: Record<string, unknown>): string | undefined {
   for (const [key, value] of Object.entries(raw)) {
-    if (
-      key === "name" ||
-      key === "toolName" ||
-      key === "kind" ||
-      key === "type"
-    ) {
+    if (key === "name" || key === "toolName" || key === "kind" || key === "type") {
       continue;
     }
     if (typeof value === "string" && value.trim() && !looksLikeCallId(value)) {
@@ -1100,9 +999,7 @@ function contentPath(content: unknown): string | undefined {
   }
   for (const item of content) {
     const rec = asRecord(item);
-    const path =
-      rec &&
-      (stringField(rec, "path") ?? contentPath(rec.content ?? rec.diff));
+    const path = rec && (stringField(rec, "path") ?? contentPath(rec.content ?? rec.diff));
     if (path) return path;
   }
   return undefined;
@@ -1113,10 +1010,7 @@ function locationLabel(locations: unknown): string | undefined {
   for (const item of locations) {
     const rec = asRecord(item);
     const path =
-      rec &&
-      (stringField(rec, "path") ??
-        stringField(rec, "uri") ??
-        stringField(rec, "file"));
+      rec && (stringField(rec, "path") ?? stringField(rec, "uri") ?? stringField(rec, "file"));
     if (path) return shortPath(path);
   }
   return undefined;
@@ -1125,17 +1019,10 @@ function locationLabel(locations: unknown): string | undefined {
 function metaLabel(meta: unknown): string | undefined {
   const rec = asRecord(meta);
   if (!rec) return undefined;
-  return (
-    humanField(rec, "toolName") ??
-    humanField(rec, "name") ??
-    humanField(rec, "displayName")
-  );
+  return humanField(rec, "toolName") ?? humanField(rec, "name") ?? humanField(rec, "displayName");
 }
 
-function humanField(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function humanField(rec: Record<string, unknown>, key: string): string | undefined {
   const value = stringField(rec, key);
   if (!value || looksLikeCallId(value)) return undefined;
   return value;
@@ -1180,9 +1067,7 @@ function looksLikeCallId(value: string): boolean {
   const text = value.trim();
   return (
     /^(call[-_]?|tool[-_])[a-z0-9_-]+$/i.test(text) ||
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      text,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text)
   );
 }
 
@@ -1193,17 +1078,11 @@ function shortPath(path: string): string {
   return parts.slice(-2).join("/");
 }
 
-function coerceMaybeString(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function coerceMaybeString(rec: Record<string, unknown>, key: string): string | undefined {
   return stringField(rec, key);
 }
 
-function stringField(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function stringField(rec: Record<string, unknown>, key: string): string | undefined {
   const value = rec[key];
   return typeof value === "string" && value.trim() ? value : undefined;
 }
@@ -1231,8 +1110,7 @@ function joinContentParts(parts: string[], separator: string): string {
       joined = part;
       continue;
     }
-    const boundaryAlreadyPresent =
-      !separator || /\s$/.test(joined) || /^\s/.test(part);
+    const boundaryAlreadyPresent = !separator || /\s$/.test(joined) || /^\s/.test(part);
     joined += boundaryAlreadyPresent ? part : separator + part;
   }
   return joined;

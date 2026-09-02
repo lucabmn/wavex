@@ -87,13 +87,10 @@ const liveByThread = new Map<string, Live>();
 const resumeByThread = new Map<string, Resume>();
 const cancelledThreads = new Set<string>();
 
-let resolveOpenCodeBinaryImpl: () => Promise<{ path: string }> =
-  resolveOpenCodeBinary;
+let resolveOpenCodeBinaryImpl: () => Promise<{ path: string }> = resolveOpenCodeBinary;
 
 /** Test seam. */
-export function setOpenCodeBinaryResolver(
-  fn: () => Promise<{ path: string }>,
-): void {
+export function setOpenCodeBinaryResolver(fn: () => Promise<{ path: string }>): void {
   resolveOpenCodeBinaryImpl = fn;
 }
 
@@ -109,16 +106,18 @@ export async function sendOpenCodeTurn(input: SendTurnInput): Promise<void> {
 
   live.onEvent = input.onEvent;
   live.runtimeMode = input.runtimeMode;
-  live.turns = live.turns.catch(() => undefined).then(async () => {
-    live.cancelled = false;
-    live.muteUpdates = false;
-    try {
-      await runTurn(live, input);
-    } catch (error) {
-      if (live.cancelled) return;
-      throw error;
-    }
-  });
+  live.turns = live.turns
+    .catch(() => undefined)
+    .then(async () => {
+      live.cancelled = false;
+      live.muteUpdates = false;
+      try {
+        await runTurn(live, input);
+      } catch (error) {
+        if (live.cancelled) return;
+        throw error;
+      }
+    });
   await live.turns;
 }
 
@@ -134,9 +133,7 @@ export async function steerOpenCodeTurn(input: SteerTurnInput): Promise<void> {
   }
 
   const parts = [
-    ...(input.text.trim()
-      ? [{ type: "text" as const, text: input.text.trim() }]
-      : []),
+    ...(input.text.trim() ? [{ type: "text" as const, text: input.text.trim() }] : []),
     ...toOpenCodeFileParts(input.attachments),
   ];
   if (parts.length === 0) return;
@@ -185,10 +182,7 @@ export async function cancelOpenCodeTurn(sessionId: string): Promise<void> {
   for (const [, pending] of live.questions) pending.resolve({ kind: "skipped" });
   live.questions.clear();
   await live.client.abortSession(live.openCodeSessionId);
-  finishActiveTurn(live, [
-    { type: "message.completed" },
-    { type: "reasoning.completed" },
-  ]);
+  finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
 export async function stopOpenCodeSession(sessionId: string): Promise<void> {
@@ -363,15 +357,11 @@ async function resolveSession(
     try {
       const adopted = await client.getSession(input.resume.sessionId);
       if (!adopted.directory || sameDirectory(adopted.directory, input.cwd)) {
-        await client
-          .updateSession(adopted.id, { permission })
-          .catch(() => undefined);
+        await client.updateSession(adopted.id, { permission }).catch(() => undefined);
         return adopted;
       }
       const forked = await client.forkSession(adopted.id, input.cwd);
-      await client
-        .updateSession(forked.id, { permission })
-        .catch(() => undefined);
+      await client.updateSession(forked.id, { permission }).catch(() => undefined);
       return forked;
     } catch (error) {
       if (!isOpenCodeNotFound(error) && !isHttpNotFound(error)) throw error;
@@ -388,9 +378,7 @@ async function runTurn(live: Live, input: SendTurnInput): Promise<void> {
     );
   }
   const parts = [
-    ...(input.text.trim()
-      ? [{ type: "text" as const, text: input.text.trim() }]
-      : []),
+    ...(input.text.trim() ? [{ type: "text" as const, text: input.text.trim() }] : []),
     ...toOpenCodeFileParts(input.attachments),
   ];
   if (parts.length === 0) return;
@@ -454,12 +442,8 @@ function handleEvent(live: Live, event: Record<string, unknown>): void {
       if (!partID || !delta) break;
       const existing = live.partById.get(partID);
       if (!existing || roleForPart(live, existing) !== "assistant") break;
-      const previous =
-        live.emittedTextByPartId.get(partID) ?? existing.text ?? "";
-      const { nextText, deltaToEmit } = appendOpenCodeAssistantTextDelta(
-        previous,
-        delta,
-      );
+      const previous = live.emittedTextByPartId.get(partID) ?? existing.text ?? "";
+      const { nextText, deltaToEmit } = appendOpenCodeAssistantTextDelta(previous, delta);
       live.emittedTextByPartId.set(partID, nextText);
       if (existing.type === "text" || existing.type === "reasoning") {
         live.partById.set(partID, { ...existing, text: nextText });
@@ -566,10 +550,7 @@ function handleEvent(live: Live, event: Record<string, unknown>): void {
         break;
       }
       if (statusType === "idle" && live.activeTurn) {
-        finishActiveTurn(live, [
-          { type: "message.completed" },
-          { type: "reasoning.completed" },
-        ]);
+        finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
       }
       break;
     }
@@ -588,18 +569,13 @@ function handleEvent(live: Live, event: Record<string, unknown>): void {
  * OpenCode reports tokens per assistant message but not the window, so the
  * window comes from the catalog entry for the model that produced it.
  */
-function emitContext(
-  live: Live,
-  info: Record<string, unknown> | null,
-): void {
+function emitContext(live: Live, info: Record<string, unknown> | null): void {
   const used = contextUsedFromMessageInfo(info);
   if (used === undefined) return;
   const providerID = stringField(info, "providerID");
   const modelID = stringField(info, "modelID");
   const window =
-    providerID && modelID
-      ? modelContextWindow(`opencode:${providerID}/${modelID}`)
-      : undefined;
+    providerID && modelID ? modelContextWindow(`opencode:${providerID}/${modelID}`) : undefined;
   live.onEvent({ type: "context", used, ...(window ? { window } : {}) });
 }
 
@@ -649,30 +625,19 @@ function emitTool(live: Live, part: OpenCodePart): void {
     callId,
     title,
     kind,
-    status:
-      status === "error"
-        ? "failed"
-        : status === "completed"
-          ? "completed"
-          : status,
+    status: status === "error" ? "failed" : status === "completed" ? "completed" : status,
     detail,
     preview,
   });
 }
 
-async function waitApproval(
-  live: Live,
-  uiId: number,
-  id: string,
-): Promise<void> {
+async function waitApproval(live: Live, uiId: number, id: string): Promise<void> {
   const decision = await new Promise<ApprovalDecision>((resolve) => {
     live.approvals.set(uiId, { id, resolve });
   });
   live.approvals.delete(uiId);
   live.onEvent({ type: "approval.resolved", requestId: uiId, decision });
-  await live.client
-    .replyPermission(id, toOpenCodePermissionReply(decision))
-    .catch(() => undefined);
+  await live.client.replyPermission(id, toOpenCodePermissionReply(decision)).catch(() => undefined);
 }
 
 async function waitQuestion(
@@ -694,9 +659,7 @@ async function waitQuestion(
     await live.client.rejectQuestion(id).catch(() => undefined);
     return;
   }
-  const answers = questions.map((question) =>
-    selectedAnswerLabels(question, reply),
-  );
+  const answers = questions.map((question) => selectedAnswerLabels(question, reply));
   await live.client.replyQuestion(id, answers).catch(() => undefined);
 }
 
@@ -751,8 +714,7 @@ function roleForPart(
 }
 
 function sameDirectory(left: string, right: string): boolean {
-  const normalize = (value: string) =>
-    value.replace(/\/+$/, "").replace(/\\/g, "/");
+  const normalize = (value: string) => value.replace(/\/+$/, "").replace(/\\/g, "/");
   return normalize(left) === normalize(right);
 }
 
@@ -765,7 +727,7 @@ async function assertOpenCodeVersion(path: string, cwd: string): Promise<void> {
   const version = parseOpenCodeVersion(output);
   if (!version) {
     throw new Error(
-      `Unable to determine OpenCode version. wavecode requires v${MINIMUM_OPENCODE_VERSION} or newer.`,
+      `Unable to determine OpenCode version. wavex requires v${MINIMUM_OPENCODE_VERSION} or newer.`,
     );
   }
   if (compareSemver(version, MINIMUM_OPENCODE_VERSION) < 0) {
@@ -790,9 +752,7 @@ function waitForServerUrl(
       }
       if (exited() !== undefined) {
         reject(
-          new Error(
-            `OpenCode server exited before startup completed (code: ${String(exited())}).`,
-          ),
+          new Error(`OpenCode server exited before startup completed (code: ${String(exited())}).`),
         );
         return;
       }

@@ -1,13 +1,12 @@
 import { Check, CircleDot, GitPullRequest } from "./icons";
 import { type ReactNode } from "react";
-import type { InboxKind } from "../lib/githubTasks";
+import type { InboxKind } from "../lib/inbox/githubTasks";
 import {
   DEFAULT_INBOX_FILTERS,
   hasActiveInboxFilters,
   type InboxFilters,
-  type InboxSource,
   type InboxTimeFilter,
-} from "../lib/inboxFilters";
+} from "../lib/inbox/inboxFilters";
 import { Popover } from "./Popover";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 
@@ -23,7 +22,6 @@ type Props = {
   x: number;
   y: number;
   projects: ProjectOption[];
-  source: InboxSource;
   filters: InboxFilters;
   onChange: (filters: InboxFilters) => void;
   onClose: () => void;
@@ -53,15 +51,7 @@ const KIND_OPTIONS: {
   },
 ];
 
-export function InboxFiltersMenu({
-  x,
-  y,
-  projects,
-  source,
-  filters,
-  onChange,
-  onClose,
-}: Props) {
+export function InboxFiltersMenu({ x, y, projects, filters, onChange, onClose }: Props) {
   const hiddenProjects = new Set(filters.hiddenProjects);
   const hiddenKinds = new Set(filters.hiddenKinds);
 
@@ -106,37 +96,25 @@ export function InboxFiltersMenu({
       onContextMenu={(event) => event.preventDefault()}
       className="overflow-y-auto overscroll-none p-1"
     >
-      <FilterItem
-        label="Assigned to me"
-        checked={filters.assignedToMe}
-        onClick={toggleAssigned}
-      />
+      <FilterItem label="Assigned to me" checked={filters.assignedToMe} onClick={toggleAssigned} />
 
       <SectionLabel>Status</SectionLabel>
+      <FilterItem label="Open" checked={filters.status.open} onClick={() => toggleStatus("open")} />
       <FilterItem
-        label="Open"
-        checked={filters.status.open}
-        onClick={() => toggleStatus("open")}
+        label="Draft"
+        checked={filters.status.draft}
+        onClick={() => toggleStatus("draft")}
       />
-      {source === "github" ? (
-        <FilterItem
-          label="Draft"
-          checked={filters.status.draft}
-          onClick={() => toggleStatus("draft")}
-        />
-      ) : null}
       <FilterItem
         label="Closed"
         checked={filters.status.closed}
         onClick={() => toggleStatus("closed")}
       />
-      {source === "github" ? (
-        <FilterItem
-          label="Merged"
-          checked={filters.status.merged}
-          onClick={() => toggleStatus("merged")}
-        />
-      ) : null}
+      <FilterItem
+        label="Merged"
+        checked={filters.status.merged}
+        onClick={() => toggleStatus("merged")}
+      />
 
       <SectionLabel>Time</SectionLabel>
       {TIME_OPTIONS.map((option) => (
@@ -148,22 +126,18 @@ export function InboxFiltersMenu({
         />
       ))}
 
-      {source === "github" ? (
-        <>
-          <SectionLabel>Type</SectionLabel>
-          {KIND_OPTIONS.map((option) => (
-            <FilterItem
-              key={option.id}
-              label={option.label}
-              checked={!hiddenKinds.has(option.id)}
-              icon={option.icon}
-              onClick={() => toggleKind(option.id)}
-            />
-          ))}
-        </>
-      ) : null}
+      <SectionLabel>Type</SectionLabel>
+      {KIND_OPTIONS.map((option) => (
+        <FilterItem
+          key={option.id}
+          label={option.label}
+          checked={!hiddenKinds.has(option.id)}
+          icon={option.icon}
+          onClick={() => toggleKind(option.id)}
+        />
+      ))}
 
-      {source === "github" && projects.length > 0 ? (
+      {projects.length > 0 ? (
         <>
           <SectionLabel>Projects</SectionLabel>
           {projects.map((project) => (
@@ -186,7 +160,7 @@ export function InboxFiltersMenu({
         </>
       ) : null}
 
-      {hasActiveInboxFilters(filters, source) ? (
+      {hasActiveInboxFilters(filters) ? (
         <>
           <div role="separator" className="my-1 h-px bg-content/10" />
           <button
@@ -234,9 +208,7 @@ function FilterItem({
     >
       {icon}
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {checked ? (
-        <Check className="size-3.5 shrink-0" strokeWidth={2.25} />
-      ) : null}
+      {checked ? <Check className="size-3.5 shrink-0" strokeWidth={2.25} /> : null}
     </button>
   );
 }

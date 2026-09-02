@@ -6,8 +6,8 @@ import {
   readAppVersion,
   runUpdateFlow,
   type UpdaterSnapshot,
-} from "../lib/updater";
-import type { InstalledUpdate } from "../lib/updateNotice";
+} from "../lib/updates/updater";
+import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import { UpdateRailCard } from "./UpdateRailCard";
 
 export function SidebarUpdateFooter({
@@ -22,11 +22,7 @@ export function SidebarUpdateFooter({
   return (
     <div className="flex flex-col gap-1.5 p-2 pb-1">
       {update && onOpenWhatsNew && onDismissUpdate ? (
-        <UpdateRailCard
-          update={update}
-          onOpen={onOpenWhatsNew}
-          onDismiss={onDismissUpdate}
-        />
+        <UpdateRailCard update={update} onOpen={onOpenWhatsNew} onDismiss={onDismissUpdate} />
       ) : null}
       <SidebarUpdate />
     </div>
@@ -83,8 +79,7 @@ export function SidebarUpdate() {
     await runUpdateFlow(true, setSnapshot);
   }, [snapshot.phase]);
 
-  const busy =
-    snapshot.phase === "checking" || snapshot.phase === "downloading";
+  const busy = snapshot.phase === "checking" || snapshot.phase === "downloading";
   const hasUpdate = snapshot.phase === "available";
   const label = hasUpdate
     ? `Update to ${snapshot.availableVersion}`
@@ -111,17 +106,11 @@ export function SidebarUpdate() {
         ) : hasUpdate ? (
           <ArrowDownCircle className="size-4 text-accent" aria-hidden />
         ) : (
-          <RefreshCw
-            className="size-4 opacity-70"
-            strokeWidth={1.75}
-            aria-hidden
-          />
+          <RefreshCw className="size-4 opacity-70" strokeWidth={1.75} aria-hidden />
         )}
       </span>
       <span className="min-w-0 flex-1 flex items-center">
-        <span className="block truncate text-[12px] font-medium leading-tight">
-          {label}
-        </span>
+        <span className="block truncate text-[12px] font-medium leading-tight">{label}</span>
         <span className="ml-auto block text-[11px] text-content/40">
           v{snapshot.currentVersion}
         </span>

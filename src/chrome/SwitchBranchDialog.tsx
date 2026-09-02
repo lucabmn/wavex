@@ -107,11 +107,7 @@ export function SwitchBranchDialog({
             className="max-h-40 w-full resize-none overflow-y-auto rounded-md bg-content/10 py-1 pr-8 pl-2 text-[13px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
             onChange={(event) => setMessage(event.target.value)}
             onKeyDown={(event) => {
-              if (
-                (event.metaKey || event.ctrlKey) &&
-                event.key === "Enter" &&
-                canCommit
-              ) {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && canCommit) {
                 event.preventDefault();
                 onCommit(trimmed);
               }
@@ -134,9 +130,7 @@ export function SwitchBranchDialog({
         </div>
 
         {error ? (
-          <p className="whitespace-pre-wrap text-[11px] leading-4 text-red-400/90">
-            {error}
-          </p>
+          <p className="whitespace-pre-wrap text-[11px] leading-4 text-red-400/90">{error}</p>
         ) : null}
 
         <div className="flex flex-wrap justify-end gap-2">

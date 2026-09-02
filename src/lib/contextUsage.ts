@@ -46,8 +46,7 @@ export function contextTooltip(usage: ContextUsage): {
 } {
   const percent = contextPercent(usage);
   return {
-    headline:
-      percent === null ? "Context used" : `${percent}% context used`,
+    headline: percent === null ? "Context used" : `${percent}% context used`,
     detail: usage.window
       ? `${formatTokens(usage.used)} / ${formatTokens(usage.window)} tokens`
       : `${formatTokens(usage.used)} tokens`,
@@ -77,9 +76,7 @@ export function mergeContextUsage(
  * The level still roughly holds — it describes the transcript, not the model —
  * and the next turn re-reports both.
  */
-export function dropContextWindow(
-  usage: ContextUsage | undefined,
-): ContextUsage | undefined {
+export function dropContextWindow(usage: ContextUsage | undefined): ContextUsage | undefined {
   if (!usage) return undefined;
   return { used: usage.used };
 }

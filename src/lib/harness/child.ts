@@ -19,10 +19,7 @@ const sseHandlers = new Map<string, SseHandler>();
 const sseEndHandlers = new Map<string, SseEndHandler>();
 const sseBuffer = new Map<string, string[]>();
 const livePid = new Map<string, number>();
-const pendingExit = new Map<
-  string,
-  Array<{ code: number | null; pid: number }>
->();
+const pendingExit = new Map<string, Array<{ code: number | null; pid: number }>>();
 
 /** True when this exit belongs to the child we currently have spawned. */
 export function isCurrentChildExit(
@@ -40,11 +37,7 @@ let bridgeAttempt: symbol | null = null;
 let users = 0;
 let teardownTimer: ReturnType<typeof setTimeout> | undefined;
 
-function pushBounded(
-  map: Map<string, string[]>,
-  sessionId: string,
-  item: string,
-) {
+function pushBounded(map: Map<string, string[]>, sessionId: string, item: string) {
   const queued = map.get(sessionId) ?? [];
   queued.push(item);
   if (queued.length > MAX_BUFFERED) {
@@ -147,9 +140,7 @@ function teardownBridge() {
   sseBuffer.clear();
   livePid.clear();
   pendingExit.clear();
-  void pending
-    ?.then((fns) => fns.forEach((fn) => fn()))
-    .catch(() => undefined);
+  void pending?.then((fns) => fns.forEach((fn) => fn())).catch(() => undefined);
 }
 
 export function startHarnessBridge(): () => void {
@@ -215,11 +206,7 @@ export function unwatchChild(sessionId: string) {
   pendingExit.delete(sessionId);
 }
 
-export function watchSse(
-  sessionId: string,
-  onData: SseHandler,
-  onEnd?: SseEndHandler,
-) {
+export function watchSse(sessionId: string, onData: SseHandler, onEnd?: SseEndHandler) {
   const queued = sseBuffer.get(sessionId);
   sseBuffer.delete(sessionId);
   sseHandlers.set(sessionId, onData);
@@ -340,10 +327,6 @@ export function closeHarnessSse(sessionId: string): Promise<void> {
   return invoke("harness_sse_close", { sessionId });
 }
 
-export function execChild(
-  command: string,
-  args: string[],
-  cwd?: string,
-): Promise<string> {
+export function execChild(command: string, args: string[], cwd?: string): Promise<string> {
   return invoke("harness_exec", { command, args, cwd });
 }

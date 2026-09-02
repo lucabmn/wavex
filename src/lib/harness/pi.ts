@@ -14,7 +14,7 @@ import type { ApprovalDecision, SendTurnInput, SteerTurnInput } from "./types";
 /**
  * Live Pi adapter. Spawns `pi --mode rpc` with the user's config and extensions
  * loaded (no `--no-extensions`). Todos/subagents packages in `~/.pi/agent`
- * keep working; TUI-only widgets do not appear in wavecode.
+ * keep working; TUI-only widgets do not appear in wavex.
  */
 export function sendPiTurn(input: SendTurnInput): Promise<void> {
   return sendTurn(PI_FLAVOR, input);
@@ -44,17 +44,11 @@ export function forgetPiSession(sessionId: string): Promise<void> {
   return forgetSession(PI_FLAVOR, sessionId);
 }
 
-export function bindPiSession(
-  threadId: string,
-  providerSessionId: string,
-  cwd: string,
-): void {
+export function bindPiSession(threadId: string, providerSessionId: string, cwd: string): void {
   bindSession(PI_FLAVOR, threadId, providerSessionId, cwd);
 }
 
 /** Test seam. */
-export function setPiBinaryResolver(
-  fn: () => Promise<{ path: string }>,
-): void {
+export function setPiBinaryResolver(fn: () => Promise<{ path: string }>): void {
   setFlavorBinaryResolver(PI_FLAVOR, fn);
 }

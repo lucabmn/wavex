@@ -8,10 +8,7 @@ import {
   type IconComponent,
 } from "./icons";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
-import {
-  SETTINGS_SECTIONS,
-  type SettingsSectionId,
-} from "../lib/settings";
+import { SETTINGS_SECTIONS, type SettingsSectionId } from "../lib/settings";
 
 const SECTION_ICONS: Record<SettingsSectionId, IconComponent> = {
   general: SlidersHorizontal,
@@ -78,9 +75,7 @@ function NavRow({
       }`}
     >
       <Icon className="size-4 shrink-0 opacity-70" strokeWidth={1.75} />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-tight">
-        {label}
-      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-tight">{label}</span>
     </button>
   );
 }

@@ -36,20 +36,12 @@ export async function requestOutgoingHandoff(input: {
           brief = mergeStream(brief, event.text);
         }
         if (event.type === "approval.requested") {
-          respondHarnessApproval(
-            input.harness,
-            input.sessionId,
-            event.requestId,
-            "deny",
-          );
+          respondHarnessApproval(input.harness, input.sessionId, event.requestId, "deny");
         }
         if (event.type === "question.asked") {
-          respondHarnessQuestion(
-            input.harness,
-            input.sessionId,
-            event.requestId,
-            { kind: "skipped" },
-          );
+          respondHarnessQuestion(input.harness, input.sessionId, event.requestId, {
+            kind: "skipped",
+          });
         }
       },
     });

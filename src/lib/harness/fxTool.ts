@@ -51,11 +51,7 @@ export function fxToolInfo(
 ): FxToolInfo {
   const rawTitle = stringField(update, "title") ?? stringField(tool, "title");
   const verb = fxToolVerb(rawTitle);
-  const kind = (
-    stringField(update, "kind") ??
-    stringField(tool, "kind") ??
-    ""
-  ).toLowerCase();
+  const kind = (stringField(update, "kind") ?? stringField(tool, "kind") ?? "").toLowerCase();
   const text = resultText(update, tool);
 
   const command = commandResult(update, tool);
@@ -164,9 +160,7 @@ function commandResult(
 }
 
 /** `[grep] 2 matches for export\n - app.ts:1: …` */
-function grepResult(
-  text: string | undefined,
-): { query: string; body?: string } | null {
+function grepResult(text: string | undefined): { query: string; body?: string } | null {
   if (!text) return null;
   const match = /^\[(?:grep|search|glob)\]\s+.*?\bfor\s+(.+?)\s*$/m.exec(text);
   if (!match) return null;
@@ -202,14 +196,10 @@ function listingResult(text: string | undefined): { path: string } | null {
 }
 
 /** `wrote out.txt (4 bytes)` / `edited app.ts (41 bytes)` */
-function writeResult(
-  text: string | undefined,
-): { verb: string; path: string } | null {
+function writeResult(text: string | undefined): { verb: string; path: string } | null {
   if (!text) return null;
   const match =
-    /^\s*(wrote|edited|created|updated|deleted|moved|removed)\s+(\S+?)(?:\s+\(|\s*$)/i.exec(
-      text,
-    );
+    /^\s*(wrote|edited|created|updated|deleted|moved|removed)\s+(\S+?)(?:\s+\(|\s*$)/i.exec(text);
   if (!match) return null;
   const verb = match[1].toLowerCase();
   const label =
@@ -263,10 +253,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
-function stringField(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function stringField(rec: Record<string, unknown>, key: string): string | undefined {
   const value = rec[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }

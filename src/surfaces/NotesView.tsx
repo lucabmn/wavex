@@ -16,7 +16,7 @@ import { WindowControls } from "../chrome/WindowControls";
 import { useDragResize } from "../hooks/useDragResize";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useTabGroupLogos } from "../hooks/useTabGroupLogos";
-import { formatRelativeTime } from "../lib/githubTasks";
+import { formatRelativeTime } from "../lib/inbox/githubTasks";
 import {
   createNote,
   deleteNote,
@@ -37,7 +37,7 @@ import {
   resolveTabGroupColor,
   resolveTabGroupLogo,
   resolveTabGroupMascot,
-} from "../lib/tabGroups";
+} from "../lib/workspace/tabGroups";
 import { AgentMarkdown, MarkdownSourceHighlight } from "./AgentMarkdown";
 
 const MIN_WIDTH = 240;
@@ -54,12 +54,7 @@ type Props = {
   onToggleSidebar?: () => void;
 };
 
-export function NotesView({
-  besideRail = false,
-  cwd,
-  onClose,
-  onToggleSidebar,
-}: Props) {
+export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }: Props) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const listLock = useLockOverscroll<HTMLDivElement>();
@@ -162,9 +157,7 @@ export function NotesView({
   const onSaved = (note: Note) => {
     setNotes((current) => {
       const next = current.map((item) => (item.id === note.id ? note : item));
-      next.sort(
-        (a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id),
-      );
+      next.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
       return next;
     });
   };
@@ -215,19 +208,13 @@ export function NotesView({
           className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
         >
           {creating ? (
-            <LoaderCircle
-              className="size-3.5 animate-spin"
-              strokeWidth={1.75}
-            />
+            <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
           ) : (
             <Plus className="size-3.5" strokeWidth={1.75} />
           )}
         </button>
       </div>
-      <div
-        ref={listLock}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-none"
-      >
+      <div ref={listLock} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
         {error && notes.length === 0 ? (
           <p className="px-3 py-2 text-[12px] text-content/50">{error}</p>
         ) : loading && notes.length === 0 ? (
@@ -283,14 +270,9 @@ export function NotesView({
         data-tauri-drag-region="deep"
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : (
-          <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />
-        )}
+        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
-          <File
-            className="size-3.5 shrink-0 text-content/45"
-            strokeWidth={1.75}
-          />
+          <File className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
           <span className="min-w-0 truncate text-content">Notes</span>
         </div>
         {IS_MAC ? null : <WindowControls />}
@@ -328,12 +310,7 @@ function NoteProjectMark({
 }: { project: string } & ProjectMarks) {
   const logoPath = resolveTabGroupLogo(project, logos);
   const mascotName = resolveTabGroupMascot(project, mascots);
-  const mascotColor = resolveTabGroupColor(
-    project,
-    colors,
-    customColors,
-    project,
-  );
+  const mascotColor = resolveTabGroupColor(project, colors, customColors, project);
   return (
     <span className="flex min-w-0 items-center gap-1.5">
       {logoPath ? (
@@ -375,9 +352,7 @@ function NoteDetailTab({
       }`}
     >
       {label}
-      {selected ? (
-        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-content" />
-      ) : null}
+      {selected ? <span className="absolute inset-x-0 bottom-0 h-0.5 bg-content" /> : null}
     </button>
   );
 }
@@ -426,9 +401,7 @@ function NoteCard({
           <span className="min-w-0 flex-1" />
         )}
         {time ? (
-          <span className="shrink-0 text-[11px] tabular-nums text-content/45">
-            {time}
-          </span>
+          <span className="shrink-0 text-[11px] tabular-nums text-content/45">{time}</span>
         ) : null}
       </span>
       <span className="mt-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
@@ -535,10 +508,7 @@ function NoteEditor({
         body: nextBody,
       });
       setSaveError(null);
-      if (
-        titleRef.current.trim() === "" ||
-        titleRef.current === current.title
-      ) {
+      if (titleRef.current.trim() === "" || titleRef.current === current.title) {
         setTitle(saved.title);
       }
       onSavedRef.current(saved);
@@ -576,18 +546,13 @@ function NoteEditor({
   };
 
   return (
-    <div
-      ref={lockOverscroll}
-      className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-none"
-    >
+    <div ref={lockOverscroll} className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-none">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-8 py-8">
         <header className="flex flex-col gap-3">
           <div className="flex min-w-0 items-center gap-2 text-[12px] text-content/50">
             <File className="size-3.5 shrink-0" strokeWidth={1.75} />
             <span>Note</span>
-            {note.slug ? (
-              <span className="min-w-0 truncate">{note.slug}</span>
-            ) : null}
+            {note.slug ? <span className="min-w-0 truncate">{note.slug}</span> : null}
             {project ? (
               <NoteProjectMark
                 project={project}
@@ -614,9 +579,7 @@ function NoteEditor({
             className="w-full border-0 bg-transparent p-0 text-[20px] font-semibold leading-tight text-content outline-none placeholder:text-content/35"
             placeholder="Untitled"
           />
-          {time ? (
-            <div className="text-[12px] text-content/50">Updated {time}</div>
-          ) : null}
+          {time ? <div className="text-[12px] text-content/50">Updated {time}</div> : null}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
@@ -630,8 +593,7 @@ function NoteEditor({
               type="button"
               onClick={() => {
                 skipSave.current = true;
-                if (saveTimer.current != null)
-                  window.clearTimeout(saveTimer.current);
+                if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
                 void onDelete(note.id);
               }}
               className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-content/10 hover:text-red-400"
@@ -640,9 +602,7 @@ function NoteEditor({
               Delete
             </button>
           </div>
-          {saveError ? (
-            <p className="text-[12px] text-red-400/90">{saveError}</p>
-          ) : null}
+          {saveError ? <p className="text-[12px] text-red-400/90">{saveError}</p> : null}
         </header>
         <div
           role="tablist"

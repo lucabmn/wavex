@@ -1,9 +1,6 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { memo } from "react";
-import {
-  MarkdownViewShell,
-  useMarkdownMode,
-} from "../chrome/MarkdownModeToggle";
+import { MarkdownViewShell, useMarkdownMode } from "../chrome/MarkdownModeToggle";
 import { SurfaceTabs } from "../chrome/SurfaceTabs";
 import {
   isPlanTab,
@@ -11,8 +8,8 @@ import {
   isTerminalTab,
   type EditorPane,
   type FilePaneTab,
-} from "../lib/layout";
-import type { TerminalMetaPatch } from "../lib/terminalTab";
+} from "../lib/workspace/layout";
+import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
 import type { EditorNavigationTarget } from "../lib/search";
 import { editorPathsEqual } from "../lib/search";
 import type { Session } from "../lib/session";
@@ -76,18 +73,10 @@ function FilePaneComponent({
           <div
             key={file.id}
             aria-hidden={file.id !== pane.activeFileId}
-            className={
-              file.id === pane.activeFileId
-                ? "absolute inset-0 h-full"
-                : "hidden"
-            }
+            className={file.id === pane.activeFileId ? "absolute inset-0 h-full" : "hidden"}
           >
             {isPlanTab(file) ? (
-              <PlanSurface
-                file={file}
-                sessions={sessions}
-                onOpenFile={onOpenFile}
-              />
+              <PlanSurface file={file} sessions={sessions} onOpenFile={onOpenFile} />
             ) : isReleaseNotesTab(file) ? (
               <ReleaseNotesSurface source={file.releaseNotes} />
             ) : isTerminalTab(file) ? (
@@ -104,15 +93,12 @@ function FilePaneComponent({
                 showDiff={!!file.review}
                 active={focused && file.id === pane.activeFileId}
                 navigation={
-                  editorNavigation &&
-                  editorPathsEqual(file.path, editorNavigation.path)
+                  editorNavigation && editorPathsEqual(file.path, editorNavigation.path)
                     ? editorNavigation
                     : null
                 }
                 onDirtyChange={(_path, dirty) => onDirtyChange(file.id, dirty)}
-                onErrorCountChange={(_path, count) =>
-                  onErrorCountChange(file.id, count)
-                }
+                onErrorCountChange={(_path, count) => onErrorCountChange(file.id, count)}
                 onOpenFile={onOpenFile}
               />
             )}
@@ -146,9 +132,7 @@ export const FilePane = memo(FilePaneComponent, (previous, next) => {
   for (const file of next.pane.files) {
     const sessionId = file.plan?.sessionId;
     if (!sessionId) continue;
-    const before = previous.sessions.find(
-      (session) => session.id === sessionId,
-    );
+    const before = previous.sessions.find((session) => session.id === sessionId);
     const after = next.sessions.find((session) => session.id === sessionId);
     if (before !== after) return false;
   }
@@ -166,19 +150,13 @@ function PlanSurface({
 }) {
   const plan = file.plan;
   const [mode, setMode] = useMarkdownMode(file.path);
-  const session = plan
-    ? sessions.find((entry) => entry.id === plan.sessionId)
-    : undefined;
-  const block = plan
-    ? session?.blocks.find((entry) => entry.id === plan.blockId)
-    : undefined;
+  const session = plan ? sessions.find((entry) => entry.id === plan.sessionId) : undefined;
+  const block = plan ? session?.blocks.find((entry) => entry.id === plan.blockId) : undefined;
 
   if (!block) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
-        <p className="text-[13px] text-content/70">
-          This plan is no longer in the session.
-        </p>
+        <p className="text-[13px] text-content/70">This plan is no longer in the session.</p>
       </div>
     );
   }

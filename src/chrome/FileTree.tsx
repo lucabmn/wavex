@@ -22,7 +22,7 @@ import {
   validateFileName,
   wellFormedFileName,
   type NameIssue,
-} from "../lib/fileName";
+} from "../lib/files/fileName";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import {
   createParentOf,
@@ -38,7 +38,7 @@ import {
   saveExpanded,
   saveSelected,
   subscribeDirsChanged,
-} from "../lib/fileTree";
+} from "../lib/files/fileTree";
 import {
   basename,
   copyPath,
@@ -101,10 +101,7 @@ type TreeCtxValue = {
   onCreateCancel: (id: number) => void;
   onRenameCommit: (path: string, raw: string) => Promise<void>;
   onRenameCancel: () => void;
-  onItemContextMenu: (
-    entry: { path: string; isDir: boolean },
-    e: ReactMouseEvent,
-  ) => void;
+  onItemContextMenu: (entry: { path: string; isDir: boolean }, e: ReactMouseEvent) => void;
 };
 
 const TreeCtx = createContext<TreeCtxValue | null>(null);
@@ -118,8 +115,7 @@ function useTree(): TreeCtxValue {
 function isDirAt(cwd: string, path: string): boolean {
   if (path === cwd) return true;
   return (
-    peekDir(parentPath(path))?.find((entry) => entry.path === path)?.isDir ??
-    peekDir(path) != null
+    peekDir(parentPath(path))?.find((entry) => entry.path === path)?.isDir ?? peekDir(path) != null
   );
 }
 
@@ -145,9 +141,7 @@ function explorerItems(
 ): ExplorerMenuItem[] {
   const pasteParent = target.isDir ? target.path : parentPath(target.path);
   const pasteBlocked =
-    !clip ||
-    (clip.isDir &&
-      (pasteParent === clip.path || pasteParent.startsWith(`${clip.path}/`)));
+    !clip || (clip.isDir && (pasteParent === clip.path || pasteParent.startsWith(`${clip.path}/`)));
   return [
     { kind: "item", id: "new-file", label: "New File" },
     { kind: "item", id: "new-folder", label: "New Folder" },
@@ -225,9 +219,7 @@ export function FileTree({
 }: Props) {
   const [expanded, setExpanded] = useState(() => loadExpanded(cwd));
   const [selectedPath, setSelectedPath] = useState(() => loadSelected(cwd));
-  const [children, setChildren] = useState<FsEntry[] | null>(() =>
-    peekDir(cwd),
-  );
+  const [children, setChildren] = useState<FsEntry[] | null>(() => peekDir(cwd));
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState<Creating | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -291,10 +283,7 @@ export function FileTree({
     );
   };
 
-  const startCreate = (
-    isDir: boolean,
-    atPath: string | null = selectedPath,
-  ) => {
+  const startCreate = (isDir: boolean, atPath: string | null = selectedPath) => {
     const parent = createParentOf(cwd, atPath);
     setRenaming(null);
     expandDirs([cwd, parent]);
@@ -339,10 +328,7 @@ export function FileTree({
     const next = await renamePath(path, fileName);
     const wasDir = isDirAt(cwd, path);
     const parent = parentPath(path);
-    await refreshTouched(
-      [...dirsTouchedByCreate(parent, fileName), parent],
-      wasDir ? [path] : [],
-    );
+    await refreshTouched([...dirsTouchedByCreate(parent, fileName), parent], wasDir ? [path] : []);
     setRenaming(null);
     expandDirs(dirsTouchedByCreate(parent, fileName));
     remapTreePaths(path, next);
@@ -354,9 +340,7 @@ export function FileTree({
     const isDir = isDirAt(cwd, path);
     const label = basename(path);
     const ok = window.confirm(
-      isDir
-        ? `Delete folder “${label}” and everything inside it?`
-        : `Delete “${label}”?`,
+      isDir ? `Delete folder “${label}” and everything inside it?` : `Delete “${label}”?`,
     );
     if (!ok) return;
     await deletePath(path);
@@ -369,35 +353,23 @@ export function FileTree({
       }
       return prev;
     });
-    setClip((cur) =>
-      cur && (cur.path === path || cur.path.startsWith(`${path}/`))
-        ? null
-        : cur,
-    );
+    setClip((cur) => (cur && (cur.path === path || cur.path.startsWith(`${path}/`)) ? null : cur));
     onFileDeleted?.(path);
   };
 
   const pasteAt = async (targetPath: string) => {
     if (!clip) return;
     const destParent = createParentOf(cwd, targetPath);
-    if (
-      clip.isDir &&
-      (destParent === clip.path || destParent.startsWith(`${clip.path}/`))
-    ) {
+    if (clip.isDir && (destParent === clip.path || destParent.startsWith(`${clip.path}/`))) {
       throw new Error("Cannot paste a folder into itself.");
     }
     const from = clip.path;
     const mode = clip.mode;
     const isDir = clip.isDir;
     const created =
-      mode === "cut"
-        ? await movePath(from, destParent)
-        : await copyPath(from, destParent);
+      mode === "cut" ? await movePath(from, destParent) : await copyPath(from, destParent);
     if (mode === "cut") {
-      await refreshTouched(
-        dirsTouchedByMove(from, created),
-        isDir ? [from] : [],
-      );
+      await refreshTouched(dirsTouchedByMove(from, created), isDir ? [from] : []);
       remapTreePaths(from, created);
       onFileMoved?.(from, created);
       setClip(null);
@@ -477,17 +449,10 @@ export function FileTree({
     }
   };
 
-  const onItemContextMenu = (
-    entry: { path: string; isDir: boolean },
-    e: ReactMouseEvent,
-  ) => {
+  const onItemContextMenu = (entry: { path: string; isDir: boolean }, e: ReactMouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openMenu(
-      { path: entry.path, isDir: entry.isDir, isRoot: false },
-      e.clientX,
-      e.clientY,
-    );
+    openMenu({ path: entry.path, isDir: entry.isDir, isRoot: false }, e.clientX, e.clientY);
   };
 
   const onBackgroundMenu = (e: ReactMouseEvent) => {
@@ -639,10 +604,7 @@ export function FileTree({
             <FoldVertical className="size-3.5" strokeWidth={1.75} />
           </HeaderIcon>
           {onSearch ? (
-            <HeaderIcon
-              label={`Search in files (${MOD}Shift+F)`}
-              onClick={onSearch}
-            >
+            <HeaderIcon label={`Search in files (${MOD}Shift+F)`} onClick={onSearch}>
               <Search className="size-3.5" strokeWidth={1.75} />
             </HeaderIcon>
           ) : null}
@@ -666,11 +628,7 @@ export function FileTree({
             onContextMenu={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              openMenu(
-                { path: cwd, isDir: true, isRoot: true },
-                e.clientX,
-                e.clientY,
-              );
+              openMenu({ path: cwd, isDir: true, isRoot: true }, e.clientX, e.clientY);
             }}
             className={`flex min-w-0 flex-1 items-center gap-1 h-full pl-2 text-left`}
           >
@@ -686,14 +644,9 @@ export function FileTree({
             </span>
           </button>
         </div>
-        <div
-          ref={lockOverscroll}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-none"
-        >
+        <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
           {opError ? (
-            <p className="px-3 py-1 text-[12px] leading-4 text-red-400">
-              {opError}
-            </p>
+            <p className="px-3 py-1 text-[12px] leading-4 text-red-400">{opError}</p>
           ) : null}
           {rootOpen ? (
             <div role="tree" aria-label={`${name} files`}>
@@ -950,9 +903,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
           onContextMenu={(e) => onItemContextMenu(entry, e)}
           style={{ paddingLeft: 8 + depth * 12 }}
           className={`flex h-7.5 w-full cursor-default items-center gap-1 pr-2 text-left text-[14px] leading-none ${
-            selected
-              ? "bg-content/10 text-content"
-              : "text-content hover:bg-content/5"
+            selected ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
           } ${cutPath === entry.path ? "opacity-50" : ""}`}
         >
           <span className="grid size-4 shrink-0 place-items-center text-content/50">
@@ -1062,9 +1013,7 @@ function NameRow({
         className="flex h-7.5 w-full items-center gap-1 bg-content/10 pr-2"
       >
         <span className="grid size-4 shrink-0 place-items-center text-content/50">
-          {isDir ? (
-            <ChevronRight className="size-3.5" strokeWidth={1.75} />
-          ) : null}
+          {isDir ? <ChevronRight className="size-3.5" strokeWidth={1.75} /> : null}
         </span>
         <span className="shrink-0">
           <FileTypeIcon name={leaf} isDir={isDir} />
@@ -1098,9 +1047,7 @@ function NameRow({
           className="h-5 min-w-0 flex-1 rounded-sm bg-content/10 px-1 text-[14px] leading-none text-content outline-none ring-1 ring-accent"
         />
       </div>
-      {showIssue ? (
-        <NameIssueView depth={depth} issue={issue} fallback={submitError} />
-      ) : null}
+      {showIssue ? <NameIssueView depth={depth} issue={issue} fallback={submitError} /> : null}
     </div>
   );
 }
@@ -1128,22 +1075,21 @@ function NameIssueView({
       case "exists":
         body = (
           <>
-            A file or folder <span className="font-semibold">{issue.name}</span>{" "}
-            already exists at this location. Please choose a different name.
+            A file or folder <span className="font-semibold">{issue.name}</span> already exists at
+            this location. Please choose a different name.
           </>
         );
         break;
       case "invalid":
         body = (
           <>
-            The name <span className="font-semibold">{issue.name}</span> is not
-            valid as a file or folder name. Please choose a different name.
+            The name <span className="font-semibold">{issue.name}</span> is not valid as a file or
+            folder name. Please choose a different name.
           </>
         );
         break;
       case "whitespace":
-        body =
-          "Leading or trailing whitespace detected in file or folder name.";
+        body = "Leading or trailing whitespace detected in file or folder name.";
         break;
     }
   }
@@ -1151,9 +1097,7 @@ function NameIssueView({
   const error = Boolean(fallback) || !issue || issue.severity === "error";
   return (
     <p
-      className={`pr-2 pb-1 text-[12px] leading-4 ${
-        error ? "text-red-400" : "text-amber-400"
-      }`}
+      className={`pr-2 pb-1 text-[12px] leading-4 ${error ? "text-red-400" : "text-amber-400"}`}
       style={{ paddingLeft: 28 + depth * 12 }}
     >
       {body}

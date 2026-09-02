@@ -1,20 +1,15 @@
 import { play, setEnabled, setVolume, type SoundName } from "cuelume";
 
-const KEY = "wavecode.sounds";
+const KEY = "wavex.sounds";
 
 export const SOUNDS_DEFAULT = true;
 
 /** Soft enough to sit in the background while a turn runs in another app. */
 export const SOUNDS_VOLUME = 0.55;
 
-export const SOUNDS_CHANGE_EVENT = "wavecode:sounds-change";
+export const SOUNDS_CHANGE_EVENT = "wavex:sounds-change";
 
-export type SoundCue =
-  | "turnFinished"
-  | "inboxUnseen"
-  | "updateAvailable"
-  | "switch"
-  | "copy";
+export type SoundCue = "turnFinished" | "inboxUnseen" | "updateAvailable" | "switch" | "copy";
 
 const CUES: Record<SoundCue, SoundName> = {
   turnFinished: "success",
@@ -42,9 +37,7 @@ export function saveSoundsEnabled(value: boolean) {
   }
   applySoundEngine();
   if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<boolean>(SOUNDS_CHANGE_EVENT, { detail: value }),
-  );
+  window.dispatchEvent(new CustomEvent<boolean>(SOUNDS_CHANGE_EVENT, { detail: value }));
 }
 
 function applySoundEngine() {

@@ -66,19 +66,12 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
   const filePath = path ? (resolveWorkspacePath(path, cwd) ?? path) : undefined;
   const fileName = preview.fileName || fileNameOf(path);
   const lines = (preview.lines ?? [])
-    .filter(
-      (line) =>
-        line.kind === "add" || line.kind === "del" || line.kind === "context",
-    )
+    .filter((line) => line.kind === "add" || line.kind === "del" || line.kind === "context")
     .slice(0, MAX_PREVIEW_LINES);
-  const showDiff = lines.some(
-    (line) => line.kind === "add" || line.kind === "del",
-  );
+  const showDiff = lines.some((line) => line.kind === "add" || line.kind === "del");
   const added = preview.additions ?? 0;
   const deleted = preview.deletions ?? 0;
-  const label = path
-    ? displayPath(path, cwd)
-    : fileName || preview.title || "File";
+  const label = path ? displayPath(path, cwd) : fileName || preview.title || "File";
 
   return (
     <div className="overflow-hidden rounded-[10px] border border-content/10 bg-content/6">
@@ -103,13 +96,9 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
         )}
         {added > 0 || deleted > 0 ? (
           <span className="shrink-0 font-mono text-[11px] font-semibold">
-            {added > 0 ? (
-              <span className="text-emerald-400">+{added}</span>
-            ) : null}
+            {added > 0 ? <span className="text-emerald-400">+{added}</span> : null}
             {added > 0 && deleted > 0 ? " " : null}
-            {deleted > 0 ? (
-              <span className="text-red-400">-{deleted}</span>
-            ) : null}
+            {deleted > 0 ? <span className="text-red-400">-{deleted}</span> : null}
           </span>
         ) : (
           <StatusIcon status={status} />
@@ -133,25 +122,10 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
   );
 }
 
-function PreviewLine({
-  line,
-  showGutter,
-}: {
-  line: ToolPreviewLine;
-  showGutter: boolean;
-}) {
-  const bg =
-    line.kind === "add"
-      ? "bg-teal-800/20"
-      : line.kind === "del"
-        ? "bg-rose-800/20"
-        : "";
+function PreviewLine({ line, showGutter }: { line: ToolPreviewLine; showGutter: boolean }) {
+  const bg = line.kind === "add" ? "bg-teal-800/20" : line.kind === "del" ? "bg-rose-800/20" : "";
   const bar =
-    line.kind === "add"
-      ? "bg-teal-400"
-      : line.kind === "del"
-        ? "bg-rose-400"
-        : "bg-transparent";
+    line.kind === "add" ? "bg-teal-400" : line.kind === "del" ? "bg-rose-400" : "bg-transparent";
   const mark = line.kind === "add" ? "+" : line.kind === "del" ? "−" : " ";
   const markColor =
     line.kind === "add"
@@ -167,9 +141,7 @@ function PreviewLine({
         {line.number ?? " "}
       </span>
       {showGutter ? (
-        <span
-          className={`w-3 shrink-0 text-center font-mono text-[10px] font-bold ${markColor}`}
-        >
+        <span className={`w-3 shrink-0 text-center font-mono text-[10px] font-bold ${markColor}`}>
           {mark}
         </span>
       ) : null}
@@ -185,12 +157,7 @@ function StatusIcon({ status }: { status: Status }) {
     return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
   }
   if (status === "pending") {
-    return (
-      <CircleDashed
-        className="size-3.5 shrink-0 text-content/40"
-        strokeWidth={1.75}
-      />
-    );
+    return <CircleDashed className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />;
   }
   return null;
 }
@@ -198,11 +165,7 @@ function StatusIcon({ status }: { status: Status }) {
 function highlight(text: string, dimmed: boolean) {
   const dim = dimmed ? "opacity-70" : "";
   const trimmed = text.trimStart();
-  if (
-    trimmed.startsWith("//") ||
-    trimmed.startsWith("///") ||
-    trimmed.startsWith("#")
-  ) {
+  if (trimmed.startsWith("//") || trimmed.startsWith("///") || trimmed.startsWith("#")) {
     return <span className={`text-content/45 ${dim}`}>{text}</span>;
   }
 

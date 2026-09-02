@@ -9,12 +9,7 @@ import {
   PanelTop,
   Plus,
 } from "../chrome/icons";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ExplorerMenu } from "../chrome/ExplorerMenu";
 import { SurfaceTabs } from "../chrome/SurfaceTabs";
 import { IconButton } from "../chrome/TitleBar";
@@ -24,9 +19,9 @@ import {
   isVerticalDock,
   type DockSide,
   type ProjectTerminalDock,
-} from "../lib/projectTerminal";
+} from "../lib/terminal/projectTerminal";
 import { MOD } from "../lib/platform";
-import type { TerminalMetaPatch } from "../lib/terminalTab";
+import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
 import { TerminalView } from "./TerminalView";
 
 type Props = {
@@ -145,8 +140,7 @@ export function ProjectTerminalDock({
     if (!drag.current) return;
     const point = vertical ? event.clientY : event.clientX;
     const delta = point - drag.current.start;
-    const signed =
-      dock.side === "bottom" || dock.side === "right" ? -delta : delta;
+    const signed = dock.side === "bottom" || dock.side === "right" ? -delta : delta;
     paint(clampDockSize(dock.side, drag.current.size + signed, viewport()));
   };
 
@@ -211,28 +205,22 @@ export function ProjectTerminalDock({
         onReorder={onReorderTerminals}
         trailing={
           <div className="flex shrink-0 items-center gap-0.5 border-l border-content/10 px-1">
-            <IconButton
-              label={`New Terminal (${MOD}\`)`}
-              onClick={onAddTerminal}
-            >
+            <IconButton label={`New Terminal (${MOD}\`)`} onClick={onAddTerminal}>
               <Plus className="size-3.5" strokeWidth={1.75} />
             </IconButton>
             <div ref={sideButton}>
-            <IconButton
-              label="Move Terminal"
-              onClick={() => {
-                const rect = sideButton.current?.getBoundingClientRect();
-                if (!rect) return;
-                setMenu({ x: rect.left, y: rect.bottom + 4 });
-              }}
-            >
-              <SideIcon className="size-3.5" strokeWidth={1.75} />
-            </IconButton>
+              <IconButton
+                label="Move Terminal"
+                onClick={() => {
+                  const rect = sideButton.current?.getBoundingClientRect();
+                  if (!rect) return;
+                  setMenu({ x: rect.left, y: rect.bottom + 4 });
+                }}
+              >
+                <SideIcon className="size-3.5" strokeWidth={1.75} />
+              </IconButton>
             </div>
-            <IconButton
-              label={`Hide Terminal (${MOD}J)`}
-              onClick={onHide}
-            >
+            <IconButton label={`Hide Terminal (${MOD}J)`} onClick={onHide}>
               <HideIcon className="size-3.5" strokeWidth={1.75} />
             </IconButton>
           </div>
@@ -243,11 +231,7 @@ export function ProjectTerminalDock({
           <div
             key={file.id}
             aria-hidden={file.id !== dock.pane.activeFileId}
-            className={
-              file.id === dock.pane.activeFileId
-                ? "absolute inset-0 h-full"
-                : "hidden"
-            }
+            className={file.id === dock.pane.activeFileId ? "absolute inset-0 h-full" : "hidden"}
           >
             <TerminalView
               id={file.id}

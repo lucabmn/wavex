@@ -14,14 +14,10 @@ export function useLockOverscroll<T extends HTMLElement>() {
       const canScrollY = el.scrollHeight > el.clientHeight + 1;
       const atTop = canScrollY && el.scrollTop <= 0 && e.deltaY < 0;
       const atBottom =
-        canScrollY &&
-        el.scrollTop + el.clientHeight >= el.scrollHeight - 1 &&
-        e.deltaY > 0;
+        canScrollY && el.scrollTop + el.clientHeight >= el.scrollHeight - 1 && e.deltaY > 0;
       const atLeft = canScrollX && el.scrollLeft <= 0 && e.deltaX < 0;
       const atRight =
-        canScrollX &&
-        el.scrollLeft + el.clientWidth >= el.scrollWidth - 1 &&
-        e.deltaX > 0;
+        canScrollX && el.scrollLeft + el.clientWidth >= el.scrollWidth - 1 && e.deltaX > 0;
       if (atTop || atBottom || atLeft || atRight) e.preventDefault();
     };
 

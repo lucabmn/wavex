@@ -1,18 +1,12 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { LoaderCircle, X } from "../chrome/icons";
 import {
   formatRelativeTime,
   githubReviewStateLabel,
   inboxPersonAvatarUrl,
   type InboxProvider,
-} from "../lib/githubTasks";
+} from "../lib/inbox/githubTasks";
 import { MOD } from "../lib/platform";
 import { AgentMarkdown } from "./AgentMarkdown";
 
@@ -74,25 +68,17 @@ export function InboxComments({
     return null;
   }
 
-  const count = thread.comments.reduce(
-    (total, comment) => total + 1 + comment.replies.length,
-    0,
-  );
+  const count = thread.comments.reduce((total, comment) => total + 1 + comment.replies.length, 0);
   const label = count === 1 ? "1 comment" : `${count} comments`;
-  const moreOn = provider === "linear" ? "Linear" : "GitHub";
+  const moreOn = "GitHub";
 
   return (
     <section className="flex flex-col gap-3 border-t border-content/10 pt-5">
       <div className="flex items-center gap-2 text-[12px] text-content/50">
         <h2 className="text-content/70">{label}</h2>
-        {thread.truncated ? (
-          <span>Latest comments · more on {moreOn}</span>
-        ) : null}
+        {thread.truncated ? <span>Latest comments · more on {moreOn}</span> : null}
         {loading ? (
-          <LoaderCircle
-            className="size-3 animate-spin text-content/35"
-            strokeWidth={1.75}
-          />
+          <LoaderCircle className="size-3 animate-spin text-content/35" strokeWidth={1.75} />
         ) : null}
       </div>
       {error ? <p className="text-[12px] text-content/45">{error}</p> : null}
@@ -165,15 +151,10 @@ export function InboxCommentForm({
   };
 
   return (
-    <form
-      onSubmit={onFormSubmit}
-      className="flex flex-col gap-2 border-t border-content/10 pt-5"
-    >
+    <form onSubmit={onFormSubmit} className="flex flex-col gap-2 border-t border-content/10 pt-5">
       {replyTo ? (
         <div className="flex items-center gap-2 text-[12px] text-content/50">
-          <span className="min-w-0 truncate">
-            Replying to {replyTo.author || "comment"}
-          </span>
+          <span className="min-w-0 truncate">Replying to {replyTo.author || "comment"}</span>
           <button
             type="button"
             title="Cancel reply"
@@ -191,9 +172,7 @@ export function InboxCommentForm({
           rows={2}
           value={draft}
           disabled={posting}
-          placeholder={
-            replyTo ? `Write a reply (${MOD}↩)` : `Leave a comment (${MOD}↩)`
-          }
+          placeholder={replyTo ? `Write a reply (${MOD}↩)` : `Leave a comment (${MOD}↩)`}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
           className="max-h-40 w-full resize-none overflow-y-auto bg-transparent px-3 py-2 text-[13px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
@@ -208,9 +187,7 @@ export function InboxCommentForm({
           </button>
         </div>
       </div>
-      {error ? (
-        <p className="text-[12px] text-red-400/90">{error}</p>
-      ) : null}
+      {error ? <p className="text-[12px] text-red-400/90">{error}</p> : null}
     </form>
   );
 }
@@ -242,12 +219,9 @@ function InboxComment({
   const time = formatRelativeTime(comment.createdAt);
   const review = githubReviewStateLabel(comment.state);
   const location = commentLocation(comment);
-  const meta = [
-    review,
-    location,
-    comment.resolved ? "Resolved" : "",
-    time,
-  ].filter((part) => part.length > 0);
+  const meta = [review, location, comment.resolved ? "Resolved" : "", time].filter(
+    (part) => part.length > 0,
+  );
   const hasBody = comment.body.trim().length > 0;
   const hasReplies = !nested && comment.replies.length > 0;
   const canReply =
@@ -264,24 +238,15 @@ function InboxComment({
       >
         <InboxCommentPerson
           name={comment.author || "ghost"}
-          avatarUrl={inboxPersonAvatarUrl(
-            provider,
-            comment.author,
-            comment.authorAvatarUrl,
-          )}
+          avatarUrl={inboxPersonAvatarUrl(provider, comment.author, comment.authorAvatarUrl)}
         />
         {meta.map((part, index) => (
-          <span
-            key={`${part}-${index}`}
-            className="flex min-w-0 items-center gap-2"
-          >
+          <span key={`${part}-${index}`} className="flex min-w-0 items-center gap-2">
             <span aria-hidden>·</span>
             {comment.url && part === time ? (
               <button
                 type="button"
-                title={
-                  provider === "linear" ? "Open in Linear" : "Open on GitHub"
-                }
+                title="Open on GitHub"
                 onClick={() => void openUrl(comment.url)}
                 className="hover:text-content"
               >
@@ -325,11 +290,7 @@ function InboxComment({
       </header>
       {hasBody ? (
         <div className={nested ? "mt-2" : "px-3 py-2.5"}>
-          <AgentMarkdown
-            className="inbox-comment-md"
-            text={comment.body}
-            cwd={cwd}
-          />
+          <AgentMarkdown className="inbox-comment-md" text={comment.body} cwd={cwd} />
         </div>
       ) : null}
       {hasReplies ? (
@@ -337,9 +298,7 @@ function InboxComment({
           {comment.replies.map((reply, index) => (
             <div
               key={reply.id}
-              className={`py-2.5 ${
-                index > 0 ? "border-t border-content/10" : ""
-              }`}
+              className={`py-2.5 ${index > 0 ? "border-t border-content/10" : ""}`}
             >
               <InboxComment
                 comment={reply}
@@ -371,13 +330,7 @@ function commentLocation(comment: InboxComment): string {
   return path;
 }
 
-function InboxCommentPerson({
-  name,
-  avatarUrl,
-}: {
-  name: string;
-  avatarUrl: string;
-}) {
+function InboxCommentPerson({ name, avatarUrl }: { name: string; avatarUrl: string }) {
   const [failed, setFailed] = useState(!avatarUrl);
   const initial = name.trim().charAt(0).toUpperCase() || "?";
 

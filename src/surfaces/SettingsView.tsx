@@ -1,11 +1,4 @@
-import {
-  ArrowDownCircle,
-  Check,
-  Loader,
-  RefreshCw,
-  RotateCcw,
-  Search,
-} from "../chrome/icons";
+import { ArrowDownCircle, Loader, RefreshCw, RotateCcw, Search } from "../chrome/icons";
 import {
   useCallback,
   useEffect,
@@ -16,7 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
-import { InboxProviderMark } from "../chrome/InboxProviderMark";
 import { RemoveProjectDialog } from "../chrome/RemoveProjectDialog";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -89,40 +81,22 @@ import {
   subscribeArchivedProjects,
   type ArchivedProject,
 } from "../lib/recents";
-import {
-  HARNESSES,
-  HARNESS_TITLE,
-  sessionDisplayTitle,
-  type HarnessId,
-} from "../lib/session";
+import { HARNESSES, HARNESS_TITLE, sessionDisplayTitle, type HarnessId } from "../lib/session";
 import {
   loadSessionSidebarFilters,
   saveSessionSidebarFilters,
-} from "../lib/sessionFilters";
-import type { SessionSummary } from "../lib/sessionStore";
-import { clearInboxCache } from "../lib/githubTasks";
-import {
-  disconnectLinear,
-  linearConnected,
-  listLinearTeams,
-  loadHiddenLinearTeamIds,
-  notifyLinearChange,
-  saveHiddenLinearTeamIds,
-  saveLinearToken,
-  type LinearTeam,
-} from "../lib/linear";
-import { loadTabGroupLabels, resolveTabGroupLabel } from "../lib/tabGroups";
+} from "../lib/sessions/sessionFilters";
+import type { SessionSummary } from "../lib/sessions/sessionStore";
+import { loadTabGroupLabels, resolveTabGroupLabel } from "../lib/workspace/tabGroups";
 import {
   filterKeybindings,
   KEYBINDINGS,
   loadClaudeHooks,
   loadComposerRunner,
-  loadGridArcadeEnabled,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   saveClaudeHooks,
   saveComposerRunner,
-  saveGridArcadeEnabled,
   saveLiveAgentsEnabled,
   saveNotesEnabled,
   settingsSectionDescription,
@@ -135,7 +109,7 @@ import {
   readAppVersion,
   runUpdateFlow,
   type UpdaterSnapshot,
-} from "../lib/updater";
+} from "../lib/updates/updater";
 
 type Props = {
   section: SettingsSectionId;
@@ -197,9 +171,7 @@ export function SettingsView({
           <span aria-hidden className="shrink-0 text-content/25">
             /
           </span>
-          <span className="min-w-0 truncate text-content">
-            {settingsSectionLabel(section)}
-          </span>
+          <span className="min-w-0 truncate text-content">{settingsSectionLabel(section)}</span>
         </div>
         {section === "appearance" ? (
           <button
@@ -215,21 +187,14 @@ export function SettingsView({
         {IS_MAC ? null : <WindowControls />}
       </div>
 
-      <div
-        ref={lockOverscroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-none"
-      >
+      <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
         <div className="mx-auto w-full max-w-5xl px-8 py-8">
           <PageHeader
             title={settingsSectionLabel(section)}
             description={settingsSectionDescription(section)}
           />
-          {section === "general" ? (
-            <GeneralPage onOpenWhatsNew={onOpenWhatsNew} />
-          ) : null}
-          {section === "appearance" ? (
-            <AppearancePage appearance={appearance} />
-          ) : null}
+          {section === "general" ? <GeneralPage onOpenWhatsNew={onOpenWhatsNew} /> : null}
+          {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
           {section === "keybindings" ? <KeybindingsPage /> : null}
           {section === "providers" ? <ProvidersPage /> : null}
           {section === "archive" ? (
@@ -249,23 +214,12 @@ export function SettingsView({
   );
 }
 
-function GeneralPage({
-  onOpenWhatsNew,
-}: {
-  onOpenWhatsNew: (version: string) => void;
-}) {
-  const [transcriptLayout, setTranscriptLayout] =
-    useState<TranscriptLayout>(loadTranscriptLayout);
-  const [transcriptAnchor, setTranscriptAnchor] =
-    useState(loadTranscriptAnchor);
+function GeneralPage({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => void }) {
+  const [transcriptLayout, setTranscriptLayout] = useState<TranscriptLayout>(loadTranscriptLayout);
+  const [transcriptAnchor, setTranscriptAnchor] = useState(loadTranscriptAnchor);
   const [composerRunner, setComposerRunner] = useState(loadComposerRunner);
-  const [gridArcadeEnabled, setGridArcadeEnabled] = useState(
-    loadGridArcadeEnabled,
-  );
   const [notesEnabled, setNotesEnabled] = useState(loadNotesEnabled);
-  const [liveAgentsEnabled, setLiveAgentsEnabled] = useState(
-    loadLiveAgentsEnabled,
-  );
+  const [liveAgentsEnabled, setLiveAgentsEnabled] = useState(loadLiveAgentsEnabled);
   const [soundsEnabled, setSoundsEnabled] = useState(loadSoundsEnabled);
   const [claudeHooks, setClaudeHooks] = useState(loadClaudeHooks);
 
@@ -292,11 +246,6 @@ function GeneralPage({
   const onComposerRunner = (next: boolean) => {
     saveComposerRunner(next);
     setComposerRunner(next);
-  };
-
-  const onGridArcadeEnabled = (next: boolean) => {
-    saveGridArcadeEnabled(next);
-    setGridArcadeEnabled(next);
   };
 
   const onNotesEnabled = (next: boolean) => {
@@ -339,31 +288,13 @@ function GeneralPage({
         label="Anchor prompts to top"
         description="When you send, the new prompt sits at the top of the transcript and the reply grows into the space below. Turn this off to keep the classic layout, with the latest message resting on the composer."
       >
-        <Toggle
-          label="Anchor prompts to top"
-          on={transcriptAnchor}
-          onChange={onTranscriptAnchor}
-        />
+        <Toggle label="Anchor prompts to top" on={transcriptAnchor} onChange={onTranscriptAnchor} />
       </Row>
       <Row
         label="Composer mascot"
         description="When a turn is running, the project mascot runs along the composer, bonks the scroll-to-latest button the first time, then jumps it, and sometimes grabs a coin."
       >
-        <Toggle
-          label="Composer mascot"
-          on={composerRunner}
-          onChange={onComposerRunner}
-        />
-      </Row>
-      <Row
-        label="Empty session games"
-        description="Pac-man and snake idle on the empty-session grid. Hover the band to take control of whichever is on screen. Turn this off to keep the pane still."
-      >
-        <Toggle
-          label="Empty session games"
-          on={gridArcadeEnabled}
-          onChange={onGridArcadeEnabled}
-        />
+        <Toggle label="Composer mascot" on={composerRunner} onChange={onComposerRunner} />
       </Row>
       <Row
         label="Notes"
@@ -375,11 +306,7 @@ function GeneralPage({
         label="Working agents"
         description="When two or more chats are in flight, a card on the project rail lists them so you can jump across projects. Finished turns stay until you open that session. Turn this off to hide the card."
       >
-        <Toggle
-          label="Working agents"
-          on={liveAgentsEnabled}
-          onChange={onLiveAgentsEnabled}
-        />
+        <Toggle label="Working agents" on={liveAgentsEnabled} onChange={onLiveAgentsEnabled} />
       </Row>
       <Row
         label="Sounds"
@@ -391,15 +318,8 @@ function GeneralPage({
         label="Claude Code hooks"
         description="Run the hooks configured in your settings.json files — PreToolUse command rewrites, blocks, notifications, and the rest — just as the Claude Code CLI would. Turn this off if a hook is misbehaving and you need the session back. Takes effect on the next turn."
       >
-        <Toggle
-          label="Claude Code hooks"
-          on={claudeHooks}
-          onChange={onClaudeHooks}
-        />
+        <Toggle label="Claude Code hooks" on={claudeHooks} onChange={onClaudeHooks} />
       </Row>
-
-      <Heading title="Linear" />
-      <LinearSettings />
 
       <Heading title="About" />
       <UpdateRow onOpenWhatsNew={onOpenWhatsNew} />
@@ -407,167 +327,7 @@ function GeneralPage({
   );
 }
 
-function LinearSettings() {
-  const [token, setToken] = useState("");
-  const [connected, setConnected] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [teams, setTeams] = useState<LinearTeam[]>([]);
-  const [hiddenTeamIds, setHiddenTeamIds] = useState(loadHiddenLinearTeamIds);
-
-  const loadTeams = useCallback(async () => {
-    try {
-      const next = await listLinearTeams();
-      setTeams(next);
-    } catch {
-      setTeams([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    void linearConnected().then((status) => {
-      if (cancelled) return;
-      setConnected(status.connected);
-      if (status.connected) void loadTeams();
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [loadTeams]);
-
-  const onSave = async () => {
-    if (!token.trim() || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await saveLinearToken(token);
-      setToken("");
-      setConnected(true);
-      clearInboxCache();
-      notifyLinearChange();
-      await loadTeams();
-    } catch (err: unknown) {
-      setConnected(false);
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onDisconnect = async () => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await disconnectLinear();
-      setConnected(false);
-      setTeams([]);
-      clearInboxCache();
-      notifyLinearChange();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleTeam = (id: string) => {
-    const next = new Set(hiddenTeamIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    const ids = [...next];
-    setHiddenTeamIds(ids);
-    saveHiddenLinearTeamIds(ids);
-    clearInboxCache();
-  };
-
-  return (
-    <>
-      <Row
-        label={
-          <span className="flex items-center gap-2">
-            <InboxProviderMark provider="linear" className="size-4 shrink-0" />
-            API key
-          </span>
-        }
-        description="Create a personal API key in Linear → Settings → Security & Access. Disconnect deletes it."
-      >
-        {connected ? (
-          <SecondaryButton onClick={() => void onDisconnect()} disabled={busy}>
-            Disconnect
-          </SecondaryButton>
-        ) : (
-          <div className="flex items-center gap-2">
-            <label className="flex h-7 w-52 shrink-0 items-center rounded-md border border-content/10 px-2 focus-within:border-content/20">
-              <input
-                type="password"
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void onSave();
-                }}
-                placeholder="lin_api_…"
-                aria-label="Linear API key"
-                autoComplete="off"
-                spellCheck={false}
-                className="min-w-0 flex-1 bg-transparent text-[12px] text-content outline-none placeholder:text-content/35"
-              />
-            </label>
-            <SecondaryButton
-              onClick={() => void onSave()}
-              disabled={busy || !token.trim()}
-            >
-              {busy ? "Saving" : "Connect"}
-            </SecondaryButton>
-          </div>
-        )}
-      </Row>
-      {error ? (
-        <p className="pb-2 text-[12px] text-red-400/90">{error}</p>
-      ) : null}
-      {connected && teams.length > 0 ? (
-        <div className="border-b border-content/5 py-4">
-          <div className="text-[13px] font-medium text-content">
-            Linear Teams
-          </div>
-          <p className="mt-1 text-[12px] leading-relaxed text-content/45">
-            Unchecked teams stay out of the inbox.
-          </p>
-          <div className="mt-3 flex flex-col gap-0.5 -mx-2">
-            {teams.map((team) => {
-              const checked = !hiddenTeamIds.includes(team.id);
-              return (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => toggleTeam(team.id)}
-                  className="flex h-7 items-center gap-2 rounded-md px-2 text-left text-[13px] text-content hover:bg-content/5"
-                >
-                  <span className="min-w-0 flex-1 truncate">
-                    {team.name}
-                    {team.key ? (
-                      <span className="ml-1.5 text-content/40">{team.key}</span>
-                    ) : null}
-                  </span>
-                  {checked ? (
-                    <Check className="size-3.5 shrink-0" strokeWidth={2.25} />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-function UpdateRow({
-  onOpenWhatsNew,
-}: {
-  onOpenWhatsNew: (version: string) => void;
-}) {
+function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => void }) {
   const [snapshot, setSnapshot] = useState<UpdaterSnapshot>({
     phase: "idle",
     currentVersion: "…",
@@ -584,8 +344,7 @@ function UpdateRow({
     };
   }, []);
 
-  const busy =
-    snapshot.phase === "checking" || snapshot.phase === "downloading";
+  const busy = snapshot.phase === "checking" || snapshot.phase === "downloading";
   const hasUpdate = snapshot.phase === "available";
 
   const onClick = async () => {
@@ -608,16 +367,14 @@ function UpdateRow({
             ? "You're on the latest version."
             : snapshot.phase === "error"
               ? (snapshot.error ?? "Update check failed.")
-              : "wavecode updates itself from the release feed.";
+              : "wavex updates itself from the release feed.";
 
   return (
     <Row
       label={
         <span className="flex items-baseline gap-2">
           Version
-          <span className="font-mono text-[12px] text-content/45">
-            {snapshot.currentVersion}
-          </span>
+          <span className="font-mono text-[12px] text-content/45">{snapshot.currentVersion}</span>
         </span>
       }
       description={status}
@@ -631,12 +388,12 @@ function UpdateRow({
         </SecondaryButton>
         <SecondaryButton onClick={() => void onClick()} disabled={busy}>
           {busy ? (
-          <Loader className="size-3.5 animate-spin" aria-hidden />
-        ) : hasUpdate ? (
-          <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
-        ) : (
-          <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
-        )}
+            <Loader className="size-3.5 animate-spin" aria-hidden />
+          ) : hasUpdate ? (
+            <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
+          ) : (
+            <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
+          )}
           {hasUpdate ? "Download" : "Check for updates"}
         </SecondaryButton>
       </div>
@@ -647,8 +404,7 @@ function UpdateRow({
 type AppearanceSettings = ReturnType<typeof useAppearanceSettings>;
 
 function useAppearanceSettings() {
-  const [themePreference, setThemePreference] =
-    useState<ThemePreference>(loadThemePreference);
+  const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
   const [opacity, setOpacity] = useState(loadSidebarOpacity);
   const [blur, setBlur] = useState(loadSidebarBlur);
   const [themeHue, setThemeHue] = useState(loadThemeHue);
@@ -764,9 +520,7 @@ function AppearancePage({ appearance }: { appearance: AppearanceSettings }) {
           display={`${appearance.themeHue}°`}
           min={THEME_HUE_MIN}
           max={THEME_HUE_MAX}
-          onChange={(value) =>
-            appearance.onTint(value, appearance.themeSaturation)
-          }
+          onChange={(value) => appearance.onTint(value, appearance.themeSaturation)}
         />
       </Row>
       <Row
@@ -827,9 +581,7 @@ function KeybindingsPage() {
           <span className="w-28 shrink-0">When</span>
         </div>
         {rows.length === 0 ? (
-          <p className="px-3 py-3 text-[12px] text-content/45">
-            No matching bindings
-          </p>
+          <p className="px-3 py-3 text-[12px] text-content/45">No matching bindings</p>
         ) : (
           rows.map((row) => (
             <div
@@ -849,8 +601,7 @@ function KeybindingsPage() {
       </div>
 
       <p className="pt-3 text-[12px] text-content/40">
-        Bindings come from the app menu and the workspace key handler; they
-        aren’t customizable yet.
+        Bindings come from the app menu and the workspace key handler; they aren’t customizable yet.
       </p>
     </>
   );
@@ -888,11 +639,10 @@ function ProvidersPage() {
   return (
     <>
       <p className="pb-2 text-[12px] leading-relaxed text-content/45">
-        A provider is listed as installed once its CLI is found on your PATH.
-        Uninstalled CLIs stay listed here but are omitted from the model picker.
-        Turn off Show in picker to hide an installed provider from those tabs.
-        The model beside each provider is what new conversations use when that
-        provider is selected; Use by default picks the provider itself.
+        A provider is listed as installed once its CLI is found on your PATH. Uninstalled CLIs stay
+        listed here but are omitted from the model picker. Turn off Show in picker to hide an
+        installed provider from those tabs. The model beside each provider is what new conversations
+        use when that provider is selected; Use by default picks the provider itself.
       </p>
       {HARNESSES.map((harness) => (
         <ProviderRow
@@ -900,9 +650,7 @@ function ProvidersPage() {
           harness={harness}
           selectedModel={
             defaultModels[harness] ??
-            (choice?.harness === harness
-              ? choice.model
-              : defaultModelId(harness))
+            (choice?.harness === harness ? choice.model : defaultModelId(harness))
           }
           isDefault={choice?.harness === harness}
           onDefault={onDefault}
@@ -928,11 +676,8 @@ function ProviderRow({
 }) {
   const models = modelsFor(harness);
   const available = isHarnessAvailable(harness);
-  const current =
-    models.length > 0 ? resolveModel(harness, selectedModel) : null;
-  const [inPicker, setInPicker] = useState(() =>
-    isPickerProviderVisible(harness),
-  );
+  const current = models.length > 0 ? resolveModel(harness, selectedModel) : null;
+  const [inPicker, setInPicker] = useState(() => isPickerProviderVisible(harness));
 
   useEffect(() => {
     if (!available || models.length > 0) return;
@@ -996,19 +741,12 @@ function ProviderRow({
 
 function useArchivedProjects(): ArchivedProject[] {
   const [items, setItems] = useState(loadArchivedProjects);
-  useEffect(
-    () => subscribeArchivedProjects(() => setItems(loadArchivedProjects())),
-    [],
-  );
+  useEffect(() => subscribeArchivedProjects(() => setItems(loadArchivedProjects())), []);
   return items;
 }
 
 function archivedProjectLabel(path: string): string {
-  return resolveTabGroupLabel(
-    projectName(path),
-    loadTabGroupLabels(),
-    projectName(path),
-  );
+  return resolveTabGroupLabel(projectName(path), loadTabGroupLabels(), projectName(path));
 }
 
 function ArchivePage({
@@ -1032,10 +770,7 @@ function ArchivePage({
   const [deleting, setDeleting] = useState<ArchivedProject | null>(null);
   const archivedProjects = useArchivedProjects();
   const archived = useMemo(
-    () =>
-      sessions
-        .filter((session) => session.archived)
-        .sort((a, b) => b.updatedAt - a.updatedAt),
+    () => sessions.filter((session) => session.archived).sort((a, b) => b.updatedAt - a.updatedAt),
     [sessions],
   );
 
@@ -1050,8 +785,7 @@ function ArchivePage({
       <Heading title="Archived projects" first />
       {archivedProjects.length === 0 ? (
         <p className="py-3 text-[12px] text-content/45">
-          Archive a project from the rail to keep its chats without listing it
-          in the sidebar.
+          Archive a project from the rail to keep its chats without listing it in the sidebar.
         </p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-content/10">
@@ -1061,9 +795,7 @@ function ArchivePage({
               className="flex items-center gap-3 border-b border-content/5 px-3 py-2 last:border-b-0"
             >
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px]">
-                  {archivedProjectLabel(project.path)}
-                </div>
+                <div className="truncate text-[13px]">{archivedProjectLabel(project.path)}</div>
                 <div className="truncate text-[11px] text-content/40">
                   {prettyCwd(project.path)}
                 </div>
@@ -1095,11 +827,7 @@ function ArchivePage({
       </Row>
 
       <Heading
-        title={
-          looksLikeProject(cwd)
-            ? `Archived in ${projectName(cwd)}`
-            : "Archived conversations"
-        }
+        title={looksLikeProject(cwd) ? `Archived in ${projectName(cwd)}` : "Archived conversations"}
       />
 
       {!looksLikeProject(cwd) ? (
@@ -1117,10 +845,7 @@ function ArchivePage({
               key={session.id}
               className="flex items-center gap-3 border-b border-content/5 px-3 py-2 last:border-b-0"
             >
-              <HarnessIcon
-                harness={session.harness}
-                className="size-3.5 shrink-0"
-              />
+              <HarnessIcon harness={session.harness} className="size-3.5 shrink-0" />
               <button
                 type="button"
                 onClick={() => onOpenSession(session.id)}
@@ -1131,15 +856,10 @@ function ArchivePage({
               <span className="shrink-0 text-[11px] text-content/35 tabular-nums">
                 {formatDate(session.updatedAt)}
               </span>
-              <SecondaryButton
-                onClick={() => onArchiveSession(session.id, false)}
-              >
+              <SecondaryButton onClick={() => onArchiveSession(session.id, false)}>
                 Unarchive
               </SecondaryButton>
-              <SecondaryButton
-                danger
-                onClick={() => onDeleteSession(session.id)}
-              >
+              <SecondaryButton danger onClick={() => onDeleteSession(session.id)}>
                 Delete
               </SecondaryButton>
             </div>
@@ -1174,22 +894,12 @@ function formatDate(value: number): string {
   }
 }
 
-function PageHeader({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function PageHeader({ title, description }: { title: string; description: string }) {
   return (
     <header className="pb-4">
-      <h1 className="text-[20px] font-semibold leading-tight text-content">
-        {title}
-      </h1>
+      <h1 className="text-[20px] font-semibold leading-tight text-content">{title}</h1>
       {description ? (
-        <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-content/45">
-          {description}
-        </p>
+        <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-content/45">{description}</p>
       ) : null}
     </header>
   );
@@ -1197,11 +907,7 @@ function PageHeader({
 
 function Heading({ title, first = false }: { title: string; first?: boolean }) {
   return (
-    <h2
-      className={`pb-1 text-[15px] font-semibold text-content ${
-        first ? "" : "pt-8"
-      }`}
-    >
+    <h2 className={`pb-1 text-[15px] font-semibold text-content ${first ? "" : "pt-8"}`}>
       {title}
     </h2>
   );
@@ -1221,14 +927,10 @@ function Row({
       <div className="min-w-0 flex-1">
         <div className="text-[13px] font-medium text-content">{label}</div>
         {description ? (
-          <p className="mt-1 text-[12px] leading-relaxed text-content/45">
-            {description}
-          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-content/45">{description}</p>
         ) : null}
       </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-        {children}
-      </div>
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>
     </div>
   );
 }

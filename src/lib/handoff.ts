@@ -63,10 +63,7 @@ export type ComposerSwitchPlan =
   | { kind: "revert"; restoreProviderSessionId?: string }
   | { kind: "arm"; pending: PendingHarnessSwitch };
 
-export function planComposerSwitch(
-  session: Session,
-  next: HarnessId,
-): ComposerSwitchPlan {
+export function planComposerSwitch(session: Session, next: HarnessId): ComposerSwitchPlan {
   if (session.harness === next) return { kind: "model" };
   if (session.pendingSwitch && next === session.pendingSwitch.from) {
     return {
@@ -74,10 +71,7 @@ export function planComposerSwitch(
       restoreProviderSessionId: session.pendingSwitch.fromProviderSessionId,
     };
   }
-  if (
-    !session.blocks.some((block) => block.role === "user") &&
-    !session.pendingSwitch
-  ) {
+  if (!session.blocks.some((block) => block.role === "user") && !session.pendingSwitch) {
     return { kind: "empty", forget: session.harness };
   }
   return {
@@ -86,9 +80,7 @@ export function planComposerSwitch(
       from: session.harness,
       fromModel: session.model,
       fromSettings: session.modelSettings,
-      ...(session.providerSessionId
-        ? { fromProviderSessionId: session.providerSessionId }
-        : {}),
+      ...(session.providerSessionId ? { fromProviderSessionId: session.providerSessionId } : {}),
     },
   };
 }
@@ -119,8 +111,7 @@ export function lastHandoffBlock(blocks: Block[]): Block | undefined {
 
 export function isPreparingHandoff(session: Session): boolean {
   return session.blocks.some(
-    (block) =>
-      block.role === "handoff" && block.handoff?.status === "preparing",
+    (block) => block.role === "handoff" && block.handoff?.status === "preparing",
   );
 }
 
@@ -136,11 +127,7 @@ export function pendingHandoff(session: Session): {
   return { from: last.handoff.from, to: last.handoff.to, text };
 }
 
-export function appendPreparingHandoff(
-  session: Session,
-  from: HarnessId,
-  to: HarnessId,
-): Session {
+export function appendPreparingHandoff(session: Session, from: HarnessId, to: HarnessId): Session {
   return appendHandoffBlock(session, {
     from,
     to,
@@ -169,12 +156,7 @@ export function completeHandoff(session: Session, text: string): Session {
   const last = lastHandoffBlock(session.blocks);
   if (!last?.handoff) return session;
   const brief = stripGoalSections(text) || buildDeterministicHandoff(session);
-  return patchHandoff(
-    session,
-    last.id,
-    { ...last.handoff, status: "ready", pending: true },
-    brief,
-  );
+  return patchHandoff(session, last.id, { ...last.handoff, status: "ready", pending: true }, brief);
 }
 
 /** User messages already on the transcript after the last handoff divider. */
@@ -196,10 +178,7 @@ export function consumeHandoff(session: Session): Session {
   return patchHandoff(session, last.id, { ...last.handoff, pending: false });
 }
 
-export function chooseHandoffBrief(
-  agentText: string,
-  fallback: string,
-): string {
+export function chooseHandoffBrief(agentText: string, fallback: string): string {
   const agent = stripGoalSections(agentText);
   if (agent.length >= MIN_AGENT_BRIEF) {
     return limitSection(agent, BRIEF_LIMIT);
@@ -209,17 +188,12 @@ export function chooseHandoffBrief(
 
 export function hasSessionEdits(session: Session): boolean {
   return session.blocks.some((block) =>
-    isEditTool(
-      block.tool?.kind,
-      block.text || block.tool?.title,
-      block.tool?.preview,
-    ),
+    isEditTool(block.tool?.kind, block.text || block.tool?.title, block.tool?.preview),
   );
 }
 
 export function shouldAskOutgoingAgent(session: Session): boolean {
-  const liveId =
-    session.pendingSwitch?.fromProviderSessionId ?? session.providerSessionId;
+  const liveId = session.pendingSwitch?.fromProviderSessionId ?? session.providerSessionId;
   return !!liveId && hasSessionEdits(session);
 }
 
@@ -274,13 +248,7 @@ export function buildDeterministicHandoff(
       continue;
     }
     if (block.role === "tool" || block.role === "approval") {
-      if (
-        !isEditTool(
-          block.tool?.kind,
-          block.text || block.tool?.title,
-          block.tool?.preview,
-        )
-      ) {
+      if (!isEditTool(block.tool?.kind, block.text || block.tool?.title, block.tool?.preview)) {
         continue;
       }
       const label = toolHandoffLine(block, cwd);
@@ -288,10 +256,7 @@ export function buildDeterministicHandoff(
     }
   }
 
-  const priorAll =
-    current && users[users.length - 1] === current
-      ? users.slice(0, -1)
-      : users;
+  const priorAll = current && users[users.length - 1] === current ? users.slice(0, -1) : users;
   const omitted = Math.max(0, priorAll.length - MAX_PRIOR_USERS);
   const prior = priorAll.slice(-MAX_PRIOR_USERS);
 
@@ -299,12 +264,8 @@ export function buildDeterministicHandoff(
   if (omitted > 0 || prior.length > 0 || lastAssistant) {
     const lines = [
       omitted > 0 ? `(${omitted} earlier messages omitted)` : "",
-      ...prior.map((text) =>
-        `User: ${oneLine(limitSection(text, USER_LINE_LIMIT))}`,
-      ),
-      lastAssistant
-        ? `Assistant: ${oneLine(limitSection(lastAssistant, ASSISTANT_LIMIT))}`
-        : "",
+      ...prior.map((text) => `User: ${oneLine(limitSection(text, USER_LINE_LIMIT))}`),
+      lastAssistant ? `Assistant: ${oneLine(limitSection(lastAssistant, ASSISTANT_LIMIT))}` : "",
     ].filter(Boolean);
     if (lines.length > 0) {
       sections.push(`## Session so far\n${lines.join("\n")}`);
@@ -352,10 +313,7 @@ ${body}
 </handoff>`;
 }
 
-function appendHandoffBlock(
-  session: Session,
-  input: HandoffMeta & { text: string },
-): Session {
+function appendHandoffBlock(session: Session, input: HandoffMeta & { text: string }): Session {
   return {
     ...session,
     blocks: [
@@ -375,12 +333,7 @@ function appendHandoffBlock(
   };
 }
 
-function patchHandoff(
-  session: Session,
-  id: string,
-  handoff: HandoffMeta,
-  text?: string,
-): Session {
+function patchHandoff(session: Session, id: string, handoff: HandoffMeta, text?: string): Session {
   return {
     ...session,
     blocks: session.blocks.map((block) => {
@@ -396,9 +349,7 @@ function patchHandoff(
 
 function toolHandoffLine(block: Block, cwd?: string): string | undefined {
   const preview = block.tool?.preview;
-  const path = preview?.path
-    ? displayPath(preview.path, cwd)
-    : preview?.fileName;
+  const path = preview?.path ? displayPath(preview.path, cwd) : preview?.fileName;
   const title = (block.text || block.tool?.title || "").trim();
   if (path && title) {
     const lower = title.toLowerCase();

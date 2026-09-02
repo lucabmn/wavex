@@ -8,8 +8,9 @@ import {
   stopOmpSession,
 } from "./omp";
 import { refreshOmpCatalog } from "./piCatalog";
-import { generateOmpSessionTitle } from "./piTitle";
-import { warmupOmpText } from "./piText";
+import { runTextPrompt, warmupOmpText } from "./piText";
+import { OMP_FLAVOR } from "./piFlavor";
+import { createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
 export const ompAdapter: HarnessAdapter = {
@@ -23,7 +24,7 @@ export const ompAdapter: HarnessAdapter = {
   forgetSession: forgetOmpSession,
   bindSession: bindOmpSession,
   refreshCatalog: refreshOmpCatalog,
-  generateTitle: generateOmpSessionTitle,
+  generateTitle: createSessionTitleGenerator((input) => runTextPrompt(OMP_FLAVOR, input)),
   warmupText: warmupOmpText,
 };
 

@@ -1,9 +1,8 @@
 import { ALT, IS_MAC, MOD, SHIFT } from "./platform";
 
-const SECTION_KEY = "wavecode.settingsSection";
+const SECTION_KEY = "wavex.settingsSection";
 
-export type SettingsSectionId =
-  "general" | "appearance" | "keybindings" | "providers" | "archive";
+export type SettingsSectionId = "general" | "appearance" | "keybindings" | "providers" | "archive";
 
 export const SETTINGS_SECTIONS: {
   id: SettingsSectionId;
@@ -23,14 +22,12 @@ export const SETTINGS_SECTIONS: {
   {
     id: "keybindings",
     label: "Keybindings",
-    description:
-      "Every shortcut the workspace handles, from the app menu and the key handler.",
+    description: "Every shortcut the workspace handles, from the app menu and the key handler.",
   },
   {
     id: "providers",
     label: "Providers",
-    description:
-      "Agent CLIs wavecode can drive, and the model new sessions start with.",
+    description: "Agent CLIs wavex can drive, and the model new sessions start with.",
   },
   {
     id: "archive",
@@ -41,22 +38,16 @@ export const SETTINGS_SECTIONS: {
 
 export const SETTINGS_SECTION_DEFAULT: SettingsSectionId = "general";
 
-export function isSettingsSectionId(
-  value: unknown,
-): value is SettingsSectionId {
+export function isSettingsSectionId(value: unknown): value is SettingsSectionId {
   return SETTINGS_SECTIONS.some((section) => section.id === value);
 }
 
 export function settingsSectionLabel(id: SettingsSectionId): string {
-  return (
-    SETTINGS_SECTIONS.find((section) => section.id === id)?.label ?? "General"
-  );
+  return SETTINGS_SECTIONS.find((section) => section.id === id)?.label ?? "General";
 }
 
 export function settingsSectionDescription(id: SettingsSectionId): string {
-  return (
-    SETTINGS_SECTIONS.find((section) => section.id === id)?.description ?? ""
-  );
+  return SETTINGS_SECTIONS.find((section) => section.id === id)?.description ?? "";
 }
 
 export function loadSettingsSection(): SettingsSectionId {
@@ -76,12 +67,12 @@ export function saveSettingsSection(id: SettingsSectionId) {
   }
 }
 
-const COMPOSER_RUNNER_KEY = "wavecode.composerRunner";
+const COMPOSER_RUNNER_KEY = "wavex.composerRunner";
 
 export const COMPOSER_RUNNER_DEFAULT = true;
 
 /** Fired on `window` when the composer mascot setting flips. */
-export const COMPOSER_RUNNER_CHANGE_EVENT = "wavecode:composer-runner-change";
+export const COMPOSER_RUNNER_CHANGE_EVENT = "wavex:composer-runner-change";
 
 export function loadComposerRunner(): boolean {
   try {
@@ -100,17 +91,15 @@ export function saveComposerRunner(value: boolean) {
     // private mode / quota
   }
   if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<boolean>(COMPOSER_RUNNER_CHANGE_EVENT, { detail: value }),
-  );
+  window.dispatchEvent(new CustomEvent<boolean>(COMPOSER_RUNNER_CHANGE_EVENT, { detail: value }));
 }
 
-const NOTES_ENABLED_KEY = "wavecode.notesEnabled";
+const NOTES_ENABLED_KEY = "wavex.notesEnabled";
 
 export const NOTES_ENABLED_DEFAULT = true;
 
 /** Fired on `window` when the Notes UI setting flips. */
-export const NOTES_ENABLED_CHANGE_EVENT = "wavecode:notes-enabled-change";
+export const NOTES_ENABLED_CHANGE_EVENT = "wavex:notes-enabled-change";
 
 export function loadNotesEnabled(): boolean {
   try {
@@ -129,25 +118,21 @@ export function saveNotesEnabled(value: boolean) {
     // private mode / quota
   }
   if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<boolean>(NOTES_ENABLED_CHANGE_EVENT, { detail: value }),
-  );
+  window.dispatchEvent(new CustomEvent<boolean>(NOTES_ENABLED_CHANGE_EVENT, { detail: value }));
 }
 
 export function subscribeNotesEnabled(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => {};
   window.addEventListener(NOTES_ENABLED_CHANGE_EVENT, onStoreChange);
-  return () =>
-    window.removeEventListener(NOTES_ENABLED_CHANGE_EVENT, onStoreChange);
+  return () => window.removeEventListener(NOTES_ENABLED_CHANGE_EVENT, onStoreChange);
 }
 
-const LIVE_AGENTS_ENABLED_KEY = "wavecode.liveAgentsEnabled";
+const LIVE_AGENTS_ENABLED_KEY = "wavex.liveAgentsEnabled";
 
 export const LIVE_AGENTS_ENABLED_DEFAULT = true;
 
 /** Fired on `window` when the working-agents rail card setting flips. */
-export const LIVE_AGENTS_ENABLED_CHANGE_EVENT =
-  "wavecode:live-agents-enabled-change";
+export const LIVE_AGENTS_ENABLED_CHANGE_EVENT = "wavex:live-agents-enabled-change";
 
 export function loadLiveAgentsEnabled(): boolean {
   try {
@@ -176,50 +161,10 @@ export function saveLiveAgentsEnabled(value: boolean) {
 export function subscribeLiveAgentsEnabled(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => {};
   window.addEventListener(LIVE_AGENTS_ENABLED_CHANGE_EVENT, onStoreChange);
-  return () =>
-    window.removeEventListener(LIVE_AGENTS_ENABLED_CHANGE_EVENT, onStoreChange);
+  return () => window.removeEventListener(LIVE_AGENTS_ENABLED_CHANGE_EVENT, onStoreChange);
 }
 
-const GRID_ARCADE_ENABLED_KEY = "wavecode.gridArcadeEnabled";
-
-export const GRID_ARCADE_ENABLED_DEFAULT = true;
-
-/** Fired on `window` when the empty-session games setting flips. */
-export const GRID_ARCADE_ENABLED_CHANGE_EVENT =
-  "wavecode:grid-arcade-enabled-change";
-
-export function loadGridArcadeEnabled(): boolean {
-  try {
-    const raw = localStorage.getItem(GRID_ARCADE_ENABLED_KEY);
-    if (raw == null) return GRID_ARCADE_ENABLED_DEFAULT;
-    return raw === "1" || raw === "true";
-  } catch {
-    return GRID_ARCADE_ENABLED_DEFAULT;
-  }
-}
-
-export function saveGridArcadeEnabled(value: boolean) {
-  try {
-    localStorage.setItem(GRID_ARCADE_ENABLED_KEY, value ? "1" : "0");
-  } catch {
-    // private mode / quota
-  }
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<boolean>(GRID_ARCADE_ENABLED_CHANGE_EVENT, {
-      detail: value,
-    }),
-  );
-}
-
-export function subscribeGridArcadeEnabled(onStoreChange: () => void) {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener(GRID_ARCADE_ENABLED_CHANGE_EVENT, onStoreChange);
-  return () =>
-    window.removeEventListener(GRID_ARCADE_ENABLED_CHANGE_EVENT, onStoreChange);
-}
-
-const CLAUDE_HOOKS_KEY = "wavecode.claudeHooks";
+const CLAUDE_HOOKS_KEY = "wavex.claudeHooks";
 
 export const CLAUDE_HOOKS_DEFAULT = true;
 
@@ -292,10 +237,7 @@ export const KEYBINDINGS: KeybindingRow[] = [
   { command: "Editor: Replace", keys: `${MOD}${ALT}F`, when: "editorFocus" },
 ];
 
-export function filterKeybindings(
-  rows: KeybindingRow[],
-  query: string,
-): KeybindingRow[] {
+export function filterKeybindings(rows: KeybindingRow[], query: string): KeybindingRow[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return rows;
   return rows.filter(

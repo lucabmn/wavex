@@ -162,10 +162,10 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
 
     #[cfg(target_os = "macos")]
     {
-        let quit = MenuItemBuilder::with_id("quit", "Quit wavecode")
+        let quit = MenuItemBuilder::with_id("quit", "Quit wavex")
             .accelerator("CmdOrCtrl+Q")
             .build(app)?;
-        let app_menu = SubmenuBuilder::new(app, "wavecode")
+        let app_menu = SubmenuBuilder::new(app, "wavex")
             .about(Some(AboutMetadata::default()))
             .separator()
             .item(&open_settings)

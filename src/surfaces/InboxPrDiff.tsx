@@ -1,19 +1,9 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  FoldVertical,
-  UnfoldVertical,
-} from "../chrome/icons";
+import { ChevronDown, ChevronRight, FoldVertical, UnfoldVertical } from "../chrome/icons";
 import { useMemo, useState } from "react";
 import { FileTypeIcon } from "../chrome/FileTypeIcon";
 import { basename } from "../lib/fs";
-import type { GithubPrDiff } from "../lib/githubTasks";
-import {
-  mergePrDiff,
-  parsePrPatch,
-  type PrDiffFile,
-  type PrDiffLine,
-} from "../lib/prDiff";
+import type { GithubPrDiff } from "../lib/inbox/githubTasks";
+import { mergePrDiff, parsePrPatch, type PrDiffFile, type PrDiffLine } from "../lib/prDiff";
 
 const MAX_DISPLAY_LINES = 2000;
 
@@ -70,10 +60,7 @@ type Props = {
 };
 
 export function InboxPrDiff({ diff }: Props) {
-  const files = useMemo(
-    () => mergePrDiff(diff.files, parsePrPatch(diff.patch)),
-    [diff],
-  );
+  const files = useMemo(() => mergePrDiff(diff.files, parsePrPatch(diff.patch)), [diff]);
   const [open, setOpen] = useState<Set<string>>(() => {
     const next = new Set<string>();
     if (files[0]) next.add(files[0].path);
@@ -165,7 +152,10 @@ function PrFileCard({
       >
         <Chevron className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
         <FileTypeIcon name={name} isDir={false} size={16} />
-        <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-content/85" title={label}>
+        <span
+          className="min-w-0 flex-1 truncate font-mono text-[12px] text-content/85"
+          title={label}
+        >
           {label}
         </span>
         <DiffCounts additions={file.additions} deletions={file.deletions} />
@@ -217,18 +207,9 @@ function DiffLineRow({ line }: { line: PrDiffLine }) {
       </div>
     );
   }
-  const bg =
-    line.kind === "add"
-      ? "bg-teal-800/20"
-      : line.kind === "del"
-        ? "bg-rose-800/20"
-        : "";
+  const bg = line.kind === "add" ? "bg-teal-800/20" : line.kind === "del" ? "bg-rose-800/20" : "";
   const bar =
-    line.kind === "add"
-      ? "bg-teal-400"
-      : line.kind === "del"
-        ? "bg-rose-400"
-        : "bg-transparent";
+    line.kind === "add" ? "bg-teal-400" : line.kind === "del" ? "bg-rose-400" : "bg-transparent";
   const mark = line.kind === "add" ? "+" : line.kind === "del" ? "−" : " ";
   const markColor =
     line.kind === "add"
@@ -256,13 +237,7 @@ function DiffLineRow({ line }: { line: PrDiffLine }) {
   );
 }
 
-function DiffCounts({
-  additions,
-  deletions,
-}: {
-  additions: number;
-  deletions: number;
-}) {
+function DiffCounts({ additions, deletions }: { additions: number; deletions: number }) {
   if (additions <= 0 && deletions <= 0) return null;
   return (
     <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums">
@@ -275,11 +250,7 @@ function DiffCounts({
 function highlight(text: string, dimmed: boolean) {
   const dim = dimmed ? "opacity-70" : "";
   const trimmed = text.trimStart();
-  if (
-    trimmed.startsWith("//") ||
-    trimmed.startsWith("///") ||
-    trimmed.startsWith("#")
-  ) {
+  if (trimmed.startsWith("//") || trimmed.startsWith("///") || trimmed.startsWith("#")) {
     return <span className={`text-content/45 ${dim}`}>{text}</span>;
   }
 

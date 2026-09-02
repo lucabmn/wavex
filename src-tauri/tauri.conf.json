@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "wavecode",
-  "version": "0.0.1",
-  "identifier": "com.wavecode.desktop",
+  "productName": "wavex",
+  "version": "0.1.0",
+  "identifier": "com.wavex.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "wavecode",
+        "title": "wavex",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -28,21 +28,19 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: https://avatars.githubusercontent.com https://uploads.linear.app https://lh3.googleusercontent.com; font-src 'self' data:; connect-src ipc: http://ipc.localhost https://ipc.localhost; media-src 'self' asset: http://asset.localhost https://asset.localhost blob:; object-src 'none'; base-uri 'self'; frame-src 'none'",
-      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: https://avatars.githubusercontent.com https://uploads.linear.app https://lh3.googleusercontent.com; font-src 'self' data:; connect-src ipc: http://ipc.localhost https://ipc.localhost http://localhost:1420 ws://localhost:1420 http://127.0.0.1:1420 ws://127.0.0.1:1420; media-src 'self' asset: http://asset.localhost https://asset.localhost blob:; object-src 'none'; base-uri 'self'; frame-src 'none'",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: https://avatars.githubusercontent.com https://lh3.googleusercontent.com; font-src 'self' data:; connect-src ipc: http://ipc.localhost https://ipc.localhost; media-src 'self' asset: http://asset.localhost https://asset.localhost blob:; object-src 'none'; base-uri 'self'; frame-src 'none'",
+      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: https://avatars.githubusercontent.com https://lh3.googleusercontent.com; font-src 'self' data:; connect-src ipc: http://ipc.localhost https://ipc.localhost http://localhost:1420 ws://localhost:1420 http://127.0.0.1:1420 ws://127.0.0.1:1420; media-src 'self' asset: http://asset.localhost https://asset.localhost blob:; object-src 'none'; base-uri 'self'; frame-src 'none'",
       "dangerousDisableAssetCspModification": ["style-src"],
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "$APPDATA/**"
-        ]
+        "scope": ["$APPDATA/**"]
       }
     }
   },
   "bundle": {
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

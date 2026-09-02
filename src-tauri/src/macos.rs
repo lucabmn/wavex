@@ -358,7 +358,7 @@ struct DockMenuTargetIvars {
 
 define_class!(
     #[unsafe(super(NSObject))]
-    #[name = "wavecodeDockMenuTarget"]
+    #[name = "wavexDockMenuTarget"]
     #[ivars = DockMenuTargetIvars]
     struct DockMenuTarget;
 
@@ -432,7 +432,7 @@ pub(crate) fn install_dock_menu(app: &AppHandle) {
 #[cfg(debug_assertions)]
 pub(crate) fn ensure_dev_bundle() {
     if let Err(err) = relaunch_from_dev_bundle() {
-        eprintln!("wavecode: macos dev bundle: {err}");
+        eprintln!("wavex: macos dev bundle: {err}");
     }
 }
 
@@ -487,15 +487,12 @@ fn relaunch_from_dev_bundle() -> Result<(), String> {
         return Ok(());
     }
 
-    let app = exe
-        .parent()
-        .ok_or("missing exe parent")?
-        .join("wavecode.app");
+    let app = exe.parent().ok_or("missing exe parent")?.join("wavex.app");
     let macos_dir = app.join("Contents/MacOS");
     std::fs::create_dir_all(&macos_dir).map_err(|e| e.to_string())?;
     write_dev_bundle_icons(&app)?;
 
-    let bundled = macos_dir.join("wavecode");
+    let bundled = macos_dir.join("wavex");
     let _ = std::fs::remove_file(&bundled);
     if std::fs::hard_link(&exe, &bundled).is_err() {
         std::fs::copy(&exe, &bundled).map_err(|e| e.to_string())?;
@@ -537,19 +534,19 @@ const DEV_BUNDLE_PLIST: &[u8] = br#"<?xml version="1.0" encoding="UTF-8"?>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>wavecode</string>
+	<string>wavex</string>
 	<key>CFBundleExecutable</key>
-	<string>wavecode</string>
+	<string>wavex</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.wavecode.desktop</string>
+	<string>com.wavex.desktop</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>wavecode</string>
+	<string>wavex</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

@@ -5,20 +5,19 @@ import {
   listInboxItems,
   type InboxItem,
   type InboxQuery,
-} from "../lib/githubTasks";
+} from "../lib/inbox/githubTasks";
 import {
   applyInboxFilters,
   inboxFetchState,
   loadInboxFilters,
   pruneInboxFilters,
-} from "../lib/inboxFilters";
+} from "../lib/inbox/inboxFilters";
 import {
   inboxHasUnseenItems,
   seedInboxSeenIfNeeded,
   subscribeInboxSeen,
   type InboxSeenEntry,
-} from "../lib/inboxSeen";
-import { loadHiddenLinearTeamIds } from "../lib/linear";
+} from "../lib/inbox/inboxSeen";
 import type { RecentProject } from "../lib/recents";
 import { noteInboxUnseen } from "../lib/sounds";
 
@@ -63,7 +62,6 @@ export function useInboxUnseen(recents: RecentProject[], cwd: string): boolean {
         assignedToMe: filters.assignedToMe,
         state: inboxFetchState(filters),
         search: "",
-        linearHiddenTeamIds: loadHiddenLinearTeamIds(),
       };
       void listInboxItems(projects, query, { force })
         .then((listed) => {

@@ -91,9 +91,7 @@ export function parseCommitMessage(raw: string): CommitMessage | null {
   const rec = parseJsonObject(raw);
   if (!rec) return null;
   const subject = sanitizeCommitSubject(
-    stringField(rec, "subject") ||
-      stringField(rec, "title") ||
-      stringField(rec, "message"),
+    stringField(rec, "subject") || stringField(rec, "title") || stringField(rec, "message"),
   );
   if (!subject) return null;
   return { subject, body: commitBody(rec) };
@@ -126,9 +124,7 @@ export function parsePrContent(raw: string): PrContent | null {
 
 export function parseBranchName(raw: string): string | null {
   const rec = parseJsonObject(raw);
-  const branch = sanitizeBranchFragment(
-    rec ? stringField(rec, "branch") : raw,
-  );
+  const branch = sanitizeBranchFragment(rec ? stringField(rec, "branch") : raw);
   return branch || null;
 }
 

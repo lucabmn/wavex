@@ -15,9 +15,7 @@ const BASE: MermaidConfig = {
   suppressErrorRendering: true,
 };
 
-export function createLazyMermaidPlugin(
-  options: { config?: MermaidConfig } = {},
-): DiagramPlugin {
+export function createLazyMermaidPlugin(options: { config?: MermaidConfig } = {}): DiagramPlugin {
   let config: MermaidConfig = { ...BASE, ...options.config };
   let initialized = false;
   let engine: Promise<typeof import("mermaid").default> | null = null;

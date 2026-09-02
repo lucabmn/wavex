@@ -1,11 +1,5 @@
 export function moveItem<T>(items: T[], from: number, to: number): T[] {
-  if (
-    from === to ||
-    from < 0 ||
-    to < 0 ||
-    from >= items.length ||
-    to >= items.length
-  ) {
+  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) {
     return items;
   }
   const next = items.slice();
@@ -14,10 +8,7 @@ export function moveItem<T>(items: T[], from: number, to: number): T[] {
   return next;
 }
 
-export function orderByIds<T extends { id: string }>(
-  items: T[],
-  ids: string[],
-): T[] {
+export function orderByIds<T extends { id: string }>(items: T[], ids: string[]): T[] {
   const byId = new Map(items.map((item) => [item.id, item]));
   const next: T[] = [];
   const seen = new Set<string>();

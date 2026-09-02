@@ -9,11 +9,7 @@ type Props = {
   onDismiss: () => void;
 };
 
-export function TranscriptSelectionMenu({
-  selection,
-  onAddToChat,
-  onDismiss,
-}: Props) {
+export function TranscriptSelectionMenu({ selection, onAddToChat, onDismiss }: Props) {
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
 
@@ -55,11 +51,7 @@ export function TranscriptSelectionMenu({
         }}
         className="flex h-7 items-center gap-1.5 rounded-lg px-2 font-sans text-[13px] leading-none text-content outline-none ring-accent/40 hover:bg-content/5 focus-visible:ring-2"
       >
-        <MessageSquarePlus
-          aria-hidden="true"
-          className="size-3.5"
-          strokeWidth={1.75}
-        />
+        <MessageSquarePlus aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
         Add to chat
       </button>
     </Popover>

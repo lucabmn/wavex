@@ -35,12 +35,7 @@ import {
   getHarnessAvailabilitySnapshot,
 } from "../lib/harness/availability";
 import { refreshHarnessCatalogs } from "../lib/harness/registry";
-import {
-  HARNESSES,
-  HARNESS_LABEL,
-  HARNESS_TITLE,
-  type HarnessId,
-} from "../lib/session";
+import { HARNESSES, HARNESS_LABEL, HARNESS_TITLE, type HarnessId } from "../lib/session";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { HarnessIcon } from "./HarnessIcon";
 import { Popover } from "./Popover";
@@ -58,18 +53,8 @@ const MENU_WIDTH = 300;
 const MENU_MIN_HEIGHT = 180;
 const MENU_MAX_HEIGHT = 340;
 
-export function ModelPicker({
-  harness,
-  model,
-  hotkeys = false,
-  onChange,
-  onClose,
-}: Props) {
-  const catalogVersion = useSyncExternalStore(
-    subscribeModels,
-    getModelSnapshot,
-    getModelSnapshot,
-  );
+export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose }: Props) {
+  const catalogVersion = useSyncExternalStore(subscribeModels, getModelSnapshot, getModelSnapshot);
   const availabilityVersion = useSyncExternalStore(
     subscribeHarnessAvailability,
     getHarnessAvailabilitySnapshot,
@@ -95,11 +80,7 @@ export function ModelPicker({
   const lastHotkey = useRef(0);
 
   const shownInPicker = (id: HarnessId) =>
-    showProviderInModelPicker(
-      id,
-      isHarnessAvailable(id),
-      hasProbedHarnessAvailability(),
-    );
+    showProviderInModelPicker(id, isHarnessAvailable(id), hasProbedHarnessAvailability());
   const pickerHarnesses = HARNESSES.filter(shownInPicker);
   const visibleTab = coerceModelPickerTab(tab, shownInPicker);
   if (visibleTab !== tab) {
@@ -149,7 +130,7 @@ export function ModelPicker({
   useEffect(() => {
     const inBlockingUi = (target: EventTarget | null) => {
       if (!(target instanceof Element)) return false;
-      if (target.closest(".wavecode-terminal")) return true;
+      if (target.closest(".wavex-terminal")) return true;
       return Boolean(
         target.closest(
           "[data-file-picker], [data-branch-picker], [data-skill-picker], [data-mention-picker], [data-access-picker], [data-model-settings]",
@@ -160,13 +141,7 @@ export function ModelPicker({
     const onKey = (e: KeyboardEvent) => {
       if (e.isComposing) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (
-        hotkeys &&
-        mod &&
-        !e.altKey &&
-        !e.shiftKey &&
-        (e.key === "." || e.code === "Period")
-      ) {
+      if (hotkeys && mod && !e.altKey && !e.shiftKey && (e.key === "." || e.code === "Period")) {
         if (!openRef.current && inBlockingUi(e.target)) return;
         e.preventDefault();
         e.stopPropagation();
@@ -185,13 +160,7 @@ export function ModelPicker({
       if (inBlockingUi(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
-      selectTab(
-        stepModelPickerTab(
-          tabRef.current,
-          e.key === "ArrowLeft" ? -1 : 1,
-          shownInPicker,
-        ),
-      );
+      selectTab(stepModelPickerTab(tabRef.current, e.key === "ArrowLeft" ? -1 : 1, shownInPicker));
     };
 
     const onMenu = () => {
@@ -218,10 +187,7 @@ export function ModelPicker({
       visibleTab === "favorites"
         ? favorites
             .map((id) => findModel(id))
-            .filter(
-              (item): item is AgentModel =>
-                item != null && shownInPicker(item.harness),
-            )
+            .filter((item): item is AgentModel => item != null && shownInPicker(item.harness))
         : modelsFor(visibleTab);
     if (!needle) return pool;
     return pool.filter((item) => {
@@ -231,14 +197,7 @@ export function ModelPicker({
     });
     // Catalog, install probes, and picker-visibility all feed this list:
     // catalogs land after mount, and hiding a provider must drop its favorites.
-  }, [
-    visibleTab,
-    query,
-    favorites,
-    catalogVersion,
-    availabilityVersion,
-    visibilityVersion,
-  ]);
+  }, [visibleTab, query, favorites, catalogVersion, availabilityVersion, visibilityVersion]);
 
   useEffect(() => {
     if (!open) return;
@@ -247,9 +206,7 @@ export function ModelPicker({
   }, [open, visibleTab, query, current.id]);
 
   useEffect(() => {
-    setActive((i) =>
-      visible.length === 0 ? 0 : Math.min(i, visible.length - 1),
-    );
+    setActive((i) => (visible.length === 0 ? 0 : Math.min(i, visible.length - 1)));
   }, [visible.length]);
 
   const pick = (item: AgentModel) => {
@@ -260,9 +217,7 @@ export function ModelPicker({
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
-      const next = prev.includes(id)
-        ? prev.filter((item) => item !== id)
-        : [...prev, id];
+      const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
       saveFavoriteModels(next);
       return next;
     });
@@ -311,9 +266,7 @@ export function ModelPicker({
           openPicker();
         }}
         className={`flex h-6.5 max-w-52 items-center gap-1 rounded-md px-1.5 ${
-          open
-            ? "bg-content/10 text-content"
-            : "bg-content/10 text-content hover:bg-content/15"
+          open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"
         }`}
       >
         <HarnessIcon harness={current.harness} className="size-4 shrink-0" />
@@ -391,8 +344,7 @@ export function ModelPicker({
               emptyLabel={
                 visibleTab === "favorites" && !query.trim()
                   ? "No favorite models"
-                  : visibleTab !== "favorites" &&
-                      !isHarnessAvailable(visibleTab)
+                  : visibleTab !== "favorites" && !isHarnessAvailable(visibleTab)
                     ? harnessUnavailableHint(visibleTab)
                     : visibleTab === "codex" && !query.trim()
                       ? "Loading Codex models…"
@@ -498,9 +450,7 @@ function ModelList({
   }, [models.length]);
 
   if (models.length === 0) {
-    return (
-      <div className="px-3 py-4 text-[12px] text-content/50">{emptyLabel}</div>
-    );
+    return <div className="px-3 py-4 text-[12px] text-content/50">{emptyLabel}</div>;
   }
 
   return (
@@ -522,11 +472,7 @@ function ModelList({
             ref={highlighted ? activeRef : undefined}
             onMouseEnter={() => onActive(index)}
             className={`flex w-full items-center gap-1 rounded-lg px-1 ${
-              disabled
-                ? ""
-                : highlighted || selected
-                  ? "bg-content/10"
-                  : "hover:bg-content/5"
+              disabled ? "" : highlighted || selected ? "bg-content/10" : "hover:bg-content/5"
             }`}
           >
             <button
@@ -535,9 +481,7 @@ function ModelList({
               aria-selected={selected}
               aria-disabled={disabled}
               disabled={disabled}
-              title={
-                disabled ? harnessUnavailableHint(item.harness) : undefined
-              }
+              title={disabled ? harnessUnavailableHint(item.harness) : undefined}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 if (disabled) return;
@@ -552,13 +496,9 @@ function ModelList({
                   {item.name}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1 text-[11px] leading-4 text-content/50">
-                  <HarnessIcon
-                    harness={item.harness}
-                    className="size-3 shrink-0 opacity-80"
-                  />
+                  <HarnessIcon harness={item.harness} className="size-3 shrink-0 opacity-80" />
                   <span className="truncate">
-                    {HARNESS_TITLE[item.harness]} ·{" "}
-                    {HARNESS_LABEL[item.harness]}
+                    {HARNESS_TITLE[item.harness]} · {HARNESS_LABEL[item.harness]}
                   </span>
                 </span>
               </span>
@@ -571,18 +511,14 @@ function ModelList({
             <button
               type="button"
               title={favorited ? "Remove from favorites" : "Add to favorites"}
-              aria-label={
-                favorited ? "Remove from favorites" : "Add to favorites"
-              }
+              aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
               onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleFavorite(item.id);
               }}
               className={`grid size-6 shrink-0 place-items-center rounded-md ${
-                favorited
-                  ? "text-content"
-                  : "text-content/30 hover:text-content/70"
+                favorited ? "text-content" : "text-content/30 hover:text-content/70"
               }`}
             >
               <Star

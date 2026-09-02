@@ -1,4 +1,4 @@
-export const ADD_TO_CHAT_EVENT = "wavecode:add-to-chat";
+export const ADD_TO_CHAT_EVENT = "wavex:add-to-chat";
 
 export type AddToChatMode = "quote" | "plain";
 
@@ -13,10 +13,7 @@ export type QuoteRequest = {
   mode?: AddToChatMode;
 };
 
-export function requestAddToChat(
-  text: string,
-  mode: AddToChatMode = "quote",
-) {
+export function requestAddToChat(text: string, mode: AddToChatMode = "quote") {
   if (typeof window === "undefined") return;
   const value = text.replace(/\r\n?/g, "\n").trim();
   if (!value) return;
@@ -33,10 +30,7 @@ export type QuoteConsumption = {
   changed: boolean;
 };
 
-export function isMarkdownBlockquotePosition(
-  text: string,
-  position: number,
-): boolean {
+export function isMarkdownBlockquotePosition(text: string, position: number): boolean {
   const index = Math.max(0, Math.min(position, text.length));
   const lineStart = text.lastIndexOf("\n", Math.max(0, index - 1)) + 1;
   return /^ {0,3}>/.test(text.slice(lineStart, index));
@@ -88,12 +82,6 @@ export function acknowledgeQuoteRequest(
 
 function joinComposerInsert(draft: string, block: string): string {
   const separator =
-    draft.length === 0
-      ? ""
-      : draft.endsWith("\n\n")
-        ? ""
-        : draft.endsWith("\n")
-          ? "\n"
-          : "\n\n";
+    draft.length === 0 ? "" : draft.endsWith("\n\n") ? "" : draft.endsWith("\n") ? "\n" : "\n\n";
   return `${draft}${separator}${block}\n\n`;
 }

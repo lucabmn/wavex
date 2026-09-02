@@ -4,7 +4,6 @@ mod checkpoint;
 mod cursor_store;
 mod fs;
 mod harness;
-mod linear;
 #[cfg(target_os = "macos")]
 mod macos;
 mod menu;
@@ -18,7 +17,7 @@ mod skills;
 mod window;
 mod window_transfer;
 
-// Phase 1 seam: spawn / kill harness children per wavecode thread.
+// Phase 1 seam: spawn / kill harness children per wavex thread.
 // Adapters own the protocol; this host only supervises processes.
 
 /// Project directory for new sessions — prefer cwd, else home.
@@ -189,13 +188,6 @@ pub fn run() {
             fs::git_github_work_item_thread,
             fs::git_github_work_item_comment,
             fs::git_github_pr_diff,
-            linear::linear_status,
-            linear::linear_set_token,
-            linear::linear_list_teams,
-            linear::linear_list_issues,
-            linear::linear_issue_details,
-            linear::linear_issue_thread,
-            linear::linear_issue_comment,
             fs::git_branches,
             fs::git_checkout,
             fs::git_create_branch,
@@ -277,7 +269,7 @@ pub fn run() {
             project_logo::remove_project_logo,
         ])
         .build(tauri::generate_context!())
-        .expect("error while building wavecode");
+        .expect("error while building wavex");
 
     app.run(|handle, event| match event {
         #[cfg(target_os = "macos")]

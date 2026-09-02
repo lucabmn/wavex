@@ -29,33 +29,21 @@ export function HandoffMiniCard({ card, onDismiss }: Props) {
       >
         <div className="flex w-full flex-col text-left">
           <span className="flex min-w-0 items-center gap-1.5">
-            <Replace
-              className="size-3.5 shrink-0 text-content/45"
-              strokeWidth={1.75}
-            />
-            <span className="min-w-0 truncate text-[11px] text-content/50">
-              Handoff
-            </span>
+            <Replace className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
+            <span className="min-w-0 truncate text-[11px] text-content/50">Handoff</span>
           </span>
           <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] font-semibold leading-snug text-content">
             <HarnessIcon harness={card.from} className="size-3.5 shrink-0" />
             <span className="min-w-0 truncate">{HARNESS_TITLE[card.from]}</span>
-            <ChevronRight
-              className="size-3 shrink-0 text-content/35"
-              strokeWidth={1.75}
-            />
+            <ChevronRight className="size-3 shrink-0 text-content/35" strokeWidth={1.75} />
             <HarnessIcon harness={card.to} className="size-3.5 shrink-0" />
             <span className="min-w-0 truncate">{HARNESS_TITLE[card.to]}</span>
           </span>
           {card.request ? (
-            <span className="mt-1 line-clamp-1 text-[11px] text-content/45">
-              {card.request}
-            </span>
+            <span className="mt-1 line-clamp-1 text-[11px] text-content/45">{card.request}</span>
           ) : null}
           {files ? (
-            <span className="mt-1 text-[11px] leading-4 text-content/45">
-              {files}
-            </span>
+            <span className="mt-1 text-[11px] leading-4 text-content/45">{files}</span>
           ) : null}
         </div>
         {onDismiss ? (

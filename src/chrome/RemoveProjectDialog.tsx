@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LAYER } from "../lib/layers";
 import { prettyCwd } from "../lib/paths";
-import { projectSessionCount } from "../lib/projectData";
+import { projectSessionCount } from "../lib/project/projectData";
 
 type Props = {
   name: string;
@@ -55,13 +55,10 @@ export function RemoveProjectDialog({ name, path, onCancel, onConfirm }: Props) 
         className="absolute left-1/2 top-[22%] flex w-[min(420px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-[13px] font-medium leading-tight text-content">
-            Delete “{name}”?
-          </h2>
+          <h2 className="text-[13px] font-medium leading-tight text-content">Delete “{name}”?</h2>
           <p className="text-[12px] leading-snug text-content/55">
-            All conversations for this project will be deleted. It also
-            leaves the sidebar. The folder on disk stays put, and opening it
-            again brings the project back empty.
+            All conversations for this project will be deleted. It also leaves the sidebar. The
+            folder on disk stays put, and opening it again brings the project back empty.
           </p>
           {sessions != null && sessions > 0 ? (
             <p className="text-[12px] leading-snug text-content/45">
@@ -70,9 +67,7 @@ export function RemoveProjectDialog({ name, path, onCancel, onConfirm }: Props) 
                 : `${sessions} saved conversations will be removed.`}
             </p>
           ) : null}
-          <p className="truncate text-[11px] leading-tight text-content/40">
-            {prettyCwd(path)}
-          </p>
+          <p className="truncate text-[11px] leading-tight text-content/40">{prettyCwd(path)}</p>
         </div>
 
         <div className="flex justify-end gap-2">

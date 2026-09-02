@@ -5,17 +5,11 @@ import {
   type ModelSetting,
   type ModelSettingChoice,
 } from "../models";
-import {
-  killChild,
-  resolveCodexBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, resolveCodexBinary, spawnChild, unwatchChild, watchChild } from "./child";
 import { asRecord, stringField } from "./codexProtocol";
 import { JsonRpcClient } from "./jsonRpc";
 
-const PROBE_ID = "wavecode-codex-probe";
+const PROBE_ID = "wavex-codex-probe";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 
@@ -39,7 +33,7 @@ export function refreshCodexCatalog(): Promise<void> {
       if (models.length > 0) setHarnessModels("codex", models);
     })
     .catch((error: unknown) => {
-      console.debug("[wavecode] codex catalog", error);
+      console.debug("[wavex] codex catalog", error);
     })
     .finally(() => {
       inflight = null;
@@ -74,38 +68,40 @@ async function discoverCodexModels(): Promise<AgentModel[]> {
 
   try {
     await spawnChild(PROBE_ID, path, ["app-server"], cwd);
-    return await withTimeout(DISCOVERY_TIMEOUT_MS, async () => {
-      await rpc.request(
-        "initialize",
-        {
-          clientInfo: {
-            name: "wavecode",
-            title: "wavecode",
-            version: "0.1.0",
+    return await withTimeout(
+      DISCOVERY_TIMEOUT_MS,
+      async () => {
+        await rpc.request(
+          "initialize",
+          {
+            clientInfo: {
+              name: "wavex",
+              title: "wavex",
+              version: "0.1.0",
+            },
+            capabilities: { experimentalApi: true },
           },
-          capabilities: { experimentalApi: true },
-        },
-        REQUEST_TIMEOUT_MS,
-      );
-      await rpc.notify("initialized", undefined);
-
-      const account = await rpc
-        .request<{
-          account?: unknown;
-          requiresOpenaiAuth?: boolean;
-        }>("account/read", {}, REQUEST_TIMEOUT_MS)
-        .catch(() => null);
-
-      if (account && !account.account && account.requiresOpenaiAuth) {
-        throw new Error(
-          "Codex CLI is not authenticated. Run `codex login` and try again.",
+          REQUEST_TIMEOUT_MS,
         );
-      }
+        await rpc.notify("initialized", undefined);
 
-      return await listAllModels(rpc);
-    }, () => {
-      void stop();
-    });
+        const account = await rpc
+          .request<{
+            account?: unknown;
+            requiresOpenaiAuth?: boolean;
+          }>("account/read", {}, REQUEST_TIMEOUT_MS)
+          .catch(() => null);
+
+        if (account && !account.account && account.requiresOpenaiAuth) {
+          throw new Error("Codex CLI is not authenticated. Run `codex login` and try again.");
+        }
+
+        return await listAllModels(rpc);
+      },
+      () => {
+        void stop();
+      },
+    );
   } finally {
     await stop();
   }
@@ -134,10 +130,12 @@ async function listAllModels(rpc: JsonRpcClient): Promise<AgentModel[]> {
 
 export function parseCodexModelList(data: unknown[]): AgentModel[] {
   return orderDefaultFirst(
-    uniqueByNative(data.flatMap((row) => {
-      const model = parseModel(row);
-      return model ? [model] : [];
-    })),
+    uniqueByNative(
+      data.flatMap((row) => {
+        const model = parseModel(row);
+        return model ? [model] : [];
+      }),
+    ),
     data,
   );
 }
@@ -146,15 +144,10 @@ function parseModel(raw: unknown): AgentModel | null {
   const rec = asRecord(raw);
   if (!rec) return null;
   if (rec.hidden === true) return null;
-  const nativeId =
-    stringField(rec, "model") ??
-    stringField(rec, "slug") ??
-    stringField(rec, "id");
+  const nativeId = stringField(rec, "model") ?? stringField(rec, "slug") ?? stringField(rec, "id");
   if (!nativeId) return null;
   const name = formatDisplayName(
-    stringField(rec, "displayName") ??
-      stringField(rec, "name") ??
-      nativeId,
+    stringField(rec, "displayName") ?? stringField(rec, "name") ?? nativeId,
   );
   const settings = parseModelSettings(rec);
   return {
@@ -168,9 +161,7 @@ function parseModel(raw: unknown): AgentModel | null {
 
 function parseModelSettings(rec: Record<string, unknown>): ModelSetting[] {
   const settings: ModelSetting[] = [];
-  const efforts = Array.isArray(rec.supportedReasoningEfforts)
-    ? rec.supportedReasoningEfforts
-    : [];
+  const efforts = Array.isArray(rec.supportedReasoningEfforts) ? rec.supportedReasoningEfforts : [];
   const effortOptions: ModelSettingChoice[] = [];
   let defaultEffort: string | undefined;
   for (const entry of efforts) {
@@ -182,8 +173,7 @@ function parseModelSettings(rec: Record<string, unknown>): ModelSetting[] {
       continue;
     }
     const row = asRecord(entry);
-    const value =
-      stringField(row, "reasoningEffort") ?? stringField(row, "id");
+    const value = stringField(row, "reasoningEffort") ?? stringField(row, "id");
     if (!value) continue;
     effortOptions.push({
       value,
@@ -208,9 +198,7 @@ function parseModelSettings(rec: Record<string, unknown>): ModelSetting[] {
       : Array.isArray(rec.additionalSpeedTiers)
         ? rec.additionalSpeedTiers
         : []) ?? [];
-  const tierOptions: ModelSettingChoice[] = [
-    { value: "default", label: "Standard" },
-  ];
+  const tierOptions: ModelSettingChoice[] = [{ value: "default", label: "Standard" }];
   for (const entry of tiersRaw) {
     if (typeof entry === "string") {
       if (entry === "default") continue;
@@ -229,15 +217,12 @@ function parseModelSettings(rec: Record<string, unknown>): ModelSetting[] {
     });
   }
   if (tierOptions.length > 1) {
-    const defaultTier =
-      stringField(rec, "defaultServiceTier") ?? "default";
+    const defaultTier = stringField(rec, "defaultServiceTier") ?? "default";
     settings.push({
       id: "serviceTier",
       label: "Service Tier",
       kind: "select",
-      value: tierOptions.some((o) => o.value === defaultTier)
-        ? defaultTier
-        : "default",
+      value: tierOptions.some((o) => o.value === defaultTier) ? defaultTier : "default",
       options: tierOptions,
     });
   }
@@ -246,19 +231,12 @@ function parseModelSettings(rec: Record<string, unknown>): ModelSetting[] {
 }
 
 function formatDisplayName(name: string): string {
-  return name
-    .replace(/^gpt/i, "GPT")
-    .replace(/-([a-z])/g, (_, c: string) => `-${c.toUpperCase()}`);
+  return name.replace(/^gpt/i, "GPT").replace(/-([a-z])/g, (_, c: string) => `-${c.toUpperCase()}`);
 }
 
-function orderDefaultFirst(
-  models: AgentModel[],
-  rows: unknown[] = [],
-): AgentModel[] {
+function orderDefaultFirst(models: AgentModel[], rows: unknown[] = []): AgentModel[] {
   if (models.length <= 1) return models;
-  const defaultNative = rows
-    .map((row) => asRecord(row))
-    .find((rec) => rec?.isDefault === true);
+  const defaultNative = rows.map((row) => asRecord(row)).find((rec) => rec?.isDefault === true);
   const nativeId =
     stringField(defaultNative, "model") ??
     stringField(defaultNative, "slug") ??

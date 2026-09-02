@@ -8,11 +8,8 @@ import {
   type HarnessId,
   type Session,
 } from "./session";
-import type {
-  SessionSearchHit,
-  SessionSummary,
-} from "./sessionStore";
-import type { RankedFile } from "./fileIndex";
+import type { SessionSearchHit, SessionSummary } from "./sessions/sessionStore";
+import type { RankedFile } from "./files/fileIndex";
 import type { ProjectSearchMatch } from "./search";
 
 export type SearchScope = "all" | "conversations" | "files" | "projects";
@@ -73,12 +70,7 @@ export type ProjectHit = {
   positions: number[];
 };
 
-export type AppSearchHit =
-  | ConversationHit
-  | MessageHit
-  | FileHit
-  | ContentHit
-  | ProjectHit;
+export type AppSearchHit = ConversationHit | MessageHit | FileHit | ContentHit | ProjectHit;
 
 export type GroupedHits = {
   conversations: ConversationHit[];
@@ -122,29 +114,19 @@ const SCOPE_LIMITS: Record<SearchScope, Record<keyof GroupedHits, number>> = {
 };
 
 export function asHarness(value: string): HarnessId {
-  return (HARNESSES as string[]).includes(value)
-    ? (value as HarnessId)
-    : "cursor";
+  return (HARNESSES as string[]).includes(value) ? (value as HarnessId) : "cursor";
 }
 
-export function snippetAround(
-  text: string,
-  query: string,
-  radius = 42,
-): string {
+export function snippetAround(text: string, query: string, radius = 42): string {
   const compact = text.replace(/\s+/g, " ").trim();
   const needle = query.trim().toLowerCase();
   if (!compact) return "";
   if (!needle) {
-    return compact.length > radius * 2
-      ? `${compact.slice(0, radius * 2)}…`
-      : compact;
+    return compact.length > radius * 2 ? `${compact.slice(0, radius * 2)}…` : compact;
   }
   const index = compact.toLowerCase().indexOf(needle);
   if (index < 0) {
-    return compact.length > radius * 2
-      ? `${compact.slice(0, radius * 2)}…`
-      : compact;
+    return compact.length > radius * 2 ? `${compact.slice(0, radius * 2)}…` : compact;
   }
   const start = Math.max(0, index - radius);
   const end = Math.min(compact.length, index + needle.length + radius);
@@ -226,10 +208,7 @@ export function searchSessionMessages(
   return hits.sort(byScoreThenRecency);
 }
 
-export function searchRecentProjects(
-  recents: RecentProject[],
-  query: string,
-): ProjectHit[] {
+export function searchRecentProjects(recents: RecentProject[], query: string): ProjectHit[] {
   const needle = query.trim();
   if (!needle) return [];
   const hits: ProjectHit[] = [];
@@ -263,9 +242,7 @@ export function hitsFromFileRanks(files: RankedFile[]): FileHit[] {
   }));
 }
 
-export function hitsFromContentMatches(
-  matches: ProjectSearchMatch[],
-): ContentHit[] {
+export function hitsFromContentMatches(matches: ProjectSearchMatch[]): ContentHit[] {
   return matches.map((match) => ({
     id: `content:${match.path}:${match.line}:${match.column}`,
     kind: "content",
@@ -278,9 +255,7 @@ export function hitsFromContentMatches(
   }));
 }
 
-export function hitsFromSessionSearch(
-  rows: SessionSearchHit[],
-): AppSearchHit[] {
+export function hitsFromSessionSearch(rows: SessionSearchHit[]): AppSearchHit[] {
   const hits: AppSearchHit[] = [];
   for (const row of rows) {
     const harness = asHarness(row.harness);
@@ -374,10 +349,7 @@ export function mergeHits(...lists: AppSearchHit[][]): AppSearchHit[] {
   return [...byId.values()];
 }
 
-export function filterHitsByProject(
-  hits: AppSearchHit[],
-  cwd: string | undefined,
-): AppSearchHit[] {
+export function filterHitsByProject(hits: AppSearchHit[], cwd: string | undefined): AppSearchHit[] {
   if (!cwd || cwd === "~") return hits;
   return hits.filter((hit) => {
     if (hit.kind === "file" || hit.kind === "content") return true;
@@ -386,10 +358,7 @@ export function filterHitsByProject(
   });
 }
 
-export function groupHits(
-  hits: AppSearchHit[],
-  scope: SearchScope,
-): GroupedHits {
+export function groupHits(hits: AppSearchHit[], scope: SearchScope): GroupedHits {
   const grouped: GroupedHits = {
     conversations: [],
     messages: [],
@@ -462,10 +431,7 @@ function scoreOf(hit: AppSearchHit): number {
   return hit.score;
 }
 
-function byScoreThenRecency<T extends { score: number; updatedAt: number }>(
-  a: T,
-  b: T,
-): number {
+function byScoreThenRecency<T extends { score: number; updatedAt: number }>(a: T, b: T): number {
   if (b.score !== a.score) return b.score - a.score;
   return b.updatedAt - a.updatedAt;
 }

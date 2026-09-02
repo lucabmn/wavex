@@ -744,7 +744,7 @@ mod tests {
                 .as_nanos();
             let seq = TMP_SEQ.fetch_add(1, Ordering::Relaxed);
             let dir = std::env::temp_dir().join(format!(
-                "wavecode-checkpoint-{label}-{}-{stamp}-{seq}",
+                "wavex-checkpoint-{label}-{}-{stamp}-{seq}",
                 std::process::id()
             ));
             match std::fs::create_dir(&dir) {
@@ -759,10 +759,10 @@ mod tests {
         Command::new("git")
             .args(args)
             .current_dir(dir)
-            .env("GIT_AUTHOR_NAME", "wavecode")
-            .env("GIT_AUTHOR_EMAIL", "wavecode@test")
-            .env("GIT_COMMITTER_NAME", "wavecode")
-            .env("GIT_COMMITTER_EMAIL", "wavecode@test")
+            .env("GIT_AUTHOR_NAME", "wavex")
+            .env("GIT_AUTHOR_EMAIL", "wavex@test")
+            .env("GIT_COMMITTER_NAME", "wavex")
+            .env("GIT_COMMITTER_EMAIL", "wavex@test")
             .status()
             .map(|status| status.success())
             .unwrap_or(false)
@@ -772,8 +772,8 @@ mod tests {
         if !git(dir, &["init", "-b", "main"]) && !git(dir, &["init"]) {
             return false;
         }
-        let _ = git(dir, &["config", "user.email", "wavecode@test"]);
-        let _ = git(dir, &["config", "user.name", "wavecode"]);
+        let _ = git(dir, &["config", "user.email", "wavex@test"]);
+        let _ = git(dir, &["config", "user.name", "wavex"]);
         for (name, contents) in files {
             let path = dir.join(name);
             if let Some(parent) = path.parent() {

@@ -7,20 +7,20 @@ import {
   spawnPty,
   subscribePty,
   writePty,
-} from "../lib/pty";
-import { isOscColorQuery, oscColorReply } from "../lib/terminalChrome";
+} from "../lib/terminal/pty";
+import { isOscColorQuery, oscColorReply } from "../lib/terminal/terminalChrome";
 import {
   defaultTerminalTitle,
   scanOscCwd,
   type TerminalMetaPatch,
-} from "../lib/terminalTab";
+} from "../lib/terminal/terminalTab";
 import { isLightScheme, SCHEME_CHANGE_EVENT } from "../lib/appearance";
 import {
   applyTerminalChrome,
   fitTerminal,
   resetGridStretch,
   type TerminalFitMode,
-} from "../lib/terminalLayout";
+} from "../lib/terminal/terminalLayout";
 import { IS_MAC } from "../lib/platform";
 import "@xterm/xterm/css/xterm.css";
 
@@ -85,20 +85,14 @@ function terminalTheme(light: boolean) {
     foreground: cssColor("var(--color-content)", light ? "#2e2e2e" : "#e8eef2"),
     cursor: cssColor("var(--color-accent)", light ? "#4078f2" : "#4da3f5"),
     cursorAccent: light ? "#ffffff" : "#000000",
-    selectionBackground: light
-      ? "rgba(0,0,0,0.18)"
-      : "rgba(255,255,255,0.18)",
-    selectionInactiveBackground: light
-      ? "rgba(0,0,0,0.08)"
-      : "rgba(255,255,255,0.08)",
+    selectionBackground: light ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.18)",
+    selectionInactiveBackground: light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)",
     ...(light ? ANSI_LIGHT : ANSI_DARK),
   };
 }
 
 function monoFont(): string {
-  const fromCss = getComputedStyle(document.documentElement)
-    .getPropertyValue("--font-mono")
-    .trim();
+  const fromCss = getComputedStyle(document.documentElement).getPropertyValue("--font-mono").trim();
   return fromCss || "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace";
 }
 
@@ -259,8 +253,7 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
           spawned.current = false;
           lastCols = 0;
           lastRows = 0;
-          const message =
-            error instanceof Error ? error.message : String(error);
+          const message = error instanceof Error ? error.message : String(error);
           term.writeln(`\x1b[31m${message}\x1b[0m`);
         });
         return;
@@ -291,7 +284,7 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
       cancelAnimationFrame(frame);
       if (raf) cancelAnimationFrame(raf);
       observer.disconnect();
-      outer.classList.remove("wavecode-terminal--alt-screen");
+      outer.classList.remove("wavex-terminal--alt-screen");
       applySizeRef.current = () => {};
       host.removeEventListener("copy", onCopy);
       host.removeEventListener("paste", onPaste);
@@ -360,13 +353,10 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
   return (
     <div
       ref={outerRef}
-      className="wavecode-terminal flex h-full w-full min-h-0 min-w-0 flex-col"
+      className="wavex-terminal flex h-full w-full min-h-0 min-w-0 flex-col"
       onMouseDown={() => termRef.current?.focus()}
     >
-      <div
-        ref={hostRef}
-        className="wavecode-terminal-host min-h-0 min-w-0 flex-1 overflow-hidden"
-      />
+      <div ref={hostRef} className="wavex-terminal-host min-h-0 min-w-0 flex-1 overflow-hidden" />
     </div>
   );
 }

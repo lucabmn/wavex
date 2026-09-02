@@ -5,14 +5,9 @@ import {
   type TranscriptSelection,
 } from "../lib/transcriptSelection";
 
-function responseIdForNode(
-  node: Node | null,
-  root: HTMLElement,
-): string | null {
+function responseIdForNode(node: Node | null, root: HTMLElement): string | null {
   const element = node instanceof Element ? node : node?.parentElement;
-  const response = element?.closest<HTMLElement>(
-    `[${SELECTABLE_AGENT_RESPONSE_ATTR}]`,
-  );
+  const response = element?.closest<HTMLElement>(`[${SELECTABLE_AGENT_RESPONSE_ATTR}]`);
   if (!response || !root.contains(response)) return null;
   return response.getAttribute(SELECTABLE_AGENT_RESPONSE_ATTR);
 }
@@ -88,10 +83,7 @@ export function useTranscriptSelection(
       if (!pointerSelecting) scheduleReport();
     };
     const onKeyUp = (event: KeyboardEvent) => {
-      if (
-        event.key === "Shift" ||
-        (event.shiftKey && event.key.startsWith("Arrow"))
-      ) {
+      if (event.key === "Shift" || (event.shiftKey && event.key.startsWith("Arrow"))) {
         scheduleReport();
       }
     };

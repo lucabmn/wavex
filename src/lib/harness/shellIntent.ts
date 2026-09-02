@@ -74,8 +74,7 @@ export function rewriteReadableTitle(
 ): string | undefined {
   const match = title.match(/^(Read|Find|List|Edit|Write)\s+(.+)$/i);
   if (!match) return undefined;
-  const verb =
-    match[1].slice(0, 1).toUpperCase() + match[1].slice(1).toLowerCase();
+  const verb = match[1].slice(0, 1).toUpperCase() + match[1].slice(1).toLowerCase();
   if (verb === "Find") return `Find ${query || match[2]}`;
   return `${verb} ${path || match[2]}`;
 }
@@ -112,25 +111,9 @@ const NOISE_BINS = new Set([
   "wait",
 ]);
 
-const READ_BINS = new Set([
-  "cat",
-  "bat",
-  "batcat",
-  "nl",
-  "less",
-  "more",
-  "tac",
-]);
+const READ_BINS = new Set(["cat", "bat", "batcat", "nl", "less", "more", "tac"]);
 
-const SEARCH_BINS = new Set([
-  "grep",
-  "egrep",
-  "fgrep",
-  "rgrep",
-  "rg",
-  "ag",
-  "ack",
-]);
+const SEARCH_BINS = new Set(["grep", "egrep", "fgrep", "rgrep", "rg", "ag", "ack"]);
 
 const GREP_VALUE_FLAGS = new Set([
   "-e",
@@ -388,7 +371,9 @@ function binName(token: string): string {
 }
 
 function isSedInPlace(arg: string): boolean {
-  return arg === "--in-place" || arg === "-i" || arg.startsWith("-i") || arg.startsWith("--in-place=");
+  return (
+    arg === "--in-place" || arg === "-i" || arg.startsWith("-i") || arg.startsWith("--in-place=")
+  );
 }
 
 function sedStartLine(script: string | undefined): number | undefined {
@@ -427,9 +412,7 @@ function looksUnsafe(command: string): boolean {
   return quote != null;
 }
 
-function extractWriteRedirect(
-  command: string,
-): { path: string; append: boolean } | undefined {
+function extractWriteRedirect(command: string): { path: string; append: boolean } | undefined {
   let quote: "'" | '"' | null = null;
   let found: { path: string; append: boolean } | undefined;
   for (let i = 0; i < command.length; i += 1) {
@@ -485,10 +468,7 @@ function pipeSep(text: string, i: number): number {
   return 0;
 }
 
-function splitTopLevel(
-  command: string,
-  sepAt: (text: string, i: number) => number,
-): string[] {
+function splitTopLevel(command: string, sepAt: (text: string, i: number) => number): string[] {
   const parts: string[] = [];
   let start = 0;
   let quote: "'" | '"' | null = null;

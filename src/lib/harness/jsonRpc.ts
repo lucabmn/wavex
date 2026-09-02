@@ -18,11 +18,7 @@ export type JsonRpcMessage = {
 
 export type JsonRpcHandlers = {
   onNotification?: (method: string, params: unknown) => void;
-  onRequest?: (
-    id: JsonRpcId,
-    method: string,
-    params: unknown,
-  ) => void | Promise<void>;
+  onRequest?: (id: JsonRpcId, method: string, params: unknown) => void | Promise<void>;
 };
 
 export type JsonRpcClientOptions = {
@@ -58,10 +54,7 @@ export class JsonRpcClient {
     try {
       msg = JSON.parse(trimmed) as JsonRpcMessage;
     } catch {
-      console.debug(
-        `[${this.label} ${this.sessionId}] non-json`,
-        trimmed.slice(0, 200),
-      );
+      console.debug(`[${this.label} ${this.sessionId}] non-json`, trimmed.slice(0, 200));
       return;
     }
     this.handle(msg);
@@ -85,11 +78,7 @@ export class JsonRpcClient {
     return this.closed;
   }
 
-  async request<T>(
-    method: string,
-    params?: unknown,
-    timeoutMs = 0,
-  ): Promise<T> {
+  async request<T>(method: string, params?: unknown, timeoutMs = 0): Promise<T> {
     if (this.closed) throw new Error("Harness process is not running");
     const id = this.nextId++;
     const key = String(id);
@@ -126,9 +115,7 @@ export class JsonRpcClient {
       const pending = this.pending.get(key);
       if (pending) {
         this.pending.delete(key);
-        pending.reject(
-          error instanceof Error ? error : new Error(String(error)),
-        );
+        pending.reject(error instanceof Error ? error : new Error(String(error)));
       }
     }
     return response;
@@ -174,9 +161,7 @@ export class JsonRpcClient {
       this.pending.delete(key);
       if (msg.error) {
         pending.reject(
-          new Error(
-            msg.error.message || `${this.label} error ${msg.error.code ?? ""}`,
-          ),
+          new Error(msg.error.message || `${this.label} error ${msg.error.code ?? ""}`),
         );
         return;
       }

@@ -9,13 +9,7 @@ type Props = {
   onOpenFile: (path: string) => void;
 };
 
-export function SourceControl({
-  cwd,
-  enabled,
-  textHarness,
-  selectedPath,
-  onOpenFile,
-}: Props) {
+export function SourceControl({ cwd, enabled, textHarness, selectedPath, onOpenFile }: Props) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <GitChangesPanel

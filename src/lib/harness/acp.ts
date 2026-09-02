@@ -9,11 +9,7 @@ export type { JsonRpcMessage };
 
 export type AcpHandlers = {
   onNotification?: (method: string, params: unknown) => void;
-  onRequest?: (
-    id: number,
-    method: string,
-    params: unknown,
-  ) => void | Promise<void>;
+  onRequest?: (id: number, method: string, params: unknown) => void | Promise<void>;
 };
 
 /** ACP JSON-RPC client — thin wrapper preserving the Cursor numeric-id API. */
@@ -25,11 +21,9 @@ export class AcpClient {
     private readonly handlers: AcpHandlers,
   ) {
     const rpcHandlers: JsonRpcHandlers = {
-      onNotification: (method, params) =>
-        this.handlers.onNotification?.(method, params),
+      onNotification: (method, params) => this.handlers.onNotification?.(method, params),
       onRequest: (id, method, params) => {
-        const numeric =
-          typeof id === "number" ? id : Number(id);
+        const numeric = typeof id === "number" ? id : Number(id);
         void this.handlers.onRequest?.(numeric, method, params);
       },
     };

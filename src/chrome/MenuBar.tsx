@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { MOD, SHIFT } from "../lib/platform";
-import { runUpdateFlow } from "../lib/updater";
+import { runUpdateFlow } from "../lib/updates/updater";
 
 type MenuKey = "file" | "view" | "terminal";
 
@@ -172,7 +172,12 @@ export function MenuBar({
           { kind: "item", id: "open_project", label: "Open Project…", shortcut: `${MOD}O` },
           { kind: "item", id: "open_search", label: "Search…", shortcut: `${MOD}K` },
           { kind: "item", id: "go_to_file", label: "Go to File…", shortcut: `${MOD}P` },
-          { kind: "item", id: "find_in_project", label: "Find in Files…", shortcut: `${MOD}${SHIFT}F` },
+          {
+            kind: "item",
+            id: "find_in_project",
+            label: "Find in Files…",
+            shortcut: `${MOD}${SHIFT}F`,
+          },
           { kind: "sep" },
           { kind: "item", id: "close_tab", label: "Close Pane", shortcut: `${MOD}W` },
           { kind: "sep" },
@@ -182,9 +187,7 @@ export function MenuBar({
         return [
           { kind: "item", id: "toggle_sidebar", label: "Toggle Sidebar", shortcut: `${MOD}B` },
           { kind: "item", id: "open_inbox", label: "Inbox" },
-          ...(onOpenNotes
-            ? [{ kind: "item" as const, id: "open_notes", label: "Notes" }]
-            : []),
+          ...(onOpenNotes ? [{ kind: "item" as const, id: "open_notes", label: "Notes" }] : []),
           { kind: "item", id: "toggle_terminal", label: "Toggle Terminal", shortcut: `${MOD}J` },
           { kind: "item", id: "open_model_picker", label: "Switch Model…", shortcut: `${MOD}.` },
           { kind: "item", id: "toggle_diff", label: "Toggle Changes" },

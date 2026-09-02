@@ -15,7 +15,7 @@ import {
   watchChild,
 } from "./child";
 
-const PROBE_ID = "wavecode-cursor-probe";
+const PROBE_ID = "wavex-cursor-probe";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 
@@ -34,7 +34,7 @@ export function refreshCursorCatalog(): Promise<void> {
       if (models.length > 0) setHarnessModels("cursor", models);
     })
     .catch((error: unknown) => {
-      console.debug("[wavecode] cursor catalog", error);
+      console.debug("[wavex] cursor catalog", error);
     })
     .finally(() => {
       inflight = null;
@@ -44,12 +44,12 @@ export function refreshCursorCatalog(): Promise<void> {
 
 async function discoverCursorModels(): Promise<AgentModel[]> {
   const fromAcp = await discoverViaAcp().catch((error: unknown) => {
-    console.debug("[wavecode] cursor ACP catalog failed", error);
+    console.debug("[wavex] cursor ACP catalog failed", error);
     return [];
   });
   if (fromAcp.length > 0) return fromAcp;
   return discoverViaCli().catch((error: unknown) => {
-    console.debug("[wavecode] cursor CLI catalog failed", error);
+    console.debug("[wavex] cursor CLI catalog failed", error);
     return [];
   });
 }
@@ -77,36 +77,40 @@ async function discoverViaAcp(): Promise<AgentModel[]> {
 
   try {
     await spawnChild(PROBE_ID, path, ["acp"], cwd);
-    return await withTimeout(DISCOVERY_TIMEOUT_MS, async () => {
-      await acp.request(
-        "initialize",
-        {
-          protocolVersion: 1,
-          clientCapabilities: CURSOR_CLIENT_CAPABILITIES,
-          clientInfo: { name: "wavecode", version: "0.1.0" },
-        },
-        REQUEST_TIMEOUT_MS,
-      );
-      await acp
-        .request("authenticate", { methodId: "cursor_login" }, REQUEST_TIMEOUT_MS)
-        .catch(() => undefined);
-      const listed = await acp.request<unknown>(
-        "cursor/list_available_models",
-        {},
-        REQUEST_TIMEOUT_MS,
-      );
-      const models = modelsFromListAvailable(listed);
-      if (models.length > 0) return models;
+    return await withTimeout(
+      DISCOVERY_TIMEOUT_MS,
+      async () => {
+        await acp.request(
+          "initialize",
+          {
+            protocolVersion: 1,
+            clientCapabilities: CURSOR_CLIENT_CAPABILITIES,
+            clientInfo: { name: "wavex", version: "0.1.0" },
+          },
+          REQUEST_TIMEOUT_MS,
+        );
+        await acp
+          .request("authenticate", { methodId: "cursor_login" }, REQUEST_TIMEOUT_MS)
+          .catch(() => undefined);
+        const listed = await acp.request<unknown>(
+          "cursor/list_available_models",
+          {},
+          REQUEST_TIMEOUT_MS,
+        );
+        const models = modelsFromListAvailable(listed);
+        if (models.length > 0) return models;
 
-      const created = await acp.request<unknown>(
-        "session/new",
-        { cwd, mcpServers: [] },
-        REQUEST_TIMEOUT_MS,
-      );
-      return modelsFromSessionNew(created);
-    }, () => {
-      void stop();
-    });
+        const created = await acp.request<unknown>(
+          "session/new",
+          { cwd, mcpServers: [] },
+          REQUEST_TIMEOUT_MS,
+        );
+        return modelsFromSessionNew(created);
+      },
+      () => {
+        void stop();
+      },
+    );
   } finally {
     await stop();
   }
@@ -186,6 +190,7 @@ function modelsFromSessionNew(result: unknown): AgentModel[] {
 function modelsFromListModelsOutput(stdout: string): AgentModel[] {
   const rows: Array<{ id: string; name: string }> = [];
   for (const raw of stdout.split(/\r?\n/)) {
+    // oxlint-disable-next-line no-control-regex -- Strip terminal ANSI sequences.
     const line = raw.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").trim();
     const match = /^(\S+)\s+-\s+(.+)$/.exec(line);
     if (!match) continue;
@@ -197,20 +202,9 @@ function modelsFromListModelsOutput(stdout: string): AgentModel[] {
   return groupCliModels(rows);
 }
 
-const EFFORT_TOKENS = [
-  "extra-high",
-  "xhigh",
-  "minimal",
-  "medium",
-  "none",
-  "low",
-  "high",
-  "max",
-];
+const EFFORT_TOKENS = ["extra-high", "xhigh", "minimal", "medium", "none", "low", "high", "max"];
 
-function groupCliModels(
-  rows: Array<{ id: string; name: string }>,
-): AgentModel[] {
+function groupCliModels(rows: Array<{ id: string; name: string }>): AgentModel[] {
   type Flags = { effort?: string; fast: boolean; thinking: boolean };
   const families = new Map<
     string,
@@ -247,9 +241,7 @@ function groupCliModels(
     );
     const hasFast = family.variants.some((variant) => variant.fast);
     const hasThinking = family.variants.some((variant) => variant.thinking);
-    const canonical =
-      family.variants.find((variant) => variant.id === base) ??
-      family.variants[0];
+    const canonical = family.variants.find((variant) => variant.id === base) ?? family.variants[0];
     const settings: ModelSetting[] = [];
     if (efforts.length > 1) {
       settings.push({
@@ -337,19 +329,14 @@ function parseConfigOptions(raw: unknown): ModelSetting[] | undefined {
     const rec = asRecord(item);
     if (!rec) continue;
     const id = String(rec.id ?? rec.configId ?? "").trim();
-    const category = String(rec.category ?? "").trim().toLowerCase();
-    if (
-      !id ||
-      id === "mode" ||
-      id === "model" ||
-      category === "mode" ||
-      category === "model"
-    ) {
+    const category = String(rec.category ?? "")
+      .trim()
+      .toLowerCase();
+    if (!id || id === "mode" || id === "model" || category === "mode" || category === "model") {
       continue;
     }
     const label = String(rec.name ?? rec.label ?? id).trim() || id;
-    const description =
-      typeof rec.description === "string" ? rec.description : undefined;
+    const description = typeof rec.description === "string" ? rec.description : undefined;
     const type = String(rec.type ?? "select");
     if (type === "boolean") {
       const on = rec.currentValue === true || rec.currentValue === "true";
@@ -371,9 +358,7 @@ function parseConfigOptions(raw: unknown): ModelSetting[] | undefined {
     const current = String(rec.currentValue ?? options[0]?.value ?? "");
     const values = new Set(options.map((option) => option.value.toLowerCase()));
     const kind =
-      values.has("true") && values.has("false") && options.length <= 2
-        ? "toggle"
-        : "select";
+      values.has("true") && values.has("false") && options.length <= 2 ? "toggle" : "select";
     settings.push({
       id,
       label,
@@ -428,10 +413,7 @@ function unique<T>(values: T[]): T[] {
 
 function stripVariantWords(name: string): string {
   return name
-    .replace(
-      /\s+(Low|Medium|High|Extra High|Max|None|Minimal|Fast|Thinking)(\s+Fast)?$/i,
-      "",
-    )
+    .replace(/\s+(Low|Medium|High|Extra High|Max|None|Minimal|Fast|Thinking)(\s+Fast)?$/i, "")
     .trim();
 }
 

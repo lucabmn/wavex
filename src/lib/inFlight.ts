@@ -1,10 +1,9 @@
-import { leafIds, newTab, type WorkspaceTab } from "./layout";
-import type { ProjectTerminalDock } from "./projectTerminal";
+import { leafIds, newTab, type WorkspaceTab } from "./workspace/layout";
+import type { ProjectTerminalDock } from "./terminal/projectTerminal";
 import { sessionNeedsInput, type Session } from "./session";
 import { stopStreaming } from "./harness/apply";
 
-export const INTERRUPT_MESSAGE =
-  "Turn interrupted when wavecode quit.";
+export const INTERRUPT_MESSAGE = "Turn interrupted when wavex quit.";
 
 export const CONTINUE_PROMPT = "Continue from where you left off.";
 
@@ -34,10 +33,7 @@ export function hasInFlightSessions(sessions: Session[]): boolean {
  * Busy chats in tab order, then parked ones still running after their tab closed.
  * Only persistable sessions can come back after a real quit.
  */
-export function inFlightRefs(
-  sessions: Session[],
-  tabs: WorkspaceTab[],
-): InFlightRef[] {
+export function inFlightRefs(sessions: Session[], tabs: WorkspaceTab[]): InFlightRef[] {
   const byId = new Map(sessions.map((session) => [session.id, session]));
   const seen = new Set<string>();
   const refs: InFlightRef[] = [];
@@ -58,9 +54,9 @@ export function inFlightRefs(
 
 export function quitWhileBusyMessage(count: number): string {
   if (count === 1) {
-    return "1 chat is still running. Quit anyway? It will resume when you reopen wavecode.";
+    return "1 chat is still running. Quit anyway? It will resume when you reopen wavex.";
   }
-  return `${count} chats are still running. Quit anyway? They will resume when you reopen wavecode.`;
+  return `${count} chats are still running. Quit anyway? They will resume when you reopen wavex.`;
 }
 
 /**
@@ -85,9 +81,7 @@ export function markTurnInterrupted(session: Session): Session {
   };
 }
 
-export function workspaceFromResumed(
-  sessions: Session[],
-): ResumedWorkspace | null {
+export function workspaceFromResumed(sessions: Session[]): ResumedWorkspace | null {
   if (sessions.length === 0) return null;
   const tabs = sessions.map((session) => newTab(session.id));
   return {
@@ -136,10 +130,7 @@ export function shouldWriteInFlightSnapshot(
 }
 
 function canResumeAfterQuit(session: Session): boolean {
-  return (
-    session.cwd !== "~" &&
-    session.blocks.some((block) => block.role === "user")
-  );
+  return session.cwd !== "~" && session.blocks.some((block) => block.role === "user");
 }
 
 function sealOpenWork(session: Session): Session {
@@ -154,9 +145,7 @@ function sealOpenWork(session: Session): Session {
         {
           ...rest,
           streaming: false,
-          tool: block.tool
-            ? { ...block.tool, status: "cancelled" }
-            : block.tool,
+          tool: block.tool ? { ...block.tool, status: "cancelled" } : block.tool,
           ...(approval?.decided ? { approval } : {}),
         },
       ];
@@ -169,7 +158,5 @@ function shouldCancelTool(block: Session["blocks"][number]): boolean {
   if (!block.tool) return false;
   if (block.streaming) return true;
   const status = block.tool.status?.toLowerCase() ?? "";
-  return (
-    status === "in_progress" || status === "pending" || status === "running"
-  );
+  return status === "in_progress" || status === "pending" || status === "running";
 }

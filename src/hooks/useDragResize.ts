@@ -20,13 +20,7 @@ function clampTo(value: number, min: number, max: number) {
 }
 
 /** Drag a pane's width by writing the DOM directly so React re-renders can't fight the cursor. */
-export function useDragResize({
-  min,
-  max,
-  defaultWidth,
-  initial,
-  onCommit,
-}: Options) {
+export function useDragResize({ min, max, defaultWidth, initial, onCommit }: Options) {
   const minRef = useRef(min);
   minRef.current = min;
   const maxRef = useRef(max);

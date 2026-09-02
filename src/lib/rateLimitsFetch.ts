@@ -17,7 +17,7 @@ import {
 import { asRecord } from "./harness/codexProtocol";
 import { JsonRpcClient } from "./harness/jsonRpc";
 
-const USAGE_CHILD_ID = "wavecode-codex-usage";
+const USAGE_CHILD_ID = "wavex-codex-usage";
 const DISCOVERY_TIMEOUT_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 
@@ -40,15 +40,9 @@ export async function fetchClaudeRateLimits(): Promise<ProviderRateLimits> {
       };
     }
     if (result.status === "unavailable") {
-      return unavailableRateLimits(
-        "claude",
-        result.error?.trim() || "Claude not signed in",
-      );
+      return unavailableRateLimits("claude", result.error?.trim() || "Claude not signed in");
     }
-    return errorRateLimits(
-      "claude",
-      result.error?.trim() || "Claude usage unavailable",
-    );
+    return errorRateLimits("claude", result.error?.trim() || "Claude usage unavailable");
   } catch (error) {
     return errorRateLimits(
       "claude",
@@ -99,8 +93,8 @@ export async function fetchCodexRateLimits(): Promise<ProviderRateLimits> {
           "initialize",
           {
             clientInfo: {
-              name: "wavecode",
-              title: "wavecode",
+              name: "wavex",
+              title: "wavex",
               version: "0.1.0",
             },
             capabilities: { experimentalApi: true },
@@ -128,11 +122,7 @@ export async function fetchCodexRateLimits(): Promise<ProviderRateLimits> {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (
-      /not signed in|chatgpt authentication required|not authenticated/i.test(
-        message,
-      )
-    ) {
+    if (/not signed in|chatgpt authentication required|not authenticated/i.test(message)) {
       return unavailableRateLimits("codex", "Codex not signed in");
     }
     if (/ENOENT|not found|could not run/i.test(message)) {

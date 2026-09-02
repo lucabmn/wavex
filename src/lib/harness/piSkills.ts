@@ -25,19 +25,16 @@ export type PiSkillCommand = {
   source: "pi";
 };
 
-export async function discoverPiSkills(
-  cwd: string,
-): Promise<PiSkillCommand[]> {
+export async function discoverPiSkills(cwd: string): Promise<PiSkillCommand[]> {
   const { path } = await PI_FLAVOR.resolveBinary();
   const releaseBridge = await acquireHarnessBridge();
-  const childId = `wavecode-pi-skills-${crypto.randomUUID()}`;
+  const childId = `wavex-pi-skills-${crypto.randomUUID()}`;
   const replyToUi = (record: Record<string, unknown>) => {
     const request = parseExtensionUiRequest(record);
     if (!request || !needsExtensionUiReply(request)) return;
-    void writeChild(
-      childId,
-      JSON.stringify(extensionUiResponse(request, "deny")),
-    ).catch(() => undefined);
+    void writeChild(childId, JSON.stringify(extensionUiResponse(request, "deny"))).catch(
+      () => undefined,
+    );
   };
   const rpc = new PiRpc(childId, replyToUi, PI_FLAVOR.label);
 
@@ -47,16 +44,8 @@ export async function discoverPiSkills(
       (line) => rpc.pushLine(line),
       () => rpc.close(new Error(`${PI_FLAVOR.label} skill probe exited`)),
     );
-    await spawnChild(
-      childId,
-      path,
-      buildPiSpawnArgs(PI_FLAVOR, { noSession: true }),
-      cwd,
-    );
-    const response = await rpc.request(
-      { type: "get_commands" },
-      REQUEST_TIMEOUT_MS,
-    );
+    await spawnChild(childId, path, buildPiSpawnArgs(PI_FLAVOR, { noSession: true }), cwd);
+    const response = await rpc.request({ type: "get_commands" }, REQUEST_TIMEOUT_MS);
     return piSkillsFromRpcData(asRecord(response)?.data);
   } finally {
     rpc.close();
@@ -90,8 +79,7 @@ export function piSkillsFromRpcData(data: unknown): PiSkillCommand[] {
     seen.add(invocation);
     skills.push({
       name,
-      description:
-        typeof command.description === "string" ? command.description : "",
+      description: typeof command.description === "string" ? command.description : "",
       invocation,
       source: "pi",
     });

@@ -1,11 +1,6 @@
 import { homeDir } from "../fs";
 import { setHarnessModels } from "../models";
-import {
-  killChild,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, spawnChild, unwatchChild, watchChild } from "./child";
 import { PiRpc } from "./piClient";
 import { OMP_FLAVOR, PI_FLAVOR, type PiFlavor } from "./piFlavor";
 import { buildPiSpawnArgs, modelsFromRpcData } from "./piProtocol";
@@ -22,7 +17,7 @@ function refreshCatalog(flavor: PiFlavor): Promise<void> {
       if (models.length > 0) setHarnessModels(flavor.id, models);
     })
     .catch((error: unknown) => {
-      console.debug(`[wavecode] ${flavor.id} catalog`, error);
+      console.debug(`[wavex] ${flavor.id} catalog`, error);
     })
     .finally(() => {
       inflight.delete(flavor.id);

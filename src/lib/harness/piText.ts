@@ -1,10 +1,5 @@
 import { modelsFor } from "../models";
-import {
-  killChild,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, spawnChild, unwatchChild, watchChild } from "./child";
 import { PiRpc } from "./piClient";
 import { OMP_FLAVOR, PI_FLAVOR, type PiFlavor } from "./piFlavor";
 import {
@@ -48,13 +43,9 @@ function stateFor(flavor: PiFlavor): TextState {
 }
 
 function pickTextModel(flavor: PiFlavor): string | undefined {
-  const models = modelsFor(flavor.id).filter((model) =>
-    Boolean(model.nativeId?.includes("/")),
-  );
+  const models = modelsFor(flavor.id).filter((model) => Boolean(model.nativeId?.includes("/")));
   const cheap = models.find((model) =>
-    /haiku|mini|flash|nano|lite|luna/i.test(
-      `${model.nativeId ?? ""} ${model.name} ${model.id}`,
-    ),
+    /haiku|mini|flash|nano|lite|luna/i.test(`${model.nativeId ?? ""} ${model.name} ${model.id}`),
   );
   return (cheap ?? models[0])?.nativeId?.trim() || undefined;
 }
@@ -66,9 +57,11 @@ export async function stopTextPrompt(flavor: PiFlavor): Promise<void> {
 export function warmupText(flavor: PiFlavor, cwd: string): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
   const state = stateFor(flavor);
-  const run = state.turns.catch(() => undefined).then(async () => {
-    await ensureLive(flavor, cwd);
-  });
+  const run = state.turns
+    .catch(() => undefined)
+    .then(async () => {
+      await ensureLive(flavor, cwd);
+    });
   state.turns = run.then(
     () => undefined,
     () => undefined,
@@ -85,9 +78,7 @@ export async function runTextPrompt(
   },
 ): Promise<string> {
   const state = stateFor(flavor);
-  const run = state.turns
-    .catch(() => undefined)
-    .then(() => promptOnLive(flavor, input));
+  const run = state.turns.catch(() => undefined).then(() => promptOnLive(flavor, input));
   state.turns = run.then(
     () => undefined,
     () => undefined,
@@ -108,9 +99,7 @@ async function promptOnLive(
 
   try {
     await session.rpc.request({ type: "new_session" }).catch(() => undefined);
-    await session.rpc
-      .request({ type: "set_thinking_level", level: "off" })
-      .catch(() => undefined);
+    await session.rpc.request({ type: "set_thinking_level", level: "off" }).catch(() => undefined);
 
     session.output = "";
     session.collecting = true;
@@ -130,8 +119,7 @@ async function promptOnLive(
         turnPromise,
         new Promise<void>((_, reject) => {
           timer = setTimeout(
-            () =>
-              reject(new Error(`${flavor.label} text generation timed out`)),
+            () => reject(new Error(`${flavor.label} text generation timed out`)),
             timeoutMs,
           );
         }),
@@ -142,9 +130,7 @@ async function promptOnLive(
 
     let output = session.output.trim();
     if (!output) {
-      const rec = await session.rpc
-        .request({ type: "get_last_assistant_text" })
-        .catch(() => null);
+      const rec = await session.rpc.request({ type: "get_last_assistant_text" }).catch(() => null);
       const text = asRecord(rec?.data)?.text;
       if (typeof text === "string") output = text.trim();
     }
@@ -241,9 +227,7 @@ async function dropLive(flavor: PiFlavor): Promise<void> {
   if (current) {
     current.closed = true;
     current.rpc.close();
-    current.turnFailed?.(
-      new Error(`${flavor.label} text generator stopped`),
-    );
+    current.turnFailed?.(new Error(`${flavor.label} text generator stopped`));
     current.turnDone = null;
     current.turnFailed = null;
   }
@@ -273,16 +257,10 @@ function finishTurn(session: LiveText) {
 
 export const stopPiTextPrompt = () => stopTextPrompt(PI_FLAVOR);
 export const warmupPiText = (cwd: string) => warmupText(PI_FLAVOR, cwd);
-export const runPiTextPrompt = (input: {
-  cwd: string;
-  prompt: string;
-  timeoutMs?: number;
-}) => runTextPrompt(PI_FLAVOR, input);
+export const runPiTextPrompt = (input: { cwd: string; prompt: string; timeoutMs?: number }) =>
+  runTextPrompt(PI_FLAVOR, input);
 
 export const stopOmpTextPrompt = () => stopTextPrompt(OMP_FLAVOR);
 export const warmupOmpText = (cwd: string) => warmupText(OMP_FLAVOR, cwd);
-export const runOmpTextPrompt = (input: {
-  cwd: string;
-  prompt: string;
-  timeoutMs?: number;
-}) => runTextPrompt(OMP_FLAVOR, input);
+export const runOmpTextPrompt = (input: { cwd: string; prompt: string; timeoutMs?: number }) =>
+  runTextPrompt(OMP_FLAVOR, input);

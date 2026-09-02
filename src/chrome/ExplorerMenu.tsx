@@ -1,9 +1,4 @@
-import {
-  useMemo,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { Check } from "./icons";
 import { Popover } from "./Popover";
 
@@ -108,13 +103,7 @@ export function ExplorerMenu({
       ) : null}
       {items.map((item, index) => {
         if (item.kind === "sep") {
-          return (
-            <div
-              key={`sep-${index}`}
-              role="separator"
-              className="my-1 h-px bg-content/10"
-            />
-          );
+          return <div key={`sep-${index}`} role="separator" className="my-1 h-px bg-content/10" />;
         }
         const highlighted = index === active;
         return (
@@ -145,9 +134,7 @@ export function ExplorerMenu({
             {item.checked ? (
               <Check className="size-3.5 shrink-0" strokeWidth={2.25} />
             ) : item.shortcut ? (
-              <span className="shrink-0 text-[11px] text-content/40">
-                {item.shortcut}
-              </span>
+              <span className="shrink-0 text-[11px] text-content/40">{item.shortcut}</span>
             ) : null}
           </button>
         );

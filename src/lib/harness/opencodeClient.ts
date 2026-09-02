@@ -1,9 +1,4 @@
-import {
-  closeHarnessSse,
-  harnessHttp,
-  openHarnessSse,
-  watchSse,
-} from "./child";
+import { closeHarnessSse, harnessHttp, openHarnessSse, watchSse } from "./child";
 import { asRecord } from "./opencodeProtocol";
 
 export class OpenCodeHttpError extends Error {
@@ -38,10 +33,7 @@ export class OpenCodeClient {
     return this.request<OpenCodeSession>("GET", `/session/${enc(sessionID)}`);
   }
 
-  async createSession(input: {
-    title?: string;
-    permission?: unknown;
-  }): Promise<OpenCodeSession> {
+  async createSession(input: { title?: string; permission?: unknown }): Promise<OpenCodeSession> {
     return this.request<OpenCodeSession>("POST", "/session", {
       body: {
         ...(input.title ? { title: input.title } : {}),
@@ -50,19 +42,13 @@ export class OpenCodeClient {
     });
   }
 
-  async updateSession(
-    sessionID: string,
-    body: Record<string, unknown>,
-  ): Promise<OpenCodeSession> {
+  async updateSession(sessionID: string, body: Record<string, unknown>): Promise<OpenCodeSession> {
     return this.request<OpenCodeSession>("PATCH", `/session/${enc(sessionID)}`, {
       body,
     });
   }
 
-  async forkSession(
-    sessionID: string,
-    directory: string,
-  ): Promise<OpenCodeSession> {
+  async forkSession(sessionID: string, directory: string): Promise<OpenCodeSession> {
     return this.request<OpenCodeSession>("POST", `/session/${enc(sessionID)}/fork`, {
       query: { directory },
       body: {},
@@ -82,18 +68,14 @@ export class OpenCodeClient {
     variant?: string;
     parts: OpenCodePromptPart[];
   }): Promise<void> {
-    await this.request<unknown>(
-      "POST",
-      `/session/${enc(input.sessionID)}/prompt_async`,
-      {
-        body: {
-          model: input.model,
-          ...(input.agent ? { agent: input.agent } : {}),
-          ...(input.variant ? { variant: input.variant } : {}),
-          parts: input.parts,
-        },
+    await this.request<unknown>("POST", `/session/${enc(input.sessionID)}/prompt_async`, {
+      body: {
+        model: input.model,
+        ...(input.agent ? { agent: input.agent } : {}),
+        ...(input.variant ? { variant: input.variant } : {}),
+        parts: input.parts,
       },
-    );
+    });
   }
 
   async prompt(input: {
@@ -115,10 +97,7 @@ export class OpenCodeClient {
     });
   }
 
-  async replyPermission(
-    requestID: string,
-    reply: "once" | "always" | "reject",
-  ): Promise<void> {
+  async replyPermission(requestID: string, reply: "once" | "always" | "reject"): Promise<void> {
     await this.request<unknown>("POST", `/permission/${enc(requestID)}/reply`, {
       body: { reply },
     });
@@ -142,11 +121,15 @@ export class OpenCodeClient {
     onEnd?: (error?: string) => void,
   ): Promise<void> {
     const url = this.url("/event");
-    watchSse(sessionId, (data) => {
-      const parsed = parseJson(data);
-      const rec = asRecord(parsed);
-      if (rec) onEvent(rec);
-    }, onEnd);
+    watchSse(
+      sessionId,
+      (data) => {
+        const parsed = parseJson(data);
+        const rec = asRecord(parsed);
+        if (rec) onEvent(rec);
+      },
+      onEnd,
+    );
     await openHarnessSse(sessionId, url, this.headers());
   }
 
@@ -230,11 +213,7 @@ function unwrapData<T>(value: unknown): T {
   return value as T;
 }
 
-function httpErrorMessage(
-  status: number,
-  raw: string,
-  parsed: unknown = parseJson(raw),
-): string {
+function httpErrorMessage(status: number, raw: string, parsed: unknown = parseJson(raw)): string {
   const rec = asRecord(parsed);
   const nested = asRecord(rec?.error) ?? asRecord(rec?.data);
   const message =

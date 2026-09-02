@@ -2,8 +2,7 @@ import { asRecord } from "./harness/codexProtocol";
 
 export type RateLimitProvider = "claude" | "codex";
 
-export type RateLimitStatus =
-  "idle" | "fetching" | "ok" | "error" | "unavailable";
+export type RateLimitStatus = "idle" | "fetching" | "ok" | "error" | "unavailable";
 
 export type RateLimitWindow = {
   /** Percentage of the window consumed (0–100). */
@@ -59,17 +58,12 @@ export function shouldFetchRateLimits(input: {
   codex: ProviderRateLimits;
   now?: number;
 }): boolean {
-  return (
-    shouldFetchProvider(input.claude, input) ||
-    shouldFetchProvider(input.codex, input)
-  );
+  return shouldFetchProvider(input.claude, input) || shouldFetchProvider(input.codex, input);
 }
 
 const WINDOW_DURATION_TOLERANCE_MINUTES = 1;
 
-export function idleRateLimits(
-  provider: RateLimitProvider,
-): ProviderRateLimits {
+export function idleRateLimits(provider: RateLimitProvider): ProviderRateLimits {
   return {
     provider,
     session: null,
@@ -189,20 +183,14 @@ export function formatResetCountdown(ms: number): string {
  * Status-bar chip label. Prefer remaining time when resetsAt is known;
  * fall back to the fixed window size otherwise.
  */
-export function formatRateLimitWindowChipLabel(
-  window: RateLimitWindow,
-  now = Date.now(),
-): string {
+export function formatRateLimitWindowChipLabel(window: RateLimitWindow, now = Date.now()): string {
   if (window.resetsAt != null) {
     return formatResetDuration(window.resetsAt - now);
   }
   return formatWindowLabel(window.windowMinutes);
 }
 
-export function rateLimitWindowTooltip(
-  window: RateLimitWindow,
-  now = Date.now(),
-): string {
+export function rateLimitWindowTooltip(window: RateLimitWindow, now = Date.now()): string {
   const used = `${formatUsagePercent(window.usedPercent)} used`;
   if (window.resetsAt == null) {
     return `${used} · ${formatWindowLabel(window.windowMinutes)} window`;
@@ -229,10 +217,7 @@ function normalizeEpochMs(value: number): number | null {
   return value > 10_000_000_000 ? value : value * 1000;
 }
 
-export function mapUsageWindow(
-  raw: unknown,
-  windowMinutes: number,
-): RateLimitWindow | null {
+export function mapUsageWindow(raw: unknown, windowMinutes: number): RateLimitWindow | null {
   const rec = asRecord(raw);
   if (!rec) return null;
   const usedPercent = usedPercentFrom(rec);
@@ -240,10 +225,7 @@ export function mapUsageWindow(
   return {
     usedPercent: clampUsedPercent(usedPercent),
     windowMinutes,
-    resetsAt:
-      parseResetTimestamp(rec.resets_at) ??
-      parseResetTimestamp(rec.resetsAt) ??
-      null,
+    resetsAt: parseResetTimestamp(rec.resets_at) ?? parseResetTimestamp(rec.resetsAt) ?? null,
   };
 }
 
@@ -300,9 +282,7 @@ export function parseCodexRateLimits(result: unknown): ProviderRateLimits {
   };
 }
 
-function snapshotFrom(
-  rec: Record<string, unknown> | null,
-): CodexWindowSnapshot | null {
+function snapshotFrom(rec: Record<string, unknown> | null): CodexWindowSnapshot | null {
   if (!rec) return null;
   const usedPercent =
     numberField(rec, "usedPercent") ??
@@ -312,9 +292,7 @@ function snapshotFrom(
   return {
     usedPercent,
     windowDurationMins:
-      numberField(rec, "windowDurationMins") ??
-      numberField(rec, "window_duration_mins") ??
-      null,
+      numberField(rec, "windowDurationMins") ?? numberField(rec, "window_duration_mins") ?? null,
     resetsAt: rec.resetsAt ?? rec.resets_at,
   };
 }
@@ -351,20 +329,12 @@ function classifyCodexWindows(input: {
   return { session, weekly };
 }
 
-function classifyWindowDuration(
-  duration: number | null,
-): "session" | "weekly" | null {
+function classifyWindowDuration(duration: number | null): "session" | "weekly" | null {
   if (duration == null || !Number.isFinite(duration)) return null;
-  if (
-    Math.abs(duration - SESSION_WINDOW_MINUTES) <=
-    WINDOW_DURATION_TOLERANCE_MINUTES
-  ) {
+  if (Math.abs(duration - SESSION_WINDOW_MINUTES) <= WINDOW_DURATION_TOLERANCE_MINUTES) {
     return "session";
   }
-  if (
-    Math.abs(duration - WEEKLY_WINDOW_MINUTES) <=
-    WINDOW_DURATION_TOLERANCE_MINUTES
-  ) {
+  if (Math.abs(duration - WEEKLY_WINDOW_MINUTES) <= WINDOW_DURATION_TOLERANCE_MINUTES) {
     return "weekly";
   }
   return null;

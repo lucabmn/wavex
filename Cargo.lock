@@ -4742,8 +4742,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "wavecode"
-version = "0.0.1"
+name = "wavex"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "block2",

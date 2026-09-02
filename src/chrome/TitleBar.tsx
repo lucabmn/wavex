@@ -27,6 +27,7 @@ import { CwdPicker } from "./CwdPicker";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useSortable } from "../hooks/useSortable";
 import { FileTypeIcon } from "./FileTypeIcon";
+import type { TitleTab } from "../lib/workspace/titleTab";
 import { HarnessIcon } from "./HarnessIcon";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { TerminalSpinner } from "./TerminalSpinner";
@@ -34,32 +35,10 @@ import { WindowControls } from "./WindowControls";
 import { IS_MAC, MOD } from "../lib/platform";
 import type { RecentProject } from "../lib/recents";
 
-export type Tab = {
-  id: string;
-  /** Project folder name, e.g. `agent-terminal`. */
-  project: string;
-  /** Focused conversation title; empty for a fresh session. */
-  title: string;
-  /** Other conversation titles in this tab, focused session omitted. */
-  more: string[];
-  sessionCount: number;
-  harnesses: HarnessId[];
-  /** Harnesses with an in-flight turn in this tab. */
-  busyHarnesses: HarnessId[];
-  /** Open file basenames, active files first. */
-  files: string[];
-  /** Split layout with more than one pane in this tab. */
-  multiPane?: boolean;
-  /** Focus is on a file/terminal pane rather than a conversation pane. */
-  fileFocused?: boolean;
-  /** Explicit tab group; absent means ungrouped. */
-  groupId?: string;
-  dirty?: boolean;
-  terminal?: boolean;
-};
+export type { TitleTab as Tab };
 
 type Props = {
-  tabs: Tab[];
+  tabs: TitleTab[];
   activeId: string;
   cwd: string;
   projectRailOpen?: boolean;
@@ -79,13 +58,13 @@ type Props = {
   onSelectProject?: (path: string) => void;
 };
 
-function sessionMeta(tab: Tab): string {
+function sessionMeta(tab: TitleTab): string {
   if (tab.more.length === 1) return tab.more[0];
   if (tab.sessionCount > 1) return `${tab.sessionCount} sessions`;
   return "";
 }
 
-export function tabCopy(tab: Tab): {
+export function tabCopy(tab: TitleTab): {
   headline: string;
   meta: string;
   tooltip: string;
@@ -199,7 +178,7 @@ function TitleTabItem({
   onClose,
   itemRef,
 }: {
-  tab: Tab;
+  tab: TitleTab;
   index: number;
   active: boolean;
   closable: boolean;
@@ -273,9 +252,7 @@ function TitleTabItem({
           />
         ) : tab.terminal || !fileIcon ? (
           <Terminal
-            className={`size-3.5 shrink-0 ${
-              active ? "text-content" : "text-content/55"
-            }`}
+            className={`size-3.5 shrink-0 ${active ? "text-content" : "text-content/55"}`}
             strokeWidth={1.75}
           />
         ) : (
@@ -330,13 +307,7 @@ function TitleTabItem({
   );
 }
 
-function TabStripChevron({
-  side,
-  onClick,
-}: {
-  side: "left" | "right";
-  onClick: () => void;
-}) {
+function TabStripChevron({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
   const label = side === "left" ? "Scroll tabs left" : "Scroll tabs right";
   const Icon = side === "left" ? ChevronLeft : ChevronRight;
   return (
@@ -438,26 +409,14 @@ export function TabVisitNav({
 }) {
   return (
     <div className="flex shrink-0 items-center">
-      <IconButton
-        label={`Back (${MOD}[)`}
-        disabled={!canGoBack}
-        onClick={onGoBack}
-      >
+      <IconButton label={`Back (${MOD}[)`} disabled={!canGoBack} onClick={onGoBack}>
         <ChevronLeft className="size-3.5" strokeWidth={1.75} />
       </IconButton>
-      <IconButton
-        label={`Forward (${MOD}])`}
-        disabled={!canGoForward}
-        onClick={onGoForward}
-      >
+      <IconButton label={`Forward (${MOD}])`} disabled={!canGoForward} onClick={onGoForward}>
         <ChevronRight className="size-3.5" strokeWidth={1.75} />
       </IconButton>
       {onTogglePanel ? (
-        <IconButton
-          label={panelLabel}
-          active={panelActive}
-          onClick={onTogglePanel}
-        >
+        <IconButton label={panelLabel} active={panelActive} onClick={onTogglePanel}>
           <PanelLeft className="size-3.5" strokeWidth={1.75} />
         </IconButton>
       ) : null}
@@ -482,10 +441,7 @@ export function OverlayNav({
         </IconButton>
       ) : null}
       {onToggleSidebar ? (
-        <IconButton
-          label={`Toggle Sidebar (${MOD}B)`}
-          onClick={onToggleSidebar}
-        >
+        <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
           <PanelLeft className="size-3.5" strokeWidth={1.75} />
         </IconButton>
       ) : null}
@@ -530,9 +486,7 @@ function TitleBarComponent({
     const next = el
       ? tabStripOverflow(el.scrollLeft, el.clientWidth, el.scrollWidth)
       : { left: false, right: false };
-    setTabOverflow((prev) =>
-      prev.left === next.left && prev.right === next.right ? prev : next,
-    );
+    setTabOverflow((prev) => (prev.left === next.left && prev.right === next.right ? prev : next));
   }, []);
   const scrollTabsBy = useCallback((direction: -1 | 1) => {
     const el = tabStripRef.current;
@@ -569,10 +523,7 @@ function TitleBarComponent({
     syncTabOverflow();
   }, [activeId, syncTabOverflow, tabs]);
 
-  const activeTab = useMemo(
-    () => tabs.find((t) => t.id === activeId),
-    [activeId, tabs],
-  );
+  const activeTab = useMemo(() => tabs.find((t) => t.id === activeId), [activeId, tabs]);
   const systemTitle = useMemo(() => {
     const activeName = activeTab
       ? activeTab.files[0]
@@ -581,12 +532,12 @@ function TitleBarComponent({
       : "";
     const project = cwd ? basename(cwd) : "";
     if (activeName && project && activeName !== project) {
-      return `${activeName} — ${project} — wavecode`;
+      return `${activeName} — ${project} — wavex`;
     }
     if (project) {
-      return `${project} — wavecode`;
+      return `${project} — wavex`;
     }
-    return "wavecode";
+    return "wavex";
   }, [activeTab, cwd]);
 
   useEffect(() => {
@@ -603,8 +554,7 @@ function TitleBarComponent({
   const projectless = !showCurrentProject;
   // An open project is labeled in the sidebar, above Sessions / Explorer /
   // Changes. Without a project that sidebar is gone, so the picker stays here.
-  const showProjectButton =
-    railClosed && Boolean(onSelectProject) && !showCurrentProject;
+  const showProjectButton = railClosed && Boolean(onSelectProject) && !showCurrentProject;
   const trailingControls = (
     <div className="flex h-full shrink-0 items-stretch">
       <div className="flex items-center gap-0.5 px-2">
@@ -630,15 +580,9 @@ function TitleBarComponent({
         ) : null}
         {!projectless && (onShowTerminal || onNewTerminal) ? (
           <IconButton
-            label={
-              projectTerminalActive ? "Terminal" : `New Terminal (${MOD}\`)`
-            }
+            label={projectTerminalActive ? "Terminal" : `New Terminal (${MOD}\`)`}
             accent={projectTerminalActive}
-            onClick={
-              projectTerminalActive
-                ? (onShowTerminal ?? onNewTerminal)
-                : onNewTerminal
-            }
+            onClick={projectTerminalActive ? (onShowTerminal ?? onNewTerminal) : onNewTerminal}
           >
             <Terminal className="size-3.5" strokeWidth={1.75} />
           </IconButton>
@@ -667,10 +611,7 @@ function TitleBarComponent({
         <>
           <div className="w-[78px] shrink-0" />
           <div className="flex shrink-0 items-center px-1.5">
-            <IconButton
-              label={`Toggle Sidebar (${MOD}B)`}
-              onClick={onToggleSidebar}
-            >
+            <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
               <PanelLeft className="size-3.5" strokeWidth={1.75} />
             </IconButton>
           </div>

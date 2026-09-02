@@ -1,13 +1,7 @@
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { AcpClient, type AcpHandlers } from "./acp";
-import {
-  killChild,
-  resolveFxBinary,
-  spawnChild,
-  unwatchChild,
-  watchChild,
-} from "./child";
+import { killChild, resolveFxBinary, spawnChild, unwatchChild, watchChild } from "./child";
 import {
   autoPermissionOption,
   eventsFromAcpUpdate,
@@ -21,12 +15,7 @@ import {
   sessionIdFromResult,
   type SessionConfigOption,
 } from "./fxProtocol";
-import type {
-  ApprovalDecision,
-  HarnessEvent,
-  SendTurnInput,
-  SteerTurnInput,
-} from "./types";
+import type { ApprovalDecision, HarnessEvent, SendTurnInput, SteerTurnInput } from "./types";
 
 type SessionSetupResult = {
   sessionId?: string;
@@ -152,9 +141,7 @@ export async function cancelFxTurn(sessionId: string): Promise<void> {
   }
   live.cancelled = true;
   live.muteUpdates = true;
-  await live.acp
-    .notify("session/cancel", { sessionId: live.acpSessionId })
-    .catch(() => undefined);
+  await live.acp.notify("session/cancel", { sessionId: live.acpSessionId }).catch(() => undefined);
   live.acp.rejectPending(new Error("cancelled"));
 }
 
@@ -173,11 +160,7 @@ export async function forgetFxSession(sessionId: string): Promise<void> {
   await stopFxSession(sessionId);
 }
 
-export function bindFxSession(
-  threadId: string,
-  acpSessionId: string,
-  cwd: string,
-): void {
+export function bindFxSession(threadId: string, acpSessionId: string, cwd: string): void {
   const sessionId = acpSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
   resumeByThread.set(threadId, { acpSessionId: sessionId, cwd });
@@ -245,7 +228,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       emit({ type: "session.ended", code });
     },
     (line) => {
-      console.debug("[wavecode] fx stderr", line);
+      console.debug("[wavex] fx stderr", line);
       if (/Fx needs access|AI Gateway|not start/i.test(line)) {
         emit({ type: "session.error", message: line.trim() });
       }
@@ -261,7 +244,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         {
           protocolVersion: 1,
           clientCapabilities: CLIENT_CAPABILITIES,
-          clientInfo: { name: "wavecode", version: "0.1.0" },
+          clientInfo: { name: "wavex", version: "0.1.0" },
         },
         INIT_TIMEOUT_MS,
       );
@@ -348,14 +331,10 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
   }
 }
 
-async function applyModelSelection(
-  live: Live,
-  input: SendTurnInput,
-): Promise<void> {
+async function applyModelSelection(live: Live, input: SendTurnInput): Promise<void> {
   const base = nativeModelId(input.model);
   const settings = input.modelSettings ?? {};
-  const modelConfigId =
-    live.modelConfigId === "provider" ? "model" : live.modelConfigId;
+  const modelConfigId = live.modelConfigId === "provider" ? "model" : live.modelConfigId;
 
   await setConfigOption(live, modelConfigId, base).catch((error: unknown) => {
     ignoreUnsupportedControl("set_config_option", error);
@@ -375,10 +354,7 @@ async function applyModelSelection(
   }
 }
 
-async function applyRuntimeMode(
-  live: Live,
-  runtimeMode: RuntimeMode,
-): Promise<void> {
+async function applyRuntimeMode(live: Live, runtimeMode: RuntimeMode): Promise<void> {
   // Unsupported mode control is non-fatal because handlePermission remains a
   // backstop. Transport failures and timeouts are rethrown so the wedged child
   // is recycled rather than leaving this turn pending forever.
@@ -454,7 +430,7 @@ async function prompt(live: Live, input: SendTurnInput): Promise<void> {
 }
 
 function ignoreUnsupportedControl(method: string, error: unknown): void {
-  console.debug(`[wavecode] fx ${method} failed`, error);
+  console.debug(`[wavex] fx ${method} failed`, error);
   const detail = error instanceof Error ? error.message : String(error);
   if (/timed out|not running|exited|closed|pipe/i.test(detail)) throw error;
 }
@@ -466,12 +442,7 @@ function handleNotification(live: Live, method: string, params: unknown) {
   }
 }
 
-async function handleRequest(
-  live: Live,
-  id: number,
-  method: string,
-  params: unknown,
-) {
+async function handleRequest(live: Live, id: number, method: string, params: unknown) {
   if (method === "session/request_permission") {
     await handlePermission(live, id, params);
     return;

@@ -40,12 +40,7 @@ function MonoIcon({
   viewBox?: string;
 }) {
   return (
-    <svg
-      viewBox={viewBox}
-      fill="currentColor"
-      aria-hidden
-      className={`block ${className}`}
-    >
+    <svg viewBox={viewBox} fill="currentColor" aria-hidden className={`block ${className}`}>
       {children}
     </svg>
   );
@@ -86,10 +81,7 @@ export function HarnessIcon({
   if (harness === "opencode") {
     return (
       <MonoIcon className={className}>
-        <path
-          fillRule="evenodd"
-          d="M20.4 5.8H8.8V23.2H20.4V5.8ZM26.2 29H3V0H26.2V29Z"
-        />
+        <path fillRule="evenodd" d="M20.4 5.8H8.8V23.2H20.4V5.8ZM26.2 29H3V0H26.2V29Z" />
       </MonoIcon>
     );
   }

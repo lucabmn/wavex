@@ -10,22 +10,28 @@ export function WindowControls() {
     let mounted = true;
 
     const win = getCurrentWindow();
-    void win.isMaximized().then((max) => {
-      if (mounted) setIsMaximized(max);
-    }).catch(() => {});
-
-    void win.onResized(async () => {
-      try {
-        const max = await win.isMaximized();
+    void win
+      .isMaximized()
+      .then((max) => {
         if (mounted) setIsMaximized(max);
-      } catch {}
-    }).then((unlistenFn) => {
-      if (mounted) {
-        unlisten = unlistenFn;
-      } else {
-        unlistenFn();
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {});
+
+    void win
+      .onResized(async () => {
+        try {
+          const max = await win.isMaximized();
+          if (mounted) setIsMaximized(max);
+        } catch {}
+      })
+      .then((unlistenFn) => {
+        if (mounted) {
+          unlisten = unlistenFn;
+        } else {
+          unlistenFn();
+        }
+      })
+      .catch(() => {});
 
     return () => {
       mounted = false;

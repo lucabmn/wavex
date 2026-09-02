@@ -75,10 +75,7 @@ export function autoPermissionOption(
   ]);
 }
 
-export function permissionOptionId(
-  decision: ApprovalDecision,
-  optionIds: string[],
-): string {
+export function permissionOptionId(decision: ApprovalDecision, optionIds: string[]): string {
   if (decision === "allow") {
     return (
       pickOption(optionIds, [
@@ -102,9 +99,7 @@ export function permissionOptionId(
   );
 }
 
-export function permissionRequestFromAcp(
-  params: unknown,
-): FxPermissionRequest {
+export function permissionRequestFromAcp(params: unknown): FxPermissionRequest {
   const rec = asRecord(params);
   const subject = asRecord(rec?.subject);
   const tool =
@@ -117,9 +112,7 @@ export function permissionRequestFromAcp(
   const command = stringField(subject ?? {}, "command");
   const kind = stringField(tool, "kind") ?? stringField(subject ?? {}, "kind");
   const fx = fxToolInfo(tool, tool);
-  const preview = fx.resolved
-    ? fx.preview
-    : (fx.preview ?? extractToolPreview(tool, tool));
+  const preview = fx.resolved ? fx.preview : (fx.preview ?? extractToolPreview(tool, tool));
   const label =
     fx.title ??
     fxToolVerb(toolLabel(tool)) ??
@@ -158,9 +151,7 @@ export function eventsFromAcpUpdate(params: unknown): HarnessEvent[] {
   const rec = asRecord(params);
   const update = asRecord(rec?.update) ?? rec;
   if (!update) return [];
-  const kind = String(
-    update.sessionUpdate ?? update.session_update ?? update.type ?? "",
-  );
+  const kind = String(update.sessionUpdate ?? update.session_update ?? update.type ?? "");
 
   if (kind === "agent_message_chunk" || kind === "agent_message") {
     const text = textFromContent(
@@ -178,19 +169,10 @@ export function eventsFromAcpUpdate(params: unknown): HarnessEvent[] {
     return text ? [{ type: "reasoning.delta", text }] : [];
   }
 
-  if (
-    kind === "tool_call" ||
-    kind === "tool_call_update" ||
-    kind === "tool_call_content_chunk"
-  ) {
-    const tool =
-      asRecord(update.toolCall) ?? asRecord(update.tool_call) ?? update;
+  if (kind === "tool_call" || kind === "tool_call_update" || kind === "tool_call_content_chunk") {
+    const tool = asRecord(update.toolCall) ?? asRecord(update.tool_call) ?? update;
     const callId = String(
-      tool.toolCallId ??
-        tool.tool_call_id ??
-        update.toolCallId ??
-        update.tool_call_id ??
-        "",
+      tool.toolCallId ?? tool.tool_call_id ?? update.toolCallId ?? update.tool_call_id ?? "",
     );
     if (!callId) return [];
     const status = stringField(update, "status") ?? stringField(tool, "status");
@@ -198,11 +180,8 @@ export function eventsFromAcpUpdate(params: unknown): HarnessEvent[] {
     // nothing to work with. Mine the result blob instead, and only fall back to
     // the shared path if fx ever starts sending structured fields.
     const fx = fxToolInfo(update, tool);
-    const toolKind =
-      fx.kind ?? stringField(update, "kind") ?? stringField(tool, "kind");
-    const preview = fx.resolved
-      ? fx.preview
-      : (fx.preview ?? extractToolPreview(update, tool));
+    const toolKind = fx.kind ?? stringField(update, "kind") ?? stringField(tool, "kind");
+    const preview = fx.resolved ? fx.preview : (fx.preview ?? extractToolPreview(update, tool));
     const title =
       composeToolTitle({
         kind: toolKind,
@@ -271,10 +250,7 @@ export function modelsFromFxOutput(stdout: string): AgentModel[] {
   } catch {
     const start = trimmed.indexOf("{");
     const arrayStart = trimmed.indexOf("[");
-    const jsonAt =
-      start >= 0 && (arrayStart < 0 || start < arrayStart)
-        ? start
-        : arrayStart;
+    const jsonAt = start >= 0 && (arrayStart < 0 || start < arrayStart) ? start : arrayStart;
     if (jsonAt >= 0) {
       try {
         return uniqueFxModels(modelsFromFxJson(JSON.parse(trimmed.slice(jsonAt))));
@@ -343,8 +319,7 @@ export function readConfigOptions(raw: unknown): SessionConfigOption[] {
         id,
         category: typeof rec?.category === "string" ? rec.category : undefined,
         currentValue:
-          typeof rec?.currentValue === "string" ||
-          typeof rec?.currentValue === "boolean"
+          typeof rec?.currentValue === "string" || typeof rec?.currentValue === "boolean"
             ? rec.currentValue
             : undefined,
       },
@@ -352,15 +327,11 @@ export function readConfigOptions(raw: unknown): SessionConfigOption[] {
   });
 }
 
-export function extractModelConfigId(
-  options: SessionConfigOption[],
-): string {
+export function extractModelConfigId(options: SessionConfigOption[]): string {
   const exact = options.find((option) => option.id === "model");
   if (exact) return exact.id;
   // fx lists provider first with category "model"; that is not the model picker.
-  const model = options.find(
-    (option) => option.category === "model" && option.id !== "provider",
-  );
+  const model = options.find((option) => option.category === "model" && option.id !== "provider");
   return model?.id ?? "model";
 }
 
@@ -374,9 +345,7 @@ export function resolveSettingConfigId(
   if (needle === "effort" || needle === "reasoning") {
     return options.find(
       (option) =>
-        option.id === "effort" ||
-        option.id === "reasoning" ||
-        option.category === "thought_level",
+        option.id === "effort" || option.id === "reasoning" || option.category === "thought_level",
     )?.id;
   }
   if (needle === "fast" || needle === "fastmode" || needle === "fast_mode") {
@@ -416,7 +385,8 @@ function modelFromJson(item: unknown): AgentModel | null {
   if (!nativeId) return null;
   const name = String(rec.name ?? rec.displayName ?? rec.title ?? "").trim();
   const settings = settingsFromJson(rec);
-  const window = numberField(rec, "contextWindow") ??
+  const window =
+    numberField(rec, "contextWindow") ??
     numberField(rec, "context_window") ??
     numberField(rec, "window");
   return {
@@ -457,11 +427,7 @@ function settingsFromJson(rec: Record<string, unknown>): ModelSetting[] {
 }
 
 function effortChoices(rec: Record<string, unknown>): ModelSettingChoice[] {
-  const raw =
-    rec.effortOptions ??
-    rec.effort_options ??
-    rec.efforts ??
-    rec.supportedEffort;
+  const raw = rec.effortOptions ?? rec.effort_options ?? rec.efforts ?? rec.supportedEffort;
   const values = Array.isArray(raw)
     ? raw.flatMap((item) => {
         if (typeof item === "string" && item.trim()) return [item.trim()];
@@ -479,6 +445,7 @@ function effortChoices(rec: Record<string, unknown>): ModelSettingChoice[] {
 function modelsFromFxText(stdout: string): AgentModel[] {
   const models: AgentModel[] = [];
   for (const raw of stdout.split(/\r?\n/)) {
+    // oxlint-disable-next-line no-control-regex -- Strip terminal ANSI sequences.
     const line = raw.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").trim();
     const match = /^(\S+)\s+[—-]\s+(.+)$/.exec(line);
     if (!match) continue;
@@ -507,12 +474,8 @@ function uniqueFxModels(models: AgentModel[]): AgentModel[] {
 }
 
 function displayName(nativeId: string): string {
-  const slug = nativeId.includes("/")
-    ? nativeId.slice(nativeId.indexOf("/") + 1)
-    : nativeId;
-  return slug
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  const slug = nativeId.includes("/") ? nativeId.slice(nativeId.indexOf("/") + 1) : nativeId;
+  return slug.replace(/[-_]+/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 function usageFromUpdate(update: Record<string, unknown>): HarnessEvent | null {
@@ -584,9 +547,7 @@ function toolDetail(
   update: Record<string, unknown>,
   tool: Record<string, unknown>,
 ): string | undefined {
-  const content =
-    textFromContent(update.content, "\n") ||
-    textFromContent(tool.content, "\n");
+  const content = textFromContent(update.content, "\n") || textFromContent(tool.content, "\n");
   if (content.trim()) return cap(content);
   const output = update.rawOutput ?? tool.rawOutput;
   if (typeof output === "string" && output.trim()) return cap(output);
@@ -607,10 +568,7 @@ function pickOption(optionIds: string[], preferred: string[]): string | null {
   return null;
 }
 
-function humanField(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function humanField(rec: Record<string, unknown>, key: string): string | undefined {
   const value = stringField(rec, key);
   if (!value || looksLikeCallId(value)) return undefined;
   return value;
@@ -620,9 +578,7 @@ function looksLikeCallId(value: string): boolean {
   const text = value.trim();
   return (
     /^(call[-_]?|tool[-_])[a-z0-9_-]+$/i.test(text) ||
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      text,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text)
   );
 }
 
@@ -647,26 +603,17 @@ export function asRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
-export function stringField(
-  rec: Record<string, unknown>,
-  key: string,
-): string | undefined {
+export function stringField(rec: Record<string, unknown>, key: string): string | undefined {
   const value = rec[key];
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function numberField(
-  rec: Record<string, unknown>,
-  key: string,
-): number | undefined {
+function numberField(rec: Record<string, unknown>, key: string): number | undefined {
   const value = rec[key];
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function sumNumbers(
-  rec: Record<string, unknown>,
-  keys: string[],
-): number | undefined {
+function sumNumbers(rec: Record<string, unknown>, keys: string[]): number | undefined {
   let total = 0;
   let found = false;
   for (const key of keys) {

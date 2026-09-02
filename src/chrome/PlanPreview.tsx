@@ -17,10 +17,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
     <div className="overflow-hidden rounded-[10px] border border-yellow-200/40 bg-yellow-200/10 border-dashed mb-2">
       <div className="flex items-start gap-2 px-2.5 py-2">
         {streaming ? (
-          <CircleDashed
-            className="mt-0.5 size-4 shrink-0 text-content/40"
-            strokeWidth={1.75}
-          />
+          <CircleDashed className="mt-0.5 size-4 shrink-0 text-content/40" strokeWidth={1.75} />
         ) : (
           <span className="mt-0.5 shrink-0" aria-hidden="true">
             <FileTypeIcon name="plan.md" isDir={false} />
@@ -49,11 +46,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
               {summary}
             </p>
           ) : null}
-          {meta ? (
-            <p className="mt-0.5 font-mono text-[11px] text-content/40">
-              {meta}
-            </p>
-          ) : null}
+          {meta ? <p className="mt-0.5 font-mono text-[11px] text-content/40">{meta}</p> : null}
         </div>
         {onOpen ? (
           <button

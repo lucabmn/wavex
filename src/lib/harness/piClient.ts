@@ -30,9 +30,7 @@ export class PiRpc {
       this.pending.delete(response.id);
       if (!pending) return;
       if (!response.success) {
-        pending.reject(
-          new Error(response.error || `${this.label} ${response.command} failed`),
-        );
+        pending.reject(new Error(response.error || `${this.label} ${response.command} failed`));
         return;
       }
       pending.resolve(rec);
@@ -66,8 +64,7 @@ export class PiRpc {
       });
     });
     void writeChild(this.sessionId, JSON.stringify(payload)).catch((error) => {
-      const message =
-        error instanceof Error ? error : new Error(String(error));
+      const message = error instanceof Error ? error : new Error(String(error));
       const request = this.pending.get(id);
       this.pending.delete(id);
       request?.reject(message);

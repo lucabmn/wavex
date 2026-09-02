@@ -183,12 +183,12 @@ export const DEFAULT_MODEL_ID: Record<HarnessId, string> = {
   fx: "fx:zai/glm-5.2-fast",
 };
 
-const FAVORITES_KEY = "wavecode.favoriteModels";
-const MODEL_PICKER_TAB_KEY = "wavecode.modelPickerTab";
-const HIDDEN_PICKER_PROVIDERS_KEY = "wavecode.hiddenPickerProviders";
-const LAST_MODEL_KEY = "wavecode.lastModel";
-const LAST_MODEL_SETTINGS_KEY = "wavecode.lastModelSettings";
-const DEFAULT_MODELS_KEY = "wavecode.defaultModels";
+const FAVORITES_KEY = "wavex.favoriteModels";
+const MODEL_PICKER_TAB_KEY = "wavex.modelPickerTab";
+const HIDDEN_PICKER_PROVIDERS_KEY = "wavex.hiddenPickerProviders";
+const LAST_MODEL_KEY = "wavex.lastModel";
+const LAST_MODEL_SETTINGS_KEY = "wavex.lastModelSettings";
+const DEFAULT_MODELS_KEY = "wavex.defaultModels";
 
 export type ModelPickerTab = "favorites" | HarnessId;
 
@@ -304,9 +304,7 @@ export function resolveModel(harness: HarnessId, id?: string): AgentModel {
     const exact = findModel(id);
     if (exact && exact.harness === harness) return exact;
     const slug = nativeIdFrom(id);
-    const byNative = available.find(
-      (model) => (model.nativeId ?? nativeIdFrom(model.id)) === slug,
-    );
+    const byNative = available.find((model) => (model.nativeId ?? nativeIdFrom(model.id)) === slug);
     if (byNative) return byNative;
     const prefix = available.find((model) => {
       const native = model.nativeId ?? nativeIdFrom(model.id);
@@ -336,9 +334,7 @@ export function nativeModelId(model: AgentModel | string): string {
   return findModel(model)?.nativeId ?? nativeIdFrom(model);
 }
 
-export function defaultModelSettings(
-  model: AgentModel,
-): Record<string, string> {
+export function defaultModelSettings(model: AgentModel): Record<string, string> {
   const settings: Record<string, string> = {};
   for (const setting of model.settings ?? []) {
     settings[setting.id] = setting.value;
@@ -386,8 +382,7 @@ export function saveLastModelSettings(
 ) {
   const prev = loadLastModelSettings();
   const incoming = parseStringRecord(settings);
-  const next =
-    mode === "fill" ? { ...incoming, ...prev } : { ...prev, ...incoming };
+  const next = mode === "fill" ? { ...incoming, ...prev } : { ...prev, ...incoming };
   try {
     localStorage.setItem(LAST_MODEL_SETTINGS_KEY, JSON.stringify(next));
   } catch {
@@ -396,17 +391,12 @@ export function saveLastModelSettings(
 }
 
 /** Compound launch id, e.g. `claude-opus-4-8[effort=high,fast=false]`. */
-export function encodeModelLaunchId(
-  modelId: string,
-  settings?: Record<string, string>,
-): string {
+export function encodeModelLaunchId(modelId: string, settings?: Record<string, string>): string {
   const model = findModel(modelId);
   const native = nativeModelId(model ?? modelId);
   const defs = model?.settings ?? [];
   if (!native || defs.length === 0) return native;
-  const parts = defs.map(
-    (setting) => `${setting.id}=${settings?.[setting.id] ?? setting.value}`,
-  );
+  const parts = defs.map((setting) => `${setting.id}=${settings?.[setting.id] ?? setting.value}`);
   return `${native}[${parts.join(",")}]`;
 }
 
@@ -462,9 +452,7 @@ function emitPickerVisibility() {
   for (const listener of pickerVisibilityListeners) listener();
 }
 
-export function subscribePickerVisibility(
-  onStoreChange: () => void,
-): () => void {
+export function subscribePickerVisibility(onStoreChange: () => void): () => void {
   pickerVisibilityListeners.add(onStoreChange);
   return () => {
     pickerVisibilityListeners.delete(onStoreChange);
@@ -481,9 +469,7 @@ export function loadHiddenPickerProviders(): HarnessId[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (id): id is HarnessId => typeof id === "string" && isHarnessId(id),
-    );
+    return parsed.filter((id): id is HarnessId => typeof id === "string" && isHarnessId(id));
   } catch {
     return [];
   }
@@ -498,10 +484,7 @@ export function savePickerProviderVisible(id: HarnessId, visible: boolean) {
   if (visible) hidden.delete(id);
   else hidden.add(id);
   try {
-    localStorage.setItem(
-      HIDDEN_PICKER_PROVIDERS_KEY,
-      JSON.stringify([...hidden]),
-    );
+    localStorage.setItem(HIDDEN_PICKER_PROVIDERS_KEY, JSON.stringify([...hidden]));
   } catch {
     // private mode / quota
   }
@@ -522,9 +505,7 @@ export function showProviderInModelPicker(
   return !probed || installed;
 }
 
-export function modelPickerTabs(
-  available: (id: HarnessId) => boolean,
-): ModelPickerTab[] {
+export function modelPickerTabs(available: (id: HarnessId) => boolean): ModelPickerTab[] {
   return ["favorites", ...HARNESSES.filter(available)];
 }
 
@@ -673,9 +654,7 @@ function pickDefaultId(harness: HarnessId, models: AgentModel[]): string {
   if (harness === "cursor") {
     return (
       models.find((model) => model.nativeId === "composer-2.5")?.id ??
-      models.find(
-        (model) => model.nativeId === "default" || model.nativeId === "auto",
-      )?.id ??
+      models.find((model) => model.nativeId === "default" || model.nativeId === "auto")?.id ??
       models[0]?.id ??
       DEFAULT_MODEL_ID.cursor
     );

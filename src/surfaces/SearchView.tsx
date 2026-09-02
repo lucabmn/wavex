@@ -34,13 +34,13 @@ import {
   peekProjectFiles,
   rankProjectFiles,
   recentOpenedFiles,
-} from "../lib/fileIndex";
+} from "../lib/files/fileIndex";
 import { prettyCwd, projectName } from "../lib/paths";
 import { IS_MAC } from "../lib/platform";
 import { looksLikeProject, type RecentProject } from "../lib/recents";
 import { searchProject, type OpenFileFn } from "../lib/search";
 import { type Session } from "../lib/session";
-import { searchSessions, type SessionSummary } from "../lib/sessionStore";
+import { searchSessions, type SessionSummary } from "../lib/sessions/sessionStore";
 
 const SCOPES: { id: SearchScope; label: string }[] = [
   { id: "all", label: "All" },
@@ -147,9 +147,7 @@ export function SearchView({
   const fileHits = useMemo(
     () =>
       trimmed && looksLikeProject(cwd)
-        ? hitsFromFileRanks(
-            rankProjectFiles(files, trimmed, recentOpenedFiles(cwd), 40),
-          )
+        ? hitsFromFileRanks(rankProjectFiles(files, trimmed, recentOpenedFiles(cwd), 40))
         : [],
     [cwd, files, trimmed],
   );
@@ -245,27 +243,11 @@ export function SearchView({
     if (!trimmed) return [];
     return flattenGrouped(
       groupHits(
-        mergeHits(
-          titleHits,
-          liveMessageHits,
-          remoteHits,
-          fileHits,
-          contentHits,
-          projectHits,
-        ),
+        mergeHits(titleHits, liveMessageHits, remoteHits, fileHits, contentHits, projectHits),
         scope,
       ),
     );
-  }, [
-    contentHits,
-    fileHits,
-    liveMessageHits,
-    projectHits,
-    remoteHits,
-    scope,
-    titleHits,
-    trimmed,
-  ]);
+  }, [contentHits, fileHits, liveMessageHits, projectHits, remoteHits, scope, titleHits, trimmed]);
 
   const activeHit = hits[active] ?? null;
 
@@ -324,9 +306,7 @@ export function SearchView({
         data-tauri-drag-region="deep"
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : (
-          <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />
-        )}
+        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
         <label className="flex min-w-0 flex-1 items-center gap-2 px-3 text-content/50">
           <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
           <input
@@ -415,15 +395,9 @@ function EmptyState() {
             gridTemplateColumns: `repeat(${EMPTY_DOT_COLS}, minmax(0, 1fr))`,
           }}
         >
-          {Array.from(
-            { length: EMPTY_DOT_COLS * EMPTY_DOT_ROWS },
-            (_, index) => (
-              <span
-                key={index}
-                className="mx-auto size-[3px] rounded-full bg-content"
-              />
-            ),
-          )}
+          {Array.from({ length: EMPTY_DOT_COLS * EMPTY_DOT_ROWS }, (_, index) => (
+            <span key={index} className="mx-auto size-[3px] rounded-full bg-content" />
+          ))}
         </div>
         <div className="absolute grid size-14 place-items-center rounded-2xl bg-content/6 backdrop-blur-sm">
           <Search className="size-6 text-content/50" strokeWidth={1.75} />
@@ -468,10 +442,7 @@ function ResultList({
   }, [active]);
 
   const onListMouseMove = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (
-      event.clientX === pointer.current.x &&
-      event.clientY === pointer.current.y
-    ) {
+    if (event.clientX === pointer.current.x && event.clientY === pointer.current.y) {
       return;
     }
     pointer.current = { x: event.clientX, y: event.clientY, allow: true };
@@ -484,11 +455,7 @@ function ResultList({
   };
 
   return (
-    <div
-      role="listbox"
-      aria-label="Search results"
-      onMouseMove={onListMouseMove}
-    >
+    <div role="listbox" aria-label="Search results" onMouseMove={onListMouseMove}>
       {hits.map((hit, index) => {
         const highlighted = index === active;
         const row = rowCopy(hit, query);
@@ -506,9 +473,7 @@ function ResultList({
               highlighted ? "bg-content/10 text-content" : "text-content"
             }`}
           >
-            <span className="grid size-4 shrink-0 place-items-center">
-              {row.icon}
-            </span>
+            <span className="grid size-4 shrink-0 place-items-center">{row.icon}</span>
             <span className="min-w-0 flex-1 truncate">{row.title}</span>
             {row.meta ? (
               <span className="min-w-0 max-w-[45%] truncate font-mono text-[11px] text-content/40">
@@ -535,12 +500,7 @@ function rowCopy(
   }
   if (hit.kind === "message") {
     return {
-      icon: (
-        <MessageSquare
-          className="size-3.5 text-content/55"
-          strokeWidth={1.75}
-        />
-      ),
+      icon: <MessageSquare className="size-3.5 text-content/55" strokeWidth={1.75} />,
       title: <Highlight text={hit.preview || hit.title} query={query} />,
       meta: hit.title,
     };
@@ -548,9 +508,7 @@ function rowCopy(
   if (hit.kind === "file") {
     return {
       icon: <FileTypeIcon name={hit.name} isDir={false} size={16} />,
-      title: (
-        <MatchText text={hit.name} positions={namePositions(hit)} active />
-      ),
+      title: <MatchText text={hit.name} positions={namePositions(hit)} active />,
       meta: hit.relative,
     };
   }
@@ -562,13 +520,7 @@ function rowCopy(
     };
   }
   return {
-    icon: (
-      <ProjectLogoIcon
-        path={hit.path}
-        className="size-3.5 rounded-sm"
-        fallback={Folder}
-      />
-    ),
+    icon: <ProjectLogoIcon path={hit.path} className="size-3.5 rounded-sm" fallback={Folder} />,
     title: <MatchText text={hit.name} positions={hit.positions} active />,
     meta: prettyCwd(hit.path),
   };
@@ -589,11 +541,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
   );
 }
 
-function namePositions(hit: {
-  name: string;
-  relative: string;
-  positions: number[];
-}) {
+function namePositions(hit: { name: string; relative: string; positions: number[] }) {
   const offset = Math.max(0, hit.relative.length - hit.name.length);
   return hit.positions
     .map((index) => index - offset)

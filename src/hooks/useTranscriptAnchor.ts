@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  loadTranscriptAnchor,
-  TRANSCRIPT_ANCHOR_CHANGE_EVENT,
-} from "../lib/appearance";
+import { loadTranscriptAnchor, TRANSCRIPT_ANCHOR_CHANGE_EVENT } from "../lib/appearance";
 
 /** Subscribes to prompt-to-top changes triggered by saveTranscriptAnchor(). */
 export function useTranscriptAnchor(): boolean {
@@ -12,8 +9,7 @@ export function useTranscriptAnchor(): boolean {
       setAnchor((event as CustomEvent<boolean>).detail === true);
     };
     window.addEventListener(TRANSCRIPT_ANCHOR_CHANGE_EVENT, onChange);
-    return () =>
-      window.removeEventListener(TRANSCRIPT_ANCHOR_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(TRANSCRIPT_ANCHOR_CHANGE_EVENT, onChange);
   }, []);
   return anchor;
 }

@@ -9,14 +9,11 @@ import {
   stopCursorSession,
 } from "./cursor";
 import { refreshCursorCatalog } from "./cursorCatalog";
-import {
-  generateCursorBranchName,
-  generateCursorCommitMessage,
-  generateCursorPrContent,
-} from "./cursorGit";
-import { generateCursorSessionTitle } from "./cursorTitle";
-import { warmupCursorText } from "./cursorText";
+import { runCursorTextPrompt, warmupCursorText } from "./cursorText";
+import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
+
+const gitText = createGitTextGenerators(runCursorTextPrompt, "Cursor", 60_000);
 
 export const cursorAdapter: HarnessAdapter = {
   id: "cursor",
@@ -30,10 +27,10 @@ export const cursorAdapter: HarnessAdapter = {
   forgetSession: forgetCursorSession,
   bindSession: bindCursorSession,
   refreshCatalog: refreshCursorCatalog,
-  generateTitle: generateCursorSessionTitle,
-  generateCommitMessage: generateCursorCommitMessage,
-  generatePrContent: generateCursorPrContent,
-  generateBranchName: generateCursorBranchName,
+  generateTitle: createSessionTitleGenerator(runCursorTextPrompt),
+  generateCommitMessage: gitText.generateCommitMessage,
+  generatePrContent: gitText.generatePrContent,
+  generateBranchName: gitText.generateBranchName,
   warmupText: warmupCursorText,
 };
 

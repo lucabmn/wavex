@@ -1,16 +1,16 @@
 name: Bug report
-description: Report a problem in wavecode
+description: Report a problem in wavex
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        wavecode is macOS (Apple Silicon) only. Linux and Windows are out of scope.
+        wavex is macOS (Apple Silicon) only. Linux and Windows are out of scope.
 
   - type: input
     id: version
     attributes:
-      label: wavecode version
+      label: wavex version
       placeholder: "0.1.0"
     validations:
       required: true
@@ -47,6 +47,13 @@ body:
       description: What did you expect, and what did you get instead?
     validations:
       required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or console output
+      description: Paste any relevant logs or console output. Redact secrets.
+      render: text
 
   - type: textarea
     id: repro

@@ -1,9 +1,5 @@
 import { useRef, useState } from "react";
-import {
-  contextRatio,
-  contextTooltip,
-  type ContextUsage,
-} from "../lib/contextUsage";
+import { contextRatio, contextTooltip, type ContextUsage } from "../lib/contextUsage";
 import { Popover } from "./Popover";
 
 const SIZE = 14;

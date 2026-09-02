@@ -1,10 +1,4 @@
-import {
-  Check,
-  ChevronRight,
-  MessageMultiple,
-  Replace,
-  type IconComponent,
-} from "./icons";
+import { Check, ChevronRight, MessageMultiple, Replace, type IconComponent } from "./icons";
 import {
   useEffect,
   useMemo,
@@ -88,11 +82,7 @@ export function SecondOpinionButton({
     getPickerVisibilitySnapshot,
     getPickerVisibilitySnapshot,
   );
-  const catalogVersion = useSyncExternalStore(
-    subscribeModels,
-    getModelSnapshot,
-    getModelSnapshot,
-  );
+  const catalogVersion = useSyncExternalStore(subscribeModels, getModelSnapshot, getModelSnapshot);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [modelActive, setModelActive] = useState(0);
@@ -117,8 +107,7 @@ export function SecondOpinionButton({
     void catalogVersion;
     return activeHarness ? modelsFor(activeHarness) : [];
   }, [activeHarness, catalogVersion]);
-  const preferred =
-    activeHarness != null ? preferredModelId(activeHarness) : undefined;
+  const preferred = activeHarness != null ? preferredModelId(activeHarness) : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -256,9 +245,7 @@ export function SecondOpinionButton({
             className="p-1 font-sans"
           >
             <div className="px-1.5 pb-2 pt-1.5">
-              <p className="text-[11px] leading-3 text-content/50 text-balance">
-                {description}
-              </p>
+              <p className="text-[11px] leading-3 text-content/50 text-balance">{description}</p>
             </div>
             <div className="mx-1 mb-1 h-px bg-content/10" />
             {targets.length === 0 ? (
@@ -275,9 +262,7 @@ export function SecondOpinionButton({
                     ref={highlighted ? activeRow : undefined}
                     type="button"
                     role="menuitem"
-                    aria-haspopup={
-                      modelsFor(harness).length > 0 ? "menu" : undefined
-                    }
+                    aria-haspopup={modelsFor(harness).length > 0 ? "menu" : undefined}
                     aria-expanded={highlighted && models.length > 0}
                     disabled={!available && probed}
                     onMouseDown={(event) => event.preventDefault()}
@@ -298,9 +283,7 @@ export function SecondOpinionButton({
                     }`}
                   >
                     <HarnessIcon harness={harness} className="size-3.5" />
-                    <span className="min-w-0 flex-1 truncate">
-                      {HARNESS_TITLE[harness]}
-                    </span>
+                    <span className="min-w-0 flex-1 truncate">{HARNESS_TITLE[harness]}</span>
                     {modelsFor(harness).length > 0 ? (
                       <ChevronRight
                         className="size-3.5 shrink-0 text-content/40"
@@ -343,19 +326,12 @@ export function SecondOpinionButton({
                     }}
                     onClick={() => pick(activeHarness, model.id)}
                     className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted
-                        ? "bg-content/10 text-content"
-                        : "text-content hover:bg-content/5"
+                      highlighted ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
                     }`}
                   >
-                    <span className="min-w-0 flex-1 truncate">
-                      {model.name}
-                    </span>
+                    <span className="min-w-0 flex-1 truncate">{model.name}</span>
                     {model.id === preferred ? (
-                      <Check
-                        className="size-3 shrink-0 text-content/45"
-                        strokeWidth={2}
-                      />
+                      <Check className="size-3 shrink-0 text-content/45" strokeWidth={2} />
                     ) : null}
                   </button>
                 );

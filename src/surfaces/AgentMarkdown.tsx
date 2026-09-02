@@ -150,12 +150,7 @@ function MarkdownLink({
 
 type MarkdownCodeProps = ComponentProps<"code"> & { node?: unknown };
 
-function MarkdownCode({
-  children,
-  className,
-  node,
-  ...props
-}: MarkdownCodeProps) {
+function MarkdownCode({ children, className, node, ...props }: MarkdownCodeProps) {
   const incomplete = useIsCodeFenceIncomplete();
   const block = Object.prototype.hasOwnProperty.call(props, "data-block");
   if (!block) {
@@ -163,8 +158,7 @@ function MarkdownCode({
     const fileName = inlineFileName(text);
     const { cwd, onOpenFile } = useContext(FileOpenContext);
     const filePath = fileName ? resolveWorkspacePath(text, cwd) : undefined;
-    const open =
-      filePath && onOpenFile ? () => onOpenFile(filePath) : undefined;
+    const open = filePath && onOpenFile ? () => onOpenFile(filePath) : undefined;
     return (
       <code
         {...props}
@@ -198,13 +192,9 @@ function MarkdownCode({
   const meta = codeMeta(node);
   const fence = parseCodeFence(className, meta);
   if (fence.language.toLowerCase() === "mermaid") {
-    return (
-      <MermaidBlock code={textContent(children)} incomplete={incomplete} />
-    );
+    return <MermaidBlock code={textContent(children)} incomplete={incomplete} />;
   }
-  const iconName =
-    fence.fileName ??
-    (fence.language ? fileNameForLanguage(fence.language) : "");
+  const iconName = fence.fileName ?? (fence.language ? fileNameForLanguage(fence.language) : "");
   const lineNumbers = !/\bnoLineNumbers\b/.test(meta);
 
   return (
@@ -281,22 +271,13 @@ export const MarkdownPreview = memo(function MarkdownPreview({
       className="markdown-preview h-full overflow-y-auto overscroll-none [overflow-anchor:none]"
     >
       <div className="px-6 py-8">
-        <AgentMarkdown
-          text={text}
-          streaming={streaming}
-          cwd={cwd}
-          onOpenFile={onOpenFile}
-        />
+        <AgentMarkdown text={text} streaming={streaming} cwd={cwd} onOpenFile={onOpenFile} />
       </div>
     </div>
   );
 });
 
-export const MarkdownSource = memo(function MarkdownSource({
-  text,
-}: {
-  text: string;
-}) {
+export const MarkdownSource = memo(function MarkdownSource({ text }: { text: string }) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
 
   return (
@@ -330,13 +311,7 @@ export function MarkdownSourceHighlight({ text }: { text: string }) {
   );
 }
 
-function MermaidBlock({
-  code,
-  incomplete,
-}: {
-  code: string;
-  incomplete: boolean;
-}) {
+function MermaidBlock({ code, incomplete }: { code: string; incomplete: boolean }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const colorScheme = useColorScheme();
@@ -375,12 +350,7 @@ function MermaidBlock({
         <span className="markdown-code-icon" aria-hidden="true">
           <FileTypeIcon name="diagram.mmd" isDir={false} />
         </span>
-        <CodeBlock
-          code={code}
-          isIncomplete={incomplete}
-          language="mermaid"
-          lineNumbers={false}
-        />
+        <CodeBlock code={code} isIncomplete={incomplete} language="mermaid" lineNumbers={false} />
       </div>
     );
   }
@@ -412,19 +382,14 @@ function hashCode(value: string): number {
 function codeMeta(node: unknown): string {
   if (!node || typeof node !== "object" || !("properties" in node)) return "";
   const properties = node.properties;
-  if (
-    !properties ||
-    typeof properties !== "object" ||
-    !("metastring" in properties)
-  ) {
+  if (!properties || typeof properties !== "object" || !("metastring" in properties)) {
     return "";
   }
   return typeof properties.metastring === "string" ? properties.metastring : "";
 }
 
 function textContent(value: ReactNode): string {
-  if (typeof value === "string" || typeof value === "number")
-    return String(value);
+  if (typeof value === "string" || typeof value === "number") return String(value);
   if (Array.isArray(value)) return value.map(textContent).join("");
   if (isValidElement<{ children?: ReactNode }>(value)) {
     return textContent(value.props.children);
@@ -492,9 +457,7 @@ function languageFromFileName(fileName: string): string {
   const lower = fileName.toLowerCase();
   if (lower === "dockerfile") return "dockerfile";
   if (lower === "makefile") return "makefile";
-  const ext = lower.includes(".")
-    ? lower.slice(lower.lastIndexOf(".") + 1)
-    : lower;
+  const ext = lower.includes(".") ? lower.slice(lower.lastIndexOf(".") + 1) : lower;
   return LANGUAGE_FROM_EXT[ext] ?? ext;
 }
 
@@ -507,10 +470,7 @@ function inlineFileName(value: string): string | undefined {
   const text = value.trim();
   if (!text || text.length > 240 || /\s/.test(text)) return undefined;
 
-  const withoutLocation = text.replace(
-    /(?::\d+(?::\d+)?|#L\d+(?:-L\d+)?)$/,
-    "",
-  );
+  const withoutLocation = text.replace(/(?::\d+(?::\d+)?|#L\d+(?:-L\d+)?)$/, "");
   const fileName = withoutLocation.split(/[/\\]/).filter(Boolean).pop();
   if (!fileName || !/^[\w@+().-]+$/.test(fileName)) return undefined;
 
@@ -525,7 +485,5 @@ function inlineFileName(value: string): string | undefined {
   }
 
   const extension = fileName.split(".").pop();
-  return extension && /^[a-z][a-z0-9+-]{0,11}$/i.test(extension)
-    ? fileName
-    : undefined;
+  return extension && /^[a-z][a-z0-9+-]{0,11}$/i.test(extension) ? fileName : undefined;
 }
