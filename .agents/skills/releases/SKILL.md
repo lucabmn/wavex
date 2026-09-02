@@ -47,7 +47,8 @@ Pushing a `v*` tag triggers `.github/workflows/release.yml`. That workflow:
 - builds the Apple Silicon Tauri app and DMG;
 - signs, notarizes, staples, and Gatekeeper-checks them;
 - creates signed updater artifacts and `latest.json`;
-- publishes only after artifact verification and updater smoke testing.
+- publishes after local artifact verification, smoke-tests the public updater
+  feed, and returns a failed publication to draft.
 
 Create a signed tag when signing is configured, otherwise an annotated tag:
 

@@ -25,8 +25,8 @@ user asks, the change is substantial, or the problem needs independent tracking.
 - Use a short sentence-case title without a trailing period.
 - For bugs, include wavex and macOS versions, affected provider CLI when
   relevant, observed behavior, minimal reproduction, and expected behavior.
-- For features, explain the user problem, desired behavior, and completion
-  criteria.
+- For features, explain the user problem, desired behavior, considered
+  alternatives, and completion criteria.
 - Include logs, screenshots, or constraints only when they make the issue more
   actionable. Redact tokens, credentials, private paths, prompts, and repository
   contents.
