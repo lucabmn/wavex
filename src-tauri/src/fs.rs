@@ -4214,8 +4214,20 @@ mod tests {
         if !git(&a.0, &["remote", "add", "origin", &origin_url])
             || !git(&a.0, &["push", "-u", "origin", "main"])
             || !git(&origin.0, &["symbolic-ref", "HEAD", "refs/heads/main"])
+            // `-c`, not a `config` after the fact: Windows clones with
+            // autocrlf on by default, and turning it off later leaves the CRLF
+            // working copy behind — git then reads every line as modified and
+            // refuses to pull over it.
             || crate::process::command("git")
-                .args(["clone", "-b", "main", &origin_url, "."])
+                .args([
+                    "-c",
+                    "core.autocrlf=false",
+                    "clone",
+                    "-b",
+                    "main",
+                    &origin_url,
+                    ".",
+                ])
                 .current_dir(&b.0)
                 .status()
                 .map(|status| !status.success())
