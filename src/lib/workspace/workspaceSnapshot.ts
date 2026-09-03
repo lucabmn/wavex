@@ -360,7 +360,13 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
   const hasReleaseNotes = "releaseNotes" in value;
   const releaseNotes = sanitizeReleaseNotes(value.releaseNotes);
   if (hasReleaseNotes && !releaseNotes) return null;
-  if (releaseNotes && (value.plan != null || value.review === true || value.terminal === true)) {
+  if (
+    releaseNotes &&
+    (value.plan != null ||
+      value.review === true ||
+      value.changes === true ||
+      value.terminal === true)
+  ) {
     return null;
   }
   return {
@@ -370,6 +376,7 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
     ...(plan ? { plan } : {}),
     ...(releaseNotes ? { releaseNotes } : {}),
     ...(value.review === true ? { review: true } : {}),
+    ...(value.changes === true ? { changes: true, review: true } : {}),
     ...(value.terminal === true ? { terminal: true } : {}),
   };
 }

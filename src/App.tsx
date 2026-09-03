@@ -73,6 +73,7 @@ import {
   newTerminalFile,
   newTerminalWorkspaceTab,
   nextTerminalTitle,
+  openChangesTab,
   openEditorTab,
   openTerminalTab,
   removePane,
@@ -269,6 +270,7 @@ import { InboxView } from "./surfaces/InboxView";
 import { NotesView } from "./surfaces/NotesView";
 import { inboxComposerCard, type InboxItem } from "./lib/inbox/githubTasks";
 import {
+  loadDiffViewer,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   loadSettingsSection,
@@ -1784,10 +1786,11 @@ export default function App({
         setTabs((prev) =>
           prev.map((tab) => {
             if (tab.id !== activeTabId) return tab;
-            const opened = resolved
-              ? openEditorTab(tab, newFileTab(resolved, sidebarCwdRef.current, true))
-              : tab;
-            return opened;
+            if (loadDiffViewer() === "unified") {
+              return openChangesTab(tab, sidebarCwdRef.current, resolved);
+            }
+            if (!resolved) return tab;
+            return openEditorTab(tab, newFileTab(resolved, sidebarCwdRef.current, true));
           }),
         );
         setSidebarTab("changes");

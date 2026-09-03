@@ -96,14 +96,17 @@ import {
   KEYBINDINGS,
   loadClaudeHooks,
   loadComposerRunner,
+  loadDiffViewer,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   saveClaudeHooks,
   saveComposerRunner,
+  saveDiffViewer,
   saveLiveAgentsEnabled,
   saveNotesEnabled,
   settingsSectionDescription,
   settingsSectionLabel,
+  type DiffViewer,
   type SettingsSectionId,
 } from "../lib/settings";
 import { loadSoundsEnabled, playCue, saveSoundsEnabled } from "../lib/sounds";
@@ -226,6 +229,7 @@ export function SettingsView({
 function GeneralPage({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => void }) {
   const [transcriptLayout, setTranscriptLayout] = useState<TranscriptLayout>(loadTranscriptLayout);
   const [transcriptAnchor, setTranscriptAnchor] = useState(loadTranscriptAnchor);
+  const [diffViewer, setDiffViewer] = useState<DiffViewer>(loadDiffViewer);
   const [composerRunner, setComposerRunner] = useState(loadComposerRunner);
   const [notesEnabled, setNotesEnabled] = useState(loadNotesEnabled);
   const [liveAgentsEnabled, setLiveAgentsEnabled] = useState(loadLiveAgentsEnabled);
@@ -250,6 +254,11 @@ function GeneralPage({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => 
   const onTranscriptAnchor = (next: boolean) => {
     saveTranscriptAnchor(next);
     setTranscriptAnchor(next);
+  };
+
+  const onDiffViewer = (next: DiffViewer) => {
+    saveDiffViewer(next);
+    setDiffViewer(next);
   };
 
   const onComposerRunner = (next: boolean) => {
@@ -291,6 +300,20 @@ function GeneralPage({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => 
             { value: "chat", label: "Chat" },
           ]}
           onChange={onTranscriptLayout}
+        />
+      </Row>
+      <Row
+        label="Diff view"
+        description="Editor keeps working-tree changes in the file, like VS Code. Unified stacks every changed file in a GitHub-style review, with sticky headers and collapsed unchanged lines."
+      >
+        <Segmented
+          label="Diff view"
+          value={diffViewer}
+          options={[
+            { value: "editor", label: "Editor" },
+            { value: "unified", label: "Unified" },
+          ]}
+          onChange={onDiffViewer}
         />
       </Row>
       <Row

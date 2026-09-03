@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newReleaseNotesWorkspaceTab } from "@/lib/workspace/layout";
+import { newChangesTab, newReleaseNotesWorkspaceTab } from "@/lib/workspace/layout";
 import { releaseNotesTitle } from "@/lib/updates/releaseNotes";
 import { appendProblems, surfaceTabPresentation } from "@/chrome/SurfaceTabs";
 
@@ -13,6 +13,15 @@ describe("surfaceTabPresentation", () => {
       label: releaseNotesTitle("0.1.23"),
       iconName: "CHANGELOG.md",
       tooltip: releaseNotesTitle("0.1.23"),
+    });
+  });
+
+  it("labels the unified working-tree tab as Changes", () => {
+    expect(surfaceTabPresentation(newChangesTab("/repo", "/repo/App.tsx"))).toEqual({
+      name: "Changes",
+      label: "Changes",
+      iconName: "CHANGES",
+      tooltip: "Working tree changes",
     });
   });
 });

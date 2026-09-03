@@ -176,6 +176,45 @@ export function subscribeLiveAgentsEnabled(onStoreChange: () => void) {
   return () => window.removeEventListener(LIVE_AGENTS_ENABLED_CHANGE_EVENT, onStoreChange);
 }
 
+const DIFF_VIEWER_KEY = "wavex.diffViewer";
+
+export type DiffViewer = "editor" | "unified";
+
+export const DIFF_VIEWER_DEFAULT: DiffViewer = "editor";
+
+/** Fired on `window` when the working-tree diff layout flips. */
+export const DIFF_VIEWER_CHANGE_EVENT = "wavex:diff-viewer-change";
+
+function isDiffViewer(value: unknown): value is DiffViewer {
+  return value === "editor" || value === "unified";
+}
+
+export function loadDiffViewer(): DiffViewer {
+  try {
+    const raw = profileStorage.getItem(DIFF_VIEWER_KEY);
+    return isDiffViewer(raw) ? raw : DIFF_VIEWER_DEFAULT;
+  } catch {
+    return DIFF_VIEWER_DEFAULT;
+  }
+}
+
+export function saveDiffViewer(value: DiffViewer) {
+  const next = isDiffViewer(value) ? value : DIFF_VIEWER_DEFAULT;
+  try {
+    profileStorage.setItem(DIFF_VIEWER_KEY, next);
+  } catch {
+    // private mode / quota
+  }
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<DiffViewer>(DIFF_VIEWER_CHANGE_EVENT, { detail: next }));
+}
+
+export function subscribeDiffViewer(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(DIFF_VIEWER_CHANGE_EVENT, onStoreChange);
+  return () => window.removeEventListener(DIFF_VIEWER_CHANGE_EVENT, onStoreChange);
+}
+
 const CLAUDE_HOOKS_KEY = "wavex.claudeHooks";
 
 export const CLAUDE_HOOKS_DEFAULT = true;

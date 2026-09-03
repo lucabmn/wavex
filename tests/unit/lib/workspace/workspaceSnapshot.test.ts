@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { INTERRUPT_MESSAGE } from "@/lib/inFlight";
 import {
   leaf,
+  newChangesTab,
   newFileTab,
   newReleaseNotesWorkspaceTab,
   newTab,
@@ -45,6 +46,21 @@ describe("collectWorkspaceSnapshot", () => {
     ]);
     expect("blocks" in snapshot.sessions[0]!).toBe(false);
     expect(snapshot.projectTerminals).toEqual([]);
+  });
+
+  it("round-trips a unified Changes tab", () => {
+    const file = newChangesTab("/tmp/a", "/tmp/a/src/lib.rs");
+    const tab = {
+      ...newTab("s1"),
+      id: "t1",
+      editorPanes: [{ id: "e1", files: [file], activeFileId: file.id }],
+    };
+    const snapshot = collectWorkspaceSnapshot([tab], [], "t1", "/tmp/a");
+    const workspace = hydrateWorkspaceSnapshot(snapshot, new Map());
+    const restored = workspace?.tabs[0]?.editorPanes[0]?.files[0];
+    expect(restored?.changes).toBe(true);
+    expect(restored?.review).toBe(true);
+    expect(restored?.path).toBe("/tmp/a/src/lib.rs");
   });
 
   it("round-trips a release-note descriptor", () => {
@@ -109,6 +125,7 @@ describe("parseWorkspaceSnapshot", () => {
       plan: { sessionId: "s", blockId: "b", title: "Plan" },
     },
     { releaseNotes: { version: "0.1.22" }, review: true },
+    { releaseNotes: { version: "0.1.22" }, changes: true },
     { releaseNotes: { version: "0.1.22" }, terminal: true },
   ])("rejects a tab whose release pane is invalid: %j", (descriptor) => {
     const valid = { ...newTab("session-a"), id: "valid-tab" };

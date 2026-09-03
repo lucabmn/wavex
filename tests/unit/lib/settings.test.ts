@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   COMPOSER_RUNNER_DEFAULT,
+  DIFF_VIEWER_DEFAULT,
   LIVE_AGENTS_ENABLED_DEFAULT,
   loadComposerRunner,
+  loadDiffViewer,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   NOTES_ENABLED_DEFAULT,
   saveComposerRunner,
+  saveDiffViewer,
   saveLiveAgentsEnabled,
   saveNotesEnabled,
 } from "@/lib/settings";
@@ -14,6 +17,7 @@ import {
 const KEY = "wavex.composerRunner";
 const NOTES_KEY = "wavex.notesEnabled";
 const LIVE_AGENTS_KEY = "wavex.liveAgentsEnabled";
+const DIFF_VIEWER_KEY = "wavex.diffViewer";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();
@@ -96,5 +100,30 @@ describe("live agents enabled setting", () => {
     expect(loadLiveAgentsEnabled()).toBe(false);
     saveLiveAgentsEnabled(true);
     expect(loadLiveAgentsEnabled()).toBe(true);
+  });
+});
+
+describe("diff viewer setting", () => {
+  beforeEach(mockLocalStorage);
+  afterEach(() => {
+    localStorage.removeItem(DIFF_VIEWER_KEY);
+  });
+
+  it("defaults to the editor layout", () => {
+    expect(DIFF_VIEWER_DEFAULT).toBe("editor");
+    expect(loadDiffViewer()).toBe("editor");
+  });
+
+  it("persists the unified layout", () => {
+    saveDiffViewer("unified");
+    expect(localStorage.getItem(DIFF_VIEWER_KEY)).toBe("unified");
+    expect(loadDiffViewer()).toBe("unified");
+    saveDiffViewer("editor");
+    expect(loadDiffViewer()).toBe("editor");
+  });
+
+  it("ignores unknown stored values", () => {
+    localStorage.setItem(DIFF_VIEWER_KEY, "split");
+    expect(loadDiffViewer()).toBe("editor");
   });
 });
