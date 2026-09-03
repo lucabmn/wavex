@@ -28,6 +28,7 @@ function summary(id: string, cwd: string, title: string, updatedAt = 1): Session
     updatedAt,
     additions: 0,
     deletions: 0,
+    scope: "coding",
   };
 }
 

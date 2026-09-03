@@ -118,7 +118,23 @@ export type Block = {
   secondOpinion?: SecondOpinionMeta;
   /** Note chip shown on this user turn. Body is not stored; the harness already received it. */
   noteCard?: NoteCardMeta;
+  /** This user turn asked for an image, so resending it must ask again. */
+  imageRequest?: boolean;
 };
+
+/**
+ * What a session is bound to. A coding session works in a project checkout; a
+ * work chat is a plain conversation with no project, cwd, or worktree of its
+ * own. Absent on records written before work chats existed, which read as
+ * coding sessions.
+ */
+export type SessionScope = "coding" | "work";
+
+export const DEFAULT_SESSION_SCOPE: SessionScope = "coding";
+
+export function sessionScope(session: { scope?: SessionScope }): SessionScope {
+  return session.scope === "work" ? "work" : DEFAULT_SESSION_SCOPE;
+}
 
 export type RuntimeMode = "supervised" | "auto-accept-edits" | "auto" | "full-access";
 
@@ -147,6 +163,8 @@ export const RUNTIME_MODE_HINT: Record<RuntimeMode, string> = {
 
 export type Session = {
   id: string;
+  /** Absent means a coding session. */
+  scope?: SessionScope;
   harness: HarnessId;
   model: string;
   modelSettings: Record<string, string>;

@@ -21,6 +21,7 @@ function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSu
     updatedAt: 1,
     additions: 0,
     deletions: 0,
+    scope: "coding",
     ...overrides,
   };
 }

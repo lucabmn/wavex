@@ -289,6 +289,10 @@ import {
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
+import { otherAppMode, type AppMode } from "./lib/workspace/appMode";
+import { WorkView } from "./surfaces/WorkView";
+import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
+import { getWorkChatState } from "./lib/sessions/workChatStore";
 import type { InstalledUpdate } from "./lib/updates/updateNotice";
 import {
   bindResumedSessions,
@@ -340,6 +344,9 @@ export default function App({
     () => windowTransfer?.projectTerminals ?? resumed?.projectTerminals ?? [],
   );
   const [projectTerminalFocused, setProjectTerminalFocused] = useState(false);
+  // Work vs Coding. The coding workspace stays mounted behind Work so live
+  // terminals, editors, and streaming turns survive a mode switch.
+  const [appMode, setAppMode] = useState<AppMode>(() => resumed?.mode ?? "coding");
   const [activeTabId, setActiveTabId] = useState(
     () => windowTransfer?.activeTabId ?? resumed?.activeTabId ?? seed.tab.id,
   );
@@ -409,6 +416,8 @@ export default function App({
   activeTabIdRef.current = activeTabId;
   const projectCwdRef = useRef(projectCwd);
   projectCwdRef.current = projectCwd;
+  const appModeRef = useRef(appMode);
+  appModeRef.current = appMode;
   const searchViewOpenRef = useRef(searchViewOpen);
   searchViewOpenRef.current = searchViewOpen;
   const inboxViewOpenRef = useRef(inboxViewOpen);
@@ -526,6 +535,7 @@ export default function App({
         projectCwdRef.current,
         "unload",
         projectTerminalsRef.current,
+        appModeRef.current,
       ).finally(() => {
         void reapWindowRuntime(sessionsRef.current, tabsRef.current, projectTerminalsRef.current);
       });
@@ -717,15 +727,19 @@ export default function App({
       () => projectCwdRef.current,
       () => projectTerminalsRef.current,
       flushHarnessEvents,
+      () => appModeRef.current,
     );
     void getCurrentWindow()
       .onCloseRequested((event) => {
         // Listening here makes close our job. Letting the default path run
         // calls JS `window.destroy`, which Tauri denies without a permission.
         event.preventDefault();
-        if (hasInFlightSessions(sessionsRef.current)) {
+        // A streaming work chat keeps the window alive too — closing on top of
+        // one would drop the answer being written.
+        const workChats = getWorkChatState().chats;
+        if (hasInFlightSessions(sessionsRef.current) || hasInFlightSessions(workChats)) {
           flushHarnessEvents();
-          void persistLiveTranscripts(sessionsRef.current);
+          void persistLiveTranscripts([...sessionsRef.current, ...workChats]);
           void hideCurrentWindow();
           return;
         }
@@ -736,6 +750,7 @@ export default function App({
           projectCwdRef.current,
           "unload",
           projectTerminalsRef.current,
+          appModeRef.current,
         ).finally(() => {
           void closeCurrentWindow();
         });
@@ -872,6 +887,7 @@ export default function App({
       activeTabId,
       projectCwd,
       projectTerminals,
+      appMode,
     );
     const key = workspaceSnapshotKey(snapshot);
     if (workspaceSyncKey.current === key) return;
@@ -880,7 +896,7 @@ export default function App({
       void saveWorkspaceSnapshot(snapshot).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [tabs, sessions, activeTabId, projectCwd, projectTerminals, windowTransfer]);
+  }, [tabs, sessions, activeTabId, projectCwd, projectTerminals, appMode, windowTransfer]);
 
   useEffect(() => {
     if (lastProjectPath()) return;
@@ -3259,8 +3275,45 @@ export default function App({
     fn();
   }, []);
 
+  /**
+   * A menu item that opens something — a project, a file, Search, Inbox. The
+   * user asked for a coding surface, so bring it forward rather than running
+   * the action behind the chat.
+   */
+  const runInCoding = useCallback(
+    (name: string, fn: () => void) => {
+      if (appModeRef.current === "work") setAppMode("coding");
+      run(name, fn);
+    },
+    [run],
+  );
+
+  /**
+   * A menu item that acts on the workspace itself — tabs, panes, terminals.
+   *
+   * The macOS menu owns these accelerators, so the keydown guard never sees
+   * them. Where Work has its own meaning for the key it runs that instead
+   * (⌘T is New Chat there); otherwise the item does nothing, because
+   * mutating tabs the user cannot see is worse than no response.
+   */
+  const runInWorkspace = useCallback(
+    (name: string, fn: () => void, inWork?: WorkChatCommand) => {
+      if (appModeRef.current === "work") {
+        if (inWork) requestWorkChatCommand(inWork);
+        return;
+      }
+      run(name, fn);
+    },
+    [run],
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Work owns its own bindings. Every shortcut below acts on the project
+      // workspace — tabs, panes, the file picker — which is hidden behind the
+      // chat surface, so none of them may fire while Work is in front. The
+      // mode toggle itself is bound outside this handler.
+      if (appModeRef.current === "work") return;
       const cmd = tabCommand(e);
       if (cmd) {
         const target = e.target instanceof Element ? e.target : null;
@@ -3351,35 +3404,66 @@ export default function App({
   }, [run]);
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.shiftKey || e.altKey || e.key.toLowerCase() !== "m") return;
+      e.preventDefault();
+      e.stopPropagation();
+      run("toggle_mode", () => setAppMode(otherAppMode(appModeRef.current)));
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [run]);
+
+  useEffect(() => {
     const unlisten: Array<Promise<() => void>> = [
-      listen("new_tab", () => run("new", actions.current.onNew)),
-      listen("close_tab", () => run("close", actions.current.onClosePane)),
-      listen("next_tab", () => run("next", actions.current.onNext)),
-      listen("prev_tab", () => run("prev", actions.current.onPrev)),
-      listen("back_tab", () => run("back", actions.current.onVisitBack)),
-      listen("forward_tab", () => run("forward", actions.current.onVisitForward)),
-      listen("split_right", () => run("split-right", () => actions.current.onSplit("right"))),
-      listen("split_down", () => run("split-down", () => actions.current.onSplit("down"))),
-      listen("new_terminal", () => run("new-terminal", actions.current.onNewTerminal)),
-      listen("new_terminal_tab", () => run("new-terminal-tab", actions.current.onNewTerminalTab)),
-      listen("toggle_terminal", () =>
-        run("toggle-terminal", actions.current.onToggleProjectTerminal),
+      listen("new_tab", () => runInWorkspace("new", actions.current.onNew, "new")),
+      listen("close_tab", () => runInWorkspace("close", actions.current.onClosePane)),
+      listen("next_tab", () => runInWorkspace("next", actions.current.onNext, "next")),
+      listen("prev_tab", () => runInWorkspace("prev", actions.current.onPrev, "previous")),
+      listen("back_tab", () => runInWorkspace("back", actions.current.onVisitBack)),
+      listen("forward_tab", () => runInWorkspace("forward", actions.current.onVisitForward)),
+      listen("split_right", () =>
+        runInWorkspace("split-right", () => actions.current.onSplit("right")),
       ),
-      listen("focus_left", () => run("focus-left", () => actions.current.onFocusDir("left"))),
-      listen("focus_right", () => run("focus-right", () => actions.current.onFocusDir("right"))),
-      listen("focus_up", () => run("focus-up", () => actions.current.onFocusDir("up"))),
-      listen("focus_down", () => run("focus-down", () => actions.current.onFocusDir("down"))),
-      listen("toggle_sidebar", () => run("toggle_sidebar", actions.current.onToggleSidebar)),
-      listen("open_project", () => {
-        void actions.current.pickProject();
-      }),
-      listen("go_to_file", () => actions.current.onGoToFile()),
-      listen("open_search", () => actions.current.onOpenSearch()),
-      listen("open_inbox", () => actions.current.onOpenInbox()),
-      listen("open_notes", () => actions.current.onOpenNotes()),
-      listen("open_usage", () => actions.current.onOpenUsage()),
+      listen("split_down", () =>
+        runInWorkspace("split-down", () => actions.current.onSplit("down")),
+      ),
+      listen("new_terminal", () => runInWorkspace("new-terminal", actions.current.onNewTerminal)),
+      listen("new_terminal_tab", () =>
+        runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
+      ),
+      listen("toggle_terminal", () =>
+        runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
+      ),
+      listen("focus_left", () =>
+        runInWorkspace("focus-left", () => actions.current.onFocusDir("left")),
+      ),
+      listen("focus_right", () =>
+        runInWorkspace("focus-right", () => actions.current.onFocusDir("right")),
+      ),
+      listen("focus_up", () => runInWorkspace("focus-up", () => actions.current.onFocusDir("up"))),
+      listen("focus_down", () =>
+        runInWorkspace("focus-down", () => actions.current.onFocusDir("down")),
+      ),
+      listen("toggle_sidebar", () =>
+        runInWorkspace("toggle_sidebar", actions.current.onToggleSidebar),
+      ),
+      listen("open_project", () =>
+        runInCoding("open_project", () => {
+          void actions.current.pickProject();
+        }),
+      ),
+      listen("go_to_file", () => runInCoding("onGoToFile", () => actions.current.onGoToFile())),
+      listen("open_search", () =>
+        runInCoding("onOpenSearch", () => actions.current.onOpenSearch()),
+      ),
+      listen("open_inbox", () => runInCoding("onOpenInbox", () => actions.current.onOpenInbox())),
+      listen("open_notes", () => runInCoding("onOpenNotes", () => actions.current.onOpenNotes())),
+      listen("open_usage", () => runInCoding("onOpenUsage", () => actions.current.onOpenUsage())),
       listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
-        actions.current.onSelectLiveAgent(payload),
+        runInCoding("focus_session", () => actions.current.onSelectLiveAgent(payload)),
       ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
@@ -3388,9 +3472,11 @@ export default function App({
       listen("sidebar_opacity", () => {
         actions.current.openSettings("appearance");
       }),
-      listen("find_in_project", () => actions.current.onFindInProject()),
+      listen("find_in_project", () =>
+        runInCoding("find_in_project", () => actions.current.onFindInProject()),
+      ),
       listen("find", () => {
-        openFindInActiveEditor();
+        runInWorkspace("find", openFindInActiveEditor, "find");
       }),
       listen("open_model_picker", () => {
         window.dispatchEvent(new Event("open_model_picker"));
@@ -3399,7 +3485,7 @@ export default function App({
     return () => {
       void Promise.all(unlisten).then((fns) => fns.forEach((fn) => fn()));
     };
-  }, [run]);
+  }, [run, runInCoding, runInWorkspace]);
 
   const dockGridRef = useRef<HTMLDivElement>(null);
   const dockDragSize = useRef<number | null>(null);
@@ -3428,6 +3514,10 @@ export default function App({
     );
   }, [currentProjectDock, dockVisible]);
 
+  // Settings renders inside the coding shell, so Work steps aside for it
+  // rather than hiding the surface that is supposed to show it.
+  const workMode = appMode === "work" && !settingsOpen;
+
   return (
     <div
       className={`flex h-full text-content ${
@@ -3435,6 +3525,9 @@ export default function App({
       }`}
     >
       <Sidebar
+        workMode={appMode === "work"}
+        mode={appMode}
+        onModeChange={setAppMode}
         cwd={sidebarCwd}
         gitCwd={gitCwd}
         open
@@ -3510,7 +3603,13 @@ export default function App({
         onDismissUpdate={() => setUpdateNotice(null)}
       />
 
-      <div className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Coding stays mounted while Work is in front — terminals, editors, and
+          streaming turns must not be torn down by a mode switch — but it is
+          display:none and inert, not merely covered by a translucent panel. */}
+      <div
+        className={workMode ? "hidden" : "body-glass flex min-h-0 min-w-0 flex-1 flex-col"}
+        inert={workMode || undefined}
+      >
         <div
           className={
             searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
@@ -3564,6 +3663,8 @@ export default function App({
             onGoToFile={onGoToFile}
             recents={recents}
             onSelectProject={onSelectProject}
+            mode={appMode}
+            onModeChange={setAppMode}
           />
 
           <main className="relative min-h-0 min-w-0 flex-1">
@@ -3733,6 +3834,10 @@ export default function App({
           />
         )}
       </div>
+
+      {workMode ? (
+        <WorkView mode={appMode} onModeChange={setAppMode} onOpenSettings={onOpenSettings} />
+      ) : null}
 
       {filePickerOpen ? (
         <FilePicker

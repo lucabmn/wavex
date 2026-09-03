@@ -91,6 +91,9 @@ pub struct SessionUpsert {
     pub branch: Option<String>,
     #[serde(default)]
     pub worktree_cwd: Option<String>,
+    /// "coding" (bound to a project checkout) or "work" (a plain chat).
+    #[serde(default)]
+    pub scope: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,6 +119,7 @@ pub struct SessionSummary {
     pub archived: bool,
     #[serde(default)]
     pub pinned: bool,
+    pub scope: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,6 +143,7 @@ pub struct SessionRecord {
     pub branch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub worktree_cwd: Option<String>,
+    pub scope: String,
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -180,6 +185,31 @@ pub fn session_list_by_project(
     list_by_project(&conn, &cwd).map_err(|e| e.to_string())
 }
 
+/// List every chat in a scope. Work chats have no project, so the sidebar
+/// cannot reach them through `session_list_by_project`.
+#[tauri::command(async)]
+pub fn session_list_by_scope(
+    store: State<'_, SessionStore>,
+    scope: String,
+) -> Result<Vec<SessionSummary>, String> {
+    let scope = normalize_scope(Some(&scope));
+    let conn = store.conn.lock().map_err(|_| "Session store is locked")?;
+    list_by_scope(&conn, scope).map_err(|e| e.to_string())
+}
+
+/// Where a work chat's harness child runs. Chats are not bound to a checkout,
+/// so they get an app-owned directory instead of borrowing the user's project.
+#[tauri::command(async)]
+pub fn work_chat_dir(app: AppHandle) -> Result<String, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("work-chats");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.to_string_lossy().into_owned())
+}
+
 #[tauri::command(async)]
 pub fn session_get(
     store: State<'_, SessionStore>,
@@ -203,6 +233,9 @@ pub struct SessionSearchOptions {
     pub cwd: Option<String>,
     #[serde(default)]
     pub include_archived: bool,
+    /// Absent searches every scope; callers scope their own surface.
+    #[serde(default)]
+    pub scope: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -534,6 +567,25 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
             params![now_millis()],
         )?;
     }
+    if current < 12 {
+        // Work chats have no project checkout, so they cannot be found by cwd.
+        // Existing rows default to "coding", which keeps every project listing
+        // and search unchanged.
+        ensure_column(conn, "scope", "TEXT NOT NULL DEFAULT 'coding'")?;
+        conn.execute_batch(
+            "CREATE INDEX IF NOT EXISTS sessions_scope_cover_idx
+               ON sessions (scope, has_user_message, updated_at DESC, id, cwd, harness,
+                            model, runtime_mode, title, provider_session_id,
+                            created_at, branch, archived, pinned);",
+        )?;
+        conn.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (12, ?1)",
+            params![now_millis()],
+        )?;
+    }
+    // A recorded version row is not proof the column landed, and every listing
+    // query selects `scope`. Re-check outside the version gate.
+    ensure_column(conn, "scope", "TEXT NOT NULL DEFAULT 'coding'")?;
     // Create even when a version row already exists (another build may have
     // used the same numbers, or a previous run recorded the version without
     // the table). Restore writes into these; missing tables look like a
@@ -565,7 +617,14 @@ fn upsert_session(conn: &Connection, session: &SessionUpsert) -> rusqlite::Resul
         .as_ref()
         .map(|value| value.trim())
         .filter(|value| !value.is_empty());
-    let git = crate::fs::git_info_for(&crate::fs::expand_home(&session.cwd));
+    let scope = normalize_scope(session.scope.as_deref());
+    // A work chat runs in an app-owned scratch directory, so there is no
+    // repository to interrogate and no branch to record.
+    let git = if scope == SCOPE_WORK {
+        crate::fs::GitInfo::default()
+    } else {
+        crate::fs::git_info_for(&crate::fs::expand_home(&session.cwd))
+    };
     let branch = session
         .branch
         .as_deref()
@@ -610,8 +669,8 @@ fn upsert_session(conn: &Connection, session: &SessionUpsert) -> rusqlite::Resul
         "INSERT INTO sessions (
            id, cwd, harness, model, model_settings, runtime_mode, title,
            provider_session_id, blocks_json, created_at, updated_at, branch,
-           context_used, context_window, worktree_cwd, has_user_message
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+           context_used, context_window, worktree_cwd, has_user_message, scope
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
          ON CONFLICT(id) DO UPDATE SET
            cwd = excluded.cwd,
            harness = excluded.harness,
@@ -626,7 +685,8 @@ fn upsert_session(conn: &Connection, session: &SessionUpsert) -> rusqlite::Resul
            context_used = excluded.context_used,
            context_window = excluded.context_window,
            worktree_cwd = excluded.worktree_cwd,
-           has_user_message = excluded.has_user_message",
+           has_user_message = excluded.has_user_message,
+           scope = excluded.scope",
         params![
             session.id,
             session.cwd,
@@ -644,6 +704,7 @@ fn upsert_session(conn: &Connection, session: &SessionUpsert) -> rusqlite::Resul
             session.context_window,
             worktree_cwd,
             i64::from(has_user_message),
+            scope,
         ],
     )?;
 
@@ -663,6 +724,7 @@ fn upsert_session(conn: &Connection, session: &SessionUpsert) -> rusqlite::Resul
         updated_at,
         archived,
         pinned,
+        scope: scope.to_string(),
     })
 }
 
@@ -684,6 +746,10 @@ fn search_sessions(
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty());
+    let scope = options
+        .scope
+        .as_deref()
+        .map(|value| normalize_scope(Some(value)));
 
     let mut sql = String::from(
         "SELECT id, cwd, harness, title, updated_at, archived, blocks_json
@@ -696,20 +762,24 @@ fn search_sessions(
     if !options.include_archived {
         sql.push_str(" AND archived = 0");
     }
-    if cwd.is_some() {
-        sql.push_str(" AND cwd = ?2");
-        sql.push_str(" ORDER BY updated_at DESC, id ASC LIMIT ?3");
-    } else {
-        sql.push_str(" ORDER BY updated_at DESC, id ASC LIMIT ?2");
+    // Bind positions shift with the optional filters, so build them in order.
+    let mut binds: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(pattern)];
+    if let Some(cwd) = cwd {
+        binds.push(Box::new(cwd.to_string()));
+        sql.push_str(&format!(" AND cwd = ?{}", binds.len()));
     }
+    if let Some(scope) = scope {
+        binds.push(Box::new(scope.to_string()));
+        sql.push_str(&format!(" AND scope = ?{}", binds.len()));
+    }
+    binds.push(Box::new((MAX_SEARCH_SCAN as i64) + 1));
+    sql.push_str(&format!(
+        " ORDER BY updated_at DESC, id ASC LIMIT ?{}",
+        binds.len()
+    ));
 
     let mut statement = conn.prepare(&sql)?;
-    let limit = (MAX_SEARCH_SCAN as i64) + 1;
-    let rows = if let Some(cwd) = cwd {
-        statement.query_map(params![pattern, cwd, limit], search_row)?
-    } else {
-        statement.query_map(params![pattern, limit], search_row)?
-    };
+    let rows = statement.query_map(rusqlite::params_from_iter(binds.iter()), search_row)?;
 
     let mut conversations = Vec::new();
     let mut messages = Vec::new();
@@ -916,35 +986,69 @@ fn list_by_project(conn: &Connection, cwd: &str) -> rusqlite::Result<Vec<Session
     let git = crate::fs::git_info_for(&crate::fs::expand_home(cwd));
     let mut statement = conn.prepare(
         "SELECT id, cwd, harness, model, runtime_mode, title, provider_session_id,
-                created_at, updated_at, branch, archived, pinned
+                created_at, updated_at, branch, archived, pinned, scope
          FROM sessions
          WHERE cwd = ?1
            AND has_user_message = 1
+           AND scope = 'coding'
          ORDER BY updated_at DESC, id ASC",
     )?;
-    let rows = statement.query_map(params![cwd], |row| {
-        let stored_branch: Option<String> = row.get(9)?;
-        let archived: i64 = row.get(10)?;
-        let pinned: i64 = row.get(11)?;
-        Ok(SessionSummary {
-            id: row.get(0)?,
-            cwd: row.get(1)?,
-            harness: row.get(2)?,
-            model: row.get(3)?,
-            runtime_mode: row.get(4)?,
-            title: row.get(5)?,
-            provider_session_id: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
-            branch: nonempty(stored_branch).or_else(|| git.branch.clone()),
-            repo: git.repo.clone(),
-            additions: 0,
-            deletions: 0,
-            archived: archived != 0,
-            pinned: pinned != 0,
-        })
-    })?;
+    let rows = statement.query_map(params![cwd], |row| summary_row(row, Some(&git)))?;
     rows.collect()
+}
+
+/// Both listings select the same columns in the same order. `git` fills the
+/// branch and repo a project listing knows and a scope listing does not.
+fn summary_row(
+    row: &rusqlite::Row<'_>,
+    git: Option<&crate::fs::GitInfo>,
+) -> rusqlite::Result<SessionSummary> {
+    let archived: i64 = row.get(10)?;
+    let pinned: i64 = row.get(11)?;
+    Ok(SessionSummary {
+        id: row.get(0)?,
+        cwd: row.get(1)?,
+        harness: row.get(2)?,
+        model: row.get(3)?,
+        runtime_mode: row.get(4)?,
+        title: row.get(5)?,
+        provider_session_id: row.get(6)?,
+        created_at: row.get(7)?,
+        updated_at: row.get(8)?,
+        branch: nonempty(row.get(9)?).or_else(|| git.and_then(|info| info.branch.clone())),
+        repo: git.and_then(|info| info.repo.clone()),
+        additions: 0,
+        deletions: 0,
+        archived: archived != 0,
+        pinned: pinned != 0,
+        scope: row.get(12)?,
+    })
+}
+
+/// Work chats have no project, so they list by scope instead of by cwd.
+fn list_by_scope(conn: &Connection, scope: &str) -> rusqlite::Result<Vec<SessionSummary>> {
+    let mut statement = conn.prepare(
+        "SELECT id, cwd, harness, model, runtime_mode, title, provider_session_id,
+                created_at, updated_at, branch, archived, pinned, scope
+         FROM sessions
+         WHERE scope = ?1
+           AND has_user_message = 1
+         ORDER BY updated_at DESC, id ASC",
+    )?;
+    let rows = statement.query_map(params![scope], |row| summary_row(row, None))?;
+    rows.collect()
+}
+
+pub(crate) const SCOPE_CODING: &str = "coding";
+pub(crate) const SCOPE_WORK: &str = "work";
+
+/// An unknown scope reads as "coding" so a record written by a newer build
+/// still lists in the project sidebar instead of disappearing.
+fn normalize_scope(value: Option<&str>) -> &'static str {
+    match value.map(str::trim) {
+        Some(SCOPE_WORK) => SCOPE_WORK,
+        _ => SCOPE_CODING,
+    }
 }
 
 /// Mirrors the sidebar's notion of a listable session: a transcript that the
@@ -993,7 +1097,7 @@ fn get_session(conn: &Connection, session_id: &str) -> rusqlite::Result<Option<S
     conn.query_row(
         "SELECT id, cwd, harness, model, model_settings, runtime_mode, title,
                 provider_session_id, blocks_json, created_at, updated_at,
-                context_used, context_window, branch, worktree_cwd
+                context_used, context_window, branch, worktree_cwd, scope
          FROM sessions
          WHERE id = ?1",
         params![session_id],
@@ -1028,6 +1132,7 @@ fn get_session(conn: &Connection, session_id: &str) -> rusqlite::Result<Option<S
                 context_window: row.get(12)?,
                 branch: row.get(13)?,
                 worktree_cwd: row.get(14)?,
+                scope: row.get(15)?,
                 created_at: row.get(9)?,
                 updated_at: row.get(10)?,
             })
@@ -1143,6 +1248,7 @@ mod tests {
             context_window: None,
             branch: None,
             worktree_cwd: None,
+            scope: None,
         }
     }
 
@@ -1289,6 +1395,115 @@ mod tests {
         let second = upsert_session(&conn, &next).unwrap();
         assert_eq!(second.updated_at, first.updated_at);
         assert_eq!(second.model, "gpt-5.4");
+    }
+
+    #[test]
+    fn migration_v12_adds_scope_column() {
+        let store = SessionStore::open_in_memory().unwrap();
+        let conn = store.conn.lock().unwrap();
+        let version: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM schema_migrations WHERE version = 12",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(version, 1);
+        let column: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('sessions') WHERE name = 'scope'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(column, 1);
+    }
+
+    /// Rows written before the column existed have to keep listing in their
+    /// project, so the default has to read as a coding session.
+    #[test]
+    fn sessions_default_to_the_coding_scope() {
+        let store = SessionStore::open_in_memory().unwrap();
+        let conn = store.conn.lock().unwrap();
+        let summary = upsert_session(&conn, &sample("s1", "/tmp/a", "A1")).unwrap();
+        assert_eq!(summary.scope, "coding");
+        assert_eq!(list_by_project(&conn, "/tmp/a").unwrap().len(), 1);
+        assert!(list_by_scope(&conn, "work").unwrap().is_empty());
+    }
+
+    #[test]
+    fn work_chats_list_by_scope_and_not_by_project() {
+        let store = SessionStore::open_in_memory().unwrap();
+        let conn = store.conn.lock().unwrap();
+        let mut chat = sample("w1", "/tmp/work-chats", "Draft a changelog");
+        chat.scope = Some("work".into());
+        upsert_session(&conn, &chat).unwrap();
+        upsert_session(&conn, &sample("s1", "/tmp/work-chats", "Coding")).unwrap();
+
+        let by_project = list_by_project(&conn, "/tmp/work-chats").unwrap();
+        assert_eq!(
+            by_project
+                .iter()
+                .map(|row| row.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["s1"]
+        );
+        let by_scope = list_by_scope(&conn, "work").unwrap();
+        assert_eq!(
+            by_scope
+                .iter()
+                .map(|row| row.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["w1"]
+        );
+        assert_eq!(by_scope[0].scope, "work");
+    }
+
+    /// A scope wavex does not know about must not hide the session; it lists
+    /// as a coding session instead of vanishing from every surface.
+    #[test]
+    fn unknown_scope_falls_back_to_coding() {
+        let store = SessionStore::open_in_memory().unwrap();
+        let conn = store.conn.lock().unwrap();
+        let mut session = sample("s1", "/tmp/a", "A1");
+        session.scope = Some("something-new".into());
+        assert_eq!(upsert_session(&conn, &session).unwrap().scope, "coding");
+        assert_eq!(list_by_project(&conn, "/tmp/a").unwrap().len(), 1);
+    }
+
+    #[test]
+    fn search_filters_by_scope() {
+        let store = SessionStore::open_in_memory().unwrap();
+        let conn = store.conn.lock().unwrap();
+        let mut chat = sample("w1", "/tmp/work-chats", "Sidebar copy");
+        chat.scope = Some("work".into());
+        upsert_session(&conn, &chat).unwrap();
+        upsert_session(&conn, &sample("s1", "/tmp/a", "Sidebar layout")).unwrap();
+
+        let coding = search_sessions(
+            &conn,
+            &SessionSearchOptions {
+                query: "sidebar".into(),
+                cwd: None,
+                include_archived: false,
+                scope: Some("coding".into()),
+            },
+        )
+        .unwrap();
+        assert!(coding.hits.iter().all(|hit| hit.session_id == "s1"));
+
+        let work = search_sessions(
+            &conn,
+            &SessionSearchOptions {
+                query: "sidebar".into(),
+                cwd: None,
+                include_archived: false,
+                scope: Some("work".into()),
+            },
+        )
+        .unwrap();
+        assert!(!work.hits.is_empty());
+        assert!(work.hits.iter().all(|hit| hit.session_id == "w1"));
     }
 
     #[test]
@@ -1733,6 +1948,7 @@ mod tests {
                 query: "sidebar".into(),
                 cwd: None,
                 include_archived: false,
+                scope: None,
             },
         )
         .unwrap();
@@ -1766,6 +1982,7 @@ mod tests {
                 query: "Search project".into(),
                 cwd: Some("/tmp/a".into()),
                 include_archived: false,
+                scope: None,
             },
         )
         .unwrap();
@@ -1777,6 +1994,7 @@ mod tests {
                 query: "Search project".into(),
                 cwd: Some("/tmp/a".into()),
                 include_archived: true,
+                scope: None,
             },
         )
         .unwrap();
@@ -1791,6 +2009,7 @@ mod tests {
                 query: "Search project".into(),
                 cwd: Some("/tmp/b".into()),
                 include_archived: false,
+                scope: None,
             },
         )
         .unwrap();
@@ -1808,6 +2027,7 @@ mod tests {
                 query: "   ".into(),
                 cwd: None,
                 include_archived: false,
+                scope: None,
             },
         )
         .unwrap();

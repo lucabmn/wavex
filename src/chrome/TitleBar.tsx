@@ -32,6 +32,8 @@ import { HarnessIcon } from "./HarnessIcon";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { WindowControls } from "./WindowControls";
+import { ModeSwitch } from "./ModeSwitch";
+import type { AppMode } from "../lib/workspace/appMode";
 import { IS_MAC, MOD } from "../lib/platform";
 import type { RecentProject } from "../lib/recents";
 
@@ -56,6 +58,8 @@ type Props = {
   onGoToFile?: () => void;
   recents?: RecentProject[];
   onSelectProject?: (path: string) => void;
+  mode?: AppMode;
+  onModeChange?: (mode: AppMode) => void;
 };
 
 function sessionMeta(tab: TitleTab): string {
@@ -468,6 +472,8 @@ function TitleBarComponent({
   onGoToFile,
   recents = [],
   onSelectProject,
+  mode,
+  onModeChange,
 }: Props) {
   const tabIds = tabs.map((tab) => tab.id);
   const sortable = useSortable(tabIds, onReorder);
@@ -616,6 +622,13 @@ function TitleBarComponent({
             </IconButton>
           </div>
         </>
+      ) : null}
+      {/* The rail owns the switch when it is open; this is the fallback for a
+          collapsed rail, matching how Go to File and New session appear there. */}
+      {railClosed && mode && onModeChange ? (
+        <div className="flex shrink-0 items-center border-r border-content/10 px-2">
+          <ModeSwitch mode={mode} onChange={onModeChange} />
+        </div>
       ) : null}
       {showProjectButton && onSelectProject ? (
         <CwdPicker
