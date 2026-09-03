@@ -101,9 +101,14 @@ impl PtyHost {
         let pids: Vec<u32> = kids.iter().map(|live| live.pid).collect();
         for live in kids {
             #[cfg(unix)]
-            hangup(live.pid);
-            #[cfg(unix)]
-            close_fd(live.master_fd);
+            {
+                hangup(live.pid);
+                close_fd(live.master_fd);
+            }
+            // Dropping the master closes the pseudoconsole; `terminate_all`
+            // below takes the tree.
+            #[cfg(not(unix))]
+            drop(live);
         }
         // Quit and `Drop` both exit the process, so the SIGKILL has to land
         // before this returns. `terminate`'s detached escalate thread never gets

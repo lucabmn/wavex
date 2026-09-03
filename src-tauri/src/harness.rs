@@ -115,7 +115,7 @@ impl HarnessHost {
         (epoch, kill_all, prev)
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     fn spawn_stamp_current(&self, session_id: &str, epoch: u64, kill_all: u64) -> bool {
         let inner = self.lock_inner();
         self.kill_all_gen.load(Ordering::SeqCst) == kill_all
@@ -1962,6 +1962,7 @@ mod tests {
     use super::*;
     use std::os::unix::process::CommandExt;
 
+    #[cfg(unix)]
     fn spawn_group(script: &str) -> std::process::Child {
         crate::process::command("sh")
             .args(["-c", script])
@@ -1973,6 +1974,7 @@ mod tests {
             .expect("spawn test process")
     }
 
+    #[cfg(unix)]
     fn wait_dead(pid: u32, child: &mut std::process::Child) -> bool {
         for _ in 0..40 {
             let _ = child.try_wait();
@@ -1986,6 +1988,7 @@ mod tests {
         false
     }
 
+    #[cfg(unix)]
     /// A real child so `install_spawn` can be exercised directly, rather than
     /// through a helper that re-states its condition.
     fn live_child() -> (Arc<LiveChild>, std::process::Child) {
@@ -2007,12 +2010,14 @@ mod tests {
         )
     }
 
+    #[cfg(unix)]
     fn reap(mut child: std::process::Child) {
         let _ = child.kill();
         let _ = child.wait();
     }
 
     #[test]
+    #[cfg(unix)]
     fn install_spawn_keeps_a_child_nothing_cancelled() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -2026,6 +2031,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn install_spawn_rejects_a_child_killed_mid_spawn() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -2039,6 +2045,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn install_spawn_rejects_a_child_after_kill_all() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -2052,6 +2059,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn kill_during_spawn_invalidates_the_stamp() {
         let host = HarnessHost::new();
         let (epoch, kill_all, prev) = host.begin_spawn("s1");
@@ -2062,6 +2070,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn overlapping_spawn_invalidates_the_earlier_one() {
         let host = HarnessHost::new();
         let first = host.begin_spawn("s1");
@@ -2071,6 +2080,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn kill_all_rejects_an_in_flight_spawn() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -2079,6 +2089,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn terminate_reaps_the_process_group() {
         let mut child = spawn_group("sleep 30 & sleep 30");
         let pid = child.id();
@@ -2091,6 +2102,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn terminate_escalates_to_sigkill() {
         let mut child = spawn_group("trap '' TERM; while true; do sleep 1; done");
         let pid = child.id();
@@ -2103,6 +2115,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn terminate_escalates_after_group_leader_exits() {
         let mut child = spawn_group(
             "trap 'exit 0' TERM; sh -c 'trap \"\" TERM; while true; do sleep 1; done' & wait",
@@ -2137,6 +2150,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn kill_all_reaps_term_ignoring_children_before_return() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -2162,6 +2176,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn reap_snapshots_kills_a_marked_orphan() {
         let mut child = crate::process::command("sh")
             .args(["-c", "trap '' TERM; while true; do sleep 1; done"])
@@ -2189,6 +2204,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn reap_snapshots_spares_children_of_this_process() {
         let mut child = crate::process::command("sleep")
             .arg("30")
@@ -2352,6 +2368,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn cursor_agent_accepts_symlink_named_agent() {
         let dir = std::env::temp_dir().join(format!("wavex-agent-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -2394,6 +2411,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn omp_accepts_rpc_capable_binary_and_rejects_other_names() {
         let dir = std::env::temp_dir().join(format!("wavex-omp-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -2502,6 +2520,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn passwd_identity_resolves_the_current_user() {
         let id = passwd_identity().expect("passwd");
         assert!(!id.user.is_empty());
