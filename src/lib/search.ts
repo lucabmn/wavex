@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { pathKey } from "./paths";
 
 export type ProjectSearchMatch = {
   path: string;
@@ -40,7 +41,9 @@ export function normalizeEditorPath(path: string): string {
 }
 
 export function editorPathsEqual(a: string, b: string): boolean {
-  return normalizeEditorPath(a) === normalizeEditorPath(b);
+  // `pathKey`, not the raw normalizer: the same file reaches the editor from
+  // git, from search, and from the tree, and on Windows those disagree on case.
+  return pathKey(a) === pathKey(b);
 }
 
 export function searchProject(options: ProjectSearchOptions): Promise<ProjectSearchResult> {

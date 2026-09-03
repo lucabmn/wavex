@@ -50,7 +50,7 @@ import {
   type FsEntry,
 } from "../lib/fs";
 import { displayPath, parentPath, rebasePath } from "../lib/paths";
-import { IS_MAC, MOD } from "../lib/platform";
+import { MOD, REVEAL_LABEL } from "../lib/platform";
 import type { GitStatusMap } from "../hooks/useGitFileStatuses";
 import { useProjectDiffStats } from "../hooks/useProjectDiffStats";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
@@ -79,12 +79,6 @@ type Creating = { id: number; parent: string; isDir: boolean };
 type Clip = { mode: "copy" | "cut"; path: string; isDir: boolean };
 type MenuTarget = { path: string; isDir: boolean; isRoot: boolean };
 type MenuState = { x: number; y: number; target: MenuTarget };
-
-const REVEAL_LABEL = IS_MAC
-  ? "Reveal in Finder"
-  : typeof navigator !== "undefined" && /Win/.test(navigator.platform)
-    ? "Reveal in File Explorer"
-    : "Open Containing Folder";
 
 type TreeCtxValue = {
   expanded: Set<string>;

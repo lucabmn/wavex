@@ -2,15 +2,13 @@ import { CircleAlert, GitBranch, MoreHorizontal, Plus } from "./icons";
 import { useState, type MouseEvent } from "react";
 import { copyText } from "../lib/clipboard";
 import { notifyGitChanged, revealPath, type GitDiffStats } from "../lib/fs";
-import { IS_MAC } from "../lib/platform";
+import { REVEAL_LABEL } from "../lib/platform";
 import { sameProjectPath } from "../lib/recents";
 import { gitWorktreePrune, worktreeLabel, type Worktree } from "../lib/worktrees/worktrees";
 import { useProjectDiffStats } from "../hooks/useProjectDiffStats";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { RemoveWorktreeDialog } from "./RemoveWorktreeDialog";
 import { Shimmer } from "../surfaces/Shimmer";
-
-const REVEAL_LABEL = IS_MAC ? "Reveal in Finder" : "Open Containing Folder";
 
 type Props = {
   /** Main checkout of the repository these worktrees belong to. */
