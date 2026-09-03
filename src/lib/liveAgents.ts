@@ -1,7 +1,21 @@
-import { composeToolTitle } from "./harness/preview";
+import { pendingApprovalsForSession, type PendingApprovalNotice } from "./approvalToast";
+import { composeToolTitle, isWeakToolTitle } from "./harness/preview";
 import { isInFlightSession } from "./inFlight";
 import { displayPath } from "./paths";
 import { sessionDisplayTitle, type Block, type HarnessId, type Session } from "./session";
+
+/** The request blocking a turn, carried to surfaces that live outside the window. */
+export type LiveApproval = {
+  requestId: number;
+  kind: "approval" | "question";
+  /** The same one-line summary the in-window approval toast shows. */
+  label: string;
+  /**
+   * False when the request cannot be summarized well enough to answer blind,
+   * so the only honest offer is to open the session.
+   */
+  answerable: boolean;
+};
 
 export type LiveAgent = {
   id: string;
@@ -12,6 +26,8 @@ export type LiveAgent = {
   startedAt?: number;
   durationMs?: number;
   needsApproval: boolean;
+  /** Every request blocking this session, oldest first. */
+  approvals?: LiveApproval[];
   done: boolean;
 };
 
@@ -37,10 +53,11 @@ export function formatLiveElapsed(startedAt: number, now: number): string {
 }
 
 function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
-  const pending = session.blocks.find((block) => block.approval && !block.approval.decided);
-  const pendingQuestion = session.pendingQuestion;
+  // One selector behind the toast and the menu bar, so the two surfaces can
+  // never disagree about which requests are outstanding.
+  const pending = pendingApprovalsForSession(session);
+  const latest = pending[pending.length - 1];
   const done = unseenFinished && !isInFlightSession(session);
-  const activityBlock = pending ?? lastActivityBlock(session.blocks);
   return {
     id: session.id,
     cwd: session.cwd,
@@ -48,14 +65,36 @@ function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
     harness: session.harness,
     activity: done
       ? "Done"
-      : pendingQuestion
-        ? pendingQuestion.title || pendingQuestion.questions[0]?.prompt || "Question"
-        : activityLabel(activityBlock, session.cwd),
+      : latest
+        ? latest.label
+        : activityLabel(lastActivityBlock(session.blocks), session.cwd),
     startedAt: turnStartedAt(session.blocks),
     durationMs: done ? turnDurationMs(session.blocks) : undefined,
-    needsApproval: Boolean(pending) || Boolean(pendingQuestion),
+    needsApproval: pending.length > 0,
+    ...(pending.length > 0 ? { approvals: pending.map(toLiveApproval) } : {}),
     done,
   };
+}
+
+function toLiveApproval(pending: PendingApprovalNotice): LiveApproval {
+  return {
+    requestId: pending.requestId,
+    kind: pending.kind,
+    label: pending.label,
+    answerable: pending.kind === "approval" && describesToolCall(pending),
+  };
+}
+
+/**
+ * A bare "Edit" or "Run command" names the tool, not the act. Approving a write
+ * in a real checkout on that much is a blind answer, so those requests keep the
+ * session as their only surface.
+ */
+function describesToolCall(pending: PendingApprovalNotice): boolean {
+  const preview = pending.block?.tool?.preview;
+  if (preview?.path || preview?.fileName || preview?.query) return true;
+  const label = pending.label.trim();
+  return label.length > 0 && !isWeakToolTitle(label);
 }
 
 function compareLiveAgents(a: LiveAgent, b: LiveAgent): number {

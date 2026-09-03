@@ -151,6 +151,26 @@ export function appendSteerUser(
   };
 }
 
+/**
+ * Seal requests the user can no longer answer. Stopping a turn kills the
+ * process the approval was waiting on, so leaving it undecided keeps the
+ * session in every "needs you" surface — toast, dock badge, menu bar — with
+ * buttons that answer nothing.
+ */
+export function cancelPendingApprovals(session: Session): Session {
+  if (!session.blocks.some((block) => block.approval && !block.approval.decided)) {
+    return session;
+  }
+  return {
+    ...session,
+    blocks: session.blocks.map((block) =>
+      block.approval && !block.approval.decided
+        ? { ...block, approval: { ...block.approval, decided: "cancelled" as const } }
+        : block,
+    ),
+  };
+}
+
 export function stopStreaming(session: Session): Session {
   return {
     ...session,

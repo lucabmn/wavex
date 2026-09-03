@@ -145,6 +145,7 @@ import {
   sendHarnessTurn,
   steerHarnessTurn,
   startHarnessBridge,
+  cancelPendingApprovals,
   stopStreaming,
   pickTextHarness,
   type ApprovalDecision,
@@ -237,7 +238,12 @@ import {
 } from "./lib/sessions/sessionStore";
 import { syncDockBadge } from "./lib/dockBadge";
 import { liveAgentsFromSessions } from "./lib/liveAgents";
-import { MENU_BAR_FOCUS_SESSION, publishMenuBarAgents } from "./lib/menuBar";
+import {
+  MENU_BAR_ANSWER_APPROVAL,
+  MENU_BAR_FOCUS_SESSION,
+  publishMenuBarAgents,
+  type MenuBarApprovalAnswer,
+} from "./lib/menuBar";
 import { hiddenApprovalNotices } from "./lib/approvalToast";
 import { nextUnseenFinishedSessions } from "./lib/sessions/sessionDone";
 import { playCue } from "./lib/sounds";
@@ -3084,7 +3090,7 @@ export default function App({
       setSessions((prev) =>
         prev.map((s) => {
           if (s.id !== sessionId) return s;
-          const stopped = stopStreaming(s);
+          const stopped = cancelPendingApprovals(stopStreaming(s));
           return isPreparingHandoff(stopped)
             ? completeHandoff(stopped, buildDeterministicHandoff(stopped))
             : stopped;
@@ -3150,6 +3156,13 @@ export default function App({
     (sessionId: string, requestId: number, decision: ApprovalDecision) => {
       const session = sessionsRef.current.find((s) => s.id === sessionId);
       if (!session) return;
+      // The menu bar answers from a snapshot that lags the window by one
+      // publish, so it can arrive for a request the window already resolved.
+      // Answering twice would reach the harness twice.
+      const undecided = session.blocks.some(
+        (block) => block.approval?.requestId === requestId && !block.approval.decided,
+      );
+      if (!undecided) return;
       respondHarnessApproval(session.harness, sessionId, requestId, decision);
     },
     [],
@@ -3464,6 +3477,7 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onSelectLiveAgent,
+    onApproval,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3490,6 +3504,7 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onSelectLiveAgent,
+    onApproval,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3705,6 +3720,17 @@ export default function App({
       listen("open_usage", () => runInCoding("onOpenUsage", () => actions.current.onOpenUsage())),
       listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
         runInCoding("focus_session", () => actions.current.onSelectLiveAgent(payload)),
+      ),
+      // Answered from the menu bar, so resolve the request where it lives and
+      // leave the window exactly as the user left it.
+      // Scoped to this window's label: a bare listener registers EventTarget::Any
+      // and would receive the host's targeted emit anyway, so every window would
+      // answer the same request.
+      listen<MenuBarApprovalAnswer>(
+        MENU_BAR_ANSWER_APPROVAL,
+        ({ payload }) =>
+          actions.current.onApproval(payload.sessionId, payload.requestId, payload.decision),
+        { target: getCurrentWindow().label },
       ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {

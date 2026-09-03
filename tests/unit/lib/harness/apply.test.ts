@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { newSession } from "@/lib/session";
-import { appendUser, applyHarnessEvent, appendSteerUser, stopStreaming } from "@/lib/harness/apply";
+import { newSession, sessionNeedsInput } from "@/lib/session";
+import {
+  appendUser,
+  applyHarnessEvent,
+  appendSteerUser,
+  cancelPendingApprovals,
+  stopStreaming,
+} from "@/lib/harness/apply";
 
 let now = 0;
 
@@ -47,6 +53,27 @@ describe("turn duration", () => {
     });
     expect(session.busy).toBe(false);
     expect(session.blocks[0]?.durationMs).toBe(7_000);
+  });
+});
+
+describe("cancelPendingApprovals", () => {
+  it("seals a request the stopped turn can no longer answer", () => {
+    let session = appendUser(newSession("claude", "/tmp"), "go");
+    session = applyHarnessEvent(session, {
+      type: "approval.requested",
+      requestId: 3,
+      title: "Edited src/App.tsx",
+    });
+    expect(sessionNeedsInput(session)).toBe(true);
+
+    const stopped = cancelPendingApprovals(stopStreaming(session));
+    expect(sessionNeedsInput(stopped)).toBe(false);
+    expect(stopped.blocks.at(-1)?.approval?.decided).toBe("cancelled");
+  });
+
+  it("leaves a session with nothing outstanding untouched", () => {
+    const session = appendUser(newSession("claude", "/tmp"), "go");
+    expect(cancelPendingApprovals(session)).toBe(session);
   });
 });
 

@@ -2,12 +2,16 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use tauri::{AppHandle, Emitter, EventTarget, Manager, WebviewWindow};
 
 pub const WINDOW_LABEL: &str = "menu-bar";
 const TRAY_ID: &str = "wavex-menu-bar";
 const AGENTS_CHANGED: &str = "menu_bar_agents_changed";
 const FOCUS_SESSION: &str = "focus_session_from_menu_bar";
+const ANSWER_APPROVAL: &str = "answer_approval_from_menu_bar";
+/// A summary long enough to decide on, short enough that a runaway renderer
+/// cannot grow the native cache without bound.
+const MAX_APPROVAL_LABEL: usize = 400;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const POPOVER_WIDTH: f64 = 380.0;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -74,6 +78,22 @@ fn popup_position_for(
     Some((x, y))
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ApprovalDecision {
+    Allow,
+    Deny,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MenuBarApproval {
+    request_id: i64,
+    kind: String,
+    label: String,
+    answerable: bool,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MenuBarAgent {
@@ -85,7 +105,29 @@ pub struct MenuBarAgent {
     started_at: Option<u64>,
     duration_ms: Option<u64>,
     needs_approval: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    approvals: Vec<MenuBarApproval>,
     done: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApprovalAnswer {
+    session_id: String,
+    request_id: i64,
+    decision: ApprovalDecision,
+}
+
+/// Trim on a character boundary so a multi-byte summary cannot panic the host.
+fn clamp_label(label: &str) -> String {
+    if label.len() <= MAX_APPROVAL_LABEL {
+        return label.to_string();
+    }
+    let end = (0..=MAX_APPROVAL_LABEL)
+        .rev()
+        .find(|index| label.is_char_boundary(*index))
+        .unwrap_or(0);
+    format!("{}…", &label[..end])
 }
 
 type AgentSources = HashMap<String, Vec<MenuBarAgent>>;
@@ -135,6 +177,12 @@ pub fn menu_bar_update_agents(window: WebviewWindow, mut agents: Vec<MenuBarAgen
     // A corrupt renderer must not turn a tiny status surface into an unbounded
     // native cache. Real app windows never approach this limit.
     agents.truncate(100);
+    for agent in &mut agents {
+        agent.approvals.truncate(20);
+        for approval in &mut agent.approvals {
+            approval.label = clamp_label(&approval.label);
+        }
+    }
     {
         let mut guard = sources().lock().unwrap_or_else(|error| error.into_inner());
         if agents.is_empty() {
@@ -163,21 +211,38 @@ fn publish(app: &AppHandle) {
     }
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let working = agents.iter().filter(|agent| !agent.done).count();
+        let waiting: usize = agents.iter().map(|agent| agent.approvals.len()).sum();
         // tray-icon's macOS `None` path does not clear a previous title, but
         // assigning an empty title does.
-        let title = if working > 0 {
-            working.min(99).to_string()
-        } else {
-            String::new()
-        };
-        let tooltip = match working {
-            0 => "wavex — no agents working".to_string(),
-            1 => "wavex — 1 agent working".to_string(),
-            count => format!("wavex — {count} agents working"),
-        };
+        let (title, tooltip) = tray_status(waiting, working);
         let _ = tray.set_title(Some(title));
         let _ = tray.set_tooltip(Some(tooltip));
     }
+}
+
+/// A blocked turn outranks a busy one: it is the only state the user can clear.
+/// "Requests", not "approvals": a clarifying question parks a turn just as hard.
+fn tray_status(waiting: usize, working: usize) -> (String, String) {
+    if waiting > 0 {
+        let title = format!("!{}", waiting.min(99));
+        let tooltip = if waiting == 1 {
+            "wavex — 1 request waiting for you".to_string()
+        } else {
+            format!("wavex — {waiting} requests waiting for you")
+        };
+        return (title, tooltip);
+    }
+    let title = if working > 0 {
+        working.min(99).to_string()
+    } else {
+        String::new()
+    };
+    let tooltip = match working {
+        0 => "wavex — no agents working".to_string(),
+        1 => "wavex — 1 agent working".to_string(),
+        count => format!("wavex — {count} agents working"),
+    };
+    (title, tooltip)
 }
 
 #[tauri::command]
@@ -186,17 +251,47 @@ pub fn menu_bar_open_app(app: AppHandle) -> Result<(), String> {
     crate::window::show_hidden_or_open_new(&app)
 }
 
+fn owner_of(session_id: &str) -> Option<String> {
+    let guard = sources().lock().unwrap_or_else(|error| error.into_inner());
+    guard.iter().find_map(|(label, agents)| {
+        agents
+            .iter()
+            .any(|agent| agent.id == session_id)
+            .then(|| label.clone())
+    })
+}
+
+/// Answer without showing any window. The decision goes to the one window that
+/// holds the session, never to every window: two of them mid-transfer would
+/// otherwise both answer the same request. This filter only bites because the
+/// listener in `App.tsx` registers under its own window label — a listener with
+/// no target is `EventTarget::Any` and receives every emit regardless.
+#[tauri::command]
+pub fn menu_bar_answer_approval(
+    app: AppHandle,
+    session_id: String,
+    request_id: i64,
+    decision: ApprovalDecision,
+) -> Result<(), String> {
+    let label = owner_of(&session_id).ok_or("no window owns this session")?;
+    if app.get_webview_window(&label).is_none() {
+        return Err("the window that owns this session is gone".into());
+    }
+    app.emit_to(
+        EventTarget::webview_window(&label),
+        ANSWER_APPROVAL,
+        ApprovalAnswer {
+            session_id,
+            request_id,
+            decision,
+        },
+    )
+    .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn menu_bar_focus_agent(app: AppHandle, session_id: String) -> Result<(), String> {
-    let owner = {
-        let guard = sources().lock().unwrap_or_else(|error| error.into_inner());
-        guard.iter().find_map(|(label, agents)| {
-            agents
-                .iter()
-                .any(|agent| agent.id == session_id)
-                .then(|| label.clone())
-        })
-    };
+    let owner = owner_of(&session_id);
 
     hide(&app);
     let Some(label) = owner else {
@@ -367,6 +462,16 @@ mod tests {
             started_at: Some(started_at),
             duration_ms: None,
             needs_approval,
+            approvals: if needs_approval {
+                vec![MenuBarApproval {
+                    request_id: 1,
+                    kind: "approval".into(),
+                    label: "Edit src/main.rs".into(),
+                    answerable: true,
+                }]
+            } else {
+                Vec::new()
+            },
             done: false,
         }
     }
@@ -419,5 +524,30 @@ mod tests {
             .map(|agent| agent.id)
             .collect();
         assert_eq!(ids, ["attention", "older", "newer"]);
+    }
+
+    #[test]
+    fn a_waiting_approval_outranks_working_agents_in_the_status_item() {
+        assert_eq!(
+            tray_status(2, 5),
+            ("!2".into(), "wavex — 2 requests waiting for you".into())
+        );
+        assert_eq!(
+            tray_status(0, 1),
+            ("1".into(), "wavex — 1 agent working".into())
+        );
+        assert_eq!(
+            tray_status(0, 0),
+            (String::new(), "wavex — no agents working".into())
+        );
+    }
+
+    #[test]
+    fn clamps_a_long_summary_without_splitting_a_character() {
+        let label = "é".repeat(MAX_APPROVAL_LABEL);
+        let clamped = clamp_label(&label);
+        assert!(clamped.len() <= MAX_APPROVAL_LABEL + "…".len());
+        assert!(clamped.ends_with('…'));
+        assert_eq!(clamp_label("short"), "short");
     }
 }
