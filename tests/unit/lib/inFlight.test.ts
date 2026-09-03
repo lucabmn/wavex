@@ -260,10 +260,16 @@ describe("markTurnKeptRunning", () => {
     });
   });
 
-  it("counts as a cut turn, so the chat still offers Continue on return", () => {
+  it("counts as a cut turn, so the chat comes back with the workspace", () => {
     const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true, providerSessionId: "p1" }));
     expect(wasTurnInterrupted(kept)).toBe(true);
-    expect(canAutoContinue(kept)).toBe(true);
+  });
+
+  it("does not resume itself, which would redo the work it kept doing", () => {
+    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true, providerSessionId: "p1" }));
+    expect(canAutoContinue(kept)).toBe(false);
+    const quit = markTurnInterrupted(chat("/tmp/a", { busy: true, providerSessionId: "p1" }));
+    expect(canAutoContinue(quit)).toBe(true);
   });
 
   it("does not claim a quit cut a turn it had already left running", () => {

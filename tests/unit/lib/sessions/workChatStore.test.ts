@@ -49,8 +49,11 @@ vi.mock("@/lib/sessions/sessionStore", async () => {
 
 vi.mock("@/lib/harness", async () => {
   const apply = await vi.importActual<typeof import("@/lib/harness/apply")>("@/lib/harness/apply");
+  const errors =
+    await vi.importActual<typeof import("@/lib/harness/errors")>("@/lib/harness/errors");
   return {
     ...apply,
+    ...errors,
     isLiveHarness: () => live,
     generateHarnessTitle: async () => null,
     forgetHarnessSession: async (_harness: string, id: string) => {

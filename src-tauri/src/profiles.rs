@@ -195,10 +195,15 @@ pub async fn profile_switch(
     let target = profile_id.clone();
     tauri::async_runtime::spawn_blocking(move || {
         await_windows_persisted(&handle, &target, keep_agents);
-        if !keep_agents {
-            handle
-                .state::<crate::harness::HarnessHost>()
-                .kill_profile(&leaving);
+        let host = handle.state::<crate::harness::HarnessHost>();
+        if keep_agents {
+            // The children stay alive and keep working. Their streams are cut
+            // here rather than when the profile comes back: the adapter that
+            // could parse them dies with the reload below, so the lines have
+            // no reader until Continue starts a fresh one.
+            host.detach_profile(&leaving);
+        } else {
+            host.kill_profile(&leaving);
         }
         let _ = crate::pty::pty_kill_all(handle.state());
         // Windows reload on this event whether or not the swap landed. A failed
@@ -206,13 +211,10 @@ pub async fn profile_switch(
         // and no way back short of relaunching.
         let bound = bind(&handle, &target);
         let landed = handle.state::<ProfilePaths>().active();
-        // Nothing can reattach to a child of the profile now coming on screen:
-        // the adapter that owned its turn died with the reload that detached
-        // it. Left alive it would burn a provider's tokens into a stream with
-        // no reader.
-        handle
-            .state::<crate::harness::HarnessHost>()
-            .kill_profile(&landed);
+        // A detached child of the profile coming back is deliberately left
+        // alone. Killing it here would throw away the work the user chose to
+        // keep, possibly mid-edit; it stays cut loose until Continue replaces
+        // it, and `Drop for HarnessHost` takes it at exit.
         crate::menu_bar::clear_detached_profile(&handle, &landed);
         let _ = handle.emit(CHANGED_EVENT, &landed);
         bound

@@ -135,6 +135,7 @@ import {
   canSteerHarness,
   forgetHarnessSession,
   generateHarnessTitle,
+  harnessErrorMessage,
   isLiveHarness,
   probeHarnessAvailability,
   refreshHarnessCatalogs,
@@ -2957,8 +2958,7 @@ export default function App({
         } catch (error: unknown) {
           if (turnGen.current.get(sessionId) !== gen) return;
           if (wrap) revealHandoff(wrap.text);
-          const message =
-            error instanceof Error ? error.message : `${current.harness} adapter failed`;
+          const message = harnessErrorMessage(error, current.harness);
           enqueueHarnessEvent(sessionId, {
             type: "session.error",
             message,

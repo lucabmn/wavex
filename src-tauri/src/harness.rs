@@ -75,10 +75,20 @@ struct LiveSse {
 struct HarnessInner {
     children: HashMap<String, Arc<LiveChild>>,
     epochs: HashMap<String, u64>,
-    /// Profile each live session was spawned under. A child kept alive across
-    /// a profile switch must not stream into the profile now on screen, so
-    /// every emit is checked against this.
+    /// Profile each live session was spawned under, so a switch can stop or
+    /// detach exactly the children of the profile being left.
     profiles: HashMap<String, String>,
+    /// Set when a profile switch leaves a session's child running. The stream
+    /// threads hold a clone and drop everything once it flips, which is why
+    /// the state they read is a flag rather than the active profile: a lookup
+    /// that misses would have to guess, and guessing wrong either strands a
+    /// live session or leaks another profile's output into this one.
+    ///
+    /// Sticky until the session is spawned again. Coming back to the profile
+    /// does not reopen the stream: the adapter that could parse it died with
+    /// the reload that detached the child, so the lines have no reader until
+    /// Continue starts a fresh one.
+    detached: HashMap<String, Arc<AtomicBool>>,
 }
 
 pub struct HarnessHost {
@@ -95,6 +105,7 @@ impl HarnessHost {
                 children: HashMap::new(),
                 epochs: HashMap::new(),
                 profiles: HashMap::new(),
+                detached: HashMap::new(),
             }),
             sse: Mutex::new(HashMap::new()),
             kill_all_gen: AtomicU64::new(0),
@@ -116,8 +127,36 @@ impl HarnessHost {
         let epoch = inner.epochs.entry(session_id.to_string()).or_insert(0);
         *epoch += 1;
         let epoch = *epoch;
+        // A new child is attached to whoever asked for it, whatever happened
+        // to the one it replaces.
+        inner.detached.remove(session_id);
         let prev = inner.children.remove(session_id);
         (epoch, kill_all, prev)
+    }
+
+    /// The flag a session's stream threads watch. Created on demand so a
+    /// spawn and an event stream opened for the same session share one.
+    fn detach_flag(&self, session_id: &str) -> Arc<AtomicBool> {
+        Arc::clone(
+            self.lock_inner()
+                .detached
+                .entry(session_id.to_string())
+                .or_insert_with(|| Arc::new(AtomicBool::new(false))),
+        )
+    }
+
+    /// Cuts every session of one profile loose: the children keep working, and
+    /// nothing they produce reaches the profile coming on screen.
+    pub(crate) fn detach_profile(&self, profile_id: &str) {
+        let inner = self.lock_inner();
+        for (id, owner) in &inner.profiles {
+            if owner.as_str() != profile_id {
+                continue;
+            }
+            if let Some(flag) = inner.detached.get(id) {
+                flag.store(true, Ordering::SeqCst);
+            }
+        }
     }
 
     #[cfg(all(test, unix))]
@@ -152,6 +191,7 @@ impl HarnessHost {
         let mut inner = self.lock_inner();
         *inner.epochs.entry(session_id.to_string()).or_insert(0) += 1;
         inner.profiles.remove(session_id);
+        inner.detached.remove(session_id);
         inner.children.remove(session_id)
     }
 
@@ -162,11 +202,17 @@ impl HarnessHost {
     }
 
     /// The profile a session belongs to, or `None` once its child is gone.
-    /// Only the kill paths care; the emit gate captures the owner up front so
-    /// trailing lines from a reaped child cannot read as unowned.
     #[cfg(test)]
     fn profile_of(&self, session_id: &str) -> Option<String> {
         self.lock_inner().profiles.get(session_id).cloned()
+    }
+
+    #[cfg(test)]
+    fn is_detached(&self, session_id: &str) -> bool {
+        self.lock_inner()
+            .detached
+            .get(session_id)
+            .is_some_and(|flag| flag.load(Ordering::SeqCst))
     }
 
     /// Stops only the children of one profile. `kill_all` would also take the
@@ -187,6 +233,7 @@ impl HarnessHost {
             let mut kids = Vec::new();
             for id in ids {
                 inner.profiles.remove(&id);
+                inner.detached.remove(&id);
                 *inner.epochs.entry(id.clone()).or_insert(0) += 1;
                 if let Some(child) = inner.children.remove(&id) {
                     kids.push(child);
@@ -211,6 +258,7 @@ impl HarnessHost {
             return None;
         }
         inner.profiles.remove(session_id);
+        inner.detached.remove(session_id);
         inner.children.remove(session_id)
     }
 
@@ -219,6 +267,7 @@ impl HarnessHost {
             let mut inner = self.lock_inner();
             self.kill_all_gen.fetch_add(1, Ordering::SeqCst);
             inner.profiles.clear();
+            inner.detached.clear();
             inner.children.drain().map(|(_, child)| child).collect()
         };
         self.stop_all_sse();
@@ -426,8 +475,8 @@ pub fn harness_spawn(
         stdin: Mutex::new(stdin),
         pid,
     });
-    let owner = crate::profiles::active_profile(&app);
-    host.set_profile(&session_id, &owner);
+    host.set_profile(&session_id, &crate::profiles::active_profile(&app));
+    let detached = host.detach_flag(&session_id);
     if let Some(rejected) = host.install_spawn(session_id.clone(), epoch, kill_all, live) {
         // A kill, or a newer spawn, won the race while this one was forking.
         // Returning `Ok` here would hand the caller a dead pid to store as the
@@ -442,11 +491,11 @@ pub fn harness_spawn(
 
     let stdout_app = app.clone();
     let stdout_id = session_id.clone();
-    let stdout_owner = owner.clone();
+    let stdout_detached = Arc::clone(&detached);
     thread::spawn(move || {
         for line in BufReader::new(stdout).lines() {
             let Ok(line) = line else { break };
-            if !owns_profile(&stdout_app, &stdout_owner) {
+            if !stream_is_attached(&stdout_detached) {
                 continue;
             }
             let _ = stdout_app.emit(
@@ -461,11 +510,11 @@ pub fn harness_spawn(
 
     let stderr_app = app.clone();
     let stderr_id = session_id.clone();
-    let stderr_owner = owner.clone();
+    let stderr_detached = Arc::clone(&detached);
     thread::spawn(move || {
         for line in BufReader::new(stderr).lines() {
             let Ok(line) = line else { break };
-            if !owns_profile(&stderr_app, &stderr_owner) {
+            if !stream_is_attached(&stderr_detached) {
                 continue;
             }
             let _ = stderr_app.emit(
@@ -483,7 +532,7 @@ pub fn harness_spawn(
     let wait_pid = pid;
     thread::spawn(move || {
         let code = child.wait().ok().and_then(|status| status.code());
-        let owned = owns_profile(&wait_app, &owner);
+        let attached = stream_is_attached(&detached);
         if let Some(host) = wait_app.try_state::<HarnessHost>() {
             if host.remove_if_pid(&wait_id, wait_pid).is_some() {
                 host.stop_sse(&wait_id);
@@ -491,7 +540,7 @@ pub fn harness_spawn(
         }
         // A detached agent that finished must not keep claiming a menu-bar row.
         crate::menu_bar::remove_detached_agent(&wait_app, &wait_id);
-        if !owned {
+        if !attached {
             return;
         }
         let _ = wait_app.emit(
@@ -524,20 +573,15 @@ pub fn harness_write(
         .map_err(|e| format!("Failed to write to harness: {e}"))
 }
 
-/// True when the profile on screen is still the one that started this stream.
+/// True while a stream still has a webview that can parse it.
 ///
-/// A child kept alive across a profile switch keeps producing output the
-/// current profile must never see: its webview has no session under that id,
-/// and no adapter state to parse the stream with. The lines are dropped rather
-/// than buffered, because the adapter that owned the turn died with the reload
-/// and replaying into a fresh one would desync it. Left through, they would sit
-/// in the webview's own bounded buffer under an id nothing ever claims.
-///
-/// `owner` is captured when the stream opens rather than looked up per line:
-/// the host forgets a session the moment its child is reaped, and the trailing
-/// lines still in the pipe must not read that as "no longer owned".
-fn owns_profile(app: &AppHandle, owner: &str) -> bool {
-    crate::profiles::active_profile(app) == owner
+/// A child kept alive across a profile switch keeps producing output no
+/// profile can use: the one on screen has no session under that id, and the
+/// adapter that owned the turn died with the reload. The lines are dropped
+/// rather than buffered — left through, they would pile up in the webview's
+/// own buffer under an id nothing ever claims.
+fn stream_is_attached(detached: &AtomicBool) -> bool {
+    !detached.load(Ordering::SeqCst)
 }
 
 #[tauri::command]
@@ -607,7 +651,7 @@ pub fn harness_sse_open(
     headers: Option<HashMap<String, String>>,
 ) -> Result<(), String> {
     assert_loopback(&url)?;
-    let owner = crate::profiles::active_profile(&app);
+    let detached = host.detach_flag(&session_id);
     host.stop_sse(&session_id);
     let stop = Arc::new(AtomicBool::new(false));
     host.insert_sse(
@@ -631,19 +675,19 @@ pub fn harness_sse_open(
         }
         let result = request.call();
         if stop.load(Ordering::SeqCst) {
-            emit_sse_end(&app, &owner, &session_id, None);
+            emit_sse_end(&app, &detached, &session_id, None);
             return;
         }
         match result {
             Ok(response) => {
                 let reader = BufReader::new(response.into_reader());
-                read_sse(reader, &app, &owner, &session_id, &stop);
-                emit_sse_end(&app, &owner, &session_id, None);
+                read_sse(reader, &app, &detached, &session_id, &stop);
+                emit_sse_end(&app, &detached, &session_id, None);
             }
             Err(error) => {
                 emit_sse_end(
                     &app,
-                    &owner,
+                    &detached,
                     &session_id,
                     Some(format!("OpenCode event stream failed: {error}")),
                 );
@@ -671,7 +715,7 @@ fn read_http_response(response: ureq::Response) -> Result<HarnessHttpResponse, S
 fn read_sse<R: BufRead>(
     reader: R,
     app: &AppHandle,
-    owner: &str,
+    detached: &AtomicBool,
     session_id: &str,
     stop: &AtomicBool,
 ) {
@@ -689,7 +733,7 @@ fn read_sse<R: BufRead>(
                 continue;
             }
             let payload = std::mem::take(&mut data);
-            if !owns_profile(app, owner) {
+            if !stream_is_attached(detached) {
                 continue;
             }
             let _ = app.emit(
@@ -711,8 +755,8 @@ fn read_sse<R: BufRead>(
     }
 }
 
-fn emit_sse_end(app: &AppHandle, owner: &str, session_id: &str, error: Option<String>) {
-    if !owns_profile(app, owner) {
+fn emit_sse_end(app: &AppHandle, detached: &AtomicBool, session_id: &str, error: Option<String>) {
+    if !stream_is_attached(detached) {
         return;
     }
     let _ = app.emit(
@@ -2067,10 +2111,12 @@ fn command_basename(command: &str) -> &str {
 }
 
 #[cfg(unix)]
+/// Bookkeeping that decides which children a profile switch stops, detaches,
+/// or leaves alone. Kept apart from the process tests below, which need Unix
+/// signals and do not build on Windows.
 #[cfg(test)]
-mod tests {
+mod profile_tests {
     use super::*;
-    use std::os::unix::process::CommandExt;
 
     #[test]
     fn killing_one_profile_leaves_another_profiles_sessions_owned() {
@@ -2089,6 +2135,38 @@ mod tests {
         host.kill_session("a");
         assert_eq!(host.profile_of("a"), None);
     }
+
+    #[test]
+    fn detaching_a_profile_cuts_only_its_own_streams() {
+        let host = HarnessHost::new();
+        host.set_profile("a", "work");
+        host.set_profile("b", "default");
+        host.detach_flag("a");
+        host.detach_flag("b");
+        host.detach_profile("work");
+        assert!(host.is_detached("a"));
+        assert!(!host.is_detached("b"));
+    }
+
+    #[test]
+    fn a_detached_stream_stays_cut_until_the_session_is_spawned_again() {
+        let host = HarnessHost::new();
+        host.set_profile("a", "work");
+        let flag = host.detach_flag("a");
+        host.detach_profile("work");
+        assert!(!stream_is_attached(&flag));
+        // Returning to the profile must not reopen a stream nothing can parse.
+        host.detach_profile("default");
+        assert!(host.is_detached("a"));
+        host.begin_spawn("a");
+        assert!(!host.is_detached("a"));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::process::CommandExt;
 
     #[cfg(unix)]
     fn spawn_group(script: &str) -> std::process::Child {

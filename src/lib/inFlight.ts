@@ -134,14 +134,22 @@ export function wasTurnInterrupted(session: Session): boolean {
 /**
  * Provider thread exists and the quit note is still the last block.
  * A Continue (or any later user turn) appends after it, so this stays one-shot.
+ *
+ * A turn left running across a profile switch is deliberately excluded. Its
+ * agent went on working, so resuming it unasked makes the CLI redo whatever it
+ * finished while the profile was off screen. Continue there is the user's call.
  */
 export function canAutoContinue(session: Session): boolean {
-  return !!session.providerSessionId && !session.busy && lastBlockIsCut(session);
+  return !!session.providerSessionId && !session.busy && lastBlockIs(session, INTERRUPT_MESSAGE);
 }
 
 function lastBlockIsCut(session: Session): boolean {
+  return CUT_MESSAGES.some((note) => lastBlockIs(session, note));
+}
+
+function lastBlockIs(session: Session, note: string): boolean {
   const last = session.blocks[session.blocks.length - 1];
-  return last?.role === "system" && CUT_MESSAGES.includes(last.text ?? "");
+  return last?.role === "system" && last.text === note;
 }
 
 export function inFlightSnapshotKey(refs: InFlightRef[]): string {
