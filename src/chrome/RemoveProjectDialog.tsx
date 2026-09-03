@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { LAYER } from "../lib/layers";
 import { prettyCwd } from "../lib/paths";
 import { projectSessionCount } from "../lib/project/projectData";
+import { projectPromptTemplateCount } from "../lib/project/promptTemplates";
 
 type Props = {
   name: string;
@@ -17,6 +18,7 @@ type Props = {
  */
 export function RemoveProjectDialog({ name, path, onCancel, onConfirm }: Props) {
   const [sessions, setSessions] = useState<number | null>(null);
+  const [templates, setTemplates] = useState<number | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -27,6 +29,9 @@ export function RemoveProjectDialog({ name, path, onCancel, onConfirm }: Props) 
     let cancelled = false;
     void projectSessionCount(path).then((count) => {
       if (!cancelled) setSessions(count);
+    });
+    void projectPromptTemplateCount(path).then((count) => {
+      if (!cancelled) setTemplates(count);
     });
     return () => {
       cancelled = true;
@@ -65,6 +70,13 @@ export function RemoveProjectDialog({ name, path, onCancel, onConfirm }: Props) 
               {sessions === 1
                 ? "1 saved conversation will be removed."
                 : `${sessions} saved conversations will be removed.`}
+            </p>
+          ) : null}
+          {templates != null && templates > 0 ? (
+            <p className="text-[12px] leading-snug text-content/45">
+              {templates === 1
+                ? "1 prompt template will be removed."
+                : `${templates} prompt templates will be removed.`}
             </p>
           ) : null}
           <p className="truncate text-[11px] leading-tight text-content/40">{prettyCwd(path)}</p>

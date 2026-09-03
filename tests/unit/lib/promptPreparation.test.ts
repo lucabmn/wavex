@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   applyNotesToTurn: vi.fn(),
   applySkillsToTurn: vi.fn(),
   events: [] as string[],
+  slashTokensInText: vi.fn(() => []),
   warmPiSkills: vi.fn(),
 }));
 
@@ -18,6 +19,7 @@ vi.mock("@/lib/notes", () => ({
 
 vi.mock("@/lib/skills", () => ({
   applySkillsToTurn: mocks.applySkillsToTurn,
+  slashTokensInText: mocks.slashTokensInText,
   warmPiSkills: mocks.warmPiSkills,
 }));
 

@@ -13,6 +13,7 @@ mod notes;
 mod process;
 mod profiles;
 mod project_logo;
+mod prompt_templates;
 mod pty;
 mod rate_limits;
 mod search;
@@ -302,6 +303,10 @@ pub fn run() {
             notes::notes_get,
             notes::notes_upsert,
             notes::notes_delete,
+            prompt_templates::prompt_templates_list,
+            prompt_templates::prompt_templates_upsert,
+            prompt_templates::prompt_templates_delete,
+            prompt_templates::prompt_templates_delete_project,
             checkpoint::session_checkpoint_ensure,
             checkpoint::session_checkpoint_capture,
             checkpoint::session_checkpoint_sync,

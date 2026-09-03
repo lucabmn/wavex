@@ -60,6 +60,13 @@ export type SlashToken = {
   query: string;
 };
 
+/** A written `/name` token, located so it can be highlighted or replaced. */
+export type SlashTokenHit = {
+  name: string;
+  start: number;
+  end: number;
+};
+
 export const BUILTIN_CREATE_SKILL: BuiltinSkill = {
   kind: "builtin",
   name: CREATE_SKILL_NAME,
@@ -308,19 +315,27 @@ export function replaceSlashToken(text: string, token: SlashToken, name: string)
   return `${text.slice(0, token.start)}/${name}${spacer}${rest}`;
 }
 
-export function skillNamesInText(text: string): string[] {
-  const names: string[] = [];
-  const seen = new Set<string>();
+/** Every `/name` token in the draft, quoted lines excluded. */
+export function slashTokensInText(text: string): SlashTokenHit[] {
+  const hits: SlashTokenHit[] = [];
   SKILL_TOKEN_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = SKILL_TOKEN_RE.exec(text))) {
     const name = match[2];
     const start = match.index + (match[1]?.length ?? 0);
-    if (!name || seen.has(name) || isMarkdownBlockquotePosition(text, start)) {
-      continue;
-    }
-    seen.add(name);
-    names.push(name);
+    if (!name || isMarkdownBlockquotePosition(text, start)) continue;
+    hits.push({ name, start, end: start + 1 + name.length });
+  }
+  return hits;
+}
+
+export function skillNamesInText(text: string): string[] {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const hit of slashTokensInText(text)) {
+    if (seen.has(hit.name)) continue;
+    seen.add(hit.name);
+    names.push(hit.name);
   }
   return names;
 }
@@ -346,20 +361,12 @@ export function skillTextParts(text: string, names: ReadonlySet<string>): SkillT
     parts.push({ text: value, skill });
   };
 
-  SKILL_TOKEN_RE.lastIndex = 0;
   let cursor = 0;
-  let match: RegExpExecArray | null;
-  while ((match = SKILL_TOKEN_RE.exec(text))) {
-    const name = match[2];
-    const lead = match[1] ?? "";
-    const start = match.index + lead.length;
-    if (!name || !names.has(name) || isMarkdownBlockquotePosition(text, start)) {
-      continue;
-    }
-    const end = start + 1 + name.length;
-    push(text.slice(cursor, start), false);
-    push(text.slice(start, end), true);
-    cursor = end;
+  for (const hit of slashTokensInText(text)) {
+    if (!names.has(hit.name)) continue;
+    push(text.slice(cursor, hit.start), false);
+    push(text.slice(hit.start, hit.end), true);
+    cursor = hit.end;
   }
   push(text.slice(cursor), false);
   return parts;

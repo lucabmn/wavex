@@ -1,5 +1,6 @@
 import { projectName } from "../paths";
 import { clearProjectLogo } from "./projectLogos";
+import { deleteProjectPromptTemplates } from "./promptTemplates";
 import { normalizeProjectPath } from "../recents";
 import { deleteSession, listSessionsByProject } from "../sessions/sessionStore";
 import { clearTabGroupSettings } from "../workspace/tabGroups";
@@ -10,7 +11,7 @@ export async function projectSessionCount(path: string): Promise<number> {
   return sessions.length;
 }
 
-/** Everything we persist for a project: saved chats plus its rail appearance. */
+/** Everything we persist for a project: saved chats, prompt templates, and its rail appearance. */
 export async function removeProjectData(path: string): Promise<void> {
   const normalized = normalizeProjectPath(path);
   const key = projectName(normalized);
@@ -18,6 +19,7 @@ export async function removeProjectData(path: string): Promise<void> {
   for (const session of sessions) {
     await deleteSession(session.id).catch(() => undefined);
   }
+  await deleteProjectPromptTemplates(normalized).catch(() => undefined);
   // Drops the copied image from app data; the localStorage entry goes with it.
   await clearProjectLogo(key).catch(() => undefined);
   clearTabGroupSettings(key);

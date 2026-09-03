@@ -1,4 +1,4 @@
-import { Plus } from "./icons";
+import { Pencil, Plus } from "./icons";
 import {
   useEffect,
   useRef,
@@ -7,34 +7,47 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { looksLikeProject } from "../lib/recents";
+import { pickerEntryKey, type ComposerPickerEntry } from "../lib/composerPicker";
+import { templatePreview, type PromptTemplate } from "../lib/project/promptTemplates";
 import { isValidSkillName, slugSkillName, type Skill } from "../lib/skills";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
+import { IS_MAC } from "../lib/platform";
+
+const EDIT_SHORTCUT = IS_MAC ? "⌥↵" : "Alt+Enter";
 
 type Props = {
-  skills: Skill[];
+  entries: ComposerPickerEntry[];
   query: string;
   active: number;
   creating: boolean;
   cwd: string;
+  /** Templates need a project to belong to; work chats have none. */
+  templatesEnabled: boolean;
   error?: string | null;
   busy?: boolean;
   onActive: (index: number) => void;
-  onPick: (skill: Skill) => void;
+  onPick: (entry: ComposerPickerEntry) => void;
+  onNewTemplate: () => void;
+  onEditTemplate: (template: PromptTemplate) => void;
   onStartCreate: () => void;
   onCancelCreate: () => void;
   onCreate: (name: string, scope: "project" | "user") => void;
 };
 
+/** The composer's `/` picker: this project's prompt templates, then harness skills. */
 export function SkillPicker({
-  skills,
+  entries,
   query,
   active,
   creating,
   cwd,
+  templatesEnabled,
   error,
   busy,
   onActive,
   onPick,
+  onNewTemplate,
+  onEditTemplate,
   onStartCreate,
   onCancelCreate,
   onCreate,
@@ -55,49 +68,87 @@ export function SkillPicker({
         />
       ) : (
         <>
-          <SkillList
-            skills={skills}
+          <PickerList
+            entries={entries}
             query={query}
             active={active}
             onActive={onActive}
             onPick={onPick}
+            onEditTemplate={onEditTemplate}
           />
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={onStartCreate}
-            className="flex w-full items-center gap-2 border-t border-content/10 px-2.5 py-2 text-left text-[12px] text-content/70 hover:bg-content/10 hover:text-content"
-          >
-            <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
-            New skill
-          </button>
+          <div className="flex items-center gap-1 border-t border-content/10 px-1 py-1">
+            <FooterAction
+              label="New template"
+              disabled={!templatesEnabled}
+              title={
+                templatesEnabled
+                  ? "Save a prompt with this project"
+                  : "Open a project to save templates"
+              }
+              onClick={onNewTemplate}
+            />
+            <FooterAction label="New skill" onClick={onStartCreate} />
+            {entries[active]?.kind === "template" ? (
+              <span className="shrink-0 px-1.5 text-[11px] text-content/40">
+                {EDIT_SHORTCUT} edit
+              </span>
+            ) : null}
+          </div>
         </>
       )}
     </div>
   );
 }
 
-function SkillList({
-  skills,
+function FooterAction({
+  label,
+  disabled,
+  title,
+  onClick,
+}: {
+  label: string;
+  disabled?: boolean;
+  title?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      title={title}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      className="flex flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12px] text-content/70 hover:bg-content/10 hover:text-content disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/70"
+    >
+      <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
+      {label}
+    </button>
+  );
+}
+
+function PickerList({
+  entries,
   query,
   active,
   onActive,
   onPick,
+  onEditTemplate,
 }: {
-  skills: Skill[];
+  entries: ComposerPickerEntry[];
   query: string;
   active: number;
   onActive: (index: number) => void;
-  onPick: (skill: Skill) => void;
+  onPick: (entry: ComposerPickerEntry) => void;
+  onEditTemplate: (template: PromptTemplate) => void;
 }) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
-  const activeRef = useRef<HTMLButtonElement>(null);
+  const activeRef = useRef<HTMLDivElement>(null);
   const pointer = useRef({ x: Number.NaN, y: Number.NaN, allow: false });
   const fromPointer = useRef(false);
 
   useEffect(() => {
     pointer.current.allow = false;
-  }, [skills]);
+  }, [entries]);
 
   useEffect(() => {
     if (fromPointer.current) {
@@ -121,10 +172,10 @@ function SkillList({
     onActive(index);
   };
 
-  if (skills.length === 0) {
+  if (entries.length === 0) {
     return (
       <p className="px-3 py-2.5 text-[12px] text-content/50">
-        {query.trim() ? "No matching skills" : "No skills yet"}
+        {query.trim() ? "No matching templates or skills" : "No templates or skills yet"}
       </p>
     );
   }
@@ -133,44 +184,86 @@ function SkillList({
     <div
       ref={lockOverscroll}
       role="listbox"
-      aria-label="Skills"
+      aria-label="Prompt templates and skills"
       onMouseMove={onListMouseMove}
       className="max-h-[min(240px,40vh)] overflow-y-auto overscroll-none px-1 py-1"
     >
-      {skills.map((skill, index) => {
+      {entries.map((entry, index) => {
         const highlighted = index === active;
+        const row =
+          entry.kind === "template"
+            ? {
+                template: entry.template,
+                name: entry.template.name,
+                detail: templatePreview(entry.template),
+                badge: "template",
+              }
+            : {
+                template: null,
+                name: entry.skill.invocation,
+                detail: entry.skill.description,
+                badge: scopeLabel(entry.skill),
+              };
+        const template = row.template;
         return (
-          <button
-            key={`${skill.kind}:${skill.source}:${skill.invocation}`}
-            ref={highlighted ? activeRef : undefined}
-            type="button"
-            role="option"
-            aria-selected={highlighted}
-            onMouseDown={(e) => e.preventDefault()}
+          <div
+            key={pickerEntryKey(entry)}
+            role="presentation"
+            className="group relative"
             onMouseEnter={() => onRowEnter(index)}
-            onClick={() => onPick(skill)}
-            className={`flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left ${
-              highlighted ? "bg-skill/15 text-content" : "text-content"
-            }`}
           >
-            <span className="flex min-w-0 items-baseline gap-2">
-              <span
-                className={`truncate font-mono text-[13px] ${
-                  highlighted ? "font-medium text-skill" : ""
+            <div
+              ref={highlighted ? activeRef : undefined}
+              role="option"
+              aria-selected={highlighted}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onPick(entry)}
+              className={`flex w-full cursor-default flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-content ${
+                highlighted ? (template ? "bg-template/15" : "bg-skill/15") : ""
+              }`}
+            >
+              <span className="flex min-w-0 items-baseline gap-2 pr-6">
+                <span
+                  className={`truncate font-mono text-[13px] ${
+                    highlighted
+                      ? template
+                        ? "font-medium text-template"
+                        : "font-medium text-skill"
+                      : ""
+                  }`}
+                >
+                  /{row.name}
+                </span>
+                <span
+                  className={`shrink-0 text-[10px] uppercase tracking-wide ${
+                    template ? "text-template/70" : "text-content/40"
+                  }`}
+                >
+                  {row.badge}
+                </span>
+              </span>
+              {row.detail ? (
+                <span className="line-clamp-2 pr-6 text-[11px] leading-4 text-content/50">
+                  {row.detail}
+                </span>
+              ) : null}
+            </div>
+            {template ? (
+              <button
+                type="button"
+                tabIndex={-1}
+                title={`Edit template (${EDIT_SHORTCUT})`}
+                aria-label={`Edit template ${template.name}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onEditTemplate(template)}
+                className={`absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-content/50 hover:bg-content/15 hover:text-content ${
+                  highlighted ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 }`}
               >
-                /{skill.invocation}
-              </span>
-              <span className="shrink-0 text-[10px] uppercase tracking-wide text-content/40">
-                {scopeLabel(skill)}
-              </span>
-            </span>
-            {skill.description ? (
-              <span className="line-clamp-2 text-[11px] leading-4 text-content/50">
-                {skill.description}
-              </span>
+                <Pencil className="size-3" strokeWidth={1.75} />
+              </button>
             ) : null}
-          </button>
+          </div>
         );
       })}
     </div>

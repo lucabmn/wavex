@@ -595,6 +595,13 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
             params![now_millis()],
         )?;
     }
+    if current < 13 {
+        crate::prompt_templates::ensure_prompt_templates_table(conn)?;
+        conn.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (13, ?1)",
+            params![now_millis()],
+        )?;
+    }
     // A recorded version row is not proof the column landed, and every listing
     // query selects `scope`. Re-check outside the version gate.
     ensure_column(conn, "scope", "TEXT NOT NULL DEFAULT 'coding'")?;
@@ -615,6 +622,7 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
          );",
     )?;
     crate::notes::ensure_notes_table(conn)?;
+    crate::prompt_templates::ensure_prompt_templates_table(conn)?;
     Ok(())
 }
 
