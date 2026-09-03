@@ -12,6 +12,27 @@ expect(
   config.bundle?.createUpdaterArtifacts === true,
   "bundle.createUpdaterArtifacts must be true",
 );
+// Each release job passes its own `--bundles`, so the config has to leave every
+// platform's bundle enabled rather than pin the macOS pair.
+expect(
+  config.bundle?.targets === "all",
+  'bundle.targets must be "all" so each release job can select its own bundles',
+);
+// Tauri replaces arrays on a platform-config merge rather than deep-merging
+// them, so each override has to redeclare the whole main window — and each has
+// to drop the macOS-only `resources`, or Assets.car ships inside the installer.
+for (const platform of ["windows", "linux"]) {
+  const override = readOptional(`src-tauri/tauri.${platform}.conf.json`);
+  expect(override != null, `src-tauri/tauri.${platform}.conf.json must exist`);
+  expect(
+    override?.bundle?.resources === null,
+    `src-tauri/tauri.${platform}.conf.json must set bundle.resources to null`,
+  );
+  expect(
+    override?.app?.windows?.[0]?.label === "main",
+    `src-tauri/tauri.${platform}.conf.json must redeclare the main window`,
+  );
+}
 expect(macOS?.signingIdentity !== "-", "macOS releases must not use ad-hoc signingIdentity '-' ");
 expect(macOS?.hardenedRuntime === true, "bundle.macOS.hardenedRuntime must be true");
 expect(
@@ -44,7 +65,14 @@ for (const contract of [
   "tauri-apps/tauri-action@",
   "releaseDraft: true",
   "includeUpdaterJson: true",
-  "--target aarch64-apple-darwin",
+  "--bundles ${{ matrix.bundles }} --target ${{ matrix.target }}",
+  // Every supported platform needs a build job, or the updater feed publishes
+  // with one of them silently missing.
+  "target: aarch64-apple-darwin",
+  "target: x86_64-unknown-linux-gnu",
+  "target: x86_64-pc-windows-msvc",
+  // Serialized because the jobs all rewrite one shared latest.json.
+  "max-parallel: 1",
   "codesign --verify",
   "xcrun stapler validate",
   "spctl --assess",
@@ -58,7 +86,15 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log("Distribution configuration is ready for signed, notarized updates.");
+console.log("Distribution configuration is ready for macOS, Linux, and Windows updates.");
+
+function readOptional(path) {
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
 
 function expect(condition, message) {
   if (!condition) errors.push(message);

@@ -11,7 +11,9 @@ concurrency:
 
 jobs:
   web:
-    runs-on: macos-latest
+    # The web checks never touch a native toolchain, so they run on the cheapest
+    # runner and leave the paid minutes for the three native builds below.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -28,15 +30,38 @@ jobs:
       - run: pnpm test
 
   rust:
-    runs-on: macos-latest
+    name: rust (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, platform: macOS }
+          - { os: ubuntu-22.04, platform: Linux }
+          - { os: windows-latest, platform: Windows }
     steps:
       - uses: actions/checkout@v7
+
+      # wry links against the system WebKitGTK; nothing Rust-side resolves it.
+      - name: Install Linux WebKit dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            patchelf
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
+          key: ${{ matrix.os }}
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
