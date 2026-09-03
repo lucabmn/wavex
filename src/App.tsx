@@ -3007,6 +3007,9 @@ export default function App({
 
   useEffect(() => {
     const onEscape = (event: KeyboardEvent) => {
+      // Work hides the project workspace, so its tabs and sessions are not
+      // what Escape is aimed at while the chat surface is in front.
+      if (appModeRef.current === "work") return;
       const target = event.target instanceof Element ? event.target : null;
       const inTerminal = Boolean(target?.closest(".wavex-terminal"));
       const activeTabId = activeTabIdRef.current;
