@@ -11,6 +11,8 @@ export const LAYER = {
   submenu: 81,
   /** Modal dialogs and the command palette. */
   dialog: 90,
+  /** The preview that follows the pointer during a drag. */
+  drag: 95,
   /** Toasts, which outrank whatever they interrupt. */
   toast: 100,
 } as const;

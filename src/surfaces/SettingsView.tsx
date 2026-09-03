@@ -9,6 +9,9 @@ import {
   type ReactNode,
 } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
+import { DeleteProfileDialog } from "../chrome/DeleteProfileDialog";
+import { ProfileAvatar } from "../chrome/ProfileAvatar";
+import { ProfileDialog } from "../chrome/ProfileDialog";
 import { RemoveProjectDialog } from "../chrome/RemoveProjectDialog";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -104,6 +107,9 @@ import {
   type SettingsSectionId,
 } from "../lib/settings";
 import { loadSoundsEnabled, playCue, saveSoundsEnabled } from "../lib/sounds";
+import { canDeleteProfile, type Profile } from "../lib/profiles/profile";
+import { createProfile, deleteProfile, updateProfile } from "../lib/profiles/profileStore";
+import { useProfiles } from "../hooks/useProfiles";
 import {
   installPendingUpdate,
   readAppVersion,
@@ -122,6 +128,7 @@ type Props = {
   onDeleteSession: (sessionId: string) => void;
   onRestoreProject?: (path: string) => void;
   onDeleteProject?: (path: string) => void;
+  onSwitchProfile: (profileId: string) => void;
   onOpenWhatsNew: (version: string) => void;
 };
 
@@ -136,6 +143,7 @@ export function SettingsView({
   onDeleteSession,
   onRestoreProject,
   onDeleteProject,
+  onSwitchProfile,
   onOpenWhatsNew,
 }: Props) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
@@ -194,6 +202,7 @@ export function SettingsView({
             description={settingsSectionDescription(section)}
           />
           {section === "general" ? <GeneralPage onOpenWhatsNew={onOpenWhatsNew} /> : null}
+          {section === "profiles" ? <ProfilesPage onSwitchProfile={onSwitchProfile} /> : null}
           {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
           {section === "keybindings" ? <KeybindingsPage /> : null}
           {section === "providers" ? <ProvidersPage /> : null}
@@ -892,6 +901,142 @@ function formatDate(value: number): string {
   } catch {
     return "";
   }
+}
+
+function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (profileId: string) => void }) {
+  const { profiles, active } = useProfiles();
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Profile | null>(null);
+  const [deleting, setDeleting] = useState<Profile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const onDelete = (profile: Profile) => {
+    setDeleting(null);
+    deleteProfile(profile.id).catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : "Could not delete that profile");
+    });
+  };
+
+  return (
+    <>
+      <Heading title="Profiles" first />
+      {profiles.map((profile) => (
+        <Row
+          key={profile.id}
+          label={
+            <span className="flex items-center gap-2">
+              <ProfileAvatar profile={profile} size="md" />
+              <span className="min-w-0 truncate">{profile.name}</span>
+              {profile.id === active.id ? (
+                <span className="shrink-0 rounded-full bg-accent/20 px-2 py-0.5 text-[11px] font-medium text-accent">
+                  Active
+                </span>
+              ) : null}
+            </span>
+          }
+          description={
+            profile.id === active.id
+              ? "The workspace on screen: its projects, chats, agents, and layout."
+              : "Its own projects, chats, agents, and layout, kept until you switch back."
+          }
+        >
+          {profile.id === active.id ? null : (
+            <button
+              type="button"
+              onClick={() => onSwitchProfile(profile.id)}
+              className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            >
+              Switch to
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setEditing(profile)}
+            className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+          >
+            Edit…
+          </button>
+          <button
+            type="button"
+            disabled={!canDeleteProfile(profile.id) || profile.id === active.id}
+            title={
+              !canDeleteProfile(profile.id)
+                ? "The first profile is wavex itself and cannot be deleted"
+                : profile.id === active.id
+                  ? "Switch to another profile first"
+                  : undefined
+            }
+            onClick={() => setDeleting(profile)}
+            className="rounded-md px-2.5 py-1.5 text-[12px] text-red-300/80 hover:bg-red-500/15 hover:text-red-300 disabled:cursor-default disabled:text-content/25 disabled:hover:bg-transparent"
+          >
+            Delete
+          </button>
+        </Row>
+      ))}
+
+      <Row
+        label="New profile"
+        description="Starts empty: no projects, no chats, no tabs carried over."
+      >
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15"
+        >
+          Add profile
+        </button>
+      </Row>
+
+      {error ? <p className="pt-3 text-[12px] text-red-300">{error}</p> : null}
+
+      <Heading title="What profiles do not separate" />
+      <p className="max-w-xl pt-1 text-[12px] leading-relaxed text-content/45">
+        Agent CLIs hold their own sign-in and their own agent definitions on disk, outside wavex.
+        Every profile drives the same installed CLIs, so switching profiles does not switch provider
+        accounts.
+      </p>
+      <p className="max-w-xl pt-2 text-[12px] leading-relaxed text-content/45">
+        Switching stops the agents and terminals running in the profile you leave, exactly as
+        quitting wavex does. Their chats come back with Continue when you switch back.
+      </p>
+
+      {creating ? (
+        <ProfileDialog
+          title="New profile"
+          description="A separate workspace inside this copy of wavex."
+          confirmLabel="Create and switch"
+          onCancel={() => setCreating(false)}
+          onConfirm={(name, color) => {
+            setCreating(false);
+            onSwitchProfile(createProfile(name, color).id);
+          }}
+        />
+      ) : null}
+
+      {editing ? (
+        <ProfileDialog
+          title="Edit profile"
+          description="Name and color decide how this profile reads in the chrome."
+          confirmLabel="Save"
+          initialName={editing.name}
+          initialColor={editing.color}
+          onCancel={() => setEditing(null)}
+          onConfirm={(name, color) => {
+            updateProfile(editing.id, { name, color });
+            setEditing(null);
+          }}
+        />
+      ) : null}
+
+      {deleting ? (
+        <DeleteProfileDialog
+          profile={deleting}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() => onDelete(deleting)}
+        />
+      ) : null}
+    </>
+  );
 }
 
 function PageHeader({ title, description }: { title: string; description: string }) {

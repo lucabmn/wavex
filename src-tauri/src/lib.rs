@@ -9,6 +9,7 @@ mod macos;
 mod menu;
 mod menu_bar;
 mod notes;
+mod profiles;
 mod project_logo;
 mod pty;
 mod rate_limits;
@@ -141,6 +142,8 @@ pub fn run() {
         .manage(window_transfer::WindowTransferState::new())
         .setup(|app| {
             harness::reap_orphaned_harness_processes();
+            // Profiles decide where every other store lives, so they bind first.
+            profiles::init(app.handle())?;
             session_store::init(app.handle())?;
             checkpoint::init(app.handle())?;
             menu::install(app.handle())?;
@@ -212,6 +215,8 @@ pub fn run() {
             fs::inspect_paths,
             fs::read_file_base64,
             fs::write_attachment,
+            fs::write_file_base64,
+            fs::write_generated_image,
             fs::read_text_file,
             fs::write_text_file,
             skills::list_skills,
@@ -251,6 +256,8 @@ pub fn run() {
             pty::pty_kill_all,
             session_store::session_upsert,
             session_store::session_list_by_project,
+            session_store::session_list_by_scope,
+            session_store::work_chat_dir,
             session_store::session_search,
             session_store::session_get,
             session_store::session_delete,
@@ -281,6 +288,10 @@ pub fn run() {
             window::enable_window_glass,
             window_transfer::stage_window_transfer,
             window_transfer::take_window_transfer,
+            profiles::profile_bind,
+            profiles::profile_switch,
+            profiles::profile_switch_ready,
+            profiles::profile_delete_data,
             project_logo::save_project_logo,
             project_logo::remove_project_logo,
         ])

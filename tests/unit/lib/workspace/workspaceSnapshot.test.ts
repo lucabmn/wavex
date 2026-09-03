@@ -148,6 +148,57 @@ describe("parseWorkspaceSnapshot", () => {
   });
 });
 
+describe("app mode in the snapshot", () => {
+  /**
+   * The mode arrived after these snapshots were already on disk. Treating it
+   * as required would fail validation and silently discard every saved tab.
+   */
+  it("defaults to coding when the snapshot predates the mode switch", () => {
+    const parsed = parseWorkspaceSnapshot({
+      tabs: [{ ...newTab("s1"), id: "t1" }],
+      sessions: [],
+      activeTabId: "t1",
+      projectCwd: "/tmp/a",
+    });
+    expect(parsed?.mode).toBe("coding");
+    expect(parsed?.tabs.map((tab) => tab.id)).toEqual(["t1"]);
+  });
+
+  it("keeps a saved work mode", () => {
+    const parsed = parseWorkspaceSnapshot({
+      tabs: [{ ...newTab("s1"), id: "t1" }],
+      sessions: [],
+      activeTabId: "t1",
+      projectCwd: "/tmp/a",
+      mode: "work",
+    });
+    expect(parsed?.mode).toBe("work");
+  });
+
+  it("falls back to coding for an unknown mode", () => {
+    const parsed = parseWorkspaceSnapshot({
+      tabs: [{ ...newTab("s1"), id: "t1" }],
+      sessions: [],
+      activeTabId: "t1",
+      projectCwd: "/tmp/a",
+      mode: "something-else",
+    });
+    expect(parsed?.mode).toBe("coding");
+  });
+
+  it("round-trips the mode through collect and hydrate", () => {
+    const tab = { ...newTab("s1"), id: "t1" };
+    const snapshot = collectWorkspaceSnapshot([tab], [], "t1", "/tmp/a", [], "work");
+    expect(snapshot.mode).toBe("work");
+    expect(hydrateWorkspaceSnapshot(snapshot, new Map())?.mode).toBe("work");
+  });
+
+  it("defaults to coding when no mode is collected", () => {
+    const tab = { ...newTab("s1"), id: "t1" };
+    expect(collectWorkspaceSnapshot([tab], [], "t1", "/tmp/a").mode).toBe("coding");
+  });
+});
+
 describe("hydrateWorkspaceSnapshot", () => {
   it("reopens splits, file panes, and stored transcripts", () => {
     const left = chat("s1", "/tmp/a");
@@ -247,5 +298,43 @@ describe("hydrateWorkspaceSnapshot", () => {
     ]);
     expect(workspace?.projectTerminals?.[0]?.pane.files[0]?.terminal).toBe(true);
     expect(workspace?.projectTerminals?.[0]?.pane.files[0]?.foreground).toBeUndefined();
+  });
+});
+
+describe("workspace snapshot app mode", () => {
+  const session = chat("s1", "/tmp/a");
+  const tab = { ...newTab("s1"), id: "t1" };
+
+  it("defaults to coding when the caller does not pass a mode", () => {
+    expect(collectWorkspaceSnapshot([tab], [session], "t1", "/tmp/a").mode).toBe("coding");
+  });
+
+  it("round-trips the work mode", () => {
+    const snapshot = collectWorkspaceSnapshot([tab], [session], "t1", "/tmp/a", [], "work");
+    expect(parseWorkspaceSnapshot(snapshot)?.mode).toBe("work");
+    expect(hydrateWorkspaceSnapshot(snapshot, new Map())?.mode).toBe("work");
+  });
+
+  /**
+   * Snapshots written before work chats existed carry no mode. Treating it as
+   * required here would fail the whole parse and wipe every restored tab.
+   */
+  it("restores tabs from a snapshot written without a mode", () => {
+    const snapshot = collectWorkspaceSnapshot([tab], [session], "t1", "/tmp/a");
+    const legacy = { ...snapshot } as Record<string, unknown>;
+    delete legacy.mode;
+
+    const parsed = parseWorkspaceSnapshot(legacy);
+    expect(parsed?.tabs.map((entry) => entry.id)).toEqual(["t1"]);
+    expect(parsed?.mode).toBe("coding");
+
+    const hydrated = hydrateWorkspaceSnapshot(legacy as never, new Map());
+    expect(hydrated?.tabs.map((entry) => entry.id)).toEqual(["t1"]);
+    expect(hydrated?.mode).toBe("coding");
+  });
+
+  it("falls back to coding for an unknown mode", () => {
+    const snapshot = collectWorkspaceSnapshot([tab], [session], "t1", "/tmp/a");
+    expect(parseWorkspaceSnapshot({ ...snapshot, mode: "sideways" })?.mode).toBe("coding");
   });
 });

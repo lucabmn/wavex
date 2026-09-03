@@ -9,9 +9,8 @@ const ALLOWED_EXT: [&str; 6] = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
 
 fn project_logos_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?
+        .state::<crate::profiles::ProfilePaths>()
+        .data_dir()?
         .join("project-logos");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     Ok(dir)

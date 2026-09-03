@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { basename, pickFiles as pickFilePaths } from "./fs";
+import { save } from "@tauri-apps/plugin-dialog";
+import { basename, pickFiles as pickFilePaths, readFileBase64, writeFileBase64 } from "./fs";
 import type { Attachment, AttachmentKind } from "./session";
 
 export const MAX_ATTACHMENTS = 20;
@@ -124,6 +125,20 @@ export function displayAttachments(files: Attachment[]): Attachment[] {
   }));
 }
 
+/**
+ * Save an attachment somewhere the user chose. Bytes come from `data` when the
+ * attachment is still in memory, otherwise they are read back from its path.
+ * Returns the destination, or null when the dialog was dismissed.
+ */
+export async function saveAttachmentAs(file: Attachment): Promise<string | null> {
+  const target = await save({ defaultPath: file.name });
+  if (!target) return null;
+  const data = file.data ?? (file.path ? await readFileBase64(file.path) : null);
+  if (!data) throw new Error(`${file.name} has no contents to save.`);
+  await writeFileBase64(target, data);
+  return target;
+}
+
 export function attachmentPreviewSrc(file: Attachment): string | undefined {
   if (file.previewUrl) return file.previewUrl;
   if (file.data && file.kind === "image") {
@@ -238,9 +253,7 @@ export async function prepareAttachments(files: Attachment[]): Promise<Attachmen
         return file;
       }
       try {
-        const data = await invoke<string>("read_file_base64", {
-          path: file.path,
-        });
+        const data = await readFileBase64(file.path);
         return { ...file, data };
       } catch {
         return file;
@@ -293,7 +306,7 @@ async function attachmentFromPath(info: PathInfo): Promise<Attachment | null> {
   };
   if (isVisionImage(mimeType) && info.size > 0 && info.size <= MAX_EMBED_BYTES) {
     try {
-      file.data = await invoke<string>("read_file_base64", { path: info.path });
+      file.data = await readFileBase64(info.path);
     } catch {
       // Fall back to a resource_link so the agent can still read the file.
     }

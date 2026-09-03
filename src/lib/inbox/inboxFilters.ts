@@ -1,6 +1,7 @@
 import { filterInboxItems, inboxItemStatus, type InboxItem, type InboxKind } from "./githubTasks";
 import { normalizeProjectPath } from "../recents";
 import { timeFilterStart, type SessionTimeFilter } from "../sessions/sessionFilters";
+import { profileStorage } from "../profiles/profileStorage";
 
 export type InboxTimeFilter = SessionTimeFilter;
 
@@ -38,7 +39,7 @@ const FILTERS_KEY = "wavex.inboxFilters";
 
 export function loadInboxFilters(): InboxFilters {
   try {
-    const raw = localStorage.getItem(FILTERS_KEY);
+    const raw = profileStorage.getItem(FILTERS_KEY);
     if (!raw) return DEFAULT_INBOX_FILTERS;
     const parsed = JSON.parse(raw) as Partial<InboxFilters>;
     return {
@@ -66,7 +67,7 @@ export function loadInboxFilters(): InboxFilters {
 
 export function saveInboxFilters(filters: InboxFilters) {
   try {
-    localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
+    profileStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
   } catch {
     // private mode / quota
   }

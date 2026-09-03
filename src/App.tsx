@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { message } from "@tauri-apps/plugin-dialog";
+import { ask, message } from "@tauri-apps/plugin-dialog";
 import {
   useCallback,
   useEffect,
@@ -291,16 +291,24 @@ import {
   canAutoContinue,
   inFlightRefs,
   inFlightSnapshotKey,
+  profileSwitchWhileBusyMessage,
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
+import { otherAppMode, type AppMode } from "./lib/workspace/appMode";
+import { WorkView } from "./surfaces/WorkView";
+import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
+import { getWorkChatState } from "./lib/sessions/workChatStore";
 import type { InstalledUpdate } from "./lib/updates/updateNotice";
+import { listenProfileSwitch, switchProfile } from "./lib/profiles/profileStore";
 import {
+  beginProfileSwitch,
   bindResumedSessions,
   hasInFlightSessions,
   hideCurrentWindow,
   closeCurrentWindow,
   isAppQuitting,
+  isProfileSwitching,
   persistLiveTranscripts,
   persistQuitState,
   reapWindowRuntime,
@@ -345,6 +353,9 @@ export default function App({
     () => windowTransfer?.projectTerminals ?? resumed?.projectTerminals ?? [],
   );
   const [projectTerminalFocused, setProjectTerminalFocused] = useState(false);
+  // Work vs Coding. The coding workspace stays mounted behind Work so live
+  // terminals, editors, and streaming turns survive a mode switch.
+  const [appMode, setAppMode] = useState<AppMode>(() => resumed?.mode ?? "coding");
   const [activeTabId, setActiveTabId] = useState(
     () => windowTransfer?.activeTabId ?? resumed?.activeTabId ?? seed.tab.id,
   );
@@ -381,6 +392,7 @@ export default function App({
   const [updateNotice, setUpdateNotice] = useState(installedUpdate);
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>(loadSettingsSection);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
   const editorNavigationToken = useRef(0);
   const [filePickerOpen, setFilePickerOpen] = useState(false);
@@ -416,6 +428,8 @@ export default function App({
   activeTabIdRef.current = activeTabId;
   const projectCwdRef = useRef(projectCwd);
   projectCwdRef.current = projectCwd;
+  const appModeRef = useRef(appMode);
+  appModeRef.current = appMode;
   const searchViewOpenRef = useRef(searchViewOpen);
   searchViewOpenRef.current = searchViewOpen;
   const inboxViewOpenRef = useRef(inboxViewOpen);
@@ -525,7 +539,7 @@ export default function App({
     if (resumed?.sessions.length) bindResumedSessions(resumed.sessions);
     const stopBridge = startHarnessBridge();
     const reap = () => {
-      if (isAppQuitting()) return;
+      if (isAppQuitting() || isProfileSwitching()) return;
       void persistQuitState(
         sessionsRef.current,
         tabsRef.current,
@@ -533,6 +547,7 @@ export default function App({
         projectCwdRef.current,
         "unload",
         projectTerminalsRef.current,
+        appModeRef.current,
       ).finally(() => {
         void reapWindowRuntime(sessionsRef.current, tabsRef.current, projectTerminalsRef.current);
       });
@@ -547,6 +562,29 @@ export default function App({
       harnessFlush.current = null;
     };
   }, [resumed]);
+
+  // A profile switch is a quit and a relaunch for one profile: persist, let the
+  // native stores swap, then reload onto the profile that was chosen.
+  useEffect(() => {
+    const unlisten = listenProfileSwitch({
+      onPrepare: async () => {
+        flushHarnessEvents();
+        await persistQuitState(
+          sessionsRef.current,
+          tabsRef.current,
+          activeTabIdRef.current,
+          projectCwdRef.current,
+          "quit",
+          projectTerminalsRef.current,
+        ).catch(() => undefined);
+        beginProfileSwitch();
+      },
+      onChanged: () => window.location.reload(),
+    });
+    return () => {
+      void unlisten.then((off) => off()).catch(() => undefined);
+    };
+  }, [flushHarnessEvents]);
 
   useEffect(() => {
     void probeHarnessAvailability();
@@ -724,15 +762,19 @@ export default function App({
       () => projectCwdRef.current,
       () => projectTerminalsRef.current,
       flushHarnessEvents,
+      () => appModeRef.current,
     );
     void getCurrentWindow()
       .onCloseRequested((event) => {
         // Listening here makes close our job. Letting the default path run
         // calls JS `window.destroy`, which Tauri denies without a permission.
         event.preventDefault();
-        if (hasInFlightSessions(sessionsRef.current)) {
+        // A streaming work chat keeps the window alive too — closing on top of
+        // one would drop the answer being written.
+        const workChats = getWorkChatState().chats;
+        if (hasInFlightSessions(sessionsRef.current) || hasInFlightSessions(workChats)) {
           flushHarnessEvents();
-          void persistLiveTranscripts(sessionsRef.current);
+          void persistLiveTranscripts([...sessionsRef.current, ...workChats]);
           void hideCurrentWindow();
           return;
         }
@@ -743,6 +785,7 @@ export default function App({
           projectCwdRef.current,
           "unload",
           projectTerminalsRef.current,
+          appModeRef.current,
         ).finally(() => {
           void closeCurrentWindow();
         });
@@ -842,6 +885,9 @@ export default function App({
     if (pendingPersist.current.size === 0) return;
 
     const timer = window.setTimeout(() => {
+      // The stores belong to the profile being left from the moment this
+      // window acknowledged the switch; the workspace is already on disk.
+      if (isProfileSwitching()) return;
       const dirty = [...pendingPersist.current.values()];
       pendingPersist.current.clear();
       void Promise.all(
@@ -868,6 +914,7 @@ export default function App({
       return;
     }
     inFlightSyncKey.current = key;
+    if (isProfileSwitching()) return;
     void replaceInFlightSessions(refs).catch(() => undefined);
   }, [sessions, tabs]);
 
@@ -879,15 +926,17 @@ export default function App({
       activeTabId,
       projectCwd,
       projectTerminals,
+      appMode,
     );
     const key = workspaceSnapshotKey(snapshot);
     if (workspaceSyncKey.current === key) return;
     workspaceSyncKey.current = key;
     const timer = window.setTimeout(() => {
+      if (isProfileSwitching()) return;
       void saveWorkspaceSnapshot(snapshot).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [tabs, sessions, activeTabId, projectCwd, projectTerminals, windowTransfer]);
+  }, [tabs, sessions, activeTabId, projectCwd, projectTerminals, appMode, windowTransfer]);
 
   useEffect(() => {
     if (lastProjectPath()) return;
@@ -3179,6 +3228,44 @@ export default function App({
     saveSettingsSection(section);
   }, []);
 
+  const onManageProfiles = useCallback(() => openSettings("profiles"), [openSettings]);
+
+  /** The switcher lives at the foot of the project rail, so reveal it first. */
+  const onToggleProfileMenu = useCallback(() => {
+    setSettingsOpen(false);
+    setProjectRailOpen((open) => {
+      if (open) return open;
+      saveProjectRailOpen(true);
+      return true;
+    });
+    setProfileMenuOpen((open) => !open);
+  }, []);
+
+  /**
+   * Swaps the whole app onto another profile. Every window persists first and
+   * the agents of the profile being left are stopped, so the confirmation says
+   * what running work is about to pause.
+   */
+  const onSwitchProfile = useCallback((profileId: string) => {
+    void (async () => {
+      const running = inFlightRefs(sessionsRef.current, tabsRef.current).length;
+      if (running > 0) {
+        const ok = await ask(profileSwitchWhileBusyMessage(running), {
+          title: "wavex",
+          kind: "warning",
+          okLabel: "Switch",
+        });
+        if (!ok) return;
+      }
+      await switchProfile(profileId).catch((error: unknown) => {
+        void message(error instanceof Error ? error.message : "Could not switch profile", {
+          title: "wavex",
+          kind: "error",
+        });
+      });
+    })();
+  }, []);
+
   const onOpenArchivedSession = useCallback(
     (sessionId: string) => {
       setSettingsOpen(false);
@@ -3270,6 +3357,7 @@ export default function App({
     onNewTerminalTab,
     onToggleProjectTerminal,
     openSettings,
+    onToggleProfileMenu,
   });
   actions.current = {
     onNew,
@@ -3294,6 +3382,7 @@ export default function App({
     onNewTerminalTab,
     onToggleProjectTerminal,
     openSettings,
+    onToggleProfileMenu,
   };
 
   const debounce = useRef({ name: "", at: 0 });
@@ -3304,8 +3393,45 @@ export default function App({
     fn();
   }, []);
 
+  /**
+   * A menu item that opens something — a project, a file, Search, Inbox. The
+   * user asked for a coding surface, so bring it forward rather than running
+   * the action behind the chat.
+   */
+  const runInCoding = useCallback(
+    (name: string, fn: () => void) => {
+      if (appModeRef.current === "work") setAppMode("coding");
+      run(name, fn);
+    },
+    [run],
+  );
+
+  /**
+   * A menu item that acts on the workspace itself — tabs, panes, terminals.
+   *
+   * The macOS menu owns these accelerators, so the keydown guard never sees
+   * them. Where Work has its own meaning for the key it runs that instead
+   * (⌘T is New Chat there); otherwise the item does nothing, because
+   * mutating tabs the user cannot see is worse than no response.
+   */
+  const runInWorkspace = useCallback(
+    (name: string, fn: () => void, inWork?: WorkChatCommand) => {
+      if (appModeRef.current === "work") {
+        if (inWork) requestWorkChatCommand(inWork);
+        return;
+      }
+      run(name, fn);
+    },
+    [run],
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Work owns its own bindings. Every shortcut below acts on the project
+      // workspace — tabs, panes, the file picker — which is hidden behind the
+      // chat surface, so none of them may fire while Work is in front. The
+      // mode toggle itself is bound outside this handler.
+      if (appModeRef.current === "work") return;
       const cmd = tabCommand(e);
       if (cmd) {
         const target = e.target instanceof Element ? e.target : null;
@@ -3385,6 +3511,12 @@ export default function App({
         run("open_settings", () => actions.current.openSettings());
         return;
       }
+      if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        e.stopPropagation();
+        run("toggle_profile_menu", actions.current.onToggleProfileMenu);
+        return;
+      }
       if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
         e.stopPropagation();
@@ -3396,35 +3528,66 @@ export default function App({
   }, [run]);
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.shiftKey || e.altKey || e.key.toLowerCase() !== "m") return;
+      e.preventDefault();
+      e.stopPropagation();
+      run("toggle_mode", () => setAppMode(otherAppMode(appModeRef.current)));
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [run]);
+
+  useEffect(() => {
     const unlisten: Array<Promise<() => void>> = [
-      listen("new_tab", () => run("new", actions.current.onNew)),
-      listen("close_tab", () => run("close", actions.current.onClosePane)),
-      listen("next_tab", () => run("next", actions.current.onNext)),
-      listen("prev_tab", () => run("prev", actions.current.onPrev)),
-      listen("back_tab", () => run("back", actions.current.onVisitBack)),
-      listen("forward_tab", () => run("forward", actions.current.onVisitForward)),
-      listen("split_right", () => run("split-right", () => actions.current.onSplit("right"))),
-      listen("split_down", () => run("split-down", () => actions.current.onSplit("down"))),
-      listen("new_terminal", () => run("new-terminal", actions.current.onNewTerminal)),
-      listen("new_terminal_tab", () => run("new-terminal-tab", actions.current.onNewTerminalTab)),
-      listen("toggle_terminal", () =>
-        run("toggle-terminal", actions.current.onToggleProjectTerminal),
+      listen("new_tab", () => runInWorkspace("new", actions.current.onNew, "new")),
+      listen("close_tab", () => runInWorkspace("close", actions.current.onClosePane)),
+      listen("next_tab", () => runInWorkspace("next", actions.current.onNext, "next")),
+      listen("prev_tab", () => runInWorkspace("prev", actions.current.onPrev, "previous")),
+      listen("back_tab", () => runInWorkspace("back", actions.current.onVisitBack)),
+      listen("forward_tab", () => runInWorkspace("forward", actions.current.onVisitForward)),
+      listen("split_right", () =>
+        runInWorkspace("split-right", () => actions.current.onSplit("right")),
       ),
-      listen("focus_left", () => run("focus-left", () => actions.current.onFocusDir("left"))),
-      listen("focus_right", () => run("focus-right", () => actions.current.onFocusDir("right"))),
-      listen("focus_up", () => run("focus-up", () => actions.current.onFocusDir("up"))),
-      listen("focus_down", () => run("focus-down", () => actions.current.onFocusDir("down"))),
-      listen("toggle_sidebar", () => run("toggle_sidebar", actions.current.onToggleSidebar)),
-      listen("open_project", () => {
-        void actions.current.pickProject();
-      }),
-      listen("go_to_file", () => actions.current.onGoToFile()),
-      listen("open_search", () => actions.current.onOpenSearch()),
-      listen("open_inbox", () => actions.current.onOpenInbox()),
-      listen("open_notes", () => actions.current.onOpenNotes()),
-      listen("open_usage", () => actions.current.onOpenUsage()),
+      listen("split_down", () =>
+        runInWorkspace("split-down", () => actions.current.onSplit("down")),
+      ),
+      listen("new_terminal", () => runInWorkspace("new-terminal", actions.current.onNewTerminal)),
+      listen("new_terminal_tab", () =>
+        runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
+      ),
+      listen("toggle_terminal", () =>
+        runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
+      ),
+      listen("focus_left", () =>
+        runInWorkspace("focus-left", () => actions.current.onFocusDir("left")),
+      ),
+      listen("focus_right", () =>
+        runInWorkspace("focus-right", () => actions.current.onFocusDir("right")),
+      ),
+      listen("focus_up", () => runInWorkspace("focus-up", () => actions.current.onFocusDir("up"))),
+      listen("focus_down", () =>
+        runInWorkspace("focus-down", () => actions.current.onFocusDir("down")),
+      ),
+      listen("toggle_sidebar", () =>
+        runInWorkspace("toggle_sidebar", actions.current.onToggleSidebar),
+      ),
+      listen("open_project", () =>
+        runInCoding("open_project", () => {
+          void actions.current.pickProject();
+        }),
+      ),
+      listen("go_to_file", () => runInCoding("onGoToFile", () => actions.current.onGoToFile())),
+      listen("open_search", () =>
+        runInCoding("onOpenSearch", () => actions.current.onOpenSearch()),
+      ),
+      listen("open_inbox", () => runInCoding("onOpenInbox", () => actions.current.onOpenInbox())),
+      listen("open_notes", () => runInCoding("onOpenNotes", () => actions.current.onOpenNotes())),
+      listen("open_usage", () => runInCoding("onOpenUsage", () => actions.current.onOpenUsage())),
       listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
-        actions.current.onSelectLiveAgent(payload),
+        runInCoding("focus_session", () => actions.current.onSelectLiveAgent(payload)),
       ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
@@ -3433,9 +3596,11 @@ export default function App({
       listen("sidebar_opacity", () => {
         actions.current.openSettings("appearance");
       }),
-      listen("find_in_project", () => actions.current.onFindInProject()),
+      listen("find_in_project", () =>
+        runInCoding("find_in_project", () => actions.current.onFindInProject()),
+      ),
       listen("find", () => {
-        openFindInActiveEditor();
+        runInWorkspace("find", openFindInActiveEditor, "find");
       }),
       listen("open_model_picker", () => {
         window.dispatchEvent(new Event("open_model_picker"));
@@ -3444,7 +3609,7 @@ export default function App({
     return () => {
       void Promise.all(unlisten).then((fns) => fns.forEach((fn) => fn()));
     };
-  }, [run]);
+  }, [run, runInCoding, runInWorkspace]);
 
   const dockGridRef = useRef<HTMLDivElement>(null);
   const dockDragSize = useRef<number | null>(null);
@@ -3473,6 +3638,10 @@ export default function App({
     );
   }, [currentProjectDock, dockVisible]);
 
+  // Settings renders inside the coding shell, so Work steps aside for it
+  // rather than hiding the surface that is supposed to show it.
+  const workMode = appMode === "work" && !settingsOpen;
+
   return (
     <div
       className={`flex h-full text-content ${
@@ -3480,6 +3649,9 @@ export default function App({
       }`}
     >
       <Sidebar
+        workMode={appMode === "work"}
+        mode={appMode}
+        onModeChange={setAppMode}
         cwd={sidebarCwd}
         gitCwd={gitCwd}
         open
@@ -3550,12 +3722,22 @@ export default function App({
         onOpenSettings={onOpenSettings}
         onSelectSettingsSection={onSelectSettingsSection}
         onCloseSettings={onCloseSettings}
+        profileMenuOpen={profileMenuOpen}
+        onProfileMenuOpenChange={setProfileMenuOpen}
+        onSwitchProfile={onSwitchProfile}
+        onManageProfiles={onManageProfiles}
         updateNotice={updateNotice}
         onOpenWhatsNew={onOpenWhatsNew}
         onDismissUpdate={() => setUpdateNotice(null)}
       />
 
-      <div className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Coding stays mounted while Work is in front — terminals, editors, and
+          streaming turns must not be torn down by a mode switch — but it is
+          display:none and inert, not merely covered by a translucent panel. */}
+      <div
+        className={workMode ? "hidden" : "body-glass flex min-h-0 min-w-0 flex-1 flex-col"}
+        inert={workMode || undefined}
+      >
         <div
           className={
             searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
@@ -3609,6 +3791,8 @@ export default function App({
             onGoToFile={onGoToFile}
             recents={recents}
             onSelectProject={onSelectProject}
+            mode={appMode}
+            onModeChange={setAppMode}
           />
 
           <main className="relative min-h-0 min-w-0 flex-1">
@@ -3760,6 +3944,7 @@ export default function App({
             onDeleteSession={onDeleteHistorySession}
             onRestoreProject={onRestoreProject}
             onDeleteProject={(path) => onRemoveProject(path, { purgeData: true })}
+            onSwitchProfile={onSwitchProfile}
             onOpenWhatsNew={onOpenWhatsNew}
           />
         ) : null}
@@ -3778,6 +3963,10 @@ export default function App({
           />
         )}
       </div>
+
+      {workMode ? (
+        <WorkView mode={appMode} onModeChange={setAppMode} onOpenSettings={onOpenSettings} />
+      ) : null}
 
       {filePickerOpen ? (
         <FilePicker

@@ -74,6 +74,8 @@ export function applyHarnessEvent(session: Session, event: HarnessEvent): Sessio
           window: event.window,
         }),
       };
+    case "image":
+      return appendImage(session, event);
     case "plan":
       return appendBlock(session, {
         id: crypto.randomUUID(),
@@ -179,6 +181,36 @@ function stampTurnDuration(blocks: Block[]): Block[] {
   return next;
 }
 
+/**
+ * An image the turn produced. It lands as its own assistant block so the
+ * transcript can show it inline between the prose around it.
+ */
+function appendImage(session: Session, event: Extract<HarnessEvent, { type: "image" }>): Session {
+  if (!event.data && !event.path) return session;
+  const name = event.name?.trim() || imageName(event.mimeType);
+  return appendBlock(session, {
+    id: crypto.randomUUID(),
+    role: "assistant",
+    text: "",
+    attachments: [
+      {
+        id: crypto.randomUUID(),
+        name,
+        mimeType: event.mimeType,
+        kind: "image",
+        size: 0,
+        ...(event.path ? { path: event.path } : {}),
+        ...(event.data ? { data: event.data } : {}),
+      },
+    ],
+  });
+}
+
+function imageName(mimeType: string): string {
+  const extension = mimeType.split("/")[1]?.split("+")[0] ?? "png";
+  return `image.${extension}`;
+}
+
 /** Status pings repeat; keep one row per run instead of stacking identical lines. */
 function appendStatus(session: Session, text: string): Session {
   const trimmed = text.trim();
@@ -205,7 +237,9 @@ function patchStreaming(
 ): Session {
   if (!text && role === "reasoning") return session;
   const last = session.blocks[session.blocks.length - 1];
-  if (last?.role === role) {
+  // An image block shares the assistant role but carries no prose; streaming
+  // text into it would hide the text behind the picture.
+  if (last?.role === role && !last.attachments?.length) {
     const nextText = joinStreamText(last.text, text);
     if (nextText === last.text && last.streaming === streaming) return session;
     const blocks = session.blocks.slice();

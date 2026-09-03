@@ -12,6 +12,7 @@ import {
 import type { ReleaseNotesTabSource } from "../updates/releaseNotes";
 import { clampDockSize, isDockSide, type ProjectTerminalDock } from "../terminal/projectTerminal";
 import { normalizeProjectPath } from "../recents";
+import { DEFAULT_APP_MODE, sanitizeAppMode, type AppMode } from "./appMode";
 import {
   HARNESSES,
   RUNTIME_MODES,
@@ -40,6 +41,8 @@ export type WorkspaceSnapshot = {
   activeTabId: string;
   projectCwd: string;
   projectTerminals: ProjectTerminalDock[];
+  /** Which top-level surface was in front. Absent on pre-Work snapshots. */
+  mode: AppMode;
 };
 
 export function collectWorkspaceSnapshot(
@@ -48,8 +51,10 @@ export function collectWorkspaceSnapshot(
   activeTabId: string,
   projectCwd: string,
   projectTerminals: ProjectTerminalDock[] = [],
+  mode: AppMode = DEFAULT_APP_MODE,
 ): WorkspaceSnapshot {
   return {
+    mode,
     tabs: tabs.map(sanitizeTab).filter((tab): tab is WorkspaceTab => tab != null),
     sessions: sessions
       .map(sessionStub)
@@ -70,6 +75,7 @@ export function parseWorkspaceSnapshot(raw: unknown): WorkspaceSnapshot | null {
     activeTabId?: unknown;
     projectCwd?: unknown;
     projectTerminals?: unknown;
+    mode?: unknown;
   };
   if (!Array.isArray(value.tabs) || typeof value.activeTabId !== "string") {
     return null;
@@ -89,7 +95,16 @@ export function parseWorkspaceSnapshot(raw: unknown): WorkspaceSnapshot | null {
         .map(sanitizeProjectTerminal)
         .filter((dock): dock is ProjectTerminalDock => dock != null)
     : [];
-  return { tabs, sessions, activeTabId, projectCwd, projectTerminals };
+  // Optional on purpose: a snapshot saved before the mode switch existed must
+  // still restore its tabs instead of failing validation and losing them all.
+  return {
+    tabs,
+    sessions,
+    activeTabId,
+    projectCwd,
+    projectTerminals,
+    mode: sanitizeAppMode(value.mode),
+  };
 }
 
 export function workspaceSnapshotKey(snapshot: WorkspaceSnapshot): string {
@@ -171,6 +186,7 @@ export function hydrateWorkspaceSnapshot(
     activeTabId,
     projectCwd,
     projectTerminals: parsed.projectTerminals,
+    mode: parsed.mode,
   };
 }
 

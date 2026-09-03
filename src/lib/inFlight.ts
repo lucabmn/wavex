@@ -1,5 +1,6 @@
 import { leafIds, newTab, type WorkspaceTab } from "./workspace/layout";
 import type { ProjectTerminalDock } from "./terminal/projectTerminal";
+import type { AppMode } from "./workspace/appMode";
 import { sessionNeedsInput, type Session } from "./session";
 import { stopStreaming } from "./harness/apply";
 
@@ -18,6 +19,8 @@ export type ResumedWorkspace = {
   activeTabId: string;
   projectCwd: string;
   projectTerminals?: ProjectTerminalDock[];
+  /** Top-level surface to restore. Absent on a pre-Work snapshot. */
+  mode?: AppMode;
 };
 
 /** A turn or approval that would be lost if this webview died. */
@@ -50,6 +53,13 @@ export function inFlightRefs(sessions: Session[], tabs: WorkspaceTab[]): InFligh
   }
   for (const session of sessions) push(session);
   return refs;
+}
+
+export function profileSwitchWhileBusyMessage(count: number): string {
+  if (count === 1) {
+    return "1 chat is still running in this profile. Switch anyway? It stops now and offers Continue when you switch back.";
+  }
+  return `${count} chats are still running in this profile. Switch anyway? They stop now and offer Continue when you switch back.`;
 }
 
 export function quitWhileBusyMessage(count: number): string {

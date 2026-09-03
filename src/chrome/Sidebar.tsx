@@ -104,6 +104,7 @@ import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { FileTree } from "./FileTree";
 import { HarnessIcon } from "./HarnessIcon";
 import { ProjectRail } from "./ProjectRail";
+import type { AppMode } from "../lib/workspace/appMode";
 import { RailAction } from "./RailAction";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { DevModeSlot, IconButton, TabVisitNav } from "./TitleBar";
@@ -197,6 +198,10 @@ type Props = {
   notesEnabled?: boolean;
   usageActive?: boolean;
   onToggleProjectRail?: () => void;
+  /** Work is in front: it brings its own left column, so this one stands down. */
+  workMode?: boolean;
+  mode?: AppMode;
+  onModeChange?: (mode: AppMode) => void;
   projectRailOpen?: boolean;
   unseenFinishedIds?: Set<string>;
   settingsOpen?: boolean;
@@ -204,6 +209,10 @@ type Props = {
   onOpenSettings?: () => void;
   onSelectSettingsSection?: (section: SettingsSectionId) => void;
   onCloseSettings?: () => void;
+  profileMenuOpen?: boolean;
+  onProfileMenuOpenChange?: (open: boolean) => void;
+  onSwitchProfile?: (profileId: string) => void;
+  onManageProfiles?: () => void;
   updateNotice?: InstalledUpdate | null;
   onOpenWhatsNew?: (version: string) => void;
   onDismissUpdate?: () => void;
@@ -265,6 +274,9 @@ function SidebarComponent({
   notesEnabled = true,
   usageActive = false,
   onToggleProjectRail,
+  workMode = false,
+  mode,
+  onModeChange,
   projectRailOpen = true,
   unseenFinishedIds: unseenFinishedIdsProp,
   settingsOpen = false,
@@ -272,6 +284,10 @@ function SidebarComponent({
   onOpenSettings,
   onSelectSettingsSection,
   onCloseSettings,
+  profileMenuOpen,
+  onProfileMenuOpenChange,
+  onSwitchProfile,
+  onManageProfiles,
   updateNotice = null,
   onOpenWhatsNew,
   onDismissUpdate,
@@ -1213,7 +1229,13 @@ function SidebarComponent({
   );
 
   return (
-    <div className={`flex h-full shrink-0 ${railVisible || sidebarVisible ? "" : "hidden"}`}>
+    <div
+      className={`flex h-full shrink-0 ${
+        // Settings is a coding-shell overlay and hangs its nav off the rail, so
+        // the rail comes back for it even when Work is the surface underneath.
+        !(workMode && !settingsOpen) && (railVisible || sidebarVisible) ? "" : "hidden"
+      }`}
+    >
       {railVisible && onSelectProject && onOpenProject ? (
         <ProjectRail
           cwd={cwd}
@@ -1237,6 +1259,8 @@ function SidebarComponent({
           onOpenUsage={onOpenUsage}
           usageActive={usageActive}
           onTogglePanel={onToggleProjectRail}
+          mode={mode}
+          onModeChange={onModeChange}
           onSelectProject={onSelectProject}
           onOpenProject={onOpenProject}
           onRemoveProject={onRemoveProject}
@@ -1245,6 +1269,10 @@ function SidebarComponent({
           onOpenSettings={onOpenSettings}
           onSelectSettingsSection={onSelectSettingsSection}
           onCloseSettings={onCloseSettings}
+          profileMenuOpen={profileMenuOpen}
+          onProfileMenuOpenChange={onProfileMenuOpenChange}
+          onSwitchProfile={onSwitchProfile}
+          onManageProfiles={onManageProfiles}
           updateNotice={updateNotice}
           onOpenWhatsNew={onOpenWhatsNew}
           onDismissUpdate={onDismissUpdate}

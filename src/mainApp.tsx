@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import App from "./App";
 import { handleQuitRequested, loadBootWorkspace } from "./lib/appLifecycle";
+import { bindActiveProfile, watchProfiles } from "./lib/profiles/profileStore";
 import { initSounds } from "./lib/sounds";
 import { consumeInstalledUpdate } from "./lib/updates/updateNotice";
 
@@ -32,24 +33,29 @@ function BootGate({ children }: { children: React.ReactNode }) {
 
 export function mountMainApp() {
   initSounds();
+  void watchProfiles();
   void listen("quit_requested", () => {
     void handleQuitRequested();
   });
 
-  void loadBootWorkspace().then(({ windowTransfer, resumed, history, historyCwd }) => {
-    const installedUpdate = windowTransfer ? null : consumeInstalledUpdate();
-    ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-      <React.StrictMode>
-        <BootGate>
-          <App
-            windowTransfer={windowTransfer}
-            resumed={resumed}
-            installedUpdate={installedUpdate}
-            history={history}
-            historyCwd={historyCwd}
-          />
-        </BootGate>
-      </React.StrictMode>,
-    );
-  });
+  // Nothing may read a session, note, or snapshot before the native stores are
+  // pointed at this window's profile.
+  void bindActiveProfile()
+    .then(loadBootWorkspace)
+    .then(({ windowTransfer, resumed, history, historyCwd }) => {
+      const installedUpdate = windowTransfer ? null : consumeInstalledUpdate();
+      ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+        <React.StrictMode>
+          <BootGate>
+            <App
+              windowTransfer={windowTransfer}
+              resumed={resumed}
+              installedUpdate={installedUpdate}
+              history={history}
+              historyCwd={historyCwd}
+            />
+          </BootGate>
+        </React.StrictMode>,
+      );
+    });
 }
