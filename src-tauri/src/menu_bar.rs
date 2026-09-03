@@ -9,6 +9,7 @@ const TRAY_ID: &str = "wavex-menu-bar";
 const AGENTS_CHANGED: &str = "menu_bar_agents_changed";
 const FOCUS_SESSION: &str = "focus_session_from_menu_bar";
 const ANSWER_APPROVAL: &str = "answer_approval_from_menu_bar";
+const STOP_SESSION: &str = "stop_session_from_activity";
 /// A summary long enough to decide on, short enough that a runaway renderer
 /// cannot grow the native cache without bound.
 const MAX_APPROVAL_LABEL: usize = 400;
@@ -206,9 +207,9 @@ pub fn remove_source(app: &AppHandle, label: &str) {
 
 fn publish(app: &AppHandle) {
     let agents = current_agents();
-    if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
-        let _ = window.emit(AGENTS_CHANGED, &agents);
-    }
+    // Every window listens: the macOS popover, and the Activity surface inside
+    // each app window, which shows the same cross-window list.
+    let _ = app.emit(AGENTS_CHANGED, &agents);
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let working = agents.iter().filter(|agent| !agent.done).count();
         let waiting: usize = agents.iter().map(|agent| agent.approvals.len()).sum();
@@ -285,6 +286,23 @@ pub fn menu_bar_answer_approval(
             request_id,
             decision,
         },
+    )
+    .map_err(|error| error.to_string())
+}
+
+/// Stop a turn from a surface that does not own it. Like answering an approval,
+/// this goes to the one window holding the session; the window decides what
+/// stopping means for that harness.
+#[tauri::command]
+pub fn menu_bar_stop_agent(app: AppHandle, session_id: String) -> Result<(), String> {
+    let label = owner_of(&session_id).ok_or("no window owns this session")?;
+    if app.get_webview_window(&label).is_none() {
+        return Err("the window that owns this session is gone".into());
+    }
+    app.emit_to(
+        EventTarget::webview_window(&label),
+        STOP_SESSION,
+        session_id,
     )
     .map_err(|error| error.to_string())
 }

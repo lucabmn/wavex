@@ -1,11 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ApprovalDecision } from "./harness";
-import { IS_MAC } from "./platform";
 import type { LiveAgent, LiveApproval } from "./liveAgents";
 
 export const MENU_BAR_AGENTS_CHANGED = "menu_bar_agents_changed";
 export const MENU_BAR_FOCUS_SESSION = "focus_session_from_menu_bar";
 export const MENU_BAR_ANSWER_APPROVAL = "answer_approval_from_menu_bar";
+export const ACTIVITY_STOP_SESSION = "stop_session_from_activity";
 
 /** An approval answered in the popover, routed back to the window that owns it. */
 export type MenuBarApprovalAnswer = {
@@ -22,9 +22,14 @@ export type MenuBarRequest = {
 
 let lastSnapshot = "";
 
-/** Publish only meaningful row changes, not every streamed transcript token. */
+/**
+ * Publish only meaningful row changes, not every streamed transcript token.
+ *
+ * Not macOS-only any more: the native store is what makes the list
+ * cross-window, and the Activity surface reads it on every platform. The tray
+ * icon it also feeds simply does not exist off macOS.
+ */
 export function publishMenuBarAgents(agents: LiveAgent[]): void {
-  if (!IS_MAC) return;
   const snapshot = JSON.stringify(agents);
   if (snapshot === lastSnapshot) return;
   lastSnapshot = snapshot;
@@ -82,4 +87,17 @@ export async function answerMenuBarApproval(
 
 export function focusMenuBarAgent(sessionId: string): void {
   void invoke("menu_bar_focus_agent", { sessionId }).catch(() => {});
+}
+
+/**
+ * Stop a turn from Activity. Resolves false when no window claims the session
+ * any more, which is the only case where the row cannot be acted on.
+ */
+export async function stopMenuBarAgent(sessionId: string): Promise<boolean> {
+  try {
+    await invoke("menu_bar_stop_agent", { sessionId });
+    return true;
+  } catch {
+    return false;
+  }
 }

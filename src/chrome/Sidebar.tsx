@@ -1,5 +1,6 @@
 import {
   BarChart,
+  Bot,
   Check,
   ChevronDown,
   ChevronRight,
@@ -193,10 +194,12 @@ type Props = {
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
   onOpenUsage?: () => void;
+  onOpenActivity?: () => void;
   onGoToFile?: () => void;
   searchActive?: boolean;
   inboxActive?: boolean;
   notesActive?: boolean;
+  activityActive?: boolean;
   notesEnabled?: boolean;
   usageActive?: boolean;
   onToggleProjectRail?: () => void;
@@ -271,10 +274,12 @@ function SidebarComponent({
   onOpenInbox,
   onOpenNotes,
   onOpenUsage,
+  onOpenActivity,
   onGoToFile,
   searchActive = false,
   inboxActive = false,
   notesActive = false,
+  activityActive = false,
   notesEnabled = true,
   usageActive = false,
   onToggleProjectRail,
@@ -428,6 +433,7 @@ function SidebarComponent({
     !inboxActive &&
     !notesActive &&
     !usageActive &&
+    !activityActive &&
     !settingsOpen &&
     inProject;
   const gitStatuses = useGitFileStatuses(gitRoot, open && tab === "files");
@@ -910,10 +916,12 @@ function SidebarComponent({
               onOpenInbox={onOpenInbox}
               onOpenNotes={notesEnabled ? onOpenNotes : undefined}
               onOpenUsage={onOpenUsage}
+              onOpenActivity={onOpenActivity}
               searchActive={searchActive}
               inboxActive={inboxActive}
               notesActive={notesActive}
               usageActive={usageActive}
+              activityActive={activityActive}
               inboxUnseen={inboxUnseen}
             />
           ) : null}
@@ -1264,6 +1272,8 @@ function SidebarComponent({
           notesActive={notesActive}
           onOpenUsage={onOpenUsage}
           usageActive={usageActive}
+          onOpenActivity={onOpenActivity}
+          activityActive={activityActive}
           onTogglePanel={onToggleProjectRail}
           mode={mode}
           onModeChange={onModeChange}
@@ -1301,9 +1311,11 @@ function SidebarProjectPicker({
   onOpenInbox,
   onOpenNotes,
   onOpenUsage,
+  onOpenActivity,
   searchActive = false,
   inboxActive = false,
   notesActive = false,
+  activityActive = false,
   usageActive = false,
   inboxUnseen = false,
 }: {
@@ -1316,9 +1328,11 @@ function SidebarProjectPicker({
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
   onOpenUsage?: () => void;
+  onOpenActivity?: () => void;
   searchActive?: boolean;
   inboxActive?: boolean;
   notesActive?: boolean;
+  activityActive?: boolean;
   usageActive?: boolean;
   inboxUnseen?: boolean;
 }) {
@@ -1395,6 +1409,11 @@ function SidebarProjectPicker({
         {onOpenUsage ? (
           <IconButton label="Usage" active={usageActive} onClick={onOpenUsage}>
             <BarChart className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
+        ) : null}
+        {onOpenActivity ? (
+          <IconButton label="Activity" active={activityActive} onClick={onOpenActivity}>
+            <Bot className="size-3.5" strokeWidth={1.75} />
           </IconButton>
         ) : null}
       </div>
