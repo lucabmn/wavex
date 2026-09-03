@@ -9,6 +9,7 @@ import {
   GitPullRequestClosed,
   GitPullRequestDraft,
   Inbox,
+  CheckCheck,
   ListFilter,
   LoaderCircle,
   RefreshCw,
@@ -63,7 +64,12 @@ import {
 import { projectName } from "../lib/paths";
 import { IS_MAC } from "../lib/platform";
 import type { RecentProject } from "../lib/recents";
-import { isInboxEntryUnseen, markInboxItemSeen, useInboxSeenTick } from "../lib/inbox/inboxSeen";
+import {
+  isInboxEntryUnseen,
+  markInboxItemSeen,
+  markInboxItemsSeen,
+  useInboxSeenTick,
+} from "../lib/inbox/inboxSeen";
 import {
   loadTabGroupColors,
   loadTabGroupCustomColors,
@@ -284,6 +290,16 @@ export function InboxView({
     [activeFilters, items, searchInput],
   );
 
+  const inboxSeenTick = useInboxSeenTick();
+  const seenEntries = useMemo(
+    () => items.map((item) => ({ key: inboxItemKey(item), updatedAt: item.updatedAt })),
+    [items],
+  );
+  const hasUnseen = useMemo(
+    () => seenEntries.some(isInboxEntryUnseen),
+    [inboxSeenTick, seenEntries],
+  );
+
   const searchNarrowed = searchInput.trim().length > 0;
   const narrowedByUser = searchNarrowed || filtersActive;
   const sourceError = providerErrors.github ?? null;
@@ -351,6 +367,16 @@ export function InboxView({
           }`}
         >
           <ListFilter className="size-3" strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          title="Mark all as read"
+          aria-label="Mark all as read"
+          disabled={!hasUnseen}
+          onClick={() => markInboxItemsSeen(seenEntries)}
+          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-content/45"
+        >
+          <CheckCheck className="size-3.5" strokeWidth={1.75} />
         </button>
         <button
           type="button"

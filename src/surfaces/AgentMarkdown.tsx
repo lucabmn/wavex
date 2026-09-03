@@ -6,11 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ComponentProps,
   type ReactNode,
 } from "react";
 import { harden } from "rehype-harden";
+import { copyText } from "../lib/clipboard";
 import { INBOX_MEDIA_PREFIXES, isInboxMediaUrl } from "../lib/inbox/inboxMedia";
 import { InboxMedia } from "./InboxMedia";
 import {
@@ -220,6 +222,7 @@ function MarkdownCode({ children, className, node, ...props }: MarkdownCodeProps
   }
   const iconName = fence.fileName ?? (fence.language ? fileNameForLanguage(fence.language) : "");
   const lineNumbers = !/\bnoLineNumbers\b/.test(meta);
+  const code = textContent(children);
 
   return (
     <div className="markdown-code-shell">
@@ -229,15 +232,55 @@ function MarkdownCode({ children, className, node, ...props }: MarkdownCodeProps
         </span>
       ) : null}
       {fence.filePath ? <MarkdownCodePath path={fence.filePath} /> : null}
+      <CodeCopyButton code={code} />
       <CodeBlock
         className={className}
-        code={textContent(children)}
+        code={code}
         isIncomplete={incomplete}
         language={fence.language}
         lineNumbers={lineNumbers}
         startLine={fence.startLine}
       />
     </div>
+  );
+}
+
+function CodeCopyButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  useEffect(() => {
+    setCopied(false);
+    return () => {
+      if (timer.current != null) window.clearTimeout(timer.current);
+    };
+  }, [code]);
+
+  return (
+    <button
+      type="button"
+      title={copied ? "Copied" : "Copy code"}
+      aria-label={copied ? "Copied" : "Copy code"}
+      className={`markdown-code-copy ${copied ? "is-copied" : ""}`}
+      onClick={() => {
+        void copyText(code).then(
+          () => {
+            setCopied(true);
+            if (timer.current != null) window.clearTimeout(timer.current);
+            timer.current = window.setTimeout(() => setCopied(false), 1500);
+          },
+          () => {},
+        );
+      }}
+    >
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <g className="markdown-code-copy-pages">
+          <path d="M12 4H6a2 2 0 0 0-2 2v6" />
+          <rect x="7" y="7" width="9" height="9" rx="1.5" />
+        </g>
+        <path className="markdown-code-copy-check" d="M4.5 10.5 8.2 14 15.5 6.5" />
+      </svg>
+    </button>
   );
 }
 
@@ -392,6 +435,7 @@ function MermaidBlock({ code, incomplete }: { code: string; incomplete: boolean 
         <span className="markdown-code-icon" aria-hidden="true">
           <FileTypeIcon name="diagram.mmd" isDir={false} />
         </span>
+        <CodeCopyButton code={code} />
         <CodeBlock code={code} isIncomplete={incomplete} language="mermaid" lineNumbers={false} />
       </div>
     );

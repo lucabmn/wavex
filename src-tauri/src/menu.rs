@@ -17,11 +17,11 @@ pub fn dispatch(app: &AppHandle, id: &str) {
             let _ = crate::window::open_new_window(app);
         }
         "quit" => crate::window::request_quit(app),
-        "new_tab" | "close_tab" | "next_tab" | "prev_tab" | "back_tab" | "forward_tab"
-        | "split_right" | "split_down" | "focus_left" | "focus_right" | "focus_up"
-        | "focus_down" | "toggle_sidebar" | "sidebar_opacity" | "open_project" | "go_to_file"
-        | "open_search" | "open_inbox" | "open_notes" | "open_usage" | "find_in_project"
-        | "find" | "new_terminal" | "new_terminal_tab" | "toggle_terminal"
+        "new_tab" | "close_tab" | "close_other_tabs" | "next_tab" | "prev_tab" | "back_tab"
+        | "forward_tab" | "split_right" | "split_down" | "focus_left" | "focus_right"
+        | "focus_up" | "focus_down" | "toggle_sidebar" | "sidebar_opacity" | "open_project"
+        | "go_to_file" | "open_search" | "open_inbox" | "open_notes" | "open_usage"
+        | "find_in_project" | "find" | "new_terminal" | "new_terminal_tab" | "toggle_terminal"
         | "open_model_picker" | "open_settings" | "check_for_updates" => {
             let _ = app.emit(id, ());
         }
@@ -71,6 +71,9 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .build(app)?;
     let close_tab = MenuItemBuilder::with_id("close_tab", "Close Pane")
         .accelerator("CmdOrCtrl+W")
+        .build(app)?;
+    let close_other_tabs = MenuItemBuilder::with_id("close_other_tabs", "Close Other Tabs")
+        .accelerator("CmdOrCtrl+Alt+T")
         .build(app)?;
     let next_tab = MenuItemBuilder::with_id("next_tab", "Next Tab")
         .accelerator("CmdOrCtrl+Shift+]")
@@ -127,6 +130,7 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&split_right)
         .item(&split_down)
         .item(&close_tab)
+        .item(&close_other_tabs)
         .separator()
         .item(&prev_tab)
         .item(&next_tab)
