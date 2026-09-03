@@ -290,7 +290,12 @@ function InboxComment({
       </header>
       {hasBody ? (
         <div className={nested ? "mt-2" : "px-3 py-2.5"}>
-          <AgentMarkdown className="inbox-comment-md" text={comment.body} cwd={cwd} />
+          <AgentMarkdown
+            className="inbox-comment-md"
+            text={comment.body}
+            cwd={cwd}
+            allowRemoteMedia
+          />
         </div>
       ) : null}
       {hasReplies ? (

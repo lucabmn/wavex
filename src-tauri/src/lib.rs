@@ -4,6 +4,7 @@ mod checkpoint;
 mod cursor_store;
 mod fs;
 mod harness;
+mod inbox_media;
 #[cfg(target_os = "macos")]
 mod macos;
 mod menu;
@@ -196,6 +197,7 @@ pub fn run() {
             fs::git_github_work_item_thread,
             fs::git_github_work_item_comment,
             fs::git_github_pr_diff,
+            inbox_media::fetch_inbox_media,
             fs::git_branches,
             fs::git_checkout,
             fs::git_create_branch,
