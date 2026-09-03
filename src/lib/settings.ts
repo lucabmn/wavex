@@ -1,4 +1,4 @@
-import { ALT, IS_MAC, MOD, SHIFT } from "./platform";
+import { APP_COMMANDS } from "./commands";
 import { profileStorage } from "./profiles/profileStorage";
 
 const SECTION_KEY = "wavex.settingsSection";
@@ -237,8 +237,6 @@ export function saveClaudeHooks(value: boolean) {
   }
 }
 
-const CTRL = IS_MAC ? "⌃" : "Ctrl+";
-
 export type KeybindingRow = {
   command: string;
   keys: string;
@@ -246,49 +244,12 @@ export type KeybindingRow = {
 };
 
 /**
- * Mirrors the bindings we actually handle: the native menu accelerators in
- * `src-tauri/src/menu.rs`, `tabCommand`, and the window key handler in App.
+ * The shortcut half of the command catalog. Commands with no key never reach
+ * this page; they are still reachable by name from the command palette.
  */
-export const KEYBINDINGS: KeybindingRow[] = [
-  { command: "App: Search", keys: `${MOD}K`, when: "Always" },
-  { command: "App: Go to File", keys: `${MOD}P`, when: "Always" },
-  { command: "App: Find in Files", keys: `${MOD}${SHIFT}F`, when: "Always" },
-  { command: "App: Open Project", keys: `${MOD}O`, when: "Always" },
-  { command: "App: New Window", keys: `${MOD}${SHIFT}N`, when: "Always" },
-  { command: "App: Toggle Sidebar", keys: `${MOD}B`, when: "Always" },
-  { command: "App: Switch Model", keys: `${MOD}.`, when: "Always" },
-  { command: "App: Switch Profile", keys: `${MOD}${SHIFT}P`, when: "Always" },
-  { command: "Tab: New", keys: `${MOD}T`, when: "Always" },
-  { command: "Tab: Close Others", keys: `${MOD}${ALT}T`, when: "Always" },
-  { command: "Tab: Next", keys: `${MOD}${SHIFT}]`, when: "Always" },
-  { command: "Tab: Previous", keys: `${MOD}${SHIFT}[`, when: "Always" },
-  { command: "Tab: Cycle Next", keys: `${CTRL}Tab`, when: "Always" },
-  {
-    command: "Tab: Cycle Previous",
-    keys: `${CTRL}${SHIFT}Tab`,
-    when: "Always",
-  },
-  { command: "Tab: Back", keys: `${MOD}[`, when: "Always" },
-  { command: "Tab: Forward", keys: `${MOD}]`, when: "Always" },
-  { command: "Tab: Activate 1–8", keys: `${MOD}1 … ${MOD}8`, when: "Always" },
-  { command: "Tab: Activate Last", keys: `${MOD}9`, when: "Always" },
-  { command: "Pane: Close", keys: `${MOD}W`, when: "Always" },
-  { command: "Pane: Split Right", keys: `${MOD}D`, when: "!editorFocus" },
-  {
-    command: "Pane: Split Down",
-    keys: `${MOD}${SHIFT}D`,
-    when: "!editorFocus",
-  },
-  { command: "Pane: Focus Left", keys: `${MOD}${ALT}←`, when: "Always" },
-  { command: "Pane: Focus Right", keys: `${MOD}${ALT}→`, when: "Always" },
-  { command: "Pane: Focus Up", keys: `${MOD}${ALT}↑`, when: "Always" },
-  { command: "Pane: Focus Down", keys: `${MOD}${ALT}↓`, when: "Always" },
-  { command: "Terminal: New", keys: `${MOD}\``, when: "Always" },
-  { command: "Terminal: New Tab", keys: `${MOD}${SHIFT}\``, when: "Always" },
-  { command: "Terminal: Toggle Dock", keys: `${MOD}J`, when: "Always" },
-  { command: "Editor: Find", keys: `${MOD}F`, when: "editorFocus" },
-  { command: "Editor: Replace", keys: `${MOD}${ALT}F`, when: "editorFocus" },
-];
+export const KEYBINDINGS: KeybindingRow[] = APP_COMMANDS.filter((command) => !!command.keys).map(
+  (command) => ({ command: command.label, keys: command.keys as string, when: command.when }),
+);
 
 export function filterKeybindings(rows: KeybindingRow[], query: string): KeybindingRow[] {
   const needle = query.trim().toLowerCase();
