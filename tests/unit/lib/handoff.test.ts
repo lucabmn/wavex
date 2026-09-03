@@ -16,6 +16,7 @@ import {
   hasAgentBrief,
   hasSessionEdits,
   hasUnsettledHandoff,
+  isPreparingHandoff,
   isHandoffWorthSummarizing,
   parseHandoffBrief,
   pendingHandoff,
@@ -421,6 +422,17 @@ describe("handoff review", () => {
   it("ignores an approval when nothing is under review", () => {
     const session = appendPreparingHandoff(longSession(), "cursor", "claude");
     expect(approveHandoff(session, "nope")).toBe(session);
+  });
+});
+
+describe("stranded handoff", () => {
+  it("settles a preparing divider so the session keeps accepting messages", () => {
+    const stranded = appendPreparingHandoff(longSession(), "cursor", "claude");
+    expect(isPreparingHandoff(stranded)).toBe(true);
+    const settled = completeHandoff(stranded, buildDeterministicHandoff(stranded));
+    expect(isPreparingHandoff(settled)).toBe(false);
+    // Still queued, so the next message carries the recap the dead turn lost.
+    expect(pendingHandoff(settled)?.text).toContain("ship the retry banner");
   });
 });
 

@@ -2700,7 +2700,19 @@ export default function App({
       if (!resumeHandoff && !text.trim() && attachments.length === 0 && !noteCard && !handoffCard) {
         return;
       }
-      if (isPreparingHandoff(current)) return;
+      if (isPreparingHandoff(current)) {
+        // Busy means the briefing really is being written. Not busy means a
+        // previous turn died before settling it, and returning here would make
+        // the session refuse every message from then on.
+        if (current.busy) return;
+        const settled = sessionsRef.current.map((s) =>
+          s.id === sessionId ? completeHandoff(s, buildDeterministicHandoff(s)) : s,
+        );
+        sessionsRef.current = settled;
+        setSessions(settled);
+        submitTurn(sessionId, text, attachments, options);
+        return;
+      }
       const review = handoffUnderReview(current);
       if (review && !resumeHandoff) {
         // Sending while a briefing is on screen accepts it as it stands. The
@@ -3013,8 +3025,10 @@ export default function App({
         } catch (error: unknown) {
           if (turnGen.current.get(sessionId) !== gen) return;
           if (wrap) revealHandoff(wrap.text);
-          const message =
-            error instanceof Error ? error.message : `${current.harness} adapter failed`;
+          // `invoke` rejects with a plain string, so `instanceof Error` alone
+          // threw the only useful part of the failure away.
+          const reason = error instanceof Error ? error.message : String(error ?? "").trim();
+          const message = reason || `${current.harness} adapter failed`;
           enqueueHarnessEvent(sessionId, {
             type: "session.error",
             message,
@@ -3024,7 +3038,17 @@ export default function App({
           // oxlint-disable-next-line no-unsafe-finally
           if (turnGen.current.get(sessionId) !== gen) return;
           flushHarnessEvents();
-          setSessions((prev) => prev.map((s) => (s.id === sessionId ? stopStreaming(s) : s)));
+          setSessions((prev) =>
+            prev.map((s) => {
+              if (s.id !== sessionId) return s;
+              // The turn is over either way, so the divider cannot stay on
+              // "Preparing a handoff" waiting for a reveal that never comes.
+              const settled = isPreparingHandoff(s)
+                ? completeHandoff(s, wrap?.text || buildDeterministicHandoff(s))
+                : s;
+              return stopStreaming(settled);
+            }),
+          );
           playCue("turnFinished");
           await syncSessionCheckpoint(sessionId, workCwd).catch(() => undefined);
           notifyReviewChanged(sessionId);
