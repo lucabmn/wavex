@@ -6,6 +6,7 @@ import {
   gitFileDiff,
   gitStageContents,
   gitStageFile,
+  gitUnstageFile,
   notifyGitChanged,
   subscribeGitChanged,
   type GitChangedFile,
@@ -135,6 +136,7 @@ export function WorkingTreeDiff({ cwd, focusPath }: Props) {
         deletions: unified?.deletions ?? file.deletions,
         blocks: unchanged ? [] : (unified?.blocks ?? []),
         canStage: file.unstaged,
+        canUnstage: file.staged,
         canDiscard: file.unstaged,
         canStageHunk: file.unstaged && !loaded?.binary && !loaded?.tooLarge,
       };
@@ -145,6 +147,16 @@ export function WorkingTreeDiff({ cwd, focusPath }: Props) {
     setBusyId(id);
     try {
       await gitStageFile(cwd, id);
+      notifyGitChanged();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const onUnstageFile = async (id: string) => {
+    setBusyId(id);
+    try {
+      await gitUnstageFile(cwd, id);
       notifyGitChanged();
     } finally {
       setBusyId(null);
@@ -206,6 +218,7 @@ export function WorkingTreeDiff({ cwd, focusPath }: Props) {
       busyId={busyId}
       totals={totals}
       onStageFile={onStageFile}
+      onUnstageFile={onUnstageFile}
       onDiscardFile={onDiscardFile}
       onStageHunk={onStageHunk}
     />
