@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { IS_MAC } from "./platform";
+import { profileStorage } from "./profiles/profileStorage";
 
 const THEME_HUE_KEY = "wavex.themeHue";
 const THEME_SATURATION_KEY = "wavex.themeSaturation";
@@ -64,7 +65,7 @@ function clamp(value: number, min: number, max: number) {
 
 function readNumber(key: string): number | null {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = profileStorage.getItem(key);
     if (raw == null) return null;
     const parsed = Number(raw);
     return Number.isFinite(parsed) ? parsed : null;
@@ -75,7 +76,7 @@ function readNumber(key: string): number | null {
 
 function writeNumber(key: string, value: number) {
   try {
-    localStorage.setItem(key, String(value));
+    profileStorage.setItem(key, String(value));
   } catch {
     // private mode / quota
   }
@@ -83,7 +84,7 @@ function writeNumber(key: string, value: number) {
 
 function readFlag(key: string): boolean | null {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = profileStorage.getItem(key);
     if (raw == null) return null;
     return raw === "1" || raw === "true";
   } catch {
@@ -93,7 +94,7 @@ function readFlag(key: string): boolean | null {
 
 function writeFlag(key: string, value: boolean) {
   try {
-    localStorage.setItem(key, value ? "1" : "0");
+    profileStorage.setItem(key, value ? "1" : "0");
   } catch {
     // private mode / quota
   }
@@ -150,7 +151,7 @@ function isThemePreference(value: unknown): value is ThemePreference {
 
 export function loadThemePreference(): ThemePreference {
   try {
-    const raw = localStorage.getItem(SCHEME_KEY);
+    const raw = profileStorage.getItem(SCHEME_KEY);
     return isThemePreference(raw) ? raw : THEME_PREFERENCE_DEFAULT;
   } catch {
     return THEME_PREFERENCE_DEFAULT;
@@ -159,7 +160,7 @@ export function loadThemePreference(): ThemePreference {
 
 export function saveThemePreference(value: ThemePreference) {
   try {
-    localStorage.setItem(SCHEME_KEY, value);
+    profileStorage.setItem(SCHEME_KEY, value);
   } catch {
     // private mode / quota
   }
@@ -260,7 +261,7 @@ export function saveProjectRailOpen(value: boolean) {
 
 export function loadSidebarTabOrder(): SidebarTabId[] {
   try {
-    const raw = localStorage.getItem(SIDEBAR_TAB_ORDER_KEY);
+    const raw = profileStorage.getItem(SIDEBAR_TAB_ORDER_KEY);
     if (!raw) return [...DEFAULT_SIDEBAR_TAB_ORDER];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [...DEFAULT_SIDEBAR_TAB_ORDER];
@@ -276,7 +277,7 @@ export function loadSidebarTabOrder(): SidebarTabId[] {
 
 export function saveSidebarTabOrder(order: SidebarTabId[]) {
   try {
-    localStorage.setItem(SIDEBAR_TAB_ORDER_KEY, JSON.stringify(order));
+    profileStorage.setItem(SIDEBAR_TAB_ORDER_KEY, JSON.stringify(order));
   } catch {
     // private mode / quota
   }
@@ -305,7 +306,7 @@ function isTranscriptLayout(value: unknown): value is TranscriptLayout {
 
 export function loadTranscriptLayout(): TranscriptLayout {
   try {
-    const raw = localStorage.getItem(TRANSCRIPT_LAYOUT_KEY);
+    const raw = profileStorage.getItem(TRANSCRIPT_LAYOUT_KEY);
     return isTranscriptLayout(raw) ? raw : TRANSCRIPT_LAYOUT_DEFAULT;
   } catch {
     return TRANSCRIPT_LAYOUT_DEFAULT;
@@ -315,7 +316,7 @@ export function loadTranscriptLayout(): TranscriptLayout {
 export function saveTranscriptLayout(value: TranscriptLayout) {
   const next = isTranscriptLayout(value) ? value : TRANSCRIPT_LAYOUT_DEFAULT;
   try {
-    localStorage.setItem(TRANSCRIPT_LAYOUT_KEY, next);
+    profileStorage.setItem(TRANSCRIPT_LAYOUT_KEY, next);
   } catch {
     // private mode / quota
   }

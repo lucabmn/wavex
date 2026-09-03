@@ -5,6 +5,7 @@ import {
   Keyboard,
   Palette,
   SlidersHorizontal,
+  Users,
   type IconComponent,
 } from "./icons";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -12,6 +13,7 @@ import { SETTINGS_SECTIONS, type SettingsSectionId } from "../lib/settings";
 
 const SECTION_ICONS: Record<SettingsSectionId, IconComponent> = {
   general: SlidersHorizontal,
+  profiles: Users,
   appearance: Palette,
   keybindings: Keyboard,
   providers: Bot,

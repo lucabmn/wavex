@@ -204,6 +204,10 @@ type Props = {
   onOpenSettings?: () => void;
   onSelectSettingsSection?: (section: SettingsSectionId) => void;
   onCloseSettings?: () => void;
+  profileMenuOpen?: boolean;
+  onProfileMenuOpenChange?: (open: boolean) => void;
+  onSwitchProfile?: (profileId: string) => void;
+  onManageProfiles?: () => void;
   updateNotice?: InstalledUpdate | null;
   onOpenWhatsNew?: (version: string) => void;
   onDismissUpdate?: () => void;
@@ -272,6 +276,10 @@ function SidebarComponent({
   onOpenSettings,
   onSelectSettingsSection,
   onCloseSettings,
+  profileMenuOpen,
+  onProfileMenuOpenChange,
+  onSwitchProfile,
+  onManageProfiles,
   updateNotice = null,
   onOpenWhatsNew,
   onDismissUpdate,
@@ -1245,6 +1253,10 @@ function SidebarComponent({
           onOpenSettings={onOpenSettings}
           onSelectSettingsSection={onSelectSettingsSection}
           onCloseSettings={onCloseSettings}
+          profileMenuOpen={profileMenuOpen}
+          onProfileMenuOpenChange={onProfileMenuOpenChange}
+          onSwitchProfile={onSwitchProfile}
+          onManageProfiles={onManageProfiles}
           updateNotice={updateNotice}
           onOpenWhatsNew={onOpenWhatsNew}
           onDismissUpdate={onDismissUpdate}

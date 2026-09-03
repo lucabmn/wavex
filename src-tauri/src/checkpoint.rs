@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
@@ -15,18 +16,36 @@ use crate::fs::{
 
 const MAX_SNAPSHOT_FILES: usize = 500;
 
+/// Clones share one root so a profile switch moves every in-flight caller to
+/// the new profile's checkpoints instead of leaving stale copies behind.
 #[derive(Clone)]
 pub struct CheckpointStore {
-    root: PathBuf,
+    root: Arc<Mutex<PathBuf>>,
 }
 
 impl CheckpointStore {
     fn new(root: PathBuf) -> Self {
-        Self { root }
+        Self {
+            root: Arc::new(Mutex::new(root)),
+        }
+    }
+
+    /// A poisoned lock still holds the real root. Defaulting to an empty path
+    /// here would turn every checkpoint write into a relative one against the
+    /// process working directory, which is the user's checkout.
+    fn root(&self) -> PathBuf {
+        self.root
+            .lock()
+            .unwrap_or_else(|err| err.into_inner())
+            .clone()
+    }
+
+    pub fn set_root(&self, root: PathBuf) {
+        *self.root.lock().unwrap_or_else(|err| err.into_inner()) = root;
     }
 
     fn session_dir(&self, session_id: &str) -> PathBuf {
-        self.root.join(session_id)
+        self.root().join(session_id)
     }
 
     fn ensure(&self, session_id: &str, cwd: &str) -> Result<(), String> {
@@ -253,7 +272,7 @@ impl CheckpointStore {
     /// Paths already claimed by another live session in the same project.
     fn foreign_touched_paths(&self, cwd: &str, except_session_id: &str) -> HashSet<String> {
         let mut paths = HashSet::new();
-        let entries = match std::fs::read_dir(&self.root) {
+        let entries = match std::fs::read_dir(self.root()) {
             Ok(entries) => entries,
             Err(_) => return paths,
         };
@@ -319,9 +338,8 @@ pub struct CheckpointStatus {
 
 pub fn init(app: &AppHandle) -> Result<(), String> {
     let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?
+        .state::<crate::profiles::ProfilePaths>()
+        .data_dir()?
         .join("checkpoints");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     app.manage(CheckpointStore::new(dir));

@@ -55,6 +55,7 @@ export type BootWorkspace = {
 let resumedPromise: Promise<ResumedWorkspace | null> | null = null;
 let bootPromise: Promise<BootWorkspace> | null = null;
 let quitting = false;
+let switchingProfile = false;
 let quitDialogOpen = false;
 let bootingResumed: ResumedWorkspace | null = null;
 let liveWorkspace: {
@@ -68,6 +69,19 @@ let liveWorkspace: {
 
 export function isAppQuitting(): boolean {
   return quitting;
+}
+
+/**
+ * True once this window has handed its workspace to the profile it is leaving.
+ * The native stores swap under it from that moment, so nothing may persist
+ * again until the reload lands.
+ */
+export function isProfileSwitching(): boolean {
+  return switchingProfile;
+}
+
+export function beginProfileSwitch() {
+  switchingProfile = true;
 }
 
 export function setQuitWorkspace(

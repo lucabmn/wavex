@@ -1,8 +1,15 @@
 import { ALT, IS_MAC, MOD, SHIFT } from "./platform";
+import { profileStorage } from "./profiles/profileStorage";
 
 const SECTION_KEY = "wavex.settingsSection";
 
-export type SettingsSectionId = "general" | "appearance" | "keybindings" | "providers" | "archive";
+export type SettingsSectionId =
+  | "general"
+  | "profiles"
+  | "appearance"
+  | "keybindings"
+  | "providers"
+  | "archive";
 
 export const SETTINGS_SECTIONS: {
   id: SettingsSectionId;
@@ -13,6 +20,11 @@ export const SETTINGS_SECTIONS: {
     id: "general",
     label: "General",
     description: "App-wide behavior and the build you are running.",
+  },
+  {
+    id: "profiles",
+    label: "Profiles",
+    description: "Separate identities inside one wavex, each with its own workspace.",
   },
   {
     id: "appearance",
@@ -52,7 +64,7 @@ export function settingsSectionDescription(id: SettingsSectionId): string {
 
 export function loadSettingsSection(): SettingsSectionId {
   try {
-    const raw = localStorage.getItem(SECTION_KEY);
+    const raw = profileStorage.getItem(SECTION_KEY);
     return isSettingsSectionId(raw) ? raw : SETTINGS_SECTION_DEFAULT;
   } catch {
     return SETTINGS_SECTION_DEFAULT;
@@ -61,7 +73,7 @@ export function loadSettingsSection(): SettingsSectionId {
 
 export function saveSettingsSection(id: SettingsSectionId) {
   try {
-    localStorage.setItem(SECTION_KEY, id);
+    profileStorage.setItem(SECTION_KEY, id);
   } catch {
     // private mode / quota
   }
@@ -76,7 +88,7 @@ export const COMPOSER_RUNNER_CHANGE_EVENT = "wavex:composer-runner-change";
 
 export function loadComposerRunner(): boolean {
   try {
-    const raw = localStorage.getItem(COMPOSER_RUNNER_KEY);
+    const raw = profileStorage.getItem(COMPOSER_RUNNER_KEY);
     if (raw == null) return COMPOSER_RUNNER_DEFAULT;
     return raw === "1" || raw === "true";
   } catch {
@@ -86,7 +98,7 @@ export function loadComposerRunner(): boolean {
 
 export function saveComposerRunner(value: boolean) {
   try {
-    localStorage.setItem(COMPOSER_RUNNER_KEY, value ? "1" : "0");
+    profileStorage.setItem(COMPOSER_RUNNER_KEY, value ? "1" : "0");
   } catch {
     // private mode / quota
   }
@@ -103,7 +115,7 @@ export const NOTES_ENABLED_CHANGE_EVENT = "wavex:notes-enabled-change";
 
 export function loadNotesEnabled(): boolean {
   try {
-    const raw = localStorage.getItem(NOTES_ENABLED_KEY);
+    const raw = profileStorage.getItem(NOTES_ENABLED_KEY);
     if (raw == null) return NOTES_ENABLED_DEFAULT;
     return raw === "1" || raw === "true";
   } catch {
@@ -113,7 +125,7 @@ export function loadNotesEnabled(): boolean {
 
 export function saveNotesEnabled(value: boolean) {
   try {
-    localStorage.setItem(NOTES_ENABLED_KEY, value ? "1" : "0");
+    profileStorage.setItem(NOTES_ENABLED_KEY, value ? "1" : "0");
   } catch {
     // private mode / quota
   }
@@ -136,7 +148,7 @@ export const LIVE_AGENTS_ENABLED_CHANGE_EVENT = "wavex:live-agents-enabled-chang
 
 export function loadLiveAgentsEnabled(): boolean {
   try {
-    const raw = localStorage.getItem(LIVE_AGENTS_ENABLED_KEY);
+    const raw = profileStorage.getItem(LIVE_AGENTS_ENABLED_KEY);
     if (raw == null) return LIVE_AGENTS_ENABLED_DEFAULT;
     return raw === "1" || raw === "true";
   } catch {
@@ -146,7 +158,7 @@ export function loadLiveAgentsEnabled(): boolean {
 
 export function saveLiveAgentsEnabled(value: boolean) {
   try {
-    localStorage.setItem(LIVE_AGENTS_ENABLED_KEY, value ? "1" : "0");
+    profileStorage.setItem(LIVE_AGENTS_ENABLED_KEY, value ? "1" : "0");
   } catch {
     // private mode / quota
   }
@@ -170,7 +182,7 @@ export const CLAUDE_HOOKS_DEFAULT = true;
 
 export function loadClaudeHooks(): boolean {
   try {
-    const raw = localStorage.getItem(CLAUDE_HOOKS_KEY);
+    const raw = profileStorage.getItem(CLAUDE_HOOKS_KEY);
     if (raw == null) return CLAUDE_HOOKS_DEFAULT;
     return raw === "1" || raw === "true";
   } catch {
@@ -180,7 +192,7 @@ export function loadClaudeHooks(): boolean {
 
 export function saveClaudeHooks(value: boolean) {
   try {
-    localStorage.setItem(CLAUDE_HOOKS_KEY, value ? "1" : "0");
+    profileStorage.setItem(CLAUDE_HOOKS_KEY, value ? "1" : "0");
   } catch {
     // private mode / quota
   }
@@ -206,6 +218,7 @@ export const KEYBINDINGS: KeybindingRow[] = [
   { command: "App: New Window", keys: `${MOD}${SHIFT}N`, when: "Always" },
   { command: "App: Toggle Sidebar", keys: `${MOD}B`, when: "Always" },
   { command: "App: Switch Model", keys: `${MOD}.`, when: "Always" },
+  { command: "App: Switch Profile", keys: `${MOD}${SHIFT}P`, when: "Always" },
   { command: "Tab: New", keys: `${MOD}T`, when: "Always" },
   { command: "Tab: Next", keys: `${MOD}${SHIFT}]`, when: "Always" },
   { command: "Tab: Previous", keys: `${MOD}${SHIFT}[`, when: "Always" },

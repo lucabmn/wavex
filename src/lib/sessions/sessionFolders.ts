@@ -4,6 +4,7 @@ import type { SessionSummary } from "./sessionStore";
 import { normalizeProjectPath } from "../recents";
 import { orderByIds } from "../reorder";
 import { TAB_GROUP_COLORS } from "../workspace/tabGroups";
+import { profileStorage } from "../profiles/profileStorage";
 
 const KEY = "wavex.sessionFolders";
 
@@ -349,7 +350,7 @@ export function saveSessionFolders(cwd: string, folders: SessionFolder[]): void 
     const store = parseStore();
     if (folders.length === 0) delete store[key];
     else store[key] = folders;
-    localStorage.setItem(KEY, JSON.stringify(store));
+    profileStorage.setItem(KEY, JSON.stringify(store));
   } catch {
     // private mode / quota
   }
@@ -362,7 +363,7 @@ function storageKey(cwd: string): string | null {
 
 function parseStore(): Record<string, SessionFolder[]> {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = profileStorage.getItem(KEY);
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

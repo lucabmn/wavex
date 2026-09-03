@@ -55,6 +55,18 @@ impl SessionStore {
         })
     }
 
+    /// Points the store at another profile's database. In-flight callers block
+    /// on the same mutex, so no query straddles the swap.
+    pub fn reopen(&self, path: PathBuf) -> Result<(), String> {
+        let next = Self::open(path)?;
+        let mut conn = self.lock_conn()?;
+        *conn = next
+            .conn
+            .into_inner()
+            .map_err(|_| "Session store is locked")?;
+        Ok(())
+    }
+
     pub(crate) fn lock_conn(&self) -> Result<std::sync::MutexGuard<'_, Connection>, String> {
         self.conn
             .lock()
@@ -63,7 +75,7 @@ impl SessionStore {
 }
 
 pub fn init(app: &AppHandle) -> Result<(), String> {
-    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let data_dir = app.state::<crate::profiles::ProfilePaths>().data_dir()?;
     let store = SessionStore::open(data_dir.join("wavex.db"))?;
     app.manage(store);
     Ok(())

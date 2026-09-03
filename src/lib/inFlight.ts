@@ -52,6 +52,13 @@ export function inFlightRefs(sessions: Session[], tabs: WorkspaceTab[]): InFligh
   return refs;
 }
 
+export function profileSwitchWhileBusyMessage(count: number): string {
+  if (count === 1) {
+    return "1 chat is still running in this profile. Switch anyway? It stops now and offers Continue when you switch back.";
+  }
+  return `${count} chats are still running in this profile. Switch anyway? They stop now and offer Continue when you switch back.`;
+}
+
 export function quitWhileBusyMessage(count: number): string {
   if (count === 1) {
     return "1 chat is still running. Quit anyway? It will resume when you reopen wavex.";
