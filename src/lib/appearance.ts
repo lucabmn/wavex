@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { IS_MAC } from "./platform";
+import { HAS_NATIVE_GLASS, IS_MAC } from "./platform";
 import { profileStorage } from "./profiles/profileStorage";
 
 const THEME_HUE_KEY = "wavex.themeHue";
@@ -137,6 +137,7 @@ export function applyThemeTint(hue: number, saturation: number) {
 
 export function initAppearance() {
   document.documentElement.classList.toggle("is-mac", IS_MAC);
+  document.documentElement.classList.toggle("has-native-glass", HAS_NATIVE_GLASS);
   applyThemeTint(loadThemeHue(), loadThemeSaturation());
   applyThemePreference(loadThemePreference());
   watchSystemColorScheme();
