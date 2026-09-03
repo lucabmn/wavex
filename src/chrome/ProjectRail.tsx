@@ -14,7 +14,6 @@ import {
   File,
   Plus,
   Search,
-  Settings,
   Trash2,
 } from "./icons";
 import {
@@ -76,14 +75,13 @@ import { WorktreeList } from "./WorktreeList";
 import { HarnessIcon } from "./HarnessIcon";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 import { ProjectMascot } from "./ProjectMascot";
-import { ProfileSwitcher } from "./ProfileSwitcher";
 import { RailAction, RailSearch } from "./RailAction";
 import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
 import { RemoveProjectDialog } from "./RemoveProjectDialog";
 import { DevModeSlot, TabVisitNav } from "./TitleBar";
-import { SidebarUpdateFooter } from "./SidebarUpdate";
 import type { InstalledUpdate } from "../lib/updates/updateNotice";
+import { WorkspaceSidebarFooter } from "./WorkspaceSidebarFooter";
 import { SettingsNav } from "./SettingsRail";
 import { Shimmer } from "../surfaces/Shimmer";
 import { TabGroupMenu, type TabGroupMenuExtraItem } from "./TabGroupMenu";
@@ -512,26 +510,16 @@ export function ProjectRail({
             groupCustomColors={groupCustomColors}
             groupMascots={groupMascots}
           />
-          <SidebarUpdateFooter
+          <WorkspaceSidebarFooter
+            profileMenuOpen={profileMenuOpen}
+            onProfileMenuOpenChange={onProfileMenuOpenChange}
+            onSwitchProfile={onSwitchProfile}
+            onManageProfiles={onManageProfiles}
             update={updateNotice}
             onOpenWhatsNew={onOpenWhatsNew}
             onDismissUpdate={onDismissUpdate}
+            onOpenSettings={onOpenSettings}
           />
-          <div className="flex shrink-0 flex-col gap-px p-2 pt-0">
-            <ProfileSwitcher
-              open={profileMenuOpen}
-              onOpenChange={(open) => onProfileMenuOpenChange?.(open)}
-              onSwitch={(profileId) => onSwitchProfile?.(profileId)}
-              onManage={() => onManageProfiles?.()}
-            />
-            <RailAction
-              label="Settings"
-              icon={Settings}
-              onClick={onOpenSettings}
-              shortcut={`${MOD},`}
-              ariaLabel={`Settings (${MOD},)`}
-            />
-          </div>
         </>
       )}
       {projectMenu ? (

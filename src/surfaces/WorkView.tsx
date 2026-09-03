@@ -14,6 +14,7 @@ import { ChatComposer, type ChatComposerHandle } from "../chrome/ChatComposer";
 import { Modal } from "../chrome/Modal";
 import { ModeSwitch } from "../chrome/ModeSwitch";
 import { DevModeSlot, IconButton, TabVisitNav } from "../chrome/TitleBar";
+import { WorkspaceSidebarFooter } from "../chrome/WorkspaceSidebarFooter";
 import { WindowControls } from "../chrome/WindowControls";
 import {
   Archive,
@@ -27,7 +28,6 @@ import {
   Pin,
   Plus,
   Search,
-  Settings,
   StickyNote,
   Trash2,
   Undo2,
@@ -37,6 +37,7 @@ import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { setGrabbing, suppressTextSelection } from "../lib/drag";
 import { LAYER } from "../lib/layers";
 import { IS_MAC, MOD } from "../lib/platform";
+import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import type { AppMode } from "../lib/workspace/appMode";
 import {
   createChatFolder,
@@ -84,6 +85,13 @@ type Props = {
   mode: AppMode;
   onModeChange: (mode: AppMode) => void;
   onOpenSettings?: () => void;
+  profileMenuOpen?: boolean;
+  onProfileMenuOpenChange?: (open: boolean) => void;
+  onSwitchProfile?: (profileId: string) => void;
+  onManageProfiles?: () => void;
+  updateNotice?: InstalledUpdate | null;
+  onOpenWhatsNew?: (version: string) => void;
+  onDismissUpdate?: () => void;
 };
 
 /**
@@ -91,7 +99,18 @@ type Props = {
  * project, cwd, worktree, file, or source-control affordances. The whole
  * window belongs to it, so it carries its own top chrome.
  */
-export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
+export function WorkView({
+  mode,
+  onModeChange,
+  onOpenSettings,
+  profileMenuOpen,
+  onProfileMenuOpenChange,
+  onSwitchProfile,
+  onManageProfiles,
+  updateNotice,
+  onOpenWhatsNew,
+  onDismissUpdate,
+}: Props) {
   const state = useSyncExternalStore(subscribeWorkChats, getWorkChatState);
   const [query, setQuery] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -384,18 +403,17 @@ export function WorkView({ mode, onModeChange, onOpenSettings }: Props) {
           ) : null}
         </div>
 
-        {onOpenSettings && listOpen ? (
-          <div className="shrink-0 border-t border-content/10 p-2">
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-content/70 hover:bg-content/5 hover:text-content"
-            >
-              <Settings className="size-3.5 shrink-0" strokeWidth={1.75} />
-              <span className="min-w-0 flex-1 text-left">Settings</span>
-              <span className="shrink-0 text-[11px] text-content/35">{MOD},</span>
-            </button>
-          </div>
+        {listOpen ? (
+          <WorkspaceSidebarFooter
+            profileMenuOpen={profileMenuOpen}
+            onProfileMenuOpenChange={onProfileMenuOpenChange}
+            onSwitchProfile={onSwitchProfile}
+            onManageProfiles={onManageProfiles}
+            update={updateNotice}
+            onOpenWhatsNew={onOpenWhatsNew}
+            onDismissUpdate={onDismissUpdate}
+            onOpenSettings={onOpenSettings}
+          />
         ) : null}
       </aside>
 
