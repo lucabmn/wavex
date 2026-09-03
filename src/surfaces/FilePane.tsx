@@ -4,6 +4,7 @@ import { MarkdownViewShell, useMarkdownMode } from "../chrome/MarkdownModeToggle
 import { SurfaceTabs } from "../chrome/SurfaceTabs";
 import {
   isChangesTab,
+  isCommitTab,
   isPlanTab,
   isReleaseNotesTab,
   isReviewTab,
@@ -19,6 +20,7 @@ import type { Session } from "../lib/session";
 import { loadDiffViewer, subscribeDiffViewer } from "../lib/settings";
 import { MarkdownPreview, MarkdownSource } from "./AgentMarkdown";
 import { BinaryFileView } from "./BinaryFileView";
+import { CommitDiff } from "./CommitDiff";
 import { FileEditor } from "./FileEditor";
 import { ReleaseNotesSurface } from "./ReleaseNotesSurface";
 import { TerminalView } from "./TerminalView";
@@ -64,6 +66,7 @@ function FilePaneComponent({
   const unifiedReview =
     !!activeFile &&
     (isChangesTab(activeFile) || (diffViewer === "unified" && isReviewTab(activeFile)));
+  const commitReview = !!activeFile && isCommitTab(activeFile);
 
   return (
     <div
@@ -81,13 +84,19 @@ function FilePaneComponent({
         onPaneDragStart={onPaneDragStart}
       />
       <div className="relative min-h-0 flex-1">
-        {unifiedReview && activeFile ? (
+        {commitReview && activeFile?.commit ? (
+          <div className="absolute inset-0 h-full">
+            <CommitDiff cwd={activeFile.cwd} sha={activeFile.commit.sha} />
+          </div>
+        ) : unifiedReview && activeFile ? (
           <div className="absolute inset-0 h-full">
             <WorkingTreeDiff cwd={activeFile.cwd} focusPath={activeFile.path} />
           </div>
         ) : null}
         {pane.files.map((file) => {
-          if ((unifiedReview && isReviewTab(file)) || isChangesTab(file)) return null;
+          if (isCommitTab(file) || isChangesTab(file) || (unifiedReview && isReviewTab(file))) {
+            return null;
+          }
           return (
             <div
               key={file.id}

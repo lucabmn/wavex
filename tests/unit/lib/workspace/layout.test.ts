@@ -3,6 +3,7 @@ import {
   closeLeaf,
   editorTabKey,
   isChangesTab,
+  isCommitTab,
   isFilesystemTab,
   isReleaseNotesTab,
   isReviewTab,
@@ -11,6 +12,7 @@ import {
   layoutSashes,
   leaf,
   newChangesTab,
+  newCommitTab,
   newFileTab,
   newPlanTab,
   newReleaseNotesWorkspaceTab,
@@ -21,6 +23,7 @@ import {
   isolateTerminalPanes,
   movePane,
   openChangesTab,
+  openCommitTab,
   openEditorTab,
   openTerminalTab,
   paneEdgeFromPoint,
@@ -88,6 +91,15 @@ describe("editorTabKey", () => {
     expect(editorTabKey(newFileTab(path, cwd, true))).toBe(`review:${path}`);
     expect(editorTabKey(newChangesTab(cwd, path))).toBe(`changes:${cwd}`);
     expect(editorTabKey(newChangesTab(cwd, `${cwd}/other.ts`))).toBe(`changes:${cwd}`);
+    expect(
+      editorTabKey(
+        newCommitTab(cwd, {
+          sha: "abc1234deadbeef",
+          shortSha: "abc1234",
+          subject: "Fix the graph",
+        }),
+      ),
+    ).toBe(`commit:${cwd}:abc1234deadbeef`);
     expect(editorTabKey(newPlanTab("s", "b", "Plan", cwd))).toBe("plan:b");
     const terminal = newTerminalFile(cwd);
     expect(editorTabKey(terminal)).toBe(`terminal:${terminal.id}`);
@@ -120,6 +132,37 @@ describe("openChangesTab", () => {
     const files = next.editorPanes[0]?.files ?? [];
     expect(files.some((file) => editorTabKey(file) === `review:${cwd}/a.ts`)).toBe(false);
     expect(files.filter(isChangesTab)).toHaveLength(1);
+  });
+
+  it("keeps a commit tab when opening Changes", () => {
+    const cwd = "/repo";
+    const withCommit = openCommitTab(newTab("session-a"), cwd, {
+      sha: "abc1234deadbeef",
+      shortSha: "abc1234",
+      subject: "Fix the graph",
+    });
+    const next = openChangesTab(withCommit, cwd);
+    const files = next.editorPanes[0]?.files ?? [];
+    expect(files.filter(isCommitTab)).toHaveLength(1);
+    expect(files.filter(isChangesTab)).toHaveLength(1);
+  });
+});
+
+describe("openCommitTab", () => {
+  it("reuses one tab per commit", () => {
+    const cwd = "/repo";
+    const commit = {
+      sha: "abc1234deadbeef",
+      shortSha: "abc1234",
+      subject: "Fix the graph",
+    };
+    const first = openCommitTab(newTab("session-a"), cwd, commit);
+    const second = openCommitTab(first, cwd, { ...commit, subject: "other" });
+    const files = second.editorPanes[0]?.files ?? [];
+    const commitFile = files.find(isCommitTab);
+    expect(files.filter(isCommitTab)).toHaveLength(1);
+    expect(commitFile?.commit.subject).toBe("Fix the graph");
+    expect(commitFile && isFilesystemTab(commitFile)).toBe(false);
   });
 });
 

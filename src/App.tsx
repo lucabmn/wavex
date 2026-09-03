@@ -28,7 +28,13 @@ import {
 import { IS_MAC } from "./lib/platform";
 import { runUpdateFlow } from "./lib/updates/updater";
 import { displayAttachments, prepareAttachments } from "./lib/attachments";
-import { basename, notifyGitChanged, pickFolder, restoreSessionCheckout } from "./lib/fs";
+import {
+  basename,
+  notifyGitChanged,
+  pickFolder,
+  restoreSessionCheckout,
+  type GitHistoryCommit,
+} from "./lib/fs";
 import {
   invalidateProjectFiles,
   prefetchProjectFiles,
@@ -62,6 +68,7 @@ import {
   firstLeafId,
   focusedFileTab,
   isolateTerminalPanes,
+  isCommitTab,
   isFilesystemTab,
   leaf,
   leafIds,
@@ -74,6 +81,7 @@ import {
   newTerminalWorkspaceTab,
   nextTerminalTitle,
   openChangesTab,
+  openCommitTab,
   openEditorTab,
   openTerminalTab,
   removePane,
@@ -1862,6 +1870,24 @@ export default function App({
         setSidebarTab("changes");
         setComposerFocused(false);
       })();
+    },
+    [activeTabId],
+  );
+
+  const onOpenCommit = useCallback(
+    (commit: GitHistoryCommit) => {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === activeTabId
+            ? openCommitTab(tab, sidebarCwdRef.current, {
+                sha: commit.sha,
+                shortSha: commit.shortSha,
+                subject: commit.subject,
+              })
+            : tab,
+        ),
+      );
+      setComposerFocused(false);
     },
     [activeTabId],
   );
@@ -3767,8 +3793,10 @@ export default function App({
         onGoBack={onRailBack}
         onGoForward={onRailForward}
         onOpenDiff={onOpenDiff}
+        onOpenCommit={onOpenCommit}
         onShowSourceControl={onToggleChanges}
         selectedDiffPath={activeTab ? selectedChangePath(activeTab, gitCwd) : undefined}
+        selectedCommitSha={activeTab ? selectedCommitSha(activeTab) : undefined}
         textHarness={pickTextHarness(active?.harness)}
         recents={recents}
         busyProjectPaths={sessions.flatMap((session) =>
@@ -4073,4 +4101,13 @@ function selectedChangePath(tab: WorkspaceTab, gitCwd?: string): string | undefi
   const file = focusedFileTab(tab);
   if (!file || !isFilesystemTab(file) || !file.review) return undefined;
   return displayPath(file.path, gitCwd || file.cwd);
+}
+
+function selectedCommitSha(tab: WorkspaceTab): string | undefined {
+  const focused = focusedFileTab(tab);
+  if (focused && isCommitTab(focused)) return focused.commit.sha;
+  for (const pane of tab.editorPanes) {
+    const file = pane.files.find((entry) => entry.id === pane.activeFileId);
+    if (file && isCommitTab(file)) return file.commit.sha;
+  }
 }

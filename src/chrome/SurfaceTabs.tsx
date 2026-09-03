@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 import { basename } from "../lib/fs";
 import {
   isChangesTab,
+  isCommitTab,
   isPlanTab,
   isReleaseNotesTab,
   isReviewTab,
@@ -53,6 +54,16 @@ export function surfaceTabPresentation(file: FilePaneTab): SurfaceTabPresentatio
       label: "Changes",
       iconName: "CHANGES",
       tooltip: "Working tree changes",
+    };
+  }
+
+  if (isCommitTab(file)) {
+    const name = file.commit.subject.trim() || file.commit.shortSha;
+    return {
+      name,
+      label: name,
+      iconName: "CHANGES",
+      tooltip: `${file.commit.shortSha} — ${file.commit.subject}`,
     };
   }
 
@@ -139,6 +150,7 @@ export function SurfaceTabs({
           const dirty = dirtyFileIds.has(file.id);
           const errors = fileErrorCounts.get(file.id) ?? 0;
           const changes = isChangesTab(file);
+          const commit = isCommitTab(file);
           const review = isReviewTab(file) && !changes;
           const terminal = isTerminalTab(file);
           const { label, iconName, tooltip } = surfaceTabPresentation(file);
@@ -195,7 +207,7 @@ export function SurfaceTabs({
               >
                 {terminal ? (
                   <Terminal className="size-3.5 shrink-0" strokeWidth={1.75} />
-                ) : changes ? (
+                ) : changes || commit ? (
                   <GitCompare className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : (
                   <FileTypeIcon name={iconName} isDir={false} size={15} />

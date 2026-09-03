@@ -35,6 +35,12 @@ export type PlanTabSource = {
   title: string;
 };
 
+export type CommitTabSource = {
+  sha: string;
+  shortSha: string;
+  subject: string;
+};
+
 export type FilePaneTab = {
   id: string;
   path: string;
@@ -44,6 +50,8 @@ export type FilePaneTab = {
   review?: boolean;
   /** Single working-tree review of every changed file (unified diff). */
   changes?: boolean;
+  /** Historical commit review (unified diff, read-only). */
+  commit?: CommitTabSource;
   terminal?: boolean;
   /** Foreground command when it isn't the shell. Live only — not persisted. */
   foreground?: string;
@@ -103,6 +111,15 @@ export function newChangesTab(cwd: string, focusPath?: string): FilePaneTab {
     cwd,
     review: true,
     changes: true,
+  };
+}
+
+export function newCommitTab(cwd: string, commit: CommitTabSource): FilePaneTab {
+  return {
+    id: crypto.randomUUID(),
+    path: `commit:${commit.sha}`,
+    cwd,
+    commit,
   };
 }
 
@@ -230,12 +247,16 @@ export function isReleaseNotesTab(
   return !!file.releaseNotes;
 }
 
+export function isCommitTab(file: FilePaneTab): file is FilePaneTab & { commit: CommitTabSource } {
+  return !!file.commit;
+}
+
 export function isTerminalTab(file: FilePaneTab): boolean {
   return !!file.terminal;
 }
 
 export function isVirtualDocumentTab(file: FilePaneTab): boolean {
-  return isPlanTab(file) || isReleaseNotesTab(file);
+  return isPlanTab(file) || isReleaseNotesTab(file) || isCommitTab(file);
 }
 
 export function isFilesystemTab(file: FilePaneTab): boolean {
@@ -306,6 +327,7 @@ export function editorTabKey(file: FilePaneTab): string {
   if (file.terminal) return `terminal:${file.id}`;
   if (file.plan) return `plan:${file.plan.blockId}`;
   if (file.releaseNotes) return `release-notes:${file.releaseNotes.version}`;
+  if (file.commit) return `commit:${file.cwd}:${file.commit.sha}`;
   if (file.changes) return `changes:${file.cwd}`;
   return file.review ? `review:${file.path}` : `file:${file.path}`;
 }
@@ -408,6 +430,15 @@ export function openChangesTab(tab: WorkspaceTab, cwd: string, focusPath?: strin
         : pane,
     ),
   };
+}
+
+/** Focus a historical commit's unified diff, creating the tab if needed. */
+export function openCommitTab(
+  tab: WorkspaceTab,
+  cwd: string,
+  commit: CommitTabSource,
+): WorkspaceTab {
+  return openEditorTab(tab, newCommitTab(cwd, commit));
 }
 
 function dropPerFileReviewTabs(files: FilePaneTab[]): FilePaneTab[] {

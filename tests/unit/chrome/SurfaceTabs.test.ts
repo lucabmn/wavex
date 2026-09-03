@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newChangesTab, newReleaseNotesWorkspaceTab } from "@/lib/workspace/layout";
+import { newChangesTab, newCommitTab, newReleaseNotesWorkspaceTab } from "@/lib/workspace/layout";
 import { releaseNotesTitle } from "@/lib/updates/releaseNotes";
 import { appendProblems, surfaceTabPresentation } from "@/chrome/SurfaceTabs";
 
@@ -22,6 +22,23 @@ describe("surfaceTabPresentation", () => {
       label: "Changes",
       iconName: "CHANGES",
       tooltip: "Working tree changes",
+    });
+  });
+
+  it("labels a commit tab from the subject", () => {
+    expect(
+      surfaceTabPresentation(
+        newCommitTab("/repo", {
+          sha: "abc1234deadbeef",
+          shortSha: "abc1234",
+          subject: "Fix the graph",
+        }),
+      ),
+    ).toEqual({
+      name: "Fix the graph",
+      label: "Fix the graph",
+      iconName: "CHANGES",
+      tooltip: "abc1234 — Fix the graph",
     });
   });
 });
