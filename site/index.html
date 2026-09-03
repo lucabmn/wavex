@@ -6,7 +6,7 @@
     <title>wavex — one desktop app for every coding agent you already pay for</title>
     <meta
       name="description"
-      content="wavex drives the agent CLIs installed on your machine through your own subscriptions. Sessions, editor, terminal, git and an inbox in one window. macOS on Apple Silicon, MIT."
+      content="wavex drives the agent CLIs installed on your machine through your own subscriptions. Sessions, editor, terminal, git and an inbox in one window. macOS, Linux and Windows, MIT."
     />
     <link rel="icon" href="assets/logo.png" />
     <meta property="og:title" content="wavex" />
@@ -501,7 +501,7 @@
     <main id="top">
       <section class="hero">
         <div class="wrap">
-          <p class="eyebrow">macOS · Apple Silicon · MIT</p>
+          <p class="eyebrow">macOS · Linux · Windows · MIT</p>
           <h1>One desktop app for every coding agent you already pay for.</h1>
           <p class="lede">
             wavex drives the agent CLIs installed on your machine through your own subscriptions.
@@ -511,12 +511,13 @@
           <p class="note">wavex does not resell tokens and has no account of its own.</p>
           <div class="actions">
             <a class="btn btn-primary" href="https://github.com/lucabmn/wavex/releases/latest"
-              >Download the .dmg</a
+              >Download for macOS, Linux or Windows</a
             >
             <a class="btn" href="https://github.com/lucabmn/wavex">Read the source</a>
           </div>
           <p class="meta">
-            <span>Tauri 2 · React 19 · Rust</span><span>MIT</span><span>not notarized yet</span>
+            <span>Tauri 2 · React 19 · Rust</span><span>MIT</span
+            ><span>macOS builds are notarized</span>
           </p>
         </div>
       </section>
@@ -788,26 +789,40 @@
           <p class="eyebrow">03 — Install</p>
           <div class="cols">
             <div>
-              <h2>macOS on Apple Silicon.</h2>
+              <h2>macOS, Linux and Windows.</h2>
+              <p class="note">
+                Every release ships all three from
+                <a href="https://github.com/lucabmn/wavex/releases/latest">Releases</a>. Pick the
+                file for your machine, then sign in to at least one agent CLI.
+              </p>
               <ol class="steps">
                 <li>
-                  Download the <strong>.dmg</strong> from
-                  <a href="https://github.com/lucabmn/wavex/releases/latest">Releases</a>.
+                  <strong>macOS</strong> (Apple Silicon) — open the <strong>.dmg</strong> and drag
+                  wavex to Applications. The build is signed with a Developer ID certificate,
+                  notarized by Apple, and stapled, so it opens without a Gatekeeper prompt.
                 </li>
-                <li>Open it and drag wavex to Applications.</li>
-                <li>Sign in to at least one agent CLI.</li>
+                <li>
+                  <strong>Linux</strong> (x86-64) — take the <strong>.AppImage</strong> and mark it
+                  executable, or install the <strong>.deb</strong> or <strong>.rpm</strong>. wavex
+                  needs WebKitGTK 4.1, which every current desktop distribution ships.
+                </li>
+                <li>
+                  <strong>Windows</strong> (x86-64) — run the <strong>-setup.exe</strong> installer.
+                  It installs for the current user, so it needs no administrator rights.
+                </li>
               </ol>
               <p class="note">
-                The build is not notarized yet. If Gatekeeper blocks the first launch, right click
-                the app and choose <strong>Open</strong>, or clear the quarantine flag:
+                The Windows and Linux builds are not code-signed yet, so SmartScreen may warn on the
+                first run. Update bundles are signed on every platform and wavex verifies that
+                signature before it installs one.
               </p>
-              <pre><span class="prompt">$ </span>xattr -d com.apple.quarantine /Applications/wavex.app</pre>
             </div>
             <div>
               <h2>Or build from source.</h2>
               <p class="note">
-                Node.js 22+, pnpm, a current stable Rust toolchain, and the Xcode Command Line
-                Tools.
+                Node.js 22+, pnpm, and a current stable Rust toolchain — plus the Xcode Command Line
+                Tools on macOS, the WebKitGTK development packages on Linux, or the MSVC build tools
+                and WebView2 on Windows.
               </p>
               <pre><span class="prompt">$ </span>pnpm install
 <span class="prompt">$ </span>pnpm tauri dev</pre>

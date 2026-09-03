@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        wavex is macOS (Apple Silicon) only. Linux and Windows are out of scope.
+        wavex runs on macOS (Apple Silicon), Linux (x86-64), and Windows (x86-64).
 
   - type: input
     id: version
@@ -15,11 +15,22 @@ body:
     validations:
       required: true
 
-  - type: input
-    id: macos
+  - type: dropdown
+    id: platform
     attributes:
-      label: macOS version
-      placeholder: "15.5"
+      label: Platform
+      options:
+        - macOS (Apple Silicon)
+        - Windows
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version
+      placeholder: "macOS 15.5 / Windows 11 23H2 / Ubuntu 24.04"
     validations:
       required: true
 
