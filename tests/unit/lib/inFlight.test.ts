@@ -3,19 +3,13 @@ import { newTab } from "@/lib/workspace/layout";
 import {
   CONTINUE_PROMPT,
   INTERRUPT_MESSAGE,
-  KEPT_RUNNING_MESSAGE,
   canAutoContinue,
-  dropKeptRunningNote,
   hasInFlightSessions,
-  lastTurnStartedAt,
   inFlightRefs,
   isInFlightSession,
   markTurnInterrupted,
-  markTurnKeptRunning,
   quitWhileBusyMessage,
   shouldWriteInFlightSnapshot,
-  wasTurnInterrupted,
-  wasTurnKeptRunning,
   workspaceFromResumed,
 } from "@/lib/inFlight";
 import { newSession, type Session } from "@/lib/session";
@@ -250,61 +244,5 @@ describe("shouldWriteInFlightSnapshot", () => {
     expect(shouldWriteInFlightSnapshot("a", [{ sessionId: "a", cwd: "/tmp" }], "a", true)).toBe(
       false,
     );
-  });
-});
-
-describe("markTurnKeptRunning", () => {
-  it("seals the turn with the note that the agent was left running", () => {
-    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true }));
-    expect(kept.busy).toBe(false);
-    expect(kept.blocks[kept.blocks.length - 1]).toMatchObject({
-      role: "system",
-      text: KEPT_RUNNING_MESSAGE,
-    });
-  });
-
-  it("counts as a cut turn, so the chat comes back with the workspace", () => {
-    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true, providerSessionId: "p1" }));
-    expect(wasTurnInterrupted(kept)).toBe(true);
-  });
-
-  it("does not resume itself, which would redo the work it kept doing", () => {
-    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true, providerSessionId: "p1" }));
-    expect(canAutoContinue(kept)).toBe(false);
-    const quit = markTurnInterrupted(chat("/tmp/a", { busy: true, providerSessionId: "p1" }));
-    expect(canAutoContinue(quit)).toBe(true);
-  });
-
-  it("does not claim a quit cut a turn it had already left running", () => {
-    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true }));
-    const requit = markTurnInterrupted(kept);
-    expect(requit.blocks.filter((block) => block.text === INTERRUPT_MESSAGE)).toHaveLength(0);
-    expect(requit.blocks.filter((block) => block.text === KEPT_RUNNING_MESSAGE)).toHaveLength(1);
-  });
-});
-
-describe("recovering a turn left running", () => {
-  const kept = markTurnKeptRunning(
-    chat("/tmp/a", {
-      busy: true,
-      blocks: [{ id: "u1", role: "user", text: "hello", startedAt: 1_700 }],
-    }),
-  );
-
-  it("recognises the note and where the lost turn began", () => {
-    expect(wasTurnKeptRunning(kept)).toBe(true);
-    expect(lastTurnStartedAt(kept)).toBe(1_700);
-  });
-
-  it("drops only the note, so the turn can take its place", () => {
-    const bare = dropKeptRunningNote(kept);
-    expect(bare.blocks.map((block) => block.role)).toEqual(["user"]);
-    expect(dropKeptRunningNote(bare)).toBe(bare);
-  });
-
-  it("leaves a quit note alone, which no transcript can fill in", () => {
-    const quit = markTurnInterrupted(chat("/tmp/a", { busy: true }));
-    expect(wasTurnKeptRunning(quit)).toBe(false);
-    expect(dropKeptRunningNote(quit)).toBe(quit);
   });
 });

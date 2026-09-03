@@ -9,7 +9,6 @@ import {
   stopClaudeSession,
 } from "./claude";
 import { refreshClaudeCatalog } from "./claudeCatalog";
-import { importClaudeDetachedTurn } from "./claudeTranscript";
 import { runClaudeTextPrompt, warmupClaudeText } from "./claudeText";
 import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
@@ -27,7 +26,6 @@ export const claudeAdapter: HarnessAdapter = {
   stopSession: stopClaudeSession,
   forgetSession: forgetClaudeSession,
   bindSession: bindClaudeSession,
-  importDetachedTurn: importClaudeDetachedTurn,
   refreshCatalog: refreshClaudeCatalog,
   generateTitle: createSessionTitleGenerator(runClaudeTextPrompt),
   generateCommitMessage: gitText.generateCommitMessage,

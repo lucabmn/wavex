@@ -2,7 +2,7 @@ import type { HarnessId } from "../session";
 import type { PrContent } from "../gitText";
 import { hasLiveCatalog } from "../models";
 import type { UserQuestionReply } from "../userQuestion";
-import type { ApprovalDecision, HarnessEvent, SendTurnInput, SteerTurnInput } from "./types";
+import type { ApprovalDecision, SendTurnInput, SteerTurnInput } from "./types";
 
 export type TitleInput = {
   sessionId: string;
@@ -31,16 +31,6 @@ export type HarnessAdapter = {
   forgetSession(sessionId: string): Promise<void>;
   /** Seed resume state from a restored wavex session. */
   bindSession(threadId: string, providerSessionId: string, cwd: string): void;
-  /**
-   * Rebuild a turn that ran while no webview was attached, from whatever the
-   * CLI recorded itself. Only harnesses that keep their own transcript can
-   * offer this; the rest leave the turn as the note that ended it.
-   */
-  importDetachedTurn?(input: {
-    cwd: string;
-    providerSessionId: string;
-    since: number;
-  }): Promise<HarnessEvent[]>;
   /** Refresh the model catalog overlay when supported. */
   refreshCatalog?(): Promise<void>;
   /** Optional LLM tab title for the first turn. */
@@ -195,20 +185,6 @@ export function bindHarnessSession(
  * Boot used to refresh every adapter; that spawned unused CLIs (Pi with
  * extensions can sit at ~1GB) even when the workspace never touched them.
  */
-/**
- * Rebuilds a turn the user chose to leave running, from the CLI's own record.
- * Harnesses that keep no transcript return nothing and the turn stays as the
- * note that ended it.
- */
-export async function importDetachedHarnessTurn(
-  harness: HarnessId,
-  input: { cwd: string; providerSessionId: string; since: number },
-): Promise<HarnessEvent[]> {
-  const adapter = getHarness(harness);
-  if (!adapter?.importDetachedTurn) return [];
-  return adapter.importDetachedTurn(input).catch(() => []);
-}
-
 export async function refreshHarnessCatalogs(ids: Iterable<HarnessId>): Promise<void> {
   const wanted = new Set(ids);
   if (wanted.size === 0) return;

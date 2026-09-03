@@ -6,18 +6,6 @@ import { stopStreaming } from "./harness/apply";
 
 export const INTERRUPT_MESSAGE = "Turn interrupted when wavex quit.";
 
-/**
- * The turn was not cut: the agent kept working while the user was in another
- * profile. wavex could not render it — the adapter holding the turn died with
- * the profile switch — so the transcript stops here and Continue picks the
- * thread up from the provider's own session.
- */
-export const KEPT_RUNNING_MESSAGE =
-  "Kept running in the background while you were in another profile.";
-
-/** The notes that end a turn wavex stopped following. */
-const CUT_MESSAGES: readonly string[] = [INTERRUPT_MESSAGE, KEPT_RUNNING_MESSAGE];
-
 export const CONTINUE_PROMPT = "Continue from where you left off.";
 
 export type InFlightRef = {
@@ -69,9 +57,9 @@ export function inFlightRefs(sessions: Session[], tabs: WorkspaceTab[]): InFligh
 
 export function profileSwitchWhileBusyMessage(count: number): string {
   if (count === 1) {
-    return "1 chat is still running in this profile.";
+    return "1 chat is still running in this profile. Switch anyway? It stops now and offers Continue when you switch back.";
   }
-  return `${count} chats are still running in this profile.`;
+  return `${count} chats are still running in this profile. Switch anyway? They stop now and offer Continue when you switch back.`;
 }
 
 export function quitWhileBusyMessage(count: number): string {
@@ -88,21 +76,8 @@ export function quitWhileBusyMessage(count: number): string {
  * resume on the second quit.
  */
 export function markTurnInterrupted(session: Session): Session {
-  return sealTurn(session, INTERRUPT_MESSAGE);
-}
-
-/**
- * Same seal, different truth: the child was left alive across a profile
- * switch and kept going. Continue resumes the provider thread the work
- * actually landed in.
- */
-export function markTurnKeptRunning(session: Session): Session {
-  return sealTurn(session, KEPT_RUNNING_MESSAGE);
-}
-
-function sealTurn(session: Session, note: string): Session {
   const sealed = { ...sealOpenWork(stopStreaming(session)), busy: false };
-  if (lastBlockIsCut(sealed)) return sealed;
+  if (lastBlockIsInterrupt(sealed)) return sealed;
   return {
     ...sealed,
     blocks: [
@@ -110,7 +85,7 @@ function sealTurn(session: Session, note: string): Session {
       {
         id: crypto.randomUUID(),
         role: "system",
-        text: note,
+        text: INTERRUPT_MESSAGE,
       },
     ],
   };
@@ -128,51 +103,20 @@ export function workspaceFromResumed(sessions: Session[]): ResumedWorkspace | nu
 }
 
 export function wasTurnInterrupted(session: Session): boolean {
-  return lastBlockIsCut(session);
-}
-
-/** The agent went on working here after the profile left the screen. */
-export function wasTurnKeptRunning(session: Session): boolean {
-  return lastBlockIs(session, KEPT_RUNNING_MESSAGE);
-}
-
-/**
- * Drops the kept-running note so the turn it stood in for can take its place.
- * Nothing else in the transcript moves: the note is always the last block.
- */
-export function dropKeptRunningNote(session: Session): Session {
-  if (!wasTurnKeptRunning(session)) return session;
-  return { ...session, blocks: session.blocks.slice(0, -1) };
-}
-
-/** When the turn wavex stopped following began. */
-export function lastTurnStartedAt(session: Session): number {
-  for (let index = session.blocks.length - 1; index >= 0; index--) {
-    const block = session.blocks[index];
-    if (block.role === "user" && block.startedAt) return block.startedAt;
-  }
-  return 0;
+  return lastBlockIsInterrupt(session);
 }
 
 /**
  * Provider thread exists and the quit note is still the last block.
  * A Continue (or any later user turn) appends after it, so this stays one-shot.
- *
- * A turn left running across a profile switch is deliberately excluded. Its
- * agent went on working, so resuming it unasked makes the CLI redo whatever it
- * finished while the profile was off screen. Continue there is the user's call.
  */
 export function canAutoContinue(session: Session): boolean {
-  return !!session.providerSessionId && !session.busy && lastBlockIs(session, INTERRUPT_MESSAGE);
+  return !!session.providerSessionId && !session.busy && lastBlockIsInterrupt(session);
 }
 
-function lastBlockIsCut(session: Session): boolean {
-  return CUT_MESSAGES.some((note) => lastBlockIs(session, note));
-}
-
-function lastBlockIs(session: Session, note: string): boolean {
+function lastBlockIsInterrupt(session: Session): boolean {
   const last = session.blocks[session.blocks.length - 1];
-  return last?.role === "system" && last.text === note;
+  return last?.role === "system" && last.text === INTERRUPT_MESSAGE;
 }
 
 export function inFlightSnapshotKey(refs: InFlightRef[]): string {

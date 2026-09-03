@@ -92,7 +92,6 @@ export function MenuBarApp() {
   }, [tab]);
 
   const working = agents.filter((agent) => !agent.done).length;
-  const detached = agents.some((agent) => agent.profileId != null);
 
   return (
     // The native window carries the popover's corner radius, blur, and shadow,
@@ -153,11 +152,7 @@ export function MenuBarApp() {
 
         <footer className="flex h-10 shrink-0 items-center border-t border-content/10 px-3">
           <span className="text-[10px] text-content/45">
-            {tab !== "agents"
-              ? "From local CLI transcripts"
-              : detached
-                ? "Click an agent from another profile to switch back"
-                : "Click a session to jump back in"}
+            {tab === "agents" ? "Click a session to jump back in" : "From local CLI transcripts"}
           </span>
           <button
             type="button"
@@ -234,8 +229,7 @@ function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean 
           </span>
           <p className="text-[12px] font-medium text-content/65">No agents are working</p>
           <p className="text-[11px] leading-relaxed text-content/35">
-            Active sessions, requests for approval, and agents left running in another profile will
-            appear here.
+            Active sessions and requests for approval will appear here.
           </p>
         </div>
       ) : (
@@ -265,24 +259,13 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
       ? "Finished"
       : agent.activity;
   const project = projectName(agent.cwd);
-  // An agent left behind by a profile switch has no window here to focus, and
-  // nothing is rendering its stream, so the row says where it is running and
-  // clicking it goes back to that profile.
-  const detached = agent.profileId != null;
 
   return (
     <button
       type="button"
       onClick={() => void invoke("menu_bar_focus_agent", { sessionId: agent.id })}
       className="group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2.5 text-left hover:bg-content/[0.07] focus-visible:outline-2 focus-visible:outline-accent"
-      aria-label={[
-        agent.title,
-        HARNESS_LABEL[agent.harness],
-        project,
-        activity,
-        elapsed,
-        detached ? `switch to ${agent.profileName ?? "its profile"}` : "",
-      ]
+      aria-label={[agent.title, HARNESS_LABEL[agent.harness], project, activity, elapsed]
         .filter(Boolean)
         .join(", ")}
     >
@@ -305,12 +288,7 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
           ) : agent.done ? (
             <Check className="size-3 shrink-0" strokeWidth={2} aria-hidden />
           ) : (
-            <span
-              className={`size-1.5 shrink-0 rounded-full ${
-                detached ? "bg-content/40" : "bg-accent animate-pulse"
-              }`}
-              aria-hidden
-            />
+            <span className="size-1.5 shrink-0 rounded-full bg-accent animate-pulse" aria-hidden />
           )}
           <span className="truncate">{activity}</span>
         </span>
@@ -318,12 +296,6 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
           <span className="truncate">{HARNESS_LABEL[agent.harness]}</span>
           <span aria-hidden>·</span>
           <span className="truncate">{project}</span>
-          {detached && agent.profileName ? (
-            <>
-              <span aria-hidden>·</span>
-              <span className="truncate">{agent.profileName}</span>
-            </>
-          ) : null}
           {elapsed ? <span className="ml-auto shrink-0 tabular-nums">{elapsed}</span> : null}
         </span>
       </span>

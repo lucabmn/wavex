@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detachedAgents, formatLiveElapsed, liveAgentsFromSessions } from "@/lib/liveAgents";
+import { formatLiveElapsed, liveAgentsFromSessions } from "@/lib/liveAgents";
 import { newSession, type Block, type Session } from "@/lib/session";
 
 function chat(cwd: string, patch: Partial<Session> = {}): Session {
@@ -172,42 +172,5 @@ describe("formatLiveElapsed", () => {
     expect(formatLiveElapsed(0, 120_000)).toBe("2m");
     expect(formatLiveElapsed(0, 3_600_000)).toBe("1h");
     expect(formatLiveElapsed(0, 3_720_000)).toBe("1h 2m");
-  });
-});
-
-describe("detachedAgents", () => {
-  const working = chat("/tmp/a", {
-    busy: true,
-    blocks: [{ id: "u1", role: "user", text: "hello", startedAt: 1_000 }, edit("t1")],
-  });
-  const profile = { id: "work", name: "Work" };
-
-  it("names the profile instead of a tool title that will never advance", () => {
-    const [row] = detachedAgents(liveAgentsFromSessions([working]), profile);
-    expect(row).toMatchObject({
-      id: working.id,
-      activity: "Running in Work",
-      profileId: "work",
-      profileName: "Work",
-      needsApproval: false,
-    });
-  });
-
-  it("drops finished rows, which have nothing left to keep running", () => {
-    const done = chat("/tmp/b");
-    const agents = liveAgentsFromSessions([done], new Set([done.id]));
-    expect(agents).toHaveLength(1);
-    expect(detachedAgents(agents, profile)).toEqual([]);
-  });
-
-  it("stops claiming an approval nobody in this profile can answer", () => {
-    const waiting = chat("/tmp/c", {
-      blocks: [
-        { id: "u1", role: "user", text: "hello", startedAt: 1_000 },
-        { id: "a1", role: "approval", text: "run rm", approval: { requestId: 1 } },
-      ],
-    });
-    const [row] = detachedAgents(liveAgentsFromSessions([waiting]), profile);
-    expect(row.needsApproval).toBe(false);
   });
 });

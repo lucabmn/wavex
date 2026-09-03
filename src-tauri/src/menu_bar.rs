@@ -8,9 +8,6 @@ pub const WINDOW_LABEL: &str = "menu-bar";
 const TRAY_ID: &str = "wavex-menu-bar";
 const AGENTS_CHANGED: &str = "menu_bar_agents_changed";
 const FOCUS_SESSION: &str = "focus_session_from_menu_bar";
-/// Asks the app to switch profiles, rather than switching under it: the app
-/// owns the confirmation about agents running in the profile being left.
-const SWITCH_PROFILE: &str = "switch_profile_from_menu_bar";
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const POPOVER_WIDTH: f64 = 380.0;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -89,20 +86,7 @@ pub struct MenuBarAgent {
     duration_ms: Option<u64>,
     needs_approval: bool,
     done: bool,
-    /// Set only on an agent left running under a profile that is not the one
-    /// on screen. The popover shows the profile, and clicking the row has to
-    /// switch back rather than look the session up in the current profile.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    profile_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    profile_name: Option<String>,
 }
-
-/// The key detached rows are filed under. Every other source is a window
-/// label, and every window of the profile being left reloads and wipes its own
-/// rows, so agents that outlive a switch need an owner that is not a window.
-/// Windows are labelled `main` or `window-N`, so this key cannot collide.
-const DETACHED_KEY: &str = "profile-detached";
 
 type AgentSources = HashMap<String, Vec<MenuBarAgent>>;
 
@@ -113,18 +97,7 @@ fn sources() -> &'static Mutex<AgentSources> {
 
 fn aggregate_agents(sources: &AgentSources) -> Vec<MenuBarAgent> {
     let mut by_id = HashMap::<String, MenuBarAgent>::new();
-    // Detached rows go in first so a window that has already republished the
-    // same session wins. Both exist for the moment between a switch back and
-    // the returning window's first publish.
-    if let Some(agents) = sources.get(DETACHED_KEY) {
-        for agent in agents {
-            by_id.insert(agent.id.clone(), agent.clone());
-        }
-    }
-    for (label, agents) in sources {
-        if label == DETACHED_KEY {
-            continue;
-        }
+    for agents in sources.values() {
         for agent in agents {
             by_id.insert(agent.id.clone(), agent.clone());
         }
@@ -152,71 +125,6 @@ fn current_agents() -> Vec<MenuBarAgent> {
 #[tauri::command]
 pub fn menu_bar_agents() -> Vec<MenuBarAgent> {
     current_agents()
-}
-
-/// Files the agents a profile switch is leaving behind. Every window of the
-/// profile being left calls this with its own rows, so they merge rather than
-/// replace: a second window must not wipe the first one's agents.
-#[tauri::command]
-pub fn menu_bar_detach_agents(window: WebviewWindow, agents: Vec<MenuBarAgent>) {
-    if !crate::window::is_app_window(window.label()) || agents.is_empty() {
-        return;
-    }
-    {
-        let mut guard = sources().lock().unwrap_or_else(|error| error.into_inner());
-        let rows = guard.entry(DETACHED_KEY.to_string()).or_default();
-        for agent in agents {
-            match rows.iter_mut().find(|row| row.id == agent.id) {
-                Some(existing) => *existing = agent,
-                None => rows.push(agent),
-            }
-        }
-        rows.truncate(100);
-    }
-    publish(window.app_handle());
-}
-
-/// Drops the detached rows of one profile. Runs when that profile comes back
-/// on screen, so its own windows own the rows again.
-pub fn clear_detached_profile(app: &AppHandle, profile_id: &str) {
-    if retain_detached(|agent| agent.profile_id.as_deref() != Some(profile_id)) {
-        publish(app);
-    }
-}
-
-/// The profile a detached row belongs to, if this session is one.
-pub fn detached_profile_of(session_id: &str) -> Option<String> {
-    let guard = sources().lock().unwrap_or_else(|error| error.into_inner());
-    guard
-        .get(DETACHED_KEY)?
-        .iter()
-        .find(|agent| agent.id == session_id)?
-        .profile_id
-        .clone()
-}
-
-/// A detached agent whose child exited stops being news. Without this its row
-/// would sit in the popover claiming to work until the next profile switch.
-pub fn remove_detached_agent(app: &AppHandle, session_id: &str) {
-    if retain_detached(|agent| agent.id != session_id) {
-        publish(app);
-    }
-}
-
-/// Drops the detached rows that fail `keep`. Returns whether anything went, so
-/// a miss costs no tray repaint.
-fn retain_detached(keep: impl Fn(&MenuBarAgent) -> bool) -> bool {
-    let mut guard = sources().lock().unwrap_or_else(|error| error.into_inner());
-    let Some(rows) = guard.get_mut(DETACHED_KEY) else {
-        return false;
-    };
-    let before = rows.len();
-    rows.retain(keep);
-    let removed = rows.len() < before;
-    if rows.is_empty() {
-        guard.remove(DETACHED_KEY);
-    }
-    removed
 }
 
 #[tauri::command]
@@ -280,17 +188,6 @@ pub fn menu_bar_open_app(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn menu_bar_focus_agent(app: AppHandle, session_id: String) -> Result<(), String> {
-    // An agent left running under another profile has no window here to focus:
-    // this profile's webviews have never heard of its session. Hand the app the
-    // profile to go back to and let it run its own switch flow, so a switch
-    // started from the menu bar still asks about the agents running here.
-    if let Some(profile_id) = detached_profile_of(&session_id) {
-        hide(&app);
-        crate::window::show_hidden_or_open_new(&app)?;
-        return app
-            .emit(SWITCH_PROFILE, profile_id)
-            .map_err(|error| error.to_string());
-    }
     let owner = {
         let guard = sources().lock().unwrap_or_else(|error| error.into_inner());
         guard.iter().find_map(|(label, agents)| {
@@ -471,38 +368,7 @@ mod tests {
             duration_ms: None,
             needs_approval,
             done: false,
-            profile_id: None,
-            profile_name: None,
         }
-    }
-
-    fn detached(id: &str, profile_id: &str) -> MenuBarAgent {
-        MenuBarAgent {
-            profile_id: Some(profile_id.into()),
-            profile_name: Some("Work".into()),
-            activity: "Running in Work".into(),
-            ..agent(id, 1, false)
-        }
-    }
-
-    #[test]
-    fn a_window_row_wins_over_the_detached_copy_of_the_same_session() {
-        let mut sources = AgentSources::new();
-        sources.insert(DETACHED_KEY.into(), vec![detached("a", "work")]);
-        sources.insert("main".into(), vec![agent("a", 1, false)]);
-        let rows = aggregate_agents(&sources);
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].profile_id, None);
-    }
-
-    #[test]
-    fn detached_rows_survive_alongside_the_windows_own() {
-        let mut sources = AgentSources::new();
-        sources.insert(DETACHED_KEY.into(), vec![detached("a", "work")]);
-        sources.insert("main".into(), vec![agent("b", 2, false)]);
-        let rows = aggregate_agents(&sources);
-        let ids: Vec<&str> = rows.iter().map(|row| row.id.as_str()).collect();
-        assert_eq!(ids, ["a", "b"]);
     }
 
     #[test]

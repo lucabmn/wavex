@@ -1,10 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
 import {
-  applyHarnessEvent,
   bindHarnessSession,
   forgetHarnessSession,
-  importDetachedHarnessTurn,
   isLiveHarness,
   killAllChildren,
 } from "./harness";
@@ -12,13 +10,9 @@ import {
   hasInFlightSessions,
   inFlightRefs,
   isInFlightSession,
-  dropKeptRunningNote,
-  lastTurnStartedAt,
   markTurnInterrupted,
-  markTurnKeptRunning,
   quitWhileBusyMessage,
   wasTurnInterrupted,
-  wasTurnKeptRunning,
   workspaceFromResumed,
   type ResumedWorkspace,
 } from "./inFlight";
@@ -53,13 +47,6 @@ import { lastProjectPath, normalizeProjectPath, sameProjectPath } from "./recent
 
 export type { ResumedWorkspace };
 export { hasInFlightSessions };
-
-/**
- * `unload` is a webview reload that must not wipe a restored snapshot.
- * `switch-keep` is a profile switch whose agents were left running, which is a
- * quit for this webview but not for the children it started.
- */
-export type PersistMode = "quit" | "unload" | "switch-keep";
 
 export type BootWorkspace = {
   windowTransfer: WindowTransferPayload | null;
@@ -256,7 +243,7 @@ async function loadResumedWorkspaceOnce(): Promise<ResumedWorkspace | null> {
     workspace = {
       ...workspace,
       sessions: await Promise.all(
-        workspace.sessions.map((session) => recoverDetachedTurn(restoreSessionCheckout(session))),
+        workspace.sessions.map((session) => restoreSessionCheckout(session)),
       ),
     };
   }
@@ -270,32 +257,6 @@ async function loadResumedWorkspaceOnce(): Promise<ResumedWorkspace | null> {
     );
   }
   return workspace;
-}
-
-/**
- * Puts back the turn an agent finished while its profile was off screen.
- *
- * Nothing rendered that turn — the adapter that owned it died with the switch
- * — so the only record is the CLI's own. Harnesses that keep one hand it back
- * here; the rest keep the note, which is still the truth for them.
- */
-async function recoverDetachedTurn(session: Session): Promise<Session> {
-  if (!wasTurnKeptRunning(session) || !session.providerSessionId) return session;
-  if (!isLiveHarness(session.harness)) return session;
-  // Without a start time there is no way to tell the lost turn from the ones
-  // already in the transcript, and importing the difference blind would
-  // duplicate the whole conversation.
-  const since = lastTurnStartedAt(session);
-  if (since <= 0) return session;
-  const events = await importDetachedHarnessTurn(session.harness, {
-    cwd: sessionWorkCwd(session),
-    providerSessionId: session.providerSessionId,
-    since,
-  }).catch(() => []);
-  if (events.length === 0) return session;
-  const recovered = events.reduce(applyHarnessEvent, dropKeptRunningNote(session));
-  await upsertSession(recovered).catch(() => null);
-  return recovered;
 }
 
 export function bindResumedSessions(sessions: Session[]): void {
@@ -340,21 +301,18 @@ export async function persistQuitState(
   tabs: WorkspaceTab[],
   activeTabId: string,
   projectCwd: string,
-  mode: PersistMode = "quit",
+  mode: "quit" | "unload" = "quit",
   projectTerminals: ProjectTerminalDock[] = [],
   appMode: AppMode = "coding",
 ): Promise<void> {
   const refs = inFlightRefs(sessions, tabs);
   const interrupted = new Set(refs.map((ref) => ref.sessionId));
   const busyWorkChats = new Set(inFlightWorkChats().map((chat) => chat.id));
-  // A profile switch that leaves the agents running did not cut the turn, so
-  // the note in the transcript must not claim it did.
-  const seal = mode === "switch-keep" ? markTurnKeptRunning : markTurnInterrupted;
   await Promise.all(
     [...sessions, ...getWorkChatState().chats].map(async (session) => {
       if (!shouldPersistSession(session)) return;
       const cut = interrupted.has(session.id) || busyWorkChats.has(session.id);
-      await upsertSession(cut ? seal(session) : session).catch(() => null);
+      await upsertSession(cut ? markTurnInterrupted(session) : session).catch(() => null);
     }),
   );
   await saveWorkspaceSnapshot(
@@ -366,7 +324,7 @@ export async function persistQuitState(
   //
   // Vite/webview reload must not wipe a restored snapshot: those chats are idle
   // in this process until Continue runs.
-  if (mode !== "unload" || refs.length > 0) {
+  if (mode === "quit" || refs.length > 0) {
     await replaceInFlightSessions(refs).catch(() => undefined);
   }
 }

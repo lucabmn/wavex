@@ -236,13 +236,8 @@ import {
   type SessionSummary,
 } from "./lib/sessions/sessionStore";
 import { syncDockBadge } from "./lib/dockBadge";
-import { detachedAgents, liveAgentsFromSessions } from "./lib/liveAgents";
-import {
-  MENU_BAR_FOCUS_SESSION,
-  MENU_BAR_SWITCH_PROFILE,
-  publishDetachedAgents,
-  publishMenuBarAgents,
-} from "./lib/menuBar";
+import { liveAgentsFromSessions } from "./lib/liveAgents";
+import { MENU_BAR_FOCUS_SESSION, publishMenuBarAgents } from "./lib/menuBar";
 import { hiddenApprovalNotices } from "./lib/approvalToast";
 import { nextUnseenFinishedSessions } from "./lib/sessions/sessionDone";
 import { playCue } from "./lib/sounds";
@@ -307,6 +302,7 @@ import {
   canAutoContinue,
   inFlightRefs,
   inFlightSnapshotKey,
+  profileSwitchWhileBusyMessage,
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
@@ -315,14 +311,8 @@ import { WorkView } from "./surfaces/WorkView";
 import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
 import { getWorkChatState } from "./lib/sessions/workChatStore";
 import type { InstalledUpdate } from "./lib/updates/updateNotice";
-import {
-  activeProfile,
-  listenProfileSwitch,
-  loadProfiles,
-  switchProfile,
-} from "./lib/profiles/profileStore";
+import { listenProfileSwitch, loadProfiles, switchProfile } from "./lib/profiles/profileStore";
 import { findProfile, type Profile } from "./lib/profiles/profile";
-import { ProfileSwitchDialog } from "./chrome/ProfileSwitchDialog";
 import { ProfileSwitchOverlay } from "./chrome/ProfileSwitchOverlay";
 import {
   beginProfileSwitch,
@@ -421,11 +411,6 @@ export default function App({
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>(loadSettingsSection);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  /** The switch waiting on an answer about the chats still running here. */
-  const [profileSwitchPrompt, setProfileSwitchPrompt] = useState<{
-    target: Profile;
-    running: number;
-  } | null>(null);
   /** Set for every window from the moment a switch starts until the reload. */
   const [switchingToProfile, setSwitchingToProfile] = useState<Profile | null>(null);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
@@ -604,23 +589,18 @@ export default function App({
   // native stores swap, then reload onto the profile that was chosen.
   useEffect(() => {
     const unlisten = listenProfileSwitch({
-      onPrepare: async ({ profileId, keepAgents }) => {
+      onPrepare: async (profileId) => {
         // The shade goes up before the persist, which takes long enough to
         // read as a frozen app, and stays up over the reload behind it.
         setSwitchingToProfile(findProfile(loadProfiles(), profileId) ?? null);
         void invoke("disable_window_glass").catch(() => undefined);
         flushHarnessEvents();
-        // Recorded while this profile is still the active one: the rows have
-        // to name where the agents are running, not where the app lands.
-        if (keepAgents) {
-          await publishDetachedAgents(detachedAgents(menuBarAgentsRef.current, activeProfile()));
-        }
         await persistQuitState(
           sessionsRef.current,
           tabsRef.current,
           activeTabIdRef.current,
           projectCwdRef.current,
-          keepAgents ? "switch-keep" : "quit",
+          "quit",
           projectTerminalsRef.current,
         ).catch(() => undefined);
         beginProfileSwitch();
@@ -760,9 +740,6 @@ export default function App({
     [sessions, unseenFinishedIds],
   );
   const liveAgents = liveAgentsEnabled ? menuBarAgents : [];
-
-  const menuBarAgentsRef = useRef(menuBarAgents);
-  menuBarAgentsRef.current = menuBarAgents;
 
   useEffect(() => {
     publishMenuBarAgents(menuBarAgents);
@@ -3371,41 +3348,34 @@ export default function App({
   }, []);
 
   /**
-   * Swaps the whole app onto another profile. Every window persists first, so a
-   * switch with chats still running asks what should happen to them before any
-   * of that starts.
+   * Swaps the whole app onto another profile. Every window persists first and
+   * the agents of the profile being left are stopped, so the confirmation says
+   * what running work is about to pause.
    */
-  const startProfileSwitch = useCallback((target: Profile, keepAgents: boolean) => {
-    setProfileSwitchPrompt(null);
-    void switchProfile(target.id, keepAgents).catch((error: unknown) => {
-      // Only a rejected id gets here, which Rust checks before it asks any
-      // window to prepare — so the shade is not up yet and the glass was never
-      // taken down. Anything past that point emits the change event whether or
-      // not the swap landed, and the reload replaces this document. Restoring
-      // both anyway costs nothing and keeps the window usable if that ever
-      // stops holding.
-      setSwitchingToProfile(null);
-      void invoke("enable_window_glass").catch(() => undefined);
-      void message(error instanceof Error ? error.message : "Could not switch profile", {
-        title: "wavex",
-        kind: "error",
-      });
-    });
-  }, []);
-
-  const onSwitchProfile = useCallback(
-    (profileId: string) => {
-      const target = findProfile(loadProfiles(), profileId);
-      if (!target || target.id === activeProfile().id) return;
+  const onSwitchProfile = useCallback((profileId: string) => {
+    void (async () => {
       const running = inFlightRefs(sessionsRef.current, tabsRef.current).length;
       if (running > 0) {
-        setProfileSwitchPrompt({ target, running });
-        return;
+        const ok = await ask(profileSwitchWhileBusyMessage(running), {
+          title: "wavex",
+          kind: "warning",
+          okLabel: "Switch",
+        });
+        if (!ok) return;
       }
-      startProfileSwitch(target, false);
-    },
-    [startProfileSwitch],
-  );
+      await switchProfile(profileId).catch((error: unknown) => {
+        // Only a rejected id gets here, which Rust checks before it asks any
+        // window to prepare, so the shade is not up yet. Restoring both anyway
+        // costs nothing and keeps the window usable if that ever stops holding.
+        setSwitchingToProfile(null);
+        void invoke("enable_window_glass").catch(() => undefined);
+        void message(error instanceof Error ? error.message : "Could not switch profile", {
+          title: "wavex",
+          kind: "error",
+        });
+      });
+    })();
+  }, []);
 
   const onOpenArchivedSession = useCallback(
     (sessionId: string) => {
@@ -3494,7 +3464,6 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onSelectLiveAgent,
-    onSwitchProfile,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3521,7 +3490,6 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onSelectLiveAgent,
-    onSwitchProfile,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3737,11 +3705,6 @@ export default function App({
       listen("open_usage", () => runInCoding("onOpenUsage", () => actions.current.onOpenUsage())),
       listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
         runInCoding("focus_session", () => actions.current.onSelectLiveAgent(payload)),
-      ),
-      // The popover asks rather than switches, so the chats running here still
-      // get their confirmation.
-      listen<string>(MENU_BAR_SWITCH_PROFILE, ({ payload }) =>
-        actions.current.onSwitchProfile(payload),
       ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
@@ -4142,14 +4105,6 @@ export default function App({
       />
       {whatsNewVersion ? (
         <WhatsNewDialog version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
-      ) : null}
-      {profileSwitchPrompt ? (
-        <ProfileSwitchDialog
-          target={profileSwitchPrompt.target}
-          runningCount={profileSwitchPrompt.running}
-          onCancel={() => setProfileSwitchPrompt(null)}
-          onConfirm={(keepAgents) => startProfileSwitch(profileSwitchPrompt.target, keepAgents)}
-        />
       ) : null}
       {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
     </div>

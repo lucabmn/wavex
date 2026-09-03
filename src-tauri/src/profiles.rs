@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 
 use crate::checkpoint::CheckpointStore;
@@ -54,16 +53,6 @@ impl ProfilePaths {
     }
 }
 
-/// What every window is told when a switch starts. `keep_agents` decides the
-/// note a window leaves on the turns it is about to stop following, so it has
-/// to travel with the event rather than sit in the window that started it.
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SwitchPrepare {
-    profile_id: String,
-    keep_agents: bool,
-}
-
 /// Window labels that have persisted their workspace for the pending switch.
 #[derive(Default)]
 pub struct ProfileSwitch {
@@ -79,15 +68,6 @@ pub fn profile_data_dir(app_data: &Path, profile_id: &str) -> PathBuf {
     } else {
         app_data.join(PROFILES_DIR).join(profile_id)
     }
-}
-
-/// The profile the stores are open on. Falls back to the default before
-/// `init` has run, which only happens in tests and on a host that failed to
-/// resolve its app data directory.
-pub fn active_profile(app: &AppHandle) -> String {
-    app.try_state::<ProfilePaths>()
-        .map(|paths| paths.active())
-        .unwrap_or_else(|| DEFAULT_PROFILE_ID.to_string())
 }
 
 pub fn validate_profile_id(profile_id: &str) -> Result<(), String> {
@@ -156,8 +136,6 @@ fn bind(app: &AppHandle, profile_id: &str) -> Result<(), String> {
 #[tauri::command]
 pub fn profile_bind(app: AppHandle, profile_id: String) -> Result<(), String> {
     validate_profile_id(&profile_id)?;
-    // The window about to render this profile owns its menu-bar rows again.
-    crate::menu_bar::clear_detached_profile(&app, &profile_id);
     bind(&app, &profile_id)
 }
 
@@ -170,60 +148,35 @@ pub fn profile_switch_ready(window: WebviewWindow, state: State<'_, ProfileSwitc
 
 /// Swaps the whole app onto another profile.
 ///
-/// Windows persist first, then the terminals of the profile being left are
-/// stopped: a PTY has no consumer and no way to reattach once its window has
-/// reloaded.
-///
-/// Agents are the caller's choice. With `keep_agents` false the children of the
-/// profile being left are stopped and their chats offer Continue on return,
-/// exactly as relaunching wavex does. With it true they stay alive and finish
-/// their work; `harness.rs` gates their output on the active profile, so
-/// nothing of theirs reaches the profile coming on screen.
+/// Windows persist first, then every agent process and terminal of the profile
+/// being left is stopped. Their chats are already marked interrupted, so
+/// switching back offers Continue exactly as relaunching wavex does. Leaving
+/// them running would strand processes editing a checkout with no UI to stop
+/// them.
 #[tauri::command]
-pub async fn profile_switch(
-    app: AppHandle,
-    profile_id: String,
-    keep_agents: Option<bool>,
-) -> Result<(), String> {
+pub async fn profile_switch(app: AppHandle, profile_id: String) -> Result<(), String> {
     validate_profile_id(&profile_id)?;
-    let leaving = app.state::<ProfilePaths>().active();
-    if leaving == profile_id {
+    if app.state::<ProfilePaths>().active() == profile_id {
         return Ok(());
     }
-    let keep_agents = keep_agents.unwrap_or(false);
     let handle = app.clone();
     let target = profile_id.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        await_windows_persisted(&handle, &target, keep_agents);
-        let host = handle.state::<crate::harness::HarnessHost>();
-        if keep_agents {
-            // The children stay alive and keep working. Their streams are cut
-            // here rather than when the profile comes back: the adapter that
-            // could parse them dies with the reload below, so the lines have
-            // no reader until Continue starts a fresh one.
-            host.detach_profile(&leaving);
-        } else {
-            host.kill_profile(&leaving);
-        }
+        await_windows_persisted(&handle, &target);
+        let _ = crate::harness::harness_kill_all(handle.state());
         let _ = crate::pty::pty_kill_all(handle.state());
         // Windows reload on this event whether or not the swap landed. A failed
         // bind with no event would leave them alive with their agents stopped
         // and no way back short of relaunching.
         let bound = bind(&handle, &target);
-        let landed = handle.state::<ProfilePaths>().active();
-        // A detached child of the profile coming back is deliberately left
-        // alone. Killing it here would throw away the work the user chose to
-        // keep, possibly mid-edit; it stays cut loose until Continue replaces
-        // it, and `Drop for HarnessHost` takes it at exit.
-        crate::menu_bar::clear_detached_profile(&handle, &landed);
-        let _ = handle.emit(CHANGED_EVENT, &landed);
+        let _ = handle.emit(CHANGED_EVENT, handle.state::<ProfilePaths>().active());
         bound
     })
     .await
     .map_err(|e| e.to_string())?
 }
 
-fn await_windows_persisted(app: &AppHandle, profile_id: &str, keep_agents: bool) {
+fn await_windows_persisted(app: &AppHandle, profile_id: &str) {
     let labels: HashSet<String> = app
         .webview_windows()
         .values()
@@ -234,13 +187,7 @@ fn await_windows_persisted(app: &AppHandle, profile_id: &str, keep_agents: bool)
     if let Ok(mut ready) = state.ready.lock() {
         ready.clear();
     }
-    let _ = app.emit(
-        PREPARE_EVENT,
-        SwitchPrepare {
-            profile_id: profile_id.to_string(),
-            keep_agents,
-        },
-    );
+    let _ = app.emit(PREPARE_EVENT, profile_id);
     let deadline = Instant::now() + PREPARE_TIMEOUT;
     while Instant::now() < deadline {
         let done = state

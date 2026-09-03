@@ -18,7 +18,6 @@ mod rate_limits;
 mod search;
 mod session_store;
 mod skills;
-mod transcript;
 mod usage;
 mod window;
 mod window_transfer;
@@ -278,7 +277,6 @@ pub fn run() {
             menu_bar::menu_bar_update_agents,
             menu_bar::menu_bar_open_app,
             menu_bar::menu_bar_focus_agent,
-            menu_bar::menu_bar_detach_agents,
             pty::pty_spawn,
             pty::pty_write,
             pty::pty_resize,
@@ -316,7 +314,6 @@ pub fn run() {
             window::hide_window,
             window::destroy_window,
             window::confirm_quit,
-            transcript::harness_claude_transcript,
             window::enable_window_glass,
             window::disable_window_glass,
             window_transfer::stage_window_transfer,
