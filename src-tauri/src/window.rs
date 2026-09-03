@@ -67,6 +67,27 @@ pub fn enable_window_glass(window: WebviewWindow) {
     }
 }
 
+/// Paints the window opaque again for the length of a profile switch. The
+/// reload tears the document down, and a transparent window over that gap
+/// shows the webview's own blank frame instead of the app.
+#[tauri::command]
+pub fn disable_window_glass(window: WebviewWindow) {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = window.set_background_color(Some(Color(23, 23, 23, 255)));
+        crate::macos::disable_glass(&window);
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = window.set_effects(EffectsBuilder::new().build());
+        let _ = window.set_background_color(Some(Color(23, 23, 23, 255)));
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let _ = window;
+    }
+}
+
 /// Close with a running chat hides the webview so the harness child keeps going.
 #[tauri::command]
 pub fn hide_window(window: WebviewWindow) -> Result<(), String> {

@@ -13,7 +13,31 @@ export type LiveAgent = {
   durationMs?: number;
   needsApproval: boolean;
   done: boolean;
+  /** Set only on an agent left running under a profile that is not on screen. */
+  profileId?: string;
+  profileName?: string;
 };
+
+/**
+ * The rows for agents a profile switch is leaving behind. Their activity is
+ * frozen at this moment — nothing renders their stream while the profile is
+ * off screen — so the label says where they are running rather than a tool
+ * title that will never advance and would read as a hang.
+ */
+export function detachedAgents(
+  agents: LiveAgent[],
+  profile: { id: string; name: string },
+): LiveAgent[] {
+  return agents
+    .filter((agent) => !agent.done)
+    .map((agent) => ({
+      ...agent,
+      activity: `Running in ${profile.name}`,
+      needsApproval: false,
+      profileId: profile.id,
+      profileName: profile.name,
+    }));
+}
 
 export function liveAgentsFromSessions(
   sessions: Session[],

@@ -11,6 +11,7 @@ import {
   inFlightRefs,
   isInFlightSession,
   markTurnInterrupted,
+  markTurnKeptRunning,
   quitWhileBusyMessage,
   wasTurnInterrupted,
   workspaceFromResumed,
@@ -47,6 +48,13 @@ import { lastProjectPath, normalizeProjectPath, sameProjectPath } from "./recent
 
 export type { ResumedWorkspace };
 export { hasInFlightSessions };
+
+/**
+ * `unload` is a webview reload that must not wipe a restored snapshot.
+ * `switch-keep` is a profile switch whose agents were left running, which is a
+ * quit for this webview but not for the children it started.
+ */
+export type PersistMode = "quit" | "unload" | "switch-keep";
 
 export type BootWorkspace = {
   windowTransfer: WindowTransferPayload | null;
@@ -301,18 +309,21 @@ export async function persistQuitState(
   tabs: WorkspaceTab[],
   activeTabId: string,
   projectCwd: string,
-  mode: "quit" | "unload" = "quit",
+  mode: PersistMode = "quit",
   projectTerminals: ProjectTerminalDock[] = [],
   appMode: AppMode = "coding",
 ): Promise<void> {
   const refs = inFlightRefs(sessions, tabs);
   const interrupted = new Set(refs.map((ref) => ref.sessionId));
   const busyWorkChats = new Set(inFlightWorkChats().map((chat) => chat.id));
+  // A profile switch that leaves the agents running did not cut the turn, so
+  // the note in the transcript must not claim it did.
+  const seal = mode === "switch-keep" ? markTurnKeptRunning : markTurnInterrupted;
   await Promise.all(
     [...sessions, ...getWorkChatState().chats].map(async (session) => {
       if (!shouldPersistSession(session)) return;
       const cut = interrupted.has(session.id) || busyWorkChats.has(session.id);
-      await upsertSession(cut ? markTurnInterrupted(session) : session).catch(() => null);
+      await upsertSession(cut ? seal(session) : session).catch(() => null);
     }),
   );
   await saveWorkspaceSnapshot(
@@ -324,7 +335,7 @@ export async function persistQuitState(
   //
   // Vite/webview reload must not wipe a restored snapshot: those chats are idle
   // in this process until Continue runs.
-  if (mode === "quit" || refs.length > 0) {
+  if (mode !== "unload" || refs.length > 0) {
     await replaceInFlightSessions(refs).catch(() => undefined);
   }
 }

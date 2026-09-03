@@ -119,24 +119,35 @@ export async function bindActiveProfile(): Promise<void> {
 }
 
 /**
- * Starts a switch. Every window persists, agents of the profile being left are
- * stopped, the stores swap, and each window reloads onto the new profile.
+ * Starts a switch. Every window persists, the stores swap, and each window
+ * reloads onto the new profile.
+ *
+ * `keepAgents` decides what happens to the chats still running here. Stopped,
+ * they offer Continue on return. Kept, their CLIs finish their work with no UI
+ * attached: the adapter that owned the turn dies with this window's reload, so
+ * wavex stops rendering them either way.
  */
-export async function switchProfile(id: string): Promise<void> {
+export async function switchProfile(id: string, keepAgents = false): Promise<void> {
   if (id === activeProfileId()) return;
   // The stored id moves only when the native stores do, on the change event.
   // Flipping it earlier would file the workspace still on screen under the
   // profile being switched to.
-  await invoke("profile_switch", { profileId: id });
+  await invoke("profile_switch", { profileId: id, keepAgents });
 }
 
+/** What Rust tells every window when a switch starts. */
+export type ProfileSwitchPrepare = {
+  profileId: string;
+  keepAgents: boolean;
+};
+
 export async function listenProfileSwitch(handlers: {
-  onPrepare: () => Promise<void> | void;
+  onPrepare: (prepare: ProfileSwitchPrepare) => Promise<void> | void;
   onChanged: () => void;
 }): Promise<UnlistenFn> {
   const unlisten = await Promise.all([
-    listen(PREPARE_EVENT, () => {
-      void Promise.resolve(handlers.onPrepare()).finally(() => {
+    listen<ProfileSwitchPrepare>(PREPARE_EVENT, (event) => {
+      void Promise.resolve(handlers.onPrepare(event.payload)).finally(() => {
         void invoke("profile_switch_ready").catch(() => undefined);
       });
     }),

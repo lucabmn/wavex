@@ -84,8 +84,17 @@ provider lifecycle.
 
 A profile is a separate identity inside one install: its own projects, chats,
 agents, workspace, and preferences. It is app-wide, not per window — switching
-persists every window, stops the agents and terminals of the profile being left,
-swaps the native stores, and reloads.
+persists every window, stops the terminals of the profile being left, swaps the
+native stores, and reloads.
+
+Agents are the user's choice at the moment of the switch. Stopped, they offer
+Continue on return. Kept, their CLIs stay alive and finish their work, and the
+menu bar lists them under the profile they belong to. Neither answer keeps them
+on screen: the adapter that owns a turn is per-session state in the webview and
+dies with the reload, so `harness.rs` gates a child's output on the active
+profile matching the one it was spawned under, and the transcript records that
+the turn was left running rather than cut. Nothing may reattach a live stream to
+a reloaded webview without an adapter that can rebuild that state.
 
 Browser state that belongs to a profile goes through `profileStorage` in
 `src/lib/profiles/`, never `localStorage` directly. Native state lives under the

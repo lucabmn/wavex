@@ -3,13 +3,16 @@ import { newTab } from "@/lib/workspace/layout";
 import {
   CONTINUE_PROMPT,
   INTERRUPT_MESSAGE,
+  KEPT_RUNNING_MESSAGE,
   canAutoContinue,
   hasInFlightSessions,
   inFlightRefs,
   isInFlightSession,
   markTurnInterrupted,
+  markTurnKeptRunning,
   quitWhileBusyMessage,
   shouldWriteInFlightSnapshot,
+  wasTurnInterrupted,
   workspaceFromResumed,
 } from "@/lib/inFlight";
 import { newSession, type Session } from "@/lib/session";
@@ -244,5 +247,29 @@ describe("shouldWriteInFlightSnapshot", () => {
     expect(shouldWriteInFlightSnapshot("a", [{ sessionId: "a", cwd: "/tmp" }], "a", true)).toBe(
       false,
     );
+  });
+});
+
+describe("markTurnKeptRunning", () => {
+  it("seals the turn with the note that the agent was left running", () => {
+    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true }));
+    expect(kept.busy).toBe(false);
+    expect(kept.blocks[kept.blocks.length - 1]).toMatchObject({
+      role: "system",
+      text: KEPT_RUNNING_MESSAGE,
+    });
+  });
+
+  it("counts as a cut turn, so the chat still offers Continue on return", () => {
+    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true, providerSessionId: "p1" }));
+    expect(wasTurnInterrupted(kept)).toBe(true);
+    expect(canAutoContinue(kept)).toBe(true);
+  });
+
+  it("does not claim a quit cut a turn it had already left running", () => {
+    const kept = markTurnKeptRunning(chat("/tmp/a", { busy: true }));
+    const requit = markTurnInterrupted(kept);
+    expect(requit.blocks.filter((block) => block.text === INTERRUPT_MESSAGE)).toHaveLength(0);
+    expect(requit.blocks.filter((block) => block.text === KEPT_RUNNING_MESSAGE)).toHaveLength(1);
   });
 });

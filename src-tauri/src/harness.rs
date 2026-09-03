@@ -75,6 +75,10 @@ struct LiveSse {
 struct HarnessInner {
     children: HashMap<String, Arc<LiveChild>>,
     epochs: HashMap<String, u64>,
+    /// Profile each live session was spawned under. A child kept alive across
+    /// a profile switch must not stream into the profile now on screen, so
+    /// every emit is checked against this.
+    profiles: HashMap<String, String>,
 }
 
 pub struct HarnessHost {
@@ -90,6 +94,7 @@ impl HarnessHost {
             inner: Mutex::new(HarnessInner {
                 children: HashMap::new(),
                 epochs: HashMap::new(),
+                profiles: HashMap::new(),
             }),
             sse: Mutex::new(HashMap::new()),
             kill_all_gen: AtomicU64::new(0),
@@ -146,7 +151,58 @@ impl HarnessHost {
     fn kill_session(&self, session_id: &str) -> Option<Arc<LiveChild>> {
         let mut inner = self.lock_inner();
         *inner.epochs.entry(session_id.to_string()).or_insert(0) += 1;
+        inner.profiles.remove(session_id);
         inner.children.remove(session_id)
+    }
+
+    fn set_profile(&self, session_id: &str, profile_id: &str) {
+        self.lock_inner()
+            .profiles
+            .insert(session_id.to_string(), profile_id.to_string());
+    }
+
+    /// The profile a session belongs to, or `None` once its child is gone.
+    /// Only the kill paths care; the emit gate captures the owner up front so
+    /// trailing lines from a reaped child cannot read as unowned.
+    #[cfg(test)]
+    fn profile_of(&self, session_id: &str) -> Option<String> {
+        self.lock_inner().profiles.get(session_id).cloned()
+    }
+
+    /// Stops only the children of one profile. `kill_all` would also take the
+    /// ones deliberately left running under a profile the user switched away
+    /// from, which is the whole point of keeping them.
+    pub(crate) fn kill_profile(&self, profile_id: &str) {
+        let kids: Vec<Arc<LiveChild>> = {
+            let mut inner = self.lock_inner();
+            // Same guard `kill_all` uses: a spawn still forking when this ran
+            // must not reinstall itself afterwards.
+            self.kill_all_gen.fetch_add(1, Ordering::SeqCst);
+            let ids: Vec<String> = inner
+                .profiles
+                .iter()
+                .filter(|(_, owner)| owner.as_str() == profile_id)
+                .map(|(id, _)| id.clone())
+                .collect();
+            let mut kids = Vec::new();
+            for id in ids {
+                inner.profiles.remove(&id);
+                *inner.epochs.entry(id.clone()).or_insert(0) += 1;
+                if let Some(child) = inner.children.remove(&id) {
+                    kids.push(child);
+                }
+                if let Ok(mut sse) = self.sse.lock() {
+                    if let Some(live) = sse.remove(&id) {
+                        live.stop.store(true, Ordering::SeqCst);
+                    }
+                }
+            }
+            kids
+        };
+        let pids: Vec<u32> = kids.iter().map(|live| live.pid).collect();
+        // Drop stdin before signaling so ACP CLIs that watch the pipe can exit.
+        drop(kids);
+        terminate_all(&pids);
     }
 
     fn remove_if_pid(&self, session_id: &str, pid: u32) -> Option<Arc<LiveChild>> {
@@ -154,6 +210,7 @@ impl HarnessHost {
         if inner.children.get(session_id).map(|live| live.pid) != Some(pid) {
             return None;
         }
+        inner.profiles.remove(session_id);
         inner.children.remove(session_id)
     }
 
@@ -161,6 +218,7 @@ impl HarnessHost {
         let kids: Vec<Arc<LiveChild>> = {
             let mut inner = self.lock_inner();
             self.kill_all_gen.fetch_add(1, Ordering::SeqCst);
+            inner.profiles.clear();
             inner.children.drain().map(|(_, child)| child).collect()
         };
         self.stop_all_sse();
@@ -368,6 +426,8 @@ pub fn harness_spawn(
         stdin: Mutex::new(stdin),
         pid,
     });
+    let owner = crate::profiles::active_profile(&app);
+    host.set_profile(&session_id, &owner);
     if let Some(rejected) = host.install_spawn(session_id.clone(), epoch, kill_all, live) {
         // A kill, or a newer spawn, won the race while this one was forking.
         // Returning `Ok` here would hand the caller a dead pid to store as the
@@ -382,9 +442,13 @@ pub fn harness_spawn(
 
     let stdout_app = app.clone();
     let stdout_id = session_id.clone();
+    let stdout_owner = owner.clone();
     thread::spawn(move || {
         for line in BufReader::new(stdout).lines() {
             let Ok(line) = line else { break };
+            if !owns_profile(&stdout_app, &stdout_owner) {
+                continue;
+            }
             let _ = stdout_app.emit(
                 STDOUT_EVENT,
                 HarnessLine {
@@ -397,9 +461,13 @@ pub fn harness_spawn(
 
     let stderr_app = app.clone();
     let stderr_id = session_id.clone();
+    let stderr_owner = owner.clone();
     thread::spawn(move || {
         for line in BufReader::new(stderr).lines() {
             let Ok(line) = line else { break };
+            if !owns_profile(&stderr_app, &stderr_owner) {
+                continue;
+            }
             let _ = stderr_app.emit(
                 STDERR_EVENT,
                 HarnessLine {
@@ -415,10 +483,16 @@ pub fn harness_spawn(
     let wait_pid = pid;
     thread::spawn(move || {
         let code = child.wait().ok().and_then(|status| status.code());
+        let owned = owns_profile(&wait_app, &owner);
         if let Some(host) = wait_app.try_state::<HarnessHost>() {
             if host.remove_if_pid(&wait_id, wait_pid).is_some() {
                 host.stop_sse(&wait_id);
             }
+        }
+        // A detached agent that finished must not keep claiming a menu-bar row.
+        crate::menu_bar::remove_detached_agent(&wait_app, &wait_id);
+        if !owned {
+            return;
         }
         let _ = wait_app.emit(
             EXIT_EVENT,
@@ -450,6 +524,22 @@ pub fn harness_write(
         .map_err(|e| format!("Failed to write to harness: {e}"))
 }
 
+/// True when the profile on screen is still the one that started this stream.
+///
+/// A child kept alive across a profile switch keeps producing output the
+/// current profile must never see: its webview has no session under that id,
+/// and no adapter state to parse the stream with. The lines are dropped rather
+/// than buffered, because the adapter that owned the turn died with the reload
+/// and replaying into a fresh one would desync it. Left through, they would sit
+/// in the webview's own bounded buffer under an id nothing ever claims.
+///
+/// `owner` is captured when the stream opens rather than looked up per line:
+/// the host forgets a session the moment its child is reaped, and the trailing
+/// lines still in the pipe must not read that as "no longer owned".
+fn owns_profile(app: &AppHandle, owner: &str) -> bool {
+    crate::profiles::active_profile(app) == owner
+}
+
 #[tauri::command]
 pub fn harness_kill(host: State<HarnessHost>, session_id: String) -> Result<(), String> {
     host.stop_sse(&session_id);
@@ -459,11 +549,17 @@ pub fn harness_kill(host: State<HarnessHost>, session_id: String) -> Result<(), 
     Ok(())
 }
 
-/// Off the main thread: `kill_all` waits for the children to die before it
+/// Stops every agent of the profile on screen.
+///
+/// Scoped to that profile on purpose: closing one window must not reach into
+/// the agents another profile was left running with. Everything really does go
+/// at process exit, through `Drop for HarnessHost`.
+///
+/// Off the main thread: the kill waits for the children to die before it
 /// returns, and a window close calls this while the app keeps running.
 #[tauri::command(async)]
-pub fn harness_kill_all(host: State<'_, HarnessHost>) -> Result<(), String> {
-    host.kill_all();
+pub fn harness_kill_all(app: AppHandle, host: State<'_, HarnessHost>) -> Result<(), String> {
+    host.kill_profile(&crate::profiles::active_profile(&app));
     Ok(())
 }
 
@@ -511,6 +607,7 @@ pub fn harness_sse_open(
     headers: Option<HashMap<String, String>>,
 ) -> Result<(), String> {
     assert_loopback(&url)?;
+    let owner = crate::profiles::active_profile(&app);
     host.stop_sse(&session_id);
     let stop = Arc::new(AtomicBool::new(false));
     host.insert_sse(
@@ -534,18 +631,19 @@ pub fn harness_sse_open(
         }
         let result = request.call();
         if stop.load(Ordering::SeqCst) {
-            emit_sse_end(&app, &session_id, None);
+            emit_sse_end(&app, &owner, &session_id, None);
             return;
         }
         match result {
             Ok(response) => {
                 let reader = BufReader::new(response.into_reader());
-                read_sse(reader, &app, &session_id, &stop);
-                emit_sse_end(&app, &session_id, None);
+                read_sse(reader, &app, &owner, &session_id, &stop);
+                emit_sse_end(&app, &owner, &session_id, None);
             }
             Err(error) => {
                 emit_sse_end(
                     &app,
+                    &owner,
                     &session_id,
                     Some(format!("OpenCode event stream failed: {error}")),
                 );
@@ -570,7 +668,13 @@ fn read_http_response(response: ureq::Response) -> Result<HarnessHttpResponse, S
     Ok(HarnessHttpResponse { status, body })
 }
 
-fn read_sse<R: BufRead>(reader: R, app: &AppHandle, session_id: &str, stop: &AtomicBool) {
+fn read_sse<R: BufRead>(
+    reader: R,
+    app: &AppHandle,
+    owner: &str,
+    session_id: &str,
+    stop: &AtomicBool,
+) {
     let mut data = String::new();
     for line in reader.lines() {
         if stop.load(Ordering::SeqCst) {
@@ -585,6 +689,9 @@ fn read_sse<R: BufRead>(reader: R, app: &AppHandle, session_id: &str, stop: &Ato
                 continue;
             }
             let payload = std::mem::take(&mut data);
+            if !owns_profile(app, owner) {
+                continue;
+            }
             let _ = app.emit(
                 SSE_EVENT,
                 HarnessSse {
@@ -604,7 +711,10 @@ fn read_sse<R: BufRead>(reader: R, app: &AppHandle, session_id: &str, stop: &Ato
     }
 }
 
-fn emit_sse_end(app: &AppHandle, session_id: &str, error: Option<String>) {
+fn emit_sse_end(app: &AppHandle, owner: &str, session_id: &str, error: Option<String>) {
+    if !owns_profile(app, owner) {
+        return;
+    }
     let _ = app.emit(
         SSE_END_EVENT,
         HarnessSseEnd {
@@ -1961,6 +2071,24 @@ fn command_basename(command: &str) -> &str {
 mod tests {
     use super::*;
     use std::os::unix::process::CommandExt;
+
+    #[test]
+    fn killing_one_profile_leaves_another_profiles_sessions_owned() {
+        let host = HarnessHost::new();
+        host.set_profile("a", "work");
+        host.set_profile("b", "default");
+        host.kill_profile("work");
+        assert_eq!(host.profile_of("a"), None);
+        assert_eq!(host.profile_of("b").as_deref(), Some("default"));
+    }
+
+    #[test]
+    fn a_session_stops_being_owned_once_its_child_is_gone() {
+        let host = HarnessHost::new();
+        host.set_profile("a", "work");
+        host.kill_session("a");
+        assert_eq!(host.profile_of("a"), None);
+    }
 
     #[cfg(unix)]
     fn spawn_group(script: &str) -> std::process::Child {

@@ -99,6 +99,13 @@ html.has-native-glass #root {
   background: transparent;
 }
 
+/* The inline rule in `index.html` paints the shade dark, because first paint
+   happens before this file exists. By the time it does, `initAppearance` has
+   settled the scheme, so a light install stops covering itself in black. */
+html.theme-light #boot-splash {
+  background: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
+}
+
 .sidebar-glass {
   background: color-mix(in srgb, var(--color-background-base) 90%, black);
 }
