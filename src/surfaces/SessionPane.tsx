@@ -11,6 +11,7 @@ import {
 import { Composer } from "../chrome/Composer";
 import { SessionReview } from "../chrome/SessionReview";
 import type { ApprovalDecision, UserQuestionReply } from "../lib/harness";
+import type { QueuedPrompt } from "../lib/promptQueue";
 import { looksLikeProject, type RecentProject } from "../lib/recents";
 import {
   sessionDisplayTitle,
@@ -48,7 +49,15 @@ type Props = {
   onModelChange: (sessionId: string, harness: HarnessId, model: string) => void;
   onModelSettingsChange: (sessionId: string, settings: Record<string, string>) => void;
   onRuntimeModeChange: (sessionId: string, mode: RuntimeMode) => void;
-  onSubmit: (sessionId: string, text: string, attachments: Attachment[]) => void;
+  onSubmit: (
+    sessionId: string,
+    text: string,
+    attachments: Attachment[],
+    options?: { steer?: boolean },
+  ) => void;
+  queued?: QueuedPrompt[];
+  onRemoveQueued?: (sessionId: string, promptId: string) => void;
+  onSendQueued?: (sessionId: string, promptId: string) => void;
   onStop: (sessionId: string) => void;
   onInboxCardDismiss?: (sessionId: string) => void;
   onNoteCardDismiss?: (sessionId: string) => void;
@@ -80,6 +89,9 @@ export const SessionPane = memo(function SessionPane({
   onModelSettingsChange,
   onRuntimeModeChange,
   onSubmit,
+  queued,
+  onRemoveQueued,
+  onSendQueued,
   onStop,
   onInboxCardDismiss,
   onNoteCardDismiss,
@@ -186,7 +198,10 @@ export const SessionPane = memo(function SessionPane({
       onModelChange={(harness, model) => onModelChange(session.id, harness, model)}
       onModelSettingsChange={(settings) => onModelSettingsChange(session.id, settings)}
       onRuntimeModeChange={(mode) => onRuntimeModeChange(session.id, mode)}
-      onSubmit={(text, attachments) => onSubmit(session.id, text, attachments)}
+      onSubmit={(text, attachments, options) => onSubmit(session.id, text, attachments, options)}
+      queued={queued}
+      onRemoveQueued={(promptId) => onRemoveQueued?.(session.id, promptId)}
+      onSendQueued={(promptId) => onSendQueued?.(session.id, promptId)}
       onStop={() => onStop(session.id)}
       onOpenFile={onOpenFile}
       busy={!!session.busy}

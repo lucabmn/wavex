@@ -19,6 +19,7 @@ import {
   type LayoutSash,
   type PaneEdge,
 } from "../lib/workspace/layout";
+import { EMPTY_QUEUES, queuedFor, type PromptQueues } from "../lib/promptQueue";
 import type { RecentProject } from "../lib/recents";
 import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
 import type { Attachment, Block, HarnessId, RuntimeMode, Session } from "../lib/session";
@@ -48,7 +49,15 @@ type Shared = {
   onModelChange: (sessionId: string, harness: HarnessId, model: string) => void;
   onModelSettingsChange: (sessionId: string, settings: Record<string, string>) => void;
   onRuntimeModeChange: (sessionId: string, mode: RuntimeMode) => void;
-  onSubmit: (sessionId: string, text: string, attachments: Attachment[]) => void;
+  onSubmit: (
+    sessionId: string,
+    text: string,
+    attachments: Attachment[],
+    options?: { steer?: boolean },
+  ) => void;
+  queues?: PromptQueues;
+  onRemoveQueued?: (sessionId: string, promptId: string) => void;
+  onSendQueued?: (sessionId: string, promptId: string) => void;
   onStop: (sessionId: string) => void;
   onInboxCardDismiss?: (sessionId: string) => void;
   onNoteCardDismiss?: (sessionId: string) => void;
@@ -101,6 +110,9 @@ function PaneTreeComponent({
   onModelSettingsChange,
   onRuntimeModeChange,
   onSubmit,
+  queues = EMPTY_QUEUES,
+  onRemoveQueued,
+  onSendQueued,
   onStop,
   onInboxCardDismiss,
   onNoteCardDismiss,
@@ -277,6 +289,9 @@ function PaneTreeComponent({
                 onModelSettingsChange={onModelSettingsChange}
                 onRuntimeModeChange={onRuntimeModeChange}
                 onSubmit={onSubmit}
+                queued={queuedFor(queues, session.id)}
+                onRemoveQueued={onRemoveQueued}
+                onSendQueued={onSendQueued}
                 onStop={onStop}
                 onInboxCardDismiss={onInboxCardDismiss}
                 onNoteCardDismiss={onNoteCardDismiss}

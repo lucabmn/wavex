@@ -3,7 +3,9 @@ import { ArrowUp, ImagePlus, Square, WandSparkles } from "./icons";
 import { AttachmentChip } from "./AttachmentChip";
 import { ModelPicker } from "./ModelPicker";
 import { ModelSettings } from "./ModelSettings";
+import type { QueuedPrompt } from "../lib/promptQueue";
 import { QuestionForm } from "./QuestionForm";
+import { QueueStrip } from "./QueueStrip";
 import {
   MAX_ATTACHMENTS,
   attachmentsFromFiles,
@@ -35,8 +37,14 @@ type Props = {
   onModelChange: (harness: HarnessId, model: string) => void;
   onModelSettingsChange: (settings: Record<string, string>) => void;
   onSubmit: (text: string, attachments: Attachment[], options: { image: boolean }) => void;
+  /** Prompts waiting for the running turn to end, oldest first. */
+  queued?: QueuedPrompt[];
+  onRemoveQueued?: (promptId: string) => void;
+  onSendQueued?: (promptId: string) => void;
   onStop: () => void;
 };
+
+const NO_QUEUED: QueuedPrompt[] = [];
 
 const MAX_ROWS_PX = 200;
 
@@ -57,6 +65,9 @@ export function ChatComposer({
   onModelChange,
   onModelSettingsChange,
   onSubmit,
+  queued = NO_QUEUED,
+  onRemoveQueued,
+  onSendQueued,
   onStop,
 }: Props) {
   const field = useRef<HTMLTextAreaElement>(null);
@@ -140,6 +151,7 @@ export function ChatComposer({
       {question && onQuestionReply ? (
         <QuestionForm prompt={question} onReply={onQuestionReply} />
       ) : null}
+      <QueueStrip queued={queued} onRemove={onRemoveQueued} onSend={onSendQueued} />
       <div
         className={`overflow-hidden rounded-xl border bg-background-base/60 backdrop-blur-md ${
           dragging ? "border-accent/60" : "border-content/10"

@@ -36,7 +36,17 @@ import type { ApprovalDecision } from "../harness/types";
 import { respondHarnessApproval, respondHarnessQuestion } from "../harness/registry";
 import type { UserQuestionReply } from "../userQuestion";
 import { preferredModelSettings, resolveModel } from "../models";
-import type { Attachment, HarnessId, Session } from "../session";
+import {
+  canFlushQueue,
+  EMPTY_QUEUES,
+  enqueuePrompt,
+  queuedFor,
+  removeQueuedPrompt,
+  takeNextPrompt,
+  type PromptQueues,
+  type QueuedPrompt,
+} from "../promptQueue";
+import { sessionNeedsInput, type Attachment, type HarnessId, type Session } from "../session";
 import {
   deleteSession,
   getSession,
@@ -84,6 +94,8 @@ export type WorkChatState = {
   dir: string;
   loading: boolean;
   error: string | null;
+  /** Prompts written while a turn was running, per chat. Never persisted. */
+  queues: PromptQueues;
 };
 
 const EMPTY: WorkChatState = {
@@ -94,6 +106,7 @@ const EMPTY: WorkChatState = {
   dir: "",
   loading: false,
   error: null,
+  queues: EMPTY_QUEUES,
 };
 
 let state: WorkChatState = EMPTY;
@@ -114,6 +127,7 @@ export function resetWorkChatStore(): void {
   flush = null;
   queued.clear();
   turnGeneration.clear();
+  stoppedChats.clear();
   state = EMPTY;
   loaded = null;
   emit();
@@ -292,6 +306,7 @@ export async function deleteWorkChat(id: string): Promise<void> {
   if (harness) await forgetHarnessSession(harness, id).catch(() => undefined);
   bumpTurn(id);
   queued.delete(id);
+  stoppedChats.delete(id);
   const chats = state.chats.filter((row) => row.id !== id);
   const summaries = state.summaries.filter((row) => row.id !== id);
   const activeId =
@@ -418,8 +433,26 @@ export async function sendWorkChatTurn(
   options: SendWorkChatOptions = {},
 ): Promise<void> {
   const chat = findWorkChat(id);
-  if (!chat || chat.busy) return;
+  if (!chat) return;
   if (!text.trim() && attachments.length === 0) return;
+  // A follow-up written mid-turn used to be dropped here without a trace.
+  // It waits in the queue instead, visible above the composer, and goes out
+  // when the turn ends on its own.
+  if (chat.busy) {
+    set({
+      queues: enqueuePrompt(state.queues, id, {
+        id: crypto.randomUUID(),
+        text,
+        attachments,
+        queuedAt: Date.now(),
+        ...(options.image ? { image: true } : {}),
+      }),
+    });
+    return;
+  }
+  // A stop applies to everything queued behind it, so a fresh prompt does not
+  // release the queue. Only sending a chip does, and only once it is empty.
+  if (queuedFor(state.queues, id).length === 0) stoppedChats.delete(id);
   // The transcript shows what the user asked for; the harness gets the
   // output-shape instructions wrapped around it, and the project brief in
   // front of the whole thing so every chat in a project knows what it is
@@ -506,8 +539,50 @@ export async function sendWorkChatTurn(
       patchChat(id, stopStreaming);
       if (options.image) await collectGeneratedImage(id, text);
       await persist(id);
+      flushWorkChatQueue(id);
     }
   }
+}
+
+/** Chats whose current turn the user stopped. Their queue waits for a real send. */
+const stoppedChats = new Set<string>();
+
+export function workChatQueue(id: string | null): QueuedPrompt[] {
+  return id ? queuedFor(state.queues, id) : [];
+}
+
+export function removeWorkChatQueuedPrompt(id: string, promptId: string): void {
+  set({ queues: removeQueuedPrompt(state.queues, id, promptId) });
+}
+
+/**
+ * Send one queued prompt now. This is the deliberate send a stopped turn waits
+ * for, so it also releases the rest of that chat's queue.
+ */
+export function sendWorkChatQueuedPrompt(id: string, promptId: string): void {
+  const prompt = queuedFor(state.queues, id).find((entry) => entry.id === promptId);
+  if (!prompt) return;
+  stoppedChats.delete(id);
+  set({ queues: removeQueuedPrompt(state.queues, id, promptId) });
+  void sendWorkChatTurn(id, prompt.text, prompt.attachments, { image: prompt.image === true });
+}
+
+/** One prompt per turn boundary. Sending it schedules the next the same way. */
+function flushWorkChatQueue(id: string): void {
+  const chat = findWorkChat(id);
+  if (!chat) return;
+  const flushable = canFlushQueue({
+    busy: !!chat.busy,
+    needsInput: sessionNeedsInput(chat),
+    stopped: stoppedChats.has(id),
+  });
+  if (!flushable) return;
+  const taken = takeNextPrompt(state.queues, id);
+  if (!taken.prompt) return;
+  set({ queues: taken.queues });
+  void sendWorkChatTurn(id, taken.prompt.text, taken.prompt.attachments, {
+    image: taken.prompt.image === true,
+  });
 }
 
 /**
@@ -557,6 +632,8 @@ async function collectGeneratedImage(id: string, request: string): Promise<void>
 export async function stopWorkChat(id: string): Promise<void> {
   const chat = findWorkChat(id);
   if (!chat) return;
+  // Stopping rejects this turn; anything queued behind it stays put.
+  stoppedChats.add(id);
   bumpTurn(id);
   flushEvents();
   patchChat(id, stopStreaming);

@@ -35,6 +35,7 @@ import {
 import type { ProjectFile } from "../lib/fs";
 import { composeInboxMessage, type InboxComposerCard } from "../lib/inbox/githubTasks";
 import type { HandoffComposerCard } from "../lib/handoff";
+import type { QueuedPrompt } from "../lib/promptQueue";
 import { looksLikeProject, type RecentProject } from "../lib/recents";
 import type { Attachment, HarnessId, RuntimeMode } from "../lib/session";
 import { harnessSupportsAttachments } from "../lib/session";
@@ -69,6 +70,7 @@ import { HandoffMiniCard } from "./HandoffMiniCard";
 import { ModelPicker } from "./ModelPicker";
 import { ModelSettings } from "./ModelSettings";
 import { QuestionForm } from "./QuestionForm";
+import { QueueStrip } from "./QueueStrip";
 import { SkillPicker } from "./SkillPicker";
 import { PromptTemplateDialog } from "./PromptTemplateDialog";
 import { projectName } from "../lib/paths";
@@ -127,7 +129,11 @@ type Props = {
   onNoteCardDismiss?: () => void;
   onHandoffCardDismiss?: () => void;
   onQuestionReply?: (requestId: number, reply: UserQuestionReply) => void;
-  onSubmit: (text: string, attachments: Attachment[]) => void;
+  onSubmit: (text: string, attachments: Attachment[], options?: { steer?: boolean }) => void;
+  /** Prompts waiting for the running turn to end, oldest first. */
+  queued?: QueuedPrompt[];
+  onRemoveQueued?: (promptId: string) => void;
+  onSendQueued?: (promptId: string) => void;
   onStop?: () => void;
   onOpenFile?: (path: string) => void;
   children?: ReactNode;
@@ -164,6 +170,8 @@ function ToolButton({
   );
 }
 
+const NO_QUEUED: QueuedPrompt[] = [];
+
 export function Composer({
   enabled = true,
   focused,
@@ -199,6 +207,9 @@ export function Composer({
   onHandoffCardDismiss,
   onQuestionReply,
   onSubmit,
+  queued = NO_QUEUED,
+  onRemoveQueued,
+  onSendQueued,
   onStop,
   onOpenFile,
   children,
@@ -647,11 +658,11 @@ export function Composer({
     };
   }, [addAttachments, attachmentsSupported, enabled]);
 
-  const submit = (value: string) => {
+  const submit = (value: string, steer = false) => {
     const text = composeInboxMessage(inboxCard, value);
     const files = attachments;
     if (!text && files.length === 0 && !noteCard && !handoffCard) return;
-    onSubmit(text, files);
+    onSubmit(text, files, steer ? { steer: true } : undefined);
     if (!ref.current) return;
     ref.current.value = "";
     ref.current.style.height = "auto";
@@ -745,6 +756,13 @@ export function Composer({
       }
     }
 
+    // Steer the running turn instead of queueing behind it.
+    if (e.key === "Enter" && e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      submit(e.currentTarget.value, true);
+      return;
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit(e.currentTarget.value);
@@ -777,6 +795,7 @@ export function Composer({
         <QuestionForm prompt={question} onReply={onQuestionReply} />
       ) : null}
       {children}
+      <QueueStrip queued={queued} onRemove={onRemoveQueued} onSend={onSendQueued} />
       <div className="relative overflow-visible">
         {pickerOpen ? (
           <div className="absolute inset-x-0 bottom-full z-30 mb-1">

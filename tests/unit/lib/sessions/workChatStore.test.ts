@@ -299,6 +299,74 @@ describe("stopWorkChat", () => {
   });
 });
 
+describe("prompt queue", () => {
+  it("queues a prompt written mid-turn instead of dropping it", async () => {
+    turn = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    };
+    const id = await store.createWorkChat("claude");
+    void store.sendWorkChatTurn(id, "first");
+    await settle();
+
+    await store.sendWorkChatTurn(id, "second");
+    expect(store.workChatQueue(id).map((entry) => entry.text)).toEqual(["second"]);
+    expect(store.findWorkChat(id)?.blocks.map((block) => block.text)).toEqual(["first"]);
+  });
+
+  it("sends the queued prompt once the turn ends on its own", async () => {
+    const prompts: string[] = [];
+    turn = async (input) => {
+      prompts.push(input.text);
+      input.onEvent({ type: "message.completed" });
+    };
+    const id = await store.createWorkChat("claude");
+    const running = store.sendWorkChatTurn(id, "first");
+    await store.sendWorkChatTurn(id, "second");
+    await running;
+    await settle();
+
+    expect(prompts).toEqual(["first", "second"]);
+    expect(store.workChatQueue(id)).toEqual([]);
+    const users = (store.findWorkChat(id)?.blocks ?? []).filter((block) => block.role === "user");
+    expect(users.map((block) => block.text)).toEqual(["first", "second"]);
+  });
+
+  it("holds the queue after a stop until the user sends it", async () => {
+    const prompts: string[] = [];
+    turn = async (input) => {
+      prompts.push(input.text);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    };
+    const id = await store.createWorkChat("claude");
+    void store.sendWorkChatTurn(id, "first");
+    await settle();
+    await store.sendWorkChatTurn(id, "second");
+    await store.stopWorkChat(id);
+    await settle();
+
+    expect(prompts).toEqual(["first"]);
+    expect(store.workChatQueue(id).map((entry) => entry.text)).toEqual(["second"]);
+
+    const queuedId = store.workChatQueue(id)[0].id;
+    store.sendWorkChatQueuedPrompt(id, queuedId);
+    await settle();
+    expect(prompts).toEqual(["first", "second"]);
+  });
+
+  it("removes a queued prompt", async () => {
+    turn = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    };
+    const id = await store.createWorkChat("claude");
+    void store.sendWorkChatTurn(id, "first");
+    await settle();
+    await store.sendWorkChatTurn(id, "second");
+
+    store.removeWorkChatQueuedPrompt(id, store.workChatQueue(id)[0].id);
+    expect(store.workChatQueue(id)).toEqual([]);
+  });
+});
+
 describe("resendWorkChatTurn", () => {
   it("truncates at the edited turn and sends the new text", async () => {
     const prompts: string[] = [];
