@@ -4072,7 +4072,18 @@ export default function App({
       </div>
 
       {workMode ? (
-        <WorkView mode={appMode} onModeChange={setAppMode} onOpenSettings={onOpenSettings} />
+        <WorkView
+          mode={appMode}
+          onModeChange={setAppMode}
+          onOpenSettings={onOpenSettings}
+          profileMenuOpen={profileMenuOpen}
+          onProfileMenuOpenChange={setProfileMenuOpen}
+          onSwitchProfile={onSwitchProfile}
+          onManageProfiles={onManageProfiles}
+          updateNotice={updateNotice}
+          onOpenWhatsNew={onOpenWhatsNew}
+          onDismissUpdate={() => setUpdateNotice(null)}
+        />
       ) : null}
 
       {filePickerOpen ? (
