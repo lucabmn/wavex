@@ -11,12 +11,14 @@ import {
   type EditorPane,
   type FilePaneTab,
 } from "../lib/workspace/layout";
+import { isImagePath } from "../lib/files/filePreview";
 import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
 import type { EditorNavigationTarget } from "../lib/search";
 import { editorPathsEqual } from "../lib/search";
 import type { Session } from "../lib/session";
 import { loadDiffViewer, subscribeDiffViewer } from "../lib/settings";
 import { MarkdownPreview, MarkdownSource } from "./AgentMarkdown";
+import { BinaryFileView } from "./BinaryFileView";
 import { FileEditor } from "./FileEditor";
 import { ReleaseNotesSurface } from "./ReleaseNotesSurface";
 import { TerminalView } from "./TerminalView";
@@ -103,6 +105,8 @@ function FilePaneComponent({
                   active={focused && file.id === pane.activeFileId}
                   onMetaChange={(patch) => onTerminalMetaChange?.(file.id, patch)}
                 />
+              ) : isImagePath(file.path) ? (
+                <BinaryFileView path={file.path} cwd={file.cwd} />
               ) : (
                 <FileEditor
                   path={file.path}

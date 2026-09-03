@@ -215,6 +215,7 @@ pub fn run() {
             fs::stat_files,
             fs::inspect_paths,
             fs::read_file_base64,
+            fs::read_binary_file,
             fs::write_attachment,
             fs::write_file_base64,
             fs::write_generated_image,
