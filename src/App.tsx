@@ -135,6 +135,7 @@ import {
   canSteerHarness,
   forgetHarnessSession,
   generateHarnessTitle,
+  harnessErrorMessage,
   isLiveHarness,
   probeHarnessAvailability,
   refreshHarnessCatalogs,
@@ -310,7 +311,9 @@ import { WorkView } from "./surfaces/WorkView";
 import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
 import { getWorkChatState } from "./lib/sessions/workChatStore";
 import type { InstalledUpdate } from "./lib/updates/updateNotice";
-import { listenProfileSwitch, switchProfile } from "./lib/profiles/profileStore";
+import { listenProfileSwitch, loadProfiles, switchProfile } from "./lib/profiles/profileStore";
+import { findProfile, type Profile } from "./lib/profiles/profile";
+import { ProfileSwitchOverlay } from "./chrome/ProfileSwitchOverlay";
 import {
   beginProfileSwitch,
   bindResumedSessions,
@@ -408,6 +411,8 @@ export default function App({
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>(loadSettingsSection);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  /** Set for every window from the moment a switch starts until the reload. */
+  const [switchingToProfile, setSwitchingToProfile] = useState<Profile | null>(null);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
   const editorNavigationToken = useRef(0);
   const [filePickerOpen, setFilePickerOpen] = useState(false);
@@ -584,7 +589,11 @@ export default function App({
   // native stores swap, then reload onto the profile that was chosen.
   useEffect(() => {
     const unlisten = listenProfileSwitch({
-      onPrepare: async () => {
+      onPrepare: async (profileId) => {
+        // The shade goes up before the persist, which takes long enough to
+        // read as a frozen app, and stays up over the reload behind it.
+        setSwitchingToProfile(findProfile(loadProfiles(), profileId) ?? null);
+        void invoke("disable_window_glass").catch(() => undefined);
         flushHarnessEvents();
         await persistQuitState(
           sessionsRef.current,
@@ -2926,8 +2935,7 @@ export default function App({
         } catch (error: unknown) {
           if (turnGen.current.get(sessionId) !== gen) return;
           if (wrap) revealHandoff(wrap.text);
-          const message =
-            error instanceof Error ? error.message : `${current.harness} adapter failed`;
+          const message = harnessErrorMessage(error, current.harness);
           enqueueHarnessEvent(sessionId, {
             type: "session.error",
             message,
@@ -3356,6 +3364,11 @@ export default function App({
         if (!ok) return;
       }
       await switchProfile(profileId).catch((error: unknown) => {
+        // Only a rejected id gets here, which Rust checks before it asks any
+        // window to prepare, so the shade is not up yet. Restoring both anyway
+        // costs nothing and keeps the window usable if that ever stops holding.
+        setSwitchingToProfile(null);
+        void invoke("enable_window_glass").catch(() => undefined);
         void message(error instanceof Error ? error.message : "Could not switch profile", {
           title: "wavex",
           kind: "error",
@@ -4093,6 +4106,7 @@ export default function App({
       {whatsNewVersion ? (
         <WhatsNewDialog version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
       ) : null}
+      {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
     </div>
   );
 }

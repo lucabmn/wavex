@@ -131,12 +131,13 @@ export async function switchProfile(id: string): Promise<void> {
 }
 
 export async function listenProfileSwitch(handlers: {
-  onPrepare: () => Promise<void> | void;
+  /** The profile being switched to, so a window can say where it is going. */
+  onPrepare: (profileId: string) => Promise<void> | void;
   onChanged: () => void;
 }): Promise<UnlistenFn> {
   const unlisten = await Promise.all([
-    listen(PREPARE_EVENT, () => {
-      void Promise.resolve(handlers.onPrepare()).finally(() => {
+    listen<string>(PREPARE_EVENT, (event) => {
+      void Promise.resolve(handlers.onPrepare(event.payload)).finally(() => {
         void invoke("profile_switch_ready").catch(() => undefined);
       });
     }),

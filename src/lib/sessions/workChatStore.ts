@@ -18,6 +18,7 @@ import {
   cancelHarnessTurn,
   forgetHarnessSession,
   generateHarnessTitle,
+  harnessErrorMessage,
   isLiveHarness,
   sendHarnessTurn,
   stopStreaming,
@@ -497,7 +498,7 @@ export async function sendWorkChatTurn(
     if (turnGeneration.get(id) !== generation) return;
     enqueue(id, {
       type: "session.error",
-      message: error instanceof Error ? error.message : `${chat.harness} adapter failed`,
+      message: harnessErrorMessage(error, chat.harness),
     });
   } finally {
     if (turnGeneration.get(id) === generation) {

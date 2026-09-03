@@ -6,6 +6,7 @@ export {
   pickTextHarness,
   warmupText,
 } from "./textHarness";
+export { harnessErrorMessage } from "./errors";
 export { registerBuiltinHarnesses } from "./register";
 export {
   getHarnessAvailabilitySnapshot,

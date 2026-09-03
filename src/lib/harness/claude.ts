@@ -120,7 +120,29 @@ type Live = {
   initialized: boolean;
   emittedAssistant: string;
   emittedReasoning: string;
+  /**
+   * The tail of the CLI's own stderr. Claude Code reports why it refused to
+   * start or why it stopped on stderr, and without keeping it every such
+   * failure reaches the transcript as a bare "exited" with nothing to act on.
+   */
+  stderrTail: string[];
 };
+
+/** Enough of the CLI's own complaint to act on, not its whole startup log. */
+const STDERR_TAIL_LINES = 12;
+
+function noteStderr(live: Live, line: string): void {
+  const text = line.trim();
+  if (!text) return;
+  live.stderrTail.push(text);
+  if (live.stderrTail.length > STDERR_TAIL_LINES) live.stderrTail.shift();
+}
+
+/** `what` explained by whatever the CLI said on its way out. */
+function withStderr(live: Live, what: string): string {
+  const tail = live.stderrTail.join("\n").trim();
+  return tail ? `${what}: ${tail}` : what;
+}
 
 type Resume = {
   sessionId: string;
@@ -304,6 +326,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     initialized: false,
     emittedAssistant: "",
     emittedReasoning: "",
+    stderrTail: [],
   };
   liveRef.current = live;
 
@@ -318,7 +341,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       liveByThread.delete(input.sessionId);
       input.onEvent({ type: "session.ended", code });
       const current = liveRef.current;
-      current?.turnFailed?.(new Error("Claude Code exited"));
+      current?.turnFailed?.(new Error(withStderr(live, "Claude Code exited")));
       current?.initDone?.();
       if (current) {
         current.turnDone = null;
@@ -326,6 +349,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         current.initDone = null;
       }
     },
+    (line) => noteStderr(live, line),
   );
 
   await spawnChild(input.sessionId, path, buildClaudeSpawnArgs(launch), input.cwd);
@@ -350,7 +374,10 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     return live;
   } catch (error) {
     await stopClaudeSession(input.sessionId);
-    throw error;
+    // The CLI's own reason for refusing to start is the only useful part of a
+    // failed handshake; the timeout alone says nothing.
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(withStderr(live, reason));
   }
 }
 

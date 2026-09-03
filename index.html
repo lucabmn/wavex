@@ -4,6 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>wavex</title>
+    <style>
+      /*
+        First paint happens before any stylesheet has loaded, and a profile
+        switch reloads the document while the window is already transparent.
+        Without an opaque shade here the webview shows a white frame between
+        the two documents. It has to be inline: `index.css` arrives through
+        Tailwind's import chain, which is far too late to cover first paint.
+
+        The menu-bar popover shares this document and is transparent, so
+        `main.tsx` removes the element before mounting there.
+      */
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        background: #171717;
+        transition: opacity 160ms ease-out;
+      }
+
+      #boot-splash.boot-splash-out {
+        opacity: 0;
+      }
+    </style>
   </head>
   <body>
     <div id="boot-splash"></div>

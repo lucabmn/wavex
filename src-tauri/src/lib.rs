@@ -315,6 +315,7 @@ pub fn run() {
             window::destroy_window,
             window::confirm_quit,
             window::enable_window_glass,
+            window::disable_window_glass,
             window_transfer::stage_window_transfer,
             window_transfer::take_window_transfer,
             profiles::profile_bind,

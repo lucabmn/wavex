@@ -181,6 +181,14 @@ pub fn enable_glass(window: &WebviewWindow) {
     apply_blur(window, BLUR_RADIUS.load(Ordering::Relaxed));
 }
 
+/// Back to the opaque launch field. A profile switch reloads the document, and
+/// a transparent window during that gap shows whatever the webview paints
+/// between the two — a white flash. Blur behind an opaque window is invisible,
+/// so it does not have to be unset.
+pub fn disable_glass(window: &WebviewWindow) {
+    set_launch_background(window, 23, 23, 23);
+}
+
 /// Glass for a window whose card does not fill its own square frame.
 ///
 /// `prepare_glass`'s tiny-alpha background covers the whole rectangle, so the
