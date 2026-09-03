@@ -21,7 +21,7 @@ describe("flattenVisibleRows", () => {
     expect(rows.some((row) => row.type === "line" && row.line.text === "new")).toBe(true);
   });
 
-  it("marks only the first changed line in a hunk as stageable", () => {
+  it("marks every changed line in a hunk as stageable", () => {
     const rows = flattenVisibleRows(
       [
         {
@@ -37,11 +37,9 @@ describe("flattenVisibleRows", () => {
       true,
     );
     const staged = rows.filter((row) => row.type === "line" && row.stage);
-    expect(staged).toHaveLength(1);
-    expect(staged[0]).toMatchObject({
-      type: "line",
-      line: { kind: "del", text: "old" },
-    });
+    expect(staged).toHaveLength(2);
+    expect(staged.map((row) => row.type === "line" && row.line.kind)).toEqual(["del", "add"]);
+    expect(staged.map((row) => row.type === "line" && row.line.pos)).toEqual([4, 4]);
   });
 });
 
