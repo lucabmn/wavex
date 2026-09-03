@@ -10,8 +10,8 @@ use tauri::{AppHandle, Manager, State};
 #[cfg(test)]
 use crate::fs::GitDiffStats;
 use crate::fs::{
-    expand_home, git_checked, git_diff_files_for, resolve_repo_path, GitChangedFile, GitDiffIndex,
-    MAX_TEXT_FILE_BYTES,
+    expand_home, git_checked, git_diff_files_for, path_to_js, resolve_repo_path, GitChangedFile,
+    GitDiffIndex, MAX_TEXT_FILE_BYTES,
 };
 
 const MAX_SNAPSHOT_FILES: usize = 500;
@@ -515,7 +515,7 @@ fn describe_change(root: &Path, relative: &str, git: Option<&GitChangedFile>) ->
     let abs = root.join(relative);
     let status = if !abs.exists() { "deleted" } else { "modified" };
     CheckpointFile {
-        path: abs.to_string_lossy().into_owned(),
+        path: path_to_js(&abs),
         relative: relative.to_string(),
         status: status.into(),
         additions: 0,
@@ -741,7 +741,6 @@ fn validate_id(value: &str, label: &str) -> Result<(), String> {
 mod tests {
     use super::*;
     use std::io::ErrorKind;
-    use std::process::Command;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -774,7 +773,7 @@ mod tests {
     }
 
     fn git(dir: &Path, args: &[&str]) -> bool {
-        Command::new("git")
+        crate::process::command("git")
             .args(args)
             .current_dir(dir)
             .env("GIT_AUTHOR_NAME", "wavex")
@@ -792,6 +791,7 @@ mod tests {
         }
         let _ = git(dir, &["config", "user.email", "wavex@test"]);
         let _ = git(dir, &["config", "user.name", "wavex"]);
+        let _ = git(dir, &["config", "core.autocrlf", "false"]);
         for (name, contents) in files {
             let path = dir.join(name);
             if let Some(parent) = path.parent() {

@@ -191,13 +191,35 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
       },
     );
 
+    // Spawn up front and let every write, resize, and teardown chain off the
+    // same promise. Deferring the spawn to the first resize dropped whatever the
+    // user typed before it landed, and ConPTY is slow enough to start that the
+    // window is real rather than theoretical.
+    const starting = spawnPty(id, cwd, term.cols, term.rows)
+      .then(() => {
+        if (!closed) spawned.current = true;
+      })
+      .catch((error) => {
+        spawned.current = false;
+        if (!closed) {
+          const message = error instanceof Error ? error.message : String(error);
+          term.writeln(`\x1b[31m${message}\x1b[0m`);
+        }
+        throw error;
+      });
+    void starting.catch(() => undefined);
+
+    const afterStart = (run: () => void) => {
+      void starting.then(() => (closed ? undefined : run())).catch(() => undefined);
+    };
+
     const dataSub = term.onData((data) => {
-      void writePty(id, data);
+      afterStart(() => void writePty(id, data));
     });
 
     const replyOsc = (code: 10 | 11 | 12, hex: string) => {
       const reply = oscColorReply(code, hex);
-      if (reply) void writePty(id, reply);
+      if (reply) afterStart(() => void writePty(id, reply));
       return true;
     };
     const oscFg = term.parser.registerOscHandler(10, (data) =>
@@ -247,18 +269,13 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
       if (cols === lastCols && rows === lastRows) return;
       lastCols = cols;
       lastRows = rows;
-      if (!spawned.current) {
-        spawned.current = true;
-        void spawnPty(id, cwd, cols, rows).catch((error) => {
-          spawned.current = false;
+      void starting
+        .then(() => (closed ? undefined : resizePty(id, cols, rows)))
+        .catch(() => {
+          // Let the next fit retry once the terminal has a size again.
           lastCols = 0;
           lastRows = 0;
-          const message = error instanceof Error ? error.message : String(error);
-          term.writeln(`\x1b[31m${message}\x1b[0m`);
         });
-        return;
-      }
-      void resizePty(id, cols, rows);
     };
 
     const schedule = () => {
@@ -296,7 +313,8 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
       renderSub.dispose();
       bufferSub.dispose();
       unsubscribe();
-      void killPty(id);
+      // Kill only after the spawn settles, or the PTY outlives its tab.
+      void starting.catch(() => undefined).then(() => killPty(id));
       term.dispose();
       termRef.current = null;
       spawned.current = false;

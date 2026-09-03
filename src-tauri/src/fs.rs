@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::ErrorKind;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -46,7 +46,7 @@ pub fn list_dir(path: String) -> Result<Vec<DirEntry>, String> {
         out.push(DirEntry {
             ignored: ignore.matches(name),
             name: name.to_string(),
-            path: path.to_string_lossy().into_owned(),
+            path: path_to_js(&path),
             is_dir,
         });
     }
@@ -96,7 +96,7 @@ pub(crate) fn list_project_files_sync(cwd: &str) -> Result<Vec<ProjectFile>, Str
 }
 
 fn git_ls_files(root: &Path) -> Option<Vec<ProjectFile>> {
-    let output = Command::new("git")
+    let output = crate::process::command("git")
         .arg("-C")
         .arg(root)
         .args(["ls-files", "-co", "--exclude-standard", "-z"])
@@ -124,7 +124,7 @@ fn git_ls_files(root: &Path) -> Option<Vec<ProjectFile>> {
         }
         files.push(ProjectFile {
             name: name.to_string(),
-            path: path.to_string_lossy().into_owned(),
+            path: path_to_js(&path),
             relative,
         });
         if files.len() >= MAX_PROJECT_FILES {
@@ -864,7 +864,7 @@ fn git_diff_index_with(root: &Path, include_sync: bool) -> GitDiffIndex {
             "modified"
         };
         out.push(GitChangedFile {
-            path: abs.to_string_lossy().into_owned(),
+            path: path_to_js(&abs),
             relative,
             status: status.to_string(),
             additions: acc.additions,
@@ -1062,7 +1062,7 @@ fn git_file_diff_for(root: &Path, relative: &str) -> Result<GitFileDiff, String>
         )
     };
     Ok(GitFileDiff {
-        path: abs.to_string_lossy().into_owned(),
+        path: path_to_js(&abs),
         relative,
         status: status.to_string(),
         original: original_text,
@@ -1388,7 +1388,7 @@ fn git_index_mode(root: &Path, relative: &str) -> Option<String> {
 }
 
 fn git_hash_object(root: &Path, relative: &str, contents: &[u8]) -> Result<String, String> {
-    let mut child = Command::new("git")
+    let mut child = crate::process::command("git")
         .arg("--no-pager")
         .arg("-C")
         .arg(root)
@@ -2479,7 +2479,7 @@ fn gh_checked(root: &Path, args: &[&str]) -> Result<String, String> {
 fn gh_run(root: &Path, args: &[&str], allow_empty: bool) -> Result<String, String> {
     let program = crate::harness::resolve_gui_binary("gh")
         .ok_or_else(|| "GitHub CLI (`gh`) is not installed.".to_string())?;
-    let mut cmd = Command::new(&program);
+    let mut cmd = crate::process::command(&program);
     cmd.current_dir(root)
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
@@ -2533,7 +2533,7 @@ pub(crate) fn resolve_repo_path(root: &Path, relative: &str) -> Result<String, S
 }
 
 pub(crate) fn git_checked(root: &Path, args: &[&str]) -> Result<(), String> {
-    let output = Command::new("git")
+    let output = crate::process::command("git")
         .arg("--no-pager")
         .arg("-C")
         .arg(root)
@@ -2567,7 +2567,7 @@ pub(crate) fn git_run(root: &Path, args: &[&str]) -> Option<String> {
 }
 
 pub(crate) fn git_output(root: &Path, args: &[&str]) -> Option<Vec<u8>> {
-    let output = Command::new("git")
+    let output = crate::process::command("git")
         .arg("--no-pager")
         .arg("-C")
         .arg(root)
@@ -2772,7 +2772,7 @@ fn git_branch_name(root: &Path, name: &str) -> Result<String, String> {
     if name.is_empty() {
         return Err("Branch name cannot be empty".into());
     }
-    let output = Command::new("git")
+    let output = crate::process::command("git")
         .arg("-C")
         .arg(root)
         .args(["check-ref-format", "--branch", name])
@@ -2898,7 +2898,7 @@ fn git_ahead_behind(root: &Path, base: &str) -> (i64, i64) {
 }
 
 pub(crate) fn git_stdout(root: &Path, args: &[&str]) -> Option<String> {
-    let output = Command::new("git")
+    let output = crate::process::command("git")
         .arg("-C")
         .arg(root)
         .args(args)
@@ -2965,7 +2965,7 @@ fn walk_project_files(root: &Path) -> Vec<ProjectFile> {
             let relative = relative.to_string_lossy().replace('\\', "/");
             files.push(ProjectFile {
                 name: name.to_string(),
-                path: path.to_string_lossy().into_owned(),
+                path: path_to_js(&path),
                 relative,
             });
             if files.len() >= MAX_PROJECT_FILES {
@@ -3011,7 +3011,7 @@ fn skip_walk_dir_name(name: &str) -> bool {
 }
 
 fn path_has_skipped_dir(relative: &str) -> bool {
-    relative.split('/').any(skip_walk_dir_name)
+    relative.split(['/', '\\']).any(skip_walk_dir_name)
 }
 
 /// Directories the OS guards behind a consent prompt. macOS pops "would like to
@@ -3130,7 +3130,17 @@ pub fn create_path(parent: String, name: String, is_dir: bool) -> Result<String,
         })?;
     }
 
-    Ok(dest.to_string_lossy().into_owned())
+    Ok(path_to_js(&dest))
+}
+
+/// Every path that crosses into the WebView goes through here.
+///
+/// Windows hands back `C:\\Users\\me\\project`, and every consumer on the JS side
+/// — `joinPath`, `displayPath`, `isEqualOrInside`, the file index, the editor's
+/// path equality — splits on `/`. One slash direction on the wire, converted
+/// back only where a native API needs it.
+pub(crate) fn path_to_js(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 pub(crate) fn expand_home(path: &str) -> PathBuf {
@@ -3139,7 +3149,8 @@ pub(crate) fn expand_home(path: &str) -> PathBuf {
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from(path));
     }
-    if let Some(rest) = path.strip_prefix("~/") {
+    // A Windows user typing a path by hand writes `~\projects`, not `~/projects`.
+    if let Some(rest) = path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\")) {
         if let Some(home) = dirs_home() {
             return PathBuf::from(home).join(rest);
         }
@@ -3216,7 +3227,7 @@ fn clone_repo_sync(url: &str, parent: &str) -> Result<String, String> {
         return Err(format!("{} already exists", dest.display()));
     }
     let dest_str = dest.to_str().ok_or("Invalid destination path")?;
-    let output = std::process::Command::new("git")
+    let output = crate::process::command("git")
         .args(["clone", "--", url, dest_str])
         .output()
         .map_err(|e| {
@@ -3235,7 +3246,7 @@ fn clone_repo_sync(url: &str, parent: &str) -> Result<String, String> {
             .unwrap_or("git clone failed");
         return Err(msg.trim().to_string());
     }
-    Ok(dest.to_string_lossy().into_owned())
+    Ok(path_to_js(&dest))
 }
 
 fn is_git_url(url: &str) -> bool {
@@ -3362,7 +3373,7 @@ fn inspect_path_sync(path: &str) -> Option<PathInfo> {
         .unwrap_or(path.to_str().unwrap_or("attachment"))
         .to_string();
     Some(PathInfo {
-        path: path.to_string_lossy().into_owned(),
+        path: path_to_js(&path),
         name,
         size: meta.len(),
         is_dir: meta.is_dir(),
@@ -3454,7 +3465,7 @@ fn write_attachment_sync(name: &str, data: &str) -> Result<String, String> {
         safe_attachment_name(name)
     ));
     std::fs::write(&path, bytes).map_err(|e| format!("{}: {e}", path.display()))?;
-    Ok(path.to_string_lossy().into_owned())
+    Ok(path_to_js(&path))
 }
 
 /// Persist an image a turn generated. It lives in app data rather than the
@@ -3661,7 +3672,12 @@ fn same_entry(a: &Path, b: &Path) -> bool {
     #[cfg(not(unix))]
     {
         let _ = (a_meta, b_meta);
-        a == b
+        // No inode to compare. Canonicalize instead, so a path that reached us
+        // slashed one way is still recognised as its own destination.
+        match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+            (Ok(left), Ok(right)) => left == right,
+            _ => false,
+        }
     }
 }
 
@@ -3722,7 +3738,7 @@ fn rename_path_sync(path: &str, name: &str) -> Result<String, String> {
     let dest = resolve_under(parent, name)?;
     if same_entry(&from, &dest) {
         if from == dest {
-            return Ok(from.to_string_lossy().into_owned());
+            return Ok(path_to_js(&from));
         }
         let stamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -3737,7 +3753,7 @@ fn rename_path_sync(path: &str, name: &str) -> Result<String, String> {
             let _ = std::fs::rename(&tmp, &from);
             return Err(e.to_string());
         }
-        return Ok(dest.to_string_lossy().into_owned());
+        return Ok(path_to_js(&dest));
     }
     if dest.exists() {
         return Err(already_exists(&file_label(&dest, name)));
@@ -3749,7 +3765,7 @@ fn rename_path_sync(path: &str, name: &str) -> Result<String, String> {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
     std::fs::rename(&from, &dest).map_err(|e| e.to_string())?;
-    Ok(dest.to_string_lossy().into_owned())
+    Ok(path_to_js(&dest))
 }
 
 /// Rename `path` to `name` (relative to the current parent; `/` nests).
@@ -3797,7 +3813,7 @@ fn copy_path_sync(from: &str, dest_parent: &str) -> Result<String, String> {
     );
     let dest = dest_parent.join(&name);
     copy_recursive(&from, &dest)?;
-    Ok(dest.to_string_lossy().into_owned())
+    Ok(path_to_js(&dest))
 }
 
 #[tauri::command]
@@ -3822,13 +3838,13 @@ fn move_path_sync(from: &str, dest_parent: &str) -> Result<String, String> {
     let name = file_label(&from, from.to_str().unwrap_or("item"));
     let dest = dest_parent.join(&name);
     if same_entry(&from, &dest) {
-        return Ok(from.to_string_lossy().into_owned());
+        return Ok(path_to_js(&from));
     }
     if dest.exists() {
         return Err(already_exists(&name));
     }
     std::fs::rename(&from, &dest).map_err(|e| e.to_string())?;
-    Ok(dest.to_string_lossy().into_owned())
+    Ok(path_to_js(&dest))
 }
 
 #[tauri::command]
@@ -3844,12 +3860,10 @@ pub fn reveal_path(path: String) -> Result<(), String> {
     if !path.exists() {
         return Err(format!("{}: No such file or directory", path.display()));
     }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    let path_str = path.to_str().ok_or_else(|| "Invalid path".to_string())?;
-
     #[cfg(target_os = "macos")]
     {
-        let status = Command::new("open")
+        let path_str = path.to_str().ok_or_else(|| "Invalid path".to_string())?;
+        let status = crate::process::command("open")
             .args(["-R", path_str])
             .status()
             .map_err(|e| e.to_string())?;
@@ -3861,14 +3875,14 @@ pub fn reveal_path(path: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let status = Command::new("explorer")
+        // explorer.exe exits 1 even when it opened the folder, so its status
+        // says nothing. `/select,` also needs the native separator back.
+        let path_str = path.to_string_lossy().replace('/', "\\");
+        crate::process::command("explorer")
             .arg(format!("/select,{path_str}"))
-            .status()
+            .spawn()
             .map_err(|e| e.to_string())?;
-        if !status.success() {
-            return Err("Could not reveal in File Explorer.".into());
-        }
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -3876,7 +3890,7 @@ pub fn reveal_path(path: String) -> Result<(), String> {
         let parent = path
             .parent()
             .ok_or_else(|| "File has no parent directory.".to_string())?;
-        let status = Command::new("xdg-open")
+        let status = crate::process::command("xdg-open")
             .arg(parent)
             .status()
             .map_err(|e| e.to_string())?;
@@ -3959,7 +3973,7 @@ mod tests {
         assert!(!notes.is_dir);
         assert_eq!(notes.size, 6);
         let folder = infos.iter().find(|info| info.is_dir).unwrap();
-        assert_eq!(folder.path, dir.0.to_string_lossy());
+        assert_eq!(folder.path, path_to_js(&dir.0));
     }
 
     #[test]
@@ -4118,7 +4132,7 @@ mod tests {
         std::fs::create_dir_all(dir.0.join("node_modules")).unwrap();
         std::fs::write(dir.0.join("node_modules").join("pkg.js"), "x\n").unwrap();
 
-        let init = Command::new("git")
+        let init = crate::process::command("git")
             .args(["init"])
             .current_dir(&dir.0)
             .output();
@@ -4126,7 +4140,7 @@ mod tests {
         if !init.status.success() {
             return;
         }
-        let add = Command::new("git")
+        let add = crate::process::command("git")
             .args(["add", "tracked.ts", ".gitignore"])
             .current_dir(&dir.0)
             .status();
@@ -4143,12 +4157,15 @@ mod tests {
     }
 
     fn init_git(dir: &Path, branch: &str, origin: Option<&str>) -> bool {
-        let init = Command::new("git").args(["init"]).current_dir(dir).output();
+        let init = crate::process::command("git")
+            .args(["init"])
+            .current_dir(dir)
+            .output();
         let Ok(init) = init else { return false };
         if !init.status.success() {
             return false;
         }
-        let head = Command::new("git")
+        let head = crate::process::command("git")
             .args(["symbolic-ref", "HEAD", &format!("refs/heads/{branch}")])
             .current_dir(dir)
             .status();
@@ -4156,7 +4173,7 @@ mod tests {
             return false;
         }
         if let Some(url) = origin {
-            let remote = Command::new("git")
+            let remote = crate::process::command("git")
                 .args(["remote", "add", "origin", url])
                 .current_dir(dir)
                 .status();
@@ -4167,6 +4184,7 @@ mod tests {
         git(dir, &["config", "user.name", "wavex"])
             && git(dir, &["config", "user.email", "wavex@test"])
             && git(dir, &["config", "commit.gpgsign", "false"])
+            && git(dir, &["config", "core.autocrlf", "false"])
     }
 
     #[test]
@@ -4199,7 +4217,7 @@ mod tests {
     }
 
     fn git(dir: &Path, args: &[&str]) -> bool {
-        Command::new("git")
+        crate::process::command("git")
             .args([
                 "-c",
                 "user.name=wavex",
@@ -4732,7 +4750,7 @@ mod tests {
         if !init_git_commit(&repo.0, &[("a.txt", "alpha\n")]) {
             return;
         }
-        if Command::new("git")
+        if crate::process::command("git")
             .args(["init", "--bare"])
             .current_dir(&origin.0)
             .status()
@@ -4766,7 +4784,7 @@ mod tests {
         if !init_git_commit(&repo.0, &[("a.txt", "alpha\n")]) {
             return;
         }
-        if Command::new("git")
+        if crate::process::command("git")
             .args(["init", "--bare"])
             .current_dir(&origin.0)
             .status()
@@ -4804,7 +4822,7 @@ mod tests {
         if !init_git_commit(&a.0, &[("a.txt", "alpha\n")]) {
             return;
         }
-        if Command::new("git")
+        if crate::process::command("git")
             .args(["init", "--bare"])
             .current_dir(&origin.0)
             .status()
@@ -4817,8 +4835,20 @@ mod tests {
         if !git(&a.0, &["remote", "add", "origin", &origin_url])
             || !git(&a.0, &["push", "-u", "origin", "main"])
             || !git(&origin.0, &["symbolic-ref", "HEAD", "refs/heads/main"])
-            || Command::new("git")
-                .args(["clone", "-b", "main", &origin_url, "."])
+            // `-c`, not a `config` after the fact: Windows clones with
+            // autocrlf on by default, and turning it off later leaves the CRLF
+            // working copy behind — git then reads every line as modified and
+            // refuses to pull over it.
+            || crate::process::command("git")
+                .args([
+                    "-c",
+                    "core.autocrlf=false",
+                    "clone",
+                    "-b",
+                    "main",
+                    &origin_url,
+                    ".",
+                ])
                 .current_dir(&b.0)
                 .status()
                 .map(|status| !status.success())
@@ -4826,6 +4856,7 @@ mod tests {
             || !git(&b.0, &["config", "user.name", "wavex"])
             || !git(&b.0, &["config", "user.email", "wavex@test"])
             || !git(&b.0, &["config", "commit.gpgsign", "false"])
+            || !git(&b.0, &["config", "core.autocrlf", "false"])
         {
             return;
         }
@@ -5328,7 +5359,7 @@ mod tests {
         if !init_git_commit(&repo.0, &[("a.txt", "alpha\n")]) {
             return;
         }
-        if Command::new("git")
+        if crate::process::command("git")
             .args(["init", "--bare"])
             .current_dir(&origin.0)
             .status()

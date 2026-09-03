@@ -5,7 +5,10 @@
 - Node.js 22 or newer
 - pnpm 11
 - Rust stable
-- Xcode Command Line Tools
+- Your platform's native toolchain: the Xcode Command Line Tools on macOS, the
+  MSVC build tools and WebView2 on Windows, or the WebKitGTK development
+  packages on Linux (`libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+libxdo-dev patchelf`)
 
 ## Setup
 

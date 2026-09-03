@@ -115,7 +115,7 @@ impl HarnessHost {
         (epoch, kill_all, prev)
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     fn spawn_stamp_current(&self, session_id: &str, epoch: u64, kill_all: u64) -> bool {
         let inner = self.lock_inner();
         self.kill_all_gen.load(Ordering::SeqCst) == kill_all
@@ -338,7 +338,7 @@ pub fn harness_spawn(
         ));
     }
 
-    let mut cmd = Command::new(&command);
+    let mut cmd = crate::process::command(&command);
     cmd.args(&args)
         .current_dir(&workdir)
         .stdin(Stdio::piped())
@@ -682,7 +682,7 @@ pub async fn harness_exec(
 }
 
 fn exec_capture(command: &str, args: &[String], cwd: Option<&str>) -> Result<String, String> {
-    let mut cmd = Command::new(command);
+    let mut cmd = crate::process::command(command);
     cmd.args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -730,6 +730,7 @@ const HARNESS_PARENT_ENV: &str = "wavex_HARNESS_PARENT";
 
 /// An interactive shell has to source the user's whole rc file; nvm alone can
 /// take a second.
+#[cfg(not(windows))]
 const LOGIN_SHELL_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// A spawn that was cancelled mid-fork. The session it was starting is already
@@ -746,6 +747,14 @@ fn isolate_child(cmd: &mut Command) {
     {
         use std::os::unix::process::CommandExt;
         cmd.process_group(0);
+    }
+    // The Windows counterpart of `process_group(0)`: `taskkill /T` walks the
+    // tree, and a child in our own group would take the app down with it.
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
     }
 }
 
@@ -825,10 +834,22 @@ fn signal_tree(pid: u32, signal: TreeSignal) {
             libc::kill(ipid, sig);
         }
     }
-    #[cfg(not(unix))]
+    // Windows has no signal a detached parent can deliver to a console child:
+    // `GenerateConsoleCtrlEvent` only reaches processes sharing our console, and
+    // these are spawned with none. `taskkill /T` is the whole tree, so a graceful
+    // pass would leave the CLI's own children behind. Both levels terminate.
+    #[cfg(windows)]
     {
         let _ = signal;
-        let _ = Command::new("kill").arg(pid.to_string()).status();
+        let _ = crate::process::command("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (pid, signal);
     }
 }
 
@@ -845,6 +866,7 @@ fn tree_alive(pid: u32) -> bool {
     }
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 fn process_alive(pid: u32) -> bool {
     if pid == 0 {
         return false;
@@ -860,6 +882,7 @@ fn process_alive(pid: u32) -> bool {
     }
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 #[derive(Debug, Clone)]
 struct ProcessSnapshot {
     pid: u32,
@@ -873,6 +896,9 @@ struct ProcessSnapshot {
 /// Off-thread: the sweep shells out to `ps` and then waits on a SIGKILL, and
 /// launch would otherwise hold the first window for both. Nothing this run
 /// spawns can be caught by it — our own children carry our pid as the marker.
+/// Orphan reaping needs a process table with argv and the reap marker. Windows
+/// exposes neither cheaply, so this whole subtree only runs on Unix; a Windows
+/// crash leaves the agent CLI to exit on its own broken stdio.
 pub(crate) fn reap_orphaned_harness_processes() {
     #[cfg(unix)]
     {
@@ -881,6 +907,7 @@ pub(crate) fn reap_orphaned_harness_processes() {
     }
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 fn reap_snapshots(rows: &[ProcessSnapshot], our_pid: u32) {
     let pids: Vec<u32> = rows
         .iter()
@@ -890,6 +917,7 @@ fn reap_snapshots(rows: &[ProcessSnapshot], our_pid: u32) {
     terminate_all(&pids);
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 fn should_reap_process(
     proc: &ProcessSnapshot,
     our_pid: u32,
@@ -905,6 +933,7 @@ fn should_reap_process(
 }
 
 /// Pre-marker leftovers: `cursor-agent acp` reparented to launchd.
+#[cfg_attr(windows, allow(dead_code))]
 fn is_legacy_orphaned_cursor_acp(args: &str) -> bool {
     if !args.contains("cursor-agent") {
         return false;
@@ -915,6 +944,7 @@ fn is_legacy_orphaned_cursor_acp(args: &str) -> bool {
 /// Argv of an agent CLI we spawned — not a shell, tmux, or `npm start`.
 /// Used to decide whose environment is worth opening; the marker still
 /// decides what actually dies.
+#[cfg_attr(windows, allow(dead_code))]
 fn looks_like_harness_argv(args: &str) -> bool {
     if is_legacy_orphaned_cursor_acp(args) {
         return true;
@@ -922,6 +952,7 @@ fn looks_like_harness_argv(args: &str) -> bool {
     args.split_whitespace().any(is_harness_argv_token)
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 fn is_harness_argv_token(part: &str) -> bool {
     let name = Path::new(part)
         .file_name()
@@ -943,6 +974,7 @@ fn is_harness_argv_token(part: &str) -> bool {
     )
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 #[cfg(any(not(target_os = "linux"), test))]
 fn parse_ps_row(line: &str) -> Option<ProcessSnapshot> {
     let s = line.trim();
@@ -963,6 +995,7 @@ fn parse_ps_row(line: &str) -> Option<ProcessSnapshot> {
     })
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 fn harness_parent_from_bytes(buf: &[u8]) -> Option<u32> {
     let mut needle = Vec::with_capacity(HARNESS_PARENT_ENV.len() + 1);
     needle.extend_from_slice(HARNESS_PARENT_ENV.as_bytes());
@@ -1001,7 +1034,7 @@ fn snapshot_processes() -> Vec<ProcessSnapshot> {
 /// not pid 1, so the marker (not ppid) is what identifies them.
 #[cfg(all(unix, not(target_os = "linux")))]
 fn snapshot_from_ps() -> Vec<ProcessSnapshot> {
-    let mut cmd = Command::new("ps");
+    let mut cmd = crate::process::command("ps");
     #[cfg(target_os = "macos")]
     {
         cmd.args(["-axww", "-o", "pid=", "-o", "ppid=", "-o", "command="]);
@@ -1079,7 +1112,7 @@ fn read_harness_parents(pids: &[u32]) -> HashMap<u32, u32> {
         .map(|pid| pid.to_string())
         .collect::<Vec<_>>()
         .join(",");
-    let mut cmd = Command::new("ps");
+    let mut cmd = crate::process::command("ps");
     #[cfg(target_os = "macos")]
     {
         cmd.args(["-Eww", "-p", &list, "-o", "pid=", "-o", "command="]);
@@ -1102,6 +1135,7 @@ fn read_harness_parents(pids: &[u32]) -> HashMap<u32, u32> {
     found
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 #[cfg(any(not(target_os = "linux"), test))]
 fn parse_ps_pid_command(line: &str) -> Option<(u32, String)> {
     let s = line.trim();
@@ -1160,7 +1194,7 @@ fn resolve_cursor_agent() -> Option<PathBuf> {
         candidates.push(from_shell);
     }
 
-    candidates.into_iter().find(|path| is_cursor_agent(path))
+    first_binary_matching(candidates, is_cursor_agent)
 }
 
 fn resolve_codex() -> Option<PathBuf> {
@@ -1191,7 +1225,7 @@ fn resolve_codex() -> Option<PathBuf> {
         "/Applications/Codex.app/Contents/Resources/codex",
     ));
 
-    candidates.into_iter().find(|path| path.is_file())
+    first_binary(candidates)
 }
 
 fn resolve_opencode() -> Option<PathBuf> {
@@ -1213,7 +1247,7 @@ fn resolve_opencode() -> Option<PathBuf> {
         candidates.push(from_shell);
     }
 
-    candidates.into_iter().find(|path| path.is_file())
+    first_binary(candidates)
 }
 
 fn resolve_claude() -> Option<PathBuf> {
@@ -1236,7 +1270,7 @@ fn resolve_claude() -> Option<PathBuf> {
         candidates.push(from_shell);
     }
 
-    candidates.into_iter().find(|path| path.is_file())
+    first_binary(candidates)
 }
 
 fn resolve_pi() -> Option<PathBuf> {
@@ -1265,7 +1299,7 @@ fn resolve_pi() -> Option<PathBuf> {
         candidates.push(from_shell);
     }
 
-    candidates.into_iter().find(|path| is_pi_coding_agent(path))
+    first_binary_matching(candidates, is_pi_coding_agent)
 }
 
 fn resolve_omp() -> Option<PathBuf> {
@@ -1289,7 +1323,7 @@ fn resolve_omp() -> Option<PathBuf> {
         candidates.push(from_shell);
     }
 
-    candidates.into_iter().find(|path| is_omp_agent(path))
+    first_binary_matching(candidates, is_omp_agent)
 }
 
 /// omp ships as a ~126MB compiled binary, so the cheap string scan that
@@ -1299,8 +1333,7 @@ fn is_omp_agent(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if name != "omp" {
+    if !binary_name_eq(path, "omp") {
         return false;
     }
     help_mentions_rpc_mode(path)
@@ -1327,7 +1360,7 @@ fn resolve_fx() -> Option<PathBuf> {
         candidates.push(from_shell);
     }
 
-    candidates.into_iter().find(|path| is_fx_agent(path))
+    first_binary_matching(candidates, is_fx_agent)
 }
 
 fn resolve_grok() -> Option<PathBuf> {
@@ -1350,19 +1383,18 @@ fn resolve_grok() -> Option<PathBuf> {
         candidates.push(from_shell);
     }
 
-    candidates.into_iter().find(|path| is_grok_agent(path))
+    first_binary_matching(candidates, is_grok_agent)
 }
 
 fn is_pi_coding_agent(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if name != "pi" && name != "pi-coding-agent" {
-        return false;
-    }
-    if name == "pi-coding-agent" {
+    if binary_name_eq(path, "pi-coding-agent") {
         return true;
+    }
+    if !binary_name_eq(path, "pi") {
+        return false;
     }
     file_mentions_pi_coding_agent(path) || help_mentions_rpc_mode(path)
 }
@@ -1383,7 +1415,7 @@ fn file_mentions_pi_coding_agent(path: &Path) -> bool {
 }
 
 fn help_mentions_rpc_mode(path: &Path) -> bool {
-    let mut cmd = Command::new(path);
+    let mut cmd = crate::process::command(path);
     cmd.arg("--help")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -1421,8 +1453,7 @@ fn is_fx_agent(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if name != "fx" {
+    if !binary_name_eq(path, "fx") {
         return false;
     }
     file_mentions_fx_agent(path) || fx_help_mentions_acp(path)
@@ -1432,12 +1463,11 @@ fn is_grok_agent(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if name != "grok" {
+    if !binary_name_eq(path, "grok") {
         return false;
     }
     // Official installer: ~/.grok/bin/grok
-    if path.to_string_lossy().contains("/.grok/") {
+    if path_has_component(path, ".grok") {
         return true;
     }
     file_mentions_grok_agent(path) || grok_help_mentions_agent(path)
@@ -1476,7 +1506,7 @@ fn file_mentions_fx_agent(path: &Path) -> bool {
 }
 
 fn fx_help_mentions_acp(path: &Path) -> bool {
-    let mut cmd = Command::new(path);
+    let mut cmd = crate::process::command(path);
     cmd.arg("--help")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -1539,7 +1569,7 @@ fn file_mentions_grok_agent(path: &Path) -> bool {
 }
 
 fn grok_help_mentions_agent(path: &Path) -> bool {
-    let mut cmd = Command::new(path);
+    let mut cmd = crate::process::command(path);
     cmd.arg("--help")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -1575,15 +1605,13 @@ fn is_cursor_agent(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }
-    let text = path.to_string_lossy();
-    if text.contains("/.grok/") {
+    if path_has_component(path, ".grok") {
         return false;
     }
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if name == "cursor-agent" {
+    if binary_name_eq(path, "cursor-agent") {
         return true;
     }
-    if name == "agent" {
+    if binary_name_eq(path, "agent") {
         // One symlink hop. canonicalize() can walk into another .app
         // and trip macOS "data from other apps" TCC.
         if let Ok(target) = std::fs::read_link(path) {
@@ -1592,7 +1620,11 @@ fn is_cursor_agent(path: &Path) -> bool {
             } else {
                 path.parent().unwrap_or(path).join(target)
             };
-            return resolved.to_string_lossy().contains("cursor-agent");
+            return path_has_component(&resolved, "cursor-agent")
+                || resolved
+                    .to_string_lossy()
+                    .to_ascii_lowercase()
+                    .contains("cursor-agent");
         }
     }
     false
@@ -1602,15 +1634,90 @@ fn is_cursor_agent(path: &Path) -> bool {
 ///
 /// Reads the cached PATH rather than spawning a shell per lookup: six
 /// resolvers each asking `command -v` meant six shell startups per probe.
+/// Windows has no login shell to interrogate; the GUI search path already
+/// carries the npm/scoop/winget shim dirs plus the inherited PATH.
+#[cfg(windows)]
+fn which_via_login_shell(name: &str) -> Option<PathBuf> {
+    which_in_path(&gui_search_path(), name)
+}
+
+#[cfg(not(windows))]
 fn which_via_login_shell(name: &str) -> Option<PathBuf> {
     which_in_path(&login_shell_path()?, name)
 }
 
 fn which_in_path(path: &str, name: &str) -> Option<PathBuf> {
-    path.split(':')
-        .filter(|dir| !dir.is_empty())
-        .map(|dir| Path::new(dir).join(name))
-        .find(|candidate| is_executable_file(candidate))
+    std::env::split_paths(std::ffi::OsStr::new(path)).find_map(|dir| {
+        if dir.as_os_str().is_empty() {
+            return None;
+        }
+        existing_binary(dir.join(name))
+    })
+}
+
+/// Take the first candidate that exists as a program.
+///
+/// Windows resolves a bare command through `PATHEXT`, and every agent CLI here
+/// installs through npm, which writes a `.cmd` shim and no extensionless twin —
+/// so a literal `claude` lookup finds nothing.
+///
+/// A `.cmd` path goes straight to `Command::new`: std recognises a batch program
+/// and routes it through `cmd.exe` with batch-specific argument escaping. Doing
+/// that by hand here would pass MSVC-quoted arguments to a parser that does not
+/// use those rules, which is the bug behind CVE-2024-24576.
+fn existing_binary(path: PathBuf) -> Option<PathBuf> {
+    if is_executable_file(&path) {
+        return Some(path);
+    }
+    #[cfg(windows)]
+    if path.extension().is_none() {
+        for ext in ["exe", "cmd", "bat", "com"] {
+            let candidate = path.with_extension(ext);
+            if is_executable_file(&candidate) {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+fn first_binary(candidates: Vec<PathBuf>) -> Option<PathBuf> {
+    candidates.into_iter().find_map(existing_binary)
+}
+
+fn first_binary_matching(
+    candidates: Vec<PathBuf>,
+    matches: impl Fn(&Path) -> bool,
+) -> Option<PathBuf> {
+    candidates.into_iter().find_map(|path| {
+        let path = existing_binary(path)?;
+        matches(&path).then_some(path)
+    })
+}
+
+/// Compare a program's name without its extension. `grok.cmd` is still grok, and
+/// Windows filenames do not carry case.
+fn binary_name_eq(path: &Path, expected: &str) -> bool {
+    path.file_stem()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| {
+            if cfg!(windows) {
+                name.eq_ignore_ascii_case(expected)
+            } else {
+                name == expected
+            }
+        })
+}
+
+/// A directory in the path, not a substring of it: `contains("/.grok/")` never
+/// matches `C:\\Users\\me\\.grok\\bin\\grok.cmd`.
+fn path_has_component(path: &Path, needle: &str) -> bool {
+    path.components().any(|component| {
+        component
+            .as_os_str()
+            .to_str()
+            .is_some_and(|name| name == needle)
+    })
 }
 
 fn is_executable_file(path: &Path) -> bool {
@@ -1634,7 +1741,7 @@ pub(crate) fn resolve_gui_binary(name: &str) -> Option<PathBuf> {
     which_in_path(&gui_search_path(), name)
 }
 
-fn gui_search_path() -> String {
+pub(crate) fn gui_search_path() -> String {
     gui_search_path_from(login_shell_path(), dirs_home(), std::env::var("PATH").ok())
 }
 
@@ -1643,30 +1750,45 @@ fn gui_search_path_from(
     home: Option<String>,
     existing: Option<String>,
 ) -> String {
-    let mut parts: Vec<String> = Vec::new();
+    let mut parts: Vec<PathBuf> = Vec::new();
     // Login-shell PATH first so Homebrew, mise, nvm, and custom dirs match
     // the user's terminal. The fixed list is a fallback when that read fails.
     if let Some(path) = login_path {
-        parts.push(path);
+        parts.extend(std::env::split_paths(&path));
     }
     if let Some(home) = home {
-        parts.push(format!("{home}/.local/bin"));
-        parts.push(format!("{home}/.cargo/bin"));
-        parts.push(format!("{home}/.claude/local"));
-        parts.push(format!("{home}/.local/share/claude"));
-        parts.push(format!("{home}/.opencode/bin"));
-        parts.push(format!("{home}/.grok/bin"));
-        parts.push(format!("{home}/.npm-global/bin"));
+        parts.push(format!("{home}/.local/bin").into());
+        parts.push(format!("{home}/.cargo/bin").into());
+        parts.push(format!("{home}/.claude/local").into());
+        parts.push(format!("{home}/.local/share/claude").into());
+        parts.push(format!("{home}/.opencode/bin").into());
+        parts.push(format!("{home}/.grok/bin").into());
+        parts.push(format!("{home}/.npm-global/bin").into());
+        parts.push(format!("{home}/.bun/bin").into());
+        // npm, yarn, scoop, and winget shim dirs. npm's is on PATH for a shell
+        // but not always for a process the shell did not start.
+        parts.push(format!("{home}/AppData/Roaming/npm").into());
+        parts.push(format!("{home}/AppData/Local/Yarn/bin").into());
+        parts.push(format!("{home}/scoop/shims").into());
+        parts.push(format!("{home}/AppData/Local/Microsoft/WinGet/Links").into());
     }
     parts.push("/opt/homebrew/bin".into());
     parts.push("/usr/local/bin".into());
     parts.push("/usr/bin".into());
     parts.push("/bin".into());
     parts.push("/snap/bin".into());
-    if let Some(existing) = existing {
-        parts.push(existing);
+    #[cfg(windows)]
+    {
+        parts.push(r"C:\Program Files\Git\cmd".into());
+        parts.push(r"C:\Program Files\nodejs".into());
     }
-    parts.join(":")
+    if let Some(existing) = existing {
+        parts.extend(std::env::split_paths(&existing));
+    }
+    std::env::join_paths(parts)
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn apply_gui_path(cmd: &mut Command) {
@@ -1770,6 +1892,21 @@ fn login_shell_env(name: &str) -> Option<String> {
 /// version managers (nvm, fnm, mise, volta) all initialize from there. A
 /// login-but-not-interactive shell sees `.zshenv`/`.zprofile` only, so every
 /// nvm-managed CLI looks uninstalled.
+/// Windows has no login shell whose rc files export anything, but the fx and
+/// grok adapters still read their API keys through here, so fall back to the
+/// environment this process was started with.
+#[cfg(windows)]
+fn load_login_shell_env() -> HashMap<String, String> {
+    LOGIN_SHELL_KEYS
+        .into_iter()
+        .filter_map(|key| {
+            let value = std::env::var(key).ok()?;
+            (!value.is_empty()).then(|| (key.to_string(), value))
+        })
+        .collect()
+}
+
+#[cfg(not(windows))]
 fn load_login_shell_env() -> HashMap<String, String> {
     let shell = std::env::var("SHELL").unwrap_or_else(|_| {
         if cfg!(target_os = "macos") {
@@ -1778,7 +1915,7 @@ fn load_login_shell_env() -> HashMap<String, String> {
             "/bin/bash".into()
         }
     });
-    let mut cmd = Command::new(&shell);
+    let mut cmd = crate::process::command(&shell);
     cmd.args(["-lic", "printenv"])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -1813,7 +1950,8 @@ fn load_login_shell_env() -> HashMap<String, String> {
 
 fn command_basename(command: &str) -> &str {
     Path::new(command)
-        .file_name()
+        // `file_stem`, so `fx.cmd` and `grok.exe` still reach their env setup.
+        .file_stem()
         .and_then(|name| name.to_str())
         .unwrap_or(command)
 }
@@ -1824,8 +1962,9 @@ mod tests {
     use super::*;
     use std::os::unix::process::CommandExt;
 
+    #[cfg(unix)]
     fn spawn_group(script: &str) -> std::process::Child {
-        Command::new("sh")
+        crate::process::command("sh")
             .args(["-c", script])
             .process_group(0)
             .stdin(Stdio::null())
@@ -1835,6 +1974,7 @@ mod tests {
             .expect("spawn test process")
     }
 
+    #[cfg(unix)]
     fn wait_dead(pid: u32, child: &mut std::process::Child) -> bool {
         for _ in 0..40 {
             let _ = child.try_wait();
@@ -1848,10 +1988,11 @@ mod tests {
         false
     }
 
+    #[cfg(unix)]
     /// A real child so `install_spawn` can be exercised directly, rather than
     /// through a helper that re-states its condition.
     fn live_child() -> (Arc<LiveChild>, std::process::Child) {
-        let mut child = Command::new("sleep")
+        let mut child = crate::process::command("sleep")
             .arg("30")
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -1869,12 +2010,14 @@ mod tests {
         )
     }
 
+    #[cfg(unix)]
     fn reap(mut child: std::process::Child) {
         let _ = child.kill();
         let _ = child.wait();
     }
 
     #[test]
+    #[cfg(unix)]
     fn install_spawn_keeps_a_child_nothing_cancelled() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -1888,6 +2031,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn install_spawn_rejects_a_child_killed_mid_spawn() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -1901,6 +2045,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn install_spawn_rejects_a_child_after_kill_all() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -1914,6 +2059,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn kill_during_spawn_invalidates_the_stamp() {
         let host = HarnessHost::new();
         let (epoch, kill_all, prev) = host.begin_spawn("s1");
@@ -1924,6 +2070,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn overlapping_spawn_invalidates_the_earlier_one() {
         let host = HarnessHost::new();
         let first = host.begin_spawn("s1");
@@ -1933,6 +2080,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn kill_all_rejects_an_in_flight_spawn() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -1941,6 +2089,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn terminate_reaps_the_process_group() {
         let mut child = spawn_group("sleep 30 & sleep 30");
         let pid = child.id();
@@ -1953,6 +2102,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn terminate_escalates_to_sigkill() {
         let mut child = spawn_group("trap '' TERM; while true; do sleep 1; done");
         let pid = child.id();
@@ -1965,6 +2115,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn terminate_escalates_after_group_leader_exits() {
         let mut child = spawn_group(
             "trap 'exit 0' TERM; sh -c 'trap \"\" TERM; while true; do sleep 1; done' & wait",
@@ -1979,7 +2130,7 @@ mod tests {
     }
 
     fn live_group(script: &str) -> (Arc<LiveChild>, std::process::Child) {
-        let mut child = Command::new("sh")
+        let mut child = crate::process::command("sh")
             .args(["-c", script])
             .process_group(0)
             .stdin(Stdio::piped())
@@ -1999,6 +2150,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn kill_all_reaps_term_ignoring_children_before_return() {
         let host = HarnessHost::new();
         let (epoch, kill_all, _) = host.begin_spawn("s1");
@@ -2024,8 +2176,9 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn reap_snapshots_kills_a_marked_orphan() {
-        let mut child = Command::new("sh")
+        let mut child = crate::process::command("sh")
             .args(["-c", "trap '' TERM; while true; do sleep 1; done"])
             .process_group(0)
             .env(HARNESS_PARENT_ENV, "2147483646")
@@ -2051,8 +2204,9 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn reap_snapshots_spares_children_of_this_process() {
-        let mut child = Command::new("sleep")
+        let mut child = crate::process::command("sleep")
             .arg("30")
             .process_group(0)
             .env(HARNESS_PARENT_ENV, std::process::id().to_string())
@@ -2084,7 +2238,7 @@ mod tests {
     #[test]
     fn isolate_child_stamps_the_reap_marker() {
         let pid = std::process::id().to_string();
-        let mut cmd = Command::new("true");
+        let mut cmd = crate::process::command("true");
         isolate_child(&mut cmd);
         assert!(cmd.get_envs().any(|(key, value)| {
             key == std::ffi::OsStr::new(HARNESS_PARENT_ENV)
@@ -2093,6 +2247,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn which_in_path_takes_the_first_executable_hit() {
         use std::os::unix::fs::PermissionsExt;
 
@@ -2126,6 +2281,59 @@ mod tests {
     }
 
     #[test]
+    fn binary_name_ignores_the_windows_shim_extension() {
+        // npm installs `grok.cmd`; a `file_name() == "grok"` check rejects it and
+        // every provider then resolves to nothing on Windows.
+        assert!(binary_name_eq(Path::new("/usr/local/bin/grok"), "grok"));
+        assert!(binary_name_eq(
+            Path::new("C:/Users/dev/AppData/Roaming/npm/grok.cmd"),
+            "grok"
+        ));
+        assert!(!binary_name_eq(
+            Path::new("/usr/local/bin/grokking"),
+            "grok"
+        ));
+        assert_eq!(
+            binary_name_eq(Path::new("/usr/local/bin/GROK.exe"), "grok"),
+            cfg!(windows)
+        );
+    }
+
+    #[test]
+    fn path_component_match_survives_a_backslash_path() {
+        assert!(path_has_component(
+            Path::new("/Users/me/.grok/bin/grok"),
+            ".grok"
+        ));
+        assert!(!path_has_component(
+            Path::new("/Users/me/.grokkery/bin/grok"),
+            ".grok"
+        ));
+        // `contains("/.grok/")` is what this replaces, and it never matches a
+        // backslash path. Only Windows treats `\` as a separator, so only there
+        // does this string have components to walk.
+        #[cfg(windows)]
+        assert!(path_has_component(
+            Path::new(r"C:\Users\me\.grok\bin\grok.cmd"),
+            ".grok"
+        ));
+    }
+
+    #[test]
+    fn gui_search_path_includes_the_windows_shim_dirs() {
+        let path = gui_search_path_from(None, Some("/home/dev".into()), None);
+        let parts: Vec<PathBuf> = std::env::split_paths(&path).collect();
+        for dir in [
+            "/home/dev/AppData/Roaming/npm",
+            "/home/dev/scoop/shims",
+            "/home/dev/.bun/bin",
+        ] {
+            assert!(parts.contains(&PathBuf::from(dir)), "missing {dir}");
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
     fn gui_search_path_puts_login_path_ahead_of_fallbacks() {
         let path = gui_search_path_from(
             Some("/custom/gh-dir:/usr/bin".into()),
@@ -2142,6 +2350,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn resolve_gui_binary_finds_a_binary_on_the_gui_path() {
         use std::os::unix::fs::PermissionsExt;
 
@@ -2159,6 +2368,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn cursor_agent_accepts_symlink_named_agent() {
         let dir = std::env::temp_dir().join(format!("wavex-agent-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -2201,6 +2411,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn omp_accepts_rpc_capable_binary_and_rejects_other_names() {
         let dir = std::env::temp_dir().join(format!("wavex-omp-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -2309,6 +2520,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn passwd_identity_resolves_the_current_user() {
         let id = passwd_identity().expect("passwd");
         assert!(!id.user.is_empty());

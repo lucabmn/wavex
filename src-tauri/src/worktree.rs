@@ -7,7 +7,6 @@
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::fs::{expand_home, git_default_branch, git_is_work_tree, git_ref_exists, git_run};
 
@@ -262,7 +261,7 @@ fn validate_branch_name(root: &Path, branch: &str) -> Result<(), String> {
         return Err("Enter a branch name.".into());
     }
     // Let git own the rule set instead of half-reimplementing check-ref-format.
-    let ok = Command::new("git")
+    let ok = crate::process::command("git")
         .arg("-C")
         .arg(root)
         .args(["check-ref-format", "--branch", branch])
@@ -319,7 +318,7 @@ fn same_path(a: &str, b: &str) -> bool {
 /// Runs git and keeps stderr, which is the whole value here: "is already
 /// checked out at …" is the message the UI turns into a jump action.
 fn git_exec(root: &Path, args: &[&str]) -> Result<String, String> {
-    let output = Command::new("git")
+    let output = crate::process::command("git")
         .arg("--no-pager")
         .arg("-C")
         .arg(root)

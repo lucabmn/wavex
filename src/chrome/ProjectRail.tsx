@@ -40,8 +40,8 @@ import {
   saveProjectRailWidth,
 } from "../lib/appearance";
 import { basename, revealPath, type GitDiffStats } from "../lib/fs";
-import { IS_MAC, MOD } from "../lib/platform";
-import { projectName } from "../lib/paths";
+import { IS_MAC, MOD, REVEAL_LABEL } from "../lib/platform";
+import { pathKey, projectName } from "../lib/paths";
 import {
   collectRailProjects,
   loadPinnedProjects,
@@ -89,12 +89,6 @@ import { Shimmer } from "../surfaces/Shimmer";
 import { TabGroupMenu, type TabGroupMenuExtraItem } from "./TabGroupMenu";
 import { TerminalSpinner } from "./TerminalSpinner";
 import type { SettingsSectionId } from "../lib/settings";
-
-const REVEAL_LABEL = IS_MAC
-  ? "Reveal in Finder"
-  : typeof navigator !== "undefined" && /Win/.test(navigator.platform)
-    ? "Reveal in File Explorer"
-    : "Open Containing Folder";
 
 function projectMenuExtraItems(pinned: boolean, canRemove: boolean): TabGroupMenuExtraItem[] {
   const items: TabGroupMenuExtraItem[] = [
@@ -247,7 +241,7 @@ export function ProjectRail({
 
   useEffect(() => {
     setPinnedPaths((prev) => {
-      const next = prev.filter((path) => allProjects.has(path));
+      const next = prev.filter((path) => allProjects.has(pathKey(path)));
       if (next.length === prev.length) return prev;
       savePinnedProjects(next);
       return next;

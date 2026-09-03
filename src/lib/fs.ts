@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { slash } from "./paths";
 
 export type FsEntry = {
   name: string;
@@ -317,7 +318,7 @@ export async function pickFolder(title = "Open project"): Promise<string | null>
     multiple: false,
     title,
   });
-  return typeof selected === "string" && selected ? selected : null;
+  return typeof selected === "string" && selected ? slash(selected) : null;
 }
 
 /** Store an image a turn generated, and return where it landed. */
@@ -340,10 +341,10 @@ export async function pickFiles(title = "Attach files"): Promise<string[] | null
     title,
   });
   if (Array.isArray(selected)) {
-    const paths = selected.filter((path): path is string => Boolean(path));
+    const paths = selected.filter((path): path is string => Boolean(path)).map(slash);
     return paths.length > 0 ? paths : null;
   }
-  if (typeof selected === "string" && selected) return [selected];
+  if (typeof selected === "string" && selected) return [slash(selected)];
   return null;
 }
 
@@ -385,7 +386,8 @@ export function writeTextFile(path: string, content: string): Promise<void> {
 
 /** Last path segment, or `/` for the filesystem root. */
 export function basename(path: string): string {
-  const trimmed = path.replace(/\/+$/, "") || "/";
+  const trimmed = slash(path).replace(/\/+$/, "") || "/";
+  if (/^[A-Za-z]:$/.test(trimmed)) return trimmed;
   const parts = trimmed.split("/").filter(Boolean);
   return parts[parts.length - 1] ?? trimmed;
 }
