@@ -22,6 +22,7 @@ function summary(id: string, cwd: string, updatedAt = 1): SessionSummary {
     updatedAt,
     additions: 0,
     deletions: 0,
+    scope: "coding",
   };
 }
 

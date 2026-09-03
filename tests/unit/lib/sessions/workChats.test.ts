@@ -161,8 +161,8 @@ describe("workChatListItems ordering key", () => {
 
 describe("filterWorkChats", () => {
   const items = [
-    { id: "a", title: "Draft a changelog", updatedAt: 2 },
-    { id: "b", title: "Summarise the RFC", updatedAt: 1 },
+    { id: "a", title: "Draft a changelog", updatedAt: 2, pinned: false, archived: false },
+    { id: "b", title: "Summarise the RFC", updatedAt: 1, pinned: false, archived: false },
   ];
 
   it("returns everything for a blank query", () => {
