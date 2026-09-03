@@ -1,4 +1,4 @@
-import { normalizeProjectPath, prettyCwd } from "./paths";
+import { normalizeProjectPath, pathKey, prettyCwd } from "./paths";
 import { isWorktreePath, worktreeRepo } from "./worktrees/worktreeIndex";
 import { profileStorage } from "./profiles/profileStorage";
 
@@ -26,7 +26,7 @@ function normalize(path: string): string {
 }
 
 export function sameProjectPath(a: string, b: string): boolean {
-  return normalizeProjectPath(a) === normalizeProjectPath(b);
+  return pathKey(a) === pathKey(b);
 }
 
 export function loadRecents(): RecentProject[] {
@@ -65,7 +65,7 @@ export function rememberProject(path: string): RecentProject[] {
   // open at once would otherwise push every real project out of the list.
   if (isWorktreePath(normalized)) return loadRecents();
   dropArchived(normalized);
-  const prev = loadRecents().filter((p) => p.path !== normalized);
+  const prev = loadRecents().filter((p) => !sameProjectPath(p.path, normalized));
   const next = [{ path: normalized, openedAt: Date.now() }, ...prev].slice(0, MAX);
   save(next);
   return next;
@@ -74,10 +74,12 @@ export function rememberProject(path: string): RecentProject[] {
 /** Drops a project from the rail: its recent entry, saved order slot, and pin. */
 function dropFromRail(path: string): RecentProject[] {
   const normalized = normalize(path);
-  const next = loadRecents().filter((item) => item.path !== normalized);
+  const next = loadRecents().filter((item) => !sameProjectPath(item.path, normalized));
   save(next);
-  saveProjectRailOrder(loadProjectRailOrder().filter((entry) => entry !== normalized));
-  savePinnedProjects(loadPinnedProjects().filter((entry) => entry !== normalized));
+  saveProjectRailOrder(
+    loadProjectRailOrder().filter((entry) => !sameProjectPath(entry, normalized)),
+  );
+  savePinnedProjects(loadPinnedProjects().filter((entry) => !sameProjectPath(entry, normalized)));
   return next;
 }
 
@@ -92,7 +94,7 @@ export function archiveProject(path: string): RecentProject[] {
   const normalized = normalize(path);
   if (!looksLikeProject(normalized)) return loadRecents();
   const recents = dropFromRail(normalized);
-  const rest = loadArchivedProjects().filter((item) => item.path !== normalized);
+  const rest = loadArchivedProjects().filter((item) => !sameProjectPath(item.path, normalized));
   saveArchived([{ path: normalized, archivedAt: Date.now() }, ...rest]);
   return recents;
 }
@@ -110,8 +112,9 @@ export function loadArchivedProjects(): ArchivedProject[] {
       const rec = item as { path?: unknown; archivedAt?: unknown };
       if (typeof rec.path !== "string" || !rec.path) continue;
       const path = normalize(rec.path);
-      if (seen.has(path) || !looksLikeProject(path)) continue;
-      seen.add(path);
+      const key = pathKey(path);
+      if (seen.has(key) || !looksLikeProject(path)) continue;
+      seen.add(key);
       const archivedAt =
         typeof rec.archivedAt === "number" && Number.isFinite(rec.archivedAt) ? rec.archivedAt : 0;
       out.push({ path, archivedAt });
@@ -142,7 +145,7 @@ function saveArchived(next: ArchivedProject[]) {
 function dropArchived(path: string) {
   const normalized = normalize(path);
   const prev = loadArchivedProjects();
-  const next = prev.filter((item) => item.path !== normalized);
+  const next = prev.filter((item) => !sameProjectPath(item.path, normalized));
   if (next.length === prev.length) return;
   saveArchived(next);
 }
@@ -171,8 +174,9 @@ function readPathList(key: string): string[] {
     for (const item of parsed) {
       if (typeof item !== "string" || !item) continue;
       const path = normalize(item);
-      if (seen.has(path)) continue;
-      seen.add(path);
+      const key = pathKey(path);
+      if (seen.has(key)) continue;
+      seen.add(key);
       out.push(path);
     }
     return out;
@@ -205,7 +209,11 @@ export function savePinnedProjects(pinned: string[]) {
   savePathList(RAIL_PINNED_KEY, pinned.map(normalize));
 }
 
-/** All projects for the rail, keyed by normalized path. */
+/**
+ * All projects for the rail, keyed by `pathKey` — the map key decides identity,
+ * the entry's `path` is what gets displayed. On Windows the same folder reaches
+ * us in more than one case and must not become two rail entries.
+ */
 export function collectRailProjects(
   recents: RecentProject[],
   currentCwd: string,
@@ -214,12 +222,13 @@ export function collectRailProjects(
   for (const item of recents) {
     if (!looksLikeProject(item.path)) continue;
     const path = normalize(item.path);
-    map.set(path, { path, openedAt: item.openedAt });
+    map.set(pathKey(path), { path, openedAt: item.openedAt });
   }
   if (currentCwd && looksLikeProject(currentCwd)) {
     const path = normalize(currentCwd);
-    if (!map.has(path)) {
-      map.set(path, { path, openedAt: Date.now() });
+    const key = pathKey(path);
+    if (!map.has(key)) {
+      map.set(key, { path, openedAt: Date.now() });
     }
   }
   return withoutNestedWorktrees(map);
@@ -238,11 +247,13 @@ export function collectRailProjects(
  */
 export function repoRailPath(repo: string, projects: Iterable<string>): string | null {
   const root = normalize(repo);
+  const rootKey = pathKey(root);
   let best: string | null = null;
   for (const candidate of projects) {
     const path = normalize(candidate);
-    if (path === root) return path;
-    if (!path.startsWith(`${root}/`) || isWorktreePath(path)) continue;
+    const key = pathKey(path);
+    if (key === rootKey) return path;
+    if (!key.startsWith(`${rootKey}/`) || isWorktreePath(path)) continue;
     if (best === null || path.length < best.length) best = path;
   }
   return best;
@@ -254,12 +265,15 @@ export function repoRailPath(repo: string, projects: Iterable<string>): string |
  * folder directly would leave it with nowhere to appear.
  */
 function withoutNestedWorktrees(map: Map<string, RecentProject>): Map<string, RecentProject> {
+  // Keys are comparison keys now, so the repository lookup walks the entries'
+  // real paths and the deletion walks the keys.
+  const paths = [...map.values()].map((project) => project.path);
   const nested: string[] = [];
-  for (const path of map.keys()) {
-    const repo = worktreeRepo(path);
-    if (repo && repoRailPath(repo, map.keys()) != null) nested.push(path);
+  for (const [key, project] of map) {
+    const repo = worktreeRepo(project.path);
+    if (repo && repoRailPath(repo, paths) != null) nested.push(key);
   }
-  for (const path of nested) map.delete(path);
+  for (const key of nested) map.delete(key);
   return map;
 }
 
@@ -268,18 +282,19 @@ export function syncProjectRailOrder(
   order: string[],
   projects: Map<string, RecentProject>,
 ): string[] {
-  const paths = new Set(projects.keys());
   const next: string[] = [];
   const seen = new Set<string>();
   for (const path of order) {
-    const normalized = normalize(path);
-    if (!paths.has(normalized) || seen.has(normalized)) continue;
-    seen.add(normalized);
-    next.push(normalized);
+    const key = pathKey(path);
+    const project = projects.get(key);
+    if (!project || seen.has(key)) continue;
+    seen.add(key);
+    next.push(project.path);
   }
-  const newcomers = [...paths]
-    .filter((path) => !seen.has(path))
-    .sort((a, b) => (projects.get(b)?.openedAt ?? 0) - (projects.get(a)?.openedAt ?? 0));
+  const newcomers = [...projects.entries()]
+    .filter(([key]) => !seen.has(key))
+    .sort(([, a], [, b]) => b.openedAt - a.openedAt)
+    .map(([, project]) => project.path);
   return [...next, ...newcomers];
 }
 
@@ -291,13 +306,14 @@ export function projectRailSections(
 ): ProjectRailSections {
   const projects = collectRailProjects(recents, currentCwd);
   const syncedOrder = syncProjectRailOrder(order, projects);
-  const pinnedSet = new Set(pinnedPaths.map(normalize));
+  const pinnedSet = new Set(pinnedPaths.map(pathKey));
   const pinned: RecentProject[] = [];
   const unpinned: RecentProject[] = [];
   for (const path of syncedOrder) {
-    const item = projects.get(path);
+    const key = pathKey(path);
+    const item = projects.get(key);
     if (!item) continue;
-    if (pinnedSet.has(path)) pinned.push(item);
+    if (pinnedSet.has(key)) pinned.push(item);
     else unpinned.push(item);
   }
   return { pinned, projects: unpinned };
@@ -319,9 +335,11 @@ export function projectRailItems(recents: RecentProject[], currentCwd: string): 
 /** True if this looks like a user project, not an app bundle or system root. */
 export function looksLikeProject(path: string): boolean {
   if (!path || path === "/" || path === "~") return false;
+  // A drive root is not a project any more than `/` is.
+  if (/^[A-Za-z]:$/.test(normalize(path))) return false;
   // Home itself arrives expanded (`/Users/me`), so the `~` check above misses
   // it. Indexing it walks `~/Library`, which trips the OS consent prompt.
   if (prettyCwd(path) === "~") return false;
-  if (path.includes(".app/")) return false;
+  if (normalize(path).includes(".app/")) return false;
   return true;
 }

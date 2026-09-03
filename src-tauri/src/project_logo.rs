@@ -89,7 +89,7 @@ fn save_project_logo_sync(
     std::fs::copy(&source, &temp).map_err(|e| format!("{}: {e}", temp.display()))?;
     remove_existing_logos(&dir, project)?;
     std::fs::rename(&temp, &dest).map_err(|e| format!("{}: {e}", dest.display()))?;
-    Ok(dest.to_string_lossy().into_owned())
+    Ok(crate::fs::path_to_js(&dest))
 }
 
 fn remove_project_logo_sync(app: &AppHandle, project: &str) -> Result<(), String> {

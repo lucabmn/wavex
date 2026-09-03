@@ -1,7 +1,9 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use tauri::window::Color;
+#[cfg(target_os = "windows")]
+use tauri::window::{Effect, EffectsBuilder};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow, WebviewWindowBuilder};
 
 static WINDOW_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -52,7 +54,14 @@ pub fn enable_window_glass(window: WebviewWindow) {
         let _ = window.set_background_color(Some(Color(0, 0, 0, 3)));
         crate::macos::enable_glass(&window);
     }
-    #[cfg(not(target_os = "macos"))]
+    // Acrylic is the Windows counterpart of macOS vibrancy. Linux has no
+    // portable equivalent, so it keeps the opaque page the CSS gives it.
+    #[cfg(target_os = "windows")]
+    {
+        let _ = window.set_background_color(Some(Color(0, 0, 0, 0)));
+        let _ = window.set_effects(EffectsBuilder::new().effect(Effect::Acrylic).build());
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = window;
     }

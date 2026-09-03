@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { pathKey } from "../paths";
 import {
   collectRailProjects,
   normalizeProjectPath,
@@ -452,7 +453,7 @@ async function fetchInboxItems(
 
 export function inboxProjectsForRail(recents: RecentProject[], cwd: string): RecentProject[] {
   const map = collectRailProjects(recents, cwd);
-  const current = cwd ? map.get(normalizeProjectPath(cwd)) : undefined;
+  const current = cwd ? map.get(pathKey(cwd)) : undefined;
   const rest = [...map.values()].filter(
     (project) => !current || !sameProjectPath(project.path, current.path),
   );

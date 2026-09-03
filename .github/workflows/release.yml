@@ -8,8 +8,31 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: macos-latest
+  build:
+    name: build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      # One runner at a time. Every job appends to the same draft release and to
+      # the same `latest.json`, and tauri-action reads that feed before it
+      # rewrites it — in parallel the last writer drops the other platforms.
+      max-parallel: 1
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macOS
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+          # 22.04, not latest: the AppImage and the .deb both link the runner's
+          # glibc, and building on 24.04 refuses to start on anything older.
+          - os: ubuntu-22.04
+            platform: Linux
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,rpm,appimage
+          - os: windows-latest
+            platform: Windows
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
     env:
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
       APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -25,25 +48,47 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+
+      # wry links against the system WebKitGTK; nothing Rust-side resolves it.
+      - name: Install Linux WebKit dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            patchelf \
+            libfuse2
+
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
+          key: ${{ matrix.os }}
 
       - run: pnpm install --frozen-lockfile
 
       - name: Verify release inputs
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           node scripts/verify-release.mjs "${GITHUB_REF_NAME#v}"
           node scripts/verify-distribution.mjs
-          for name in \
-            APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID \
-            TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+          # Only the macOS artifacts are code-signed. Windows and Linux ship
+          # unsigned until certificates exist for them; the updater signature is
+          # separate and required on every platform.
+          required="TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            required="$required APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID"
+          fi
+          for name in $required; do
             [ -n "${!name:-}" ] || { echo "Missing required secret: $name" >&2; exit 1; }
           done
           [ "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = false ] || {
@@ -53,13 +98,15 @@ jobs:
 
       - name: Read release notes
         id: notes
+        shell: bash
         run: |
-          delimiter="notes-$(openssl rand -hex 16)"
+          # Not openssl: the Windows runner's bash does not ship it.
+          delimiter="notes-$(node -e "console.log(require('node:crypto').randomBytes(16).toString('hex'))")"
           echo "body<<$delimiter" >> "$GITHUB_OUTPUT"
           node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           echo "$delimiter" >> "$GITHUB_OUTPUT"
 
-      - name: Build signed and notarized release draft
+      - name: Build release draft
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -70,9 +117,10 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
-          args: --bundles app,dmg --target aarch64-apple-darwin
+          args: --bundles ${{ matrix.bundles }} --target ${{ matrix.target }}
 
       - name: Notarize and staple the disk image
+        if: matrix.os == 'macos-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -96,8 +144,7 @@ jobs:
           gh release upload "$GITHUB_REF_NAME" "$DMG" --clobber
 
       - name: Verify Gatekeeper and updater artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: matrix.os == 'macos-latest'
         run: |
           set -euo pipefail
           APP=$(find target -type d -path '*/bundle/macos/wavex.app' -print -quit)
@@ -115,11 +162,73 @@ jobs:
           spctl --assess --type execute --verbose=4 "$APP"
           spctl --assess --type open --context context:primary-signature --verbose=4 "$DMG"
 
+      - name: Verify the installer and the signed update bundle
+        if: matrix.os != 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Tauri names the update archive per platform and has changed those
+          # names between majors, so assert the contract instead of the suffix:
+          # a non-empty `.sig` next to the non-empty bundle it signs.
+          SIG=$(find target -type f -path '*/bundle/*' -name '*.sig' -print -quit)
+          [ -n "$SIG" ] || { echo "No signed update bundle was produced." >&2; exit 1; }
+          [ -s "$SIG" ]
+          [ -s "${SIG%.sig}" ]
+
+          case "${{ matrix.os }}" in
+            ubuntu-*)
+              find target -type f -name '*.AppImage' -print -quit | grep -q .
+              find target -type f -name '*.deb' -print -quit | grep -q .
+              find target -type f -name '*.rpm' -print -quit | grep -q .
+              ;;
+            windows-*)
+              find target -type f -name '*.exe' -path '*/bundle/*' -print -quit | grep -q .
+              ;;
+          esac
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # Checked while the release is still a draft. Each build job rewrites the
+      # one shared `latest.json`, and an overwrite instead of a merge leaves a
+      # feed that names a single platform — which no per-asset check would catch.
+      - name: Verify every platform reached the draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
           ASSETS=$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')
+          for pattern in '\.dmg$' '\.AppImage$' '\.deb$' '\.rpm$' '\.exe$'; do
+            grep -qE "$pattern" <<< "$ASSETS" || {
+              echo "The draft is missing an installer matching $pattern" >&2
+              exit 1
+            }
+          done
           grep -qx 'latest.json' <<< "$ASSETS"
-          grep -qE '\.dmg$' <<< "$ASSETS"
-          grep -qE '\.app\.tar\.gz$' <<< "$ASSETS"
-          grep -qE '\.app\.tar\.gz\.sig$' <<< "$ASSETS"
+
+          gh release download "$GITHUB_REF_NAME" --pattern latest.json --dir "$RUNNER_TEMP"
+          node - "$RUNNER_TEMP/latest.json" "${GITHUB_REF_NAME#v}" <<'NODE'
+          const [path, version] = process.argv.slice(2);
+          const feed = JSON.parse(require("node:fs").readFileSync(path, "utf8"));
+          if (feed.version !== version) process.exit(1);
+          for (const key of ["darwin-aarch64", "linux-x86_64", "windows-x86_64"]) {
+            const platform = feed.platforms?.[key];
+            if (!platform?.signature || !platform?.url) {
+              console.error(`latest.json has no signed bundle for ${key}`);
+              process.exit(1);
+            }
+            if (!platform.url.startsWith("https://github.com/lucabmn/wavex/releases/download/")) {
+              process.exit(1);
+            }
+          }
+          NODE
 
       - name: Publish verified release
         id: publish
@@ -137,9 +246,10 @@ jobs:
           node - "$FEED" "${GITHUB_REF_NAME#v}" <<'NODE'
           const [path, version] = process.argv.slice(2);
           const feed = JSON.parse(require("node:fs").readFileSync(path, "utf8"));
-          const platform = feed.platforms?.["darwin-aarch64"];
-          if (feed.version !== version || !platform?.signature || !platform?.url) process.exit(1);
-          if (!platform.url.startsWith("https://github.com/lucabmn/wavex/releases/download/")) process.exit(1);
+          if (feed.version !== version) process.exit(1);
+          for (const key of ["darwin-aarch64", "linux-x86_64", "windows-x86_64"]) {
+            if (!feed.platforms?.[key]?.signature) process.exit(1);
+          }
           NODE
 
       - name: Return a failed publication to draft

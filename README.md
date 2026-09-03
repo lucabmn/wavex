@@ -7,7 +7,7 @@
 **One desktop app for every coding agent you already pay for.**
 
 [![License](https://img.shields.io/badge/license-MIT-black?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-black?style=flat-square)](#install)
+[![Platform](https://img.shields.io/badge/platform-macOS%20·%20Linux%20·%20Windows-black?style=flat-square)](#install)
 [![Built with](https://img.shields.io/badge/built%20with-Tauri%202%20·%20React%2019%20·%20Rust-black?style=flat-square)](#build-from-source)
 
 </div>
@@ -72,20 +72,30 @@ expose surfaced in the composer.
 
 ## Install
 
-macOS on Apple Silicon. Download the `.dmg` from
-[Releases](https://github.com/lucabmn/wavex/releases/latest), open it, and drag
-wavex to Applications.
+Every release ships all three platforms from
+[Releases](https://github.com/lucabmn/wavex/releases/latest).
 
-Starting with v0.1.1, release builds are signed with a Developer ID certificate,
-notarized by Apple, and stapled before publication. wavex also verifies signed
-update bundles before installing them.
+| Platform              | Download                    | Notes                                                              |
+| --------------------- | --------------------------- | ------------------------------------------------------------------ |
+| macOS (Apple Silicon) | `.dmg`                      | Open it and drag wavex to Applications                             |
+| Linux (x86-64)        | `.AppImage`, `.deb`, `.rpm` | Needs WebKitGTK 4.1, which current desktop distributions ship      |
+| Windows (x86-64)      | `-setup.exe`                | Installs for the current user, so it needs no administrator rights |
+
+Starting with v0.1.1, macOS builds are signed with a Developer ID certificate,
+notarized by Apple, and stapled before publication. The Windows and Linux builds
+are not code-signed yet, so SmartScreen may warn on first run. Update bundles are
+signed on every platform, and wavex verifies that signature before installing one.
 
 ## Build from source
 
-Node.js 22+, pnpm, a current stable Rust toolchain, and the Xcode Command Line
-Tools.
+Node.js 22+, pnpm, and a current stable Rust toolchain, plus your platform's
+native toolchain: the Xcode Command Line Tools on macOS, the MSVC build tools and
+WebView2 on Windows, or the WebKitGTK development packages on Linux.
 
 ```sh
+# Debian / Ubuntu only
+sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libxdo-dev patchelf
+
 pnpm install
 pnpm tauri dev
 ```

@@ -1,16 +1,32 @@
 # wavex development guide
 
-wavex is a macOS-only Tauri 2 desktop application for installed coding-agent
-CLIs. The frontend is React 19 + TypeScript; the native host is Rust. It works
-in the user's real checkout, so filesystem, Git, process, and worktree changes
-must be treated as user data rather than disposable sandbox state.
+wavex is a Tauri 2 desktop application for installed coding-agent CLIs. It
+ships for macOS (Apple Silicon), Linux (x86-64), and Windows (x86-64). The
+frontend is React 19 + TypeScript; the native host is Rust. It works in the
+user's real checkout, so filesystem, Git, process, and worktree changes must be
+treated as user data rather than disposable sandbox state.
 
 ## Product boundaries
 
 - wavex has no account or hosted backend. Provider authentication belongs to the
   installed CLI, not to wavex.
-- macOS on Apple Silicon is the supported distribution target. Do not add
-  cross-platform abstractions unless the task requires them.
+- macOS, Linux, and Windows are all supported distribution targets, and every
+  release builds all three. Code that reaches the operating system belongs
+  behind a `cfg` arm or a platform helper, not behind an assumption that the
+  host is macOS. Native integrations without an equivalent elsewhere — the menu
+  bar popover, the Dock badge, window vibrancy — stay `#[cfg(target_os =
+"macos")]` and degrade to nothing.
+- Spawn child processes through `src-tauri/src/process.rs`, never
+  `Command::new` directly. Windows gives a bare `CreateProcess` its own console
+  window, which flashes over the app on every `git status`.
+- Every path Rust hands the WebView goes through `fs::path_to_js`, and TypeScript
+  keeps one slash direction via `slash`/`normalizeProjectPath` in
+  `src/lib/paths.ts`. Compare paths with `pathKey`, never `===`: Windows paths
+  are case-insensitive, so a raw comparison splits one project into two rail
+  entries, two tabs, and a pin that never matches.
+- Match a program by `binary_name_eq`, not `file_name()`. Agent CLIs install
+  through npm, which writes `claude.cmd` — a `== "claude"` check rejects every
+  provider on Windows.
 - A **harness** is an adapter for one coding-agent CLI. CLI-specific protocol
   details stay behind the harness registry.
 - A **session** is the persisted conversation. Tabs, panes, splits, and groups
@@ -85,7 +101,7 @@ otherwise.
 ### Tauri boundary
 
 Rust owns operating-system side effects: processes, PTYs, filesystem access,
-Git, native windows, SQLite, and macOS integration. React should call a typed
+Git, native windows, SQLite, and per-platform desktop integration. React should call a typed
 wrapper rather than scattering raw `invoke()` calls through components.
 
 When adding a command, update every applicable layer:
@@ -137,7 +153,9 @@ pnpm check
 ```
 
 It checks distribution metadata, oxlint, oxfmt, TypeScript, Vitest, the Vite
-build, rustfmt, Clippy with warnings denied, and Rust tests. The Vite build is
+build, rustfmt, Clippy with warnings denied, and Rust tests — for the host
+platform only. CI compiles the Rust host on macOS, Linux, and Windows, so a
+change inside a non-host `cfg` arm is not proven until that matrix runs. The Vite build is
 part of the gate because `index.html` references `/src/main.tsx` as plain HTML,
 which TypeScript does not validate.
 
