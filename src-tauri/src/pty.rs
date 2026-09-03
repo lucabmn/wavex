@@ -1,13 +1,13 @@
 use std::collections::HashMap;
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 use std::io::Read;
 use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 use std::sync::{Arc, Mutex};
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 use std::thread;
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
@@ -18,11 +18,11 @@ use crate::fs::expand_home;
 
 const DATA_EVENT: &str = "pty-data";
 const EXIT_EVENT: &str = "pty-exit";
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 const READ_CHUNK: usize = 32 * 1024;
 /// Cap how often a busy PTY hops the webview. Each `emit` is a JS eval; a
 /// flood of small reads was thousands per second and froze input.
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 const PTY_COALESCE: Duration = Duration::from_millis(8);
 #[cfg(unix)]
 const KILL_ESCALATE: Duration = Duration::from_secs(1);
@@ -45,6 +45,10 @@ struct LivePty {
     writer: Mutex<Box<dyn Write + Send>>,
     #[cfg(unix)]
     master_fd: i32,
+    /// ConPTY has no file descriptor to `ioctl`; resizing goes through the
+    /// pseudoconsole handle the master owns.
+    #[cfg(windows)]
+    master: Mutex<Box<dyn portable_pty::MasterPty + Send>>,
     pid: u32,
 }
 
@@ -129,16 +133,44 @@ pub fn pty_spawn(
         close_fd(prev.master_fd);
     }
 
-    #[cfg(not(unix))]
-    {
-        let _ = (app, cwd, cols, rows);
-        return Err("Terminals are supported on macOS and Linux.".into());
-    }
+    spawn_pty(app, host, id, cwd, cols.max(2), rows.max(2))
+}
 
-    #[cfg(unix)]
-    {
-        spawn_unix(app, host, id, cwd, cols.max(2), rows.max(2))
-    }
+#[cfg(unix)]
+fn spawn_pty(
+    app: AppHandle,
+    host: State<PtyHost>,
+    id: String,
+    cwd: String,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    spawn_unix(app, host, id, cwd, cols, rows)
+}
+
+#[cfg(windows)]
+fn spawn_pty(
+    app: AppHandle,
+    host: State<PtyHost>,
+    id: String,
+    cwd: String,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    spawn_windows(app, host, id, cwd, cols, rows)
+}
+
+#[cfg(not(any(unix, windows)))]
+fn spawn_pty(
+    app: AppHandle,
+    host: State<PtyHost>,
+    id: String,
+    cwd: String,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    let _ = (app, host, id, cwd, cols, rows);
+    Err("Terminals are supported on macOS, Linux, and Windows.".into())
 }
 
 #[tauri::command]
@@ -158,15 +190,32 @@ pub fn pty_resize(host: State<PtyHost>, id: String, cols: u16, rows: u16) -> Res
     let live = host
         .get(&id)
         .ok_or_else(|| "Terminal is not running".to_string())?;
-    #[cfg(unix)]
-    {
-        resize_fd(live.master_fd, cols.max(2), rows.max(2))
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = (live, cols, rows);
-        Err("Terminals are supported on macOS and Linux.".into())
-    }
+    resize_live(&live, cols.max(2), rows.max(2))
+}
+
+#[cfg(unix)]
+fn resize_live(live: &LivePty, cols: u16, rows: u16) -> Result<(), String> {
+    resize_fd(live.master_fd, cols, rows)
+}
+
+#[cfg(windows)]
+fn resize_live(live: &LivePty, cols: u16, rows: u16) -> Result<(), String> {
+    live.master
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .resize(portable_pty::PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| format!("Failed to resize terminal: {e}"))
+}
+
+#[cfg(not(any(unix, windows)))]
+fn resize_live(live: &LivePty, cols: u16, rows: u16) -> Result<(), String> {
+    let _ = (live, cols, rows);
+    Err("Terminals are supported on macOS, Linux, and Windows.".into())
 }
 
 #[derive(Serialize, Clone)]
@@ -224,13 +273,12 @@ fn spawn_unix(
     use std::fs::File;
     use std::os::unix::io::FromRawFd;
     use std::os::unix::process::CommandExt;
-    use std::process::Command;
 
     let workdir = working_dir(&cwd);
     let (shell, args) = default_shell();
     let (master, slave) = open_pty(cols, rows)?;
 
-    let mut cmd = Command::new(&shell);
+    let mut cmd = crate::process::command(&shell);
     cmd.args(&args)
         .current_dir(&workdir)
         .stdin(dup_stdio(slave)?)
@@ -341,7 +389,155 @@ fn spawn_unix(
     Ok(())
 }
 
-#[cfg(unix)]
+/// ConPTY, through `portable-pty`. Windows has no controlling-terminal dance:
+/// the pseudoconsole owns the child's console and the master carries the pipes.
+#[cfg(windows)]
+fn spawn_windows(
+    app: AppHandle,
+    host: State<PtyHost>,
+    id: String,
+    cwd: String,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+    use std::sync::mpsc;
+
+    let workdir = working_dir(&cwd);
+    let (shell, args) = default_shell();
+
+    let pair = native_pty_system()
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| format!("Failed to open terminal: {e}"))?;
+
+    let mut cmd = CommandBuilder::new(&shell);
+    cmd.args(&args);
+    cmd.cwd(&workdir);
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+    cmd.env("TERM_PROGRAM", "wavex");
+    cmd.env("PATH", crate::harness::gui_search_path());
+    if let Some(home) = dirs_home() {
+        cmd.env("USERPROFILE", &home);
+    }
+
+    let mut child = pair
+        .slave
+        .spawn_command(cmd)
+        .map_err(|e| format!("Failed to start {shell}: {e}"))?;
+    // The slave end has to close here or the reader never sees EOF on exit.
+    drop(pair.slave);
+
+    let pid = child.process_id().unwrap_or_default();
+    let reader = pair
+        .master
+        .try_clone_reader()
+        .map_err(|e| format!("Failed to read from terminal: {e}"))?;
+    let writer = pair
+        .master
+        .take_writer()
+        .map_err(|e| format!("Failed to write to terminal: {e}"))?;
+
+    host.insert(
+        id.clone(),
+        Arc::new(LivePty {
+            writer: Mutex::new(Box::new(writer)),
+            master: Mutex::new(pair.master),
+            pid,
+        }),
+    );
+
+    // ConPTY's reader only blocks, so the coalescing that keeps `emit` off the
+    // hot path lives in a second thread instead of a `poll` timeout.
+    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+    thread::spawn(move || {
+        let mut reader = reader;
+        let mut buf = vec![0_u8; READ_CHUNK];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => {
+                    if tx.send(buf[..n].to_vec()).is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+    });
+
+    let data_app = app.clone();
+    let data_id = id.clone();
+    thread::spawn(move || {
+        while let Ok(first) = rx.recv() {
+            let mut acc = first;
+            let deadline = Instant::now() + PTY_COALESCE;
+            while acc.len() < READ_CHUNK {
+                let Some(left) = deadline.checked_duration_since(Instant::now()) else {
+                    break;
+                };
+                match rx.recv_timeout(left) {
+                    Ok(more) => acc.extend_from_slice(&more),
+                    Err(_) => break,
+                }
+            }
+            emit_pty_data(&data_app, &data_id, &acc);
+        }
+    });
+
+    let wait_app = app;
+    let wait_id = id;
+    thread::spawn(move || {
+        let code = child.wait().ok().map(|status| status.exit_code() as i32);
+        // Only announce this child. A remount/respawn reuses the id, and the
+        // previous wait thread must not paint "[process exited]" on the new PTY.
+        let emit = wait_app
+            .try_state::<PtyHost>()
+            .is_some_and(|host| host.remove_if_pid(&wait_id, pid).is_some());
+        if emit {
+            let _ = wait_app.emit(EXIT_EVENT, PtyExit { id: wait_id, code });
+        }
+    });
+
+    Ok(())
+}
+
+/// PowerShell ships with every supported Windows and is what the agent CLI
+/// install docs assume. `COMSPEC` is the fallback for a trimmed install.
+#[cfg(windows)]
+fn default_shell() -> (String, Vec<String>) {
+    // PowerShell 7 first: 5.1 rejects `&&`, which anyone chaining shell commands
+    // in a dev terminal will reach for within the first minute.
+    if let Some(pwsh) = crate::harness::resolve_gui_binary("pwsh") {
+        return (
+            pwsh.to_string_lossy().into_owned(),
+            vec!["-NoLogo".to_string()],
+        );
+    }
+    if let Some(root) = std::env::var_os("SystemRoot") {
+        let powershell = std::path::Path::new(&root)
+            .join("System32")
+            .join("WindowsPowerShell")
+            .join("v1.0")
+            .join("powershell.exe");
+        if powershell.is_file() {
+            return (
+                powershell.to_string_lossy().into_owned(),
+                vec!["-NoLogo".to_string()],
+            );
+        }
+    }
+    (
+        std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string()),
+        Vec::new(),
+    )
+}
+
+#[cfg(any(unix, windows))]
 fn working_dir(cwd: &str) -> std::path::PathBuf {
     let path = expand_home(cwd);
     if path.is_dir() {
@@ -435,7 +631,16 @@ fn terminate(pid: u32) {
             }
         });
     }
-    #[cfg(not(unix))]
+    // No signal reaches a console child from a process that shares no console
+    // with it, and ConPTY leaves the shell's own children running when only the
+    // shell is killed. `/T` takes the tree.
+    #[cfg(windows)]
+    {
+        let _ = crate::process::command("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .status();
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = pid;
     }
@@ -545,7 +750,7 @@ fn os_err(ctx: &str) -> String {
     format!("{ctx}: {}", std::io::Error::last_os_error())
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 fn emit_pty_data(app: &AppHandle, id: &str, bytes: &[u8]) {
     if bytes.is_empty() {
         return;
@@ -598,8 +803,7 @@ fn foreground_label(master_fd: i32, shell_pid: u32) -> Option<String> {
 
 #[cfg(unix)]
 fn process_label(pid: i32) -> Option<String> {
-    use std::process::Command;
-    let output = Command::new("ps")
+    let output = crate::process::command("ps")
         .args(["-p", &pid.to_string(), "-o", "args="])
         .output()
         .ok()?;

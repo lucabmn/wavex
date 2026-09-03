@@ -500,8 +500,8 @@ fn security_ok(args: &[String]) -> bool {
 
 #[cfg(target_os = "macos")]
 fn security_run(args: &[String], require_stdout: bool) -> Option<String> {
-    use std::process::{Command, Stdio};
-    let mut cmd = Command::new("security");
+    use std::process::Stdio;
+    let mut cmd = crate::process::command("security");
     cmd.args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())

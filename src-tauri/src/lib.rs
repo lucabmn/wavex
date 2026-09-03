@@ -9,6 +9,7 @@ mod macos;
 mod menu;
 mod menu_bar;
 mod notes;
+mod process;
 mod profiles;
 mod project_logo;
 mod pty;
@@ -28,14 +29,16 @@ mod worktree;
 #[tauri::command]
 fn default_cwd() -> String {
     if let Ok(cwd) = std::env::current_dir() {
-        return cwd.to_string_lossy().into_owned();
+        return fs::path_to_js(&cwd);
     }
-    dirs_home().unwrap_or_else(|| "~".into())
+    home_dir()
 }
 
 #[tauri::command]
 fn home_dir() -> String {
-    dirs_home().unwrap_or_else(|| "~".into())
+    dirs_home()
+        .map(|home| fs::path_to_js(std::path::Path::new(&home)))
+        .unwrap_or_else(|| "~".into())
 }
 
 pub(crate) struct PasswdIdentity {
@@ -49,6 +52,25 @@ pub(crate) fn dirs_home() -> Option<String> {
         let home = home.to_string_lossy().into_owned();
         if !home.is_empty() {
             return Some(home);
+        }
+    }
+    // Windows has no HOME. USERPROFILE is the login home; HOMEDRIVE+HOMEPATH is
+    // the roaming-profile fallback a domain account can still be pointed at.
+    #[cfg(windows)]
+    {
+        if let Some(profile) = std::env::var_os("USERPROFILE") {
+            let profile = profile.to_string_lossy().into_owned();
+            if !profile.is_empty() {
+                return Some(profile);
+            }
+        }
+        if let (Some(drive), Some(path)) =
+            (std::env::var_os("HOMEDRIVE"), std::env::var_os("HOMEPATH"))
+        {
+            let joined = format!("{}{}", drive.to_string_lossy(), path.to_string_lossy());
+            if !joined.is_empty() {
+                return Some(joined);
+            }
         }
     }
     passwd_identity().map(|id| id.home)
@@ -336,8 +358,11 @@ pub fn run() {
             }
             api.prevent_exit();
             // Last window destroyed (red button). Stay in the dock; ⌘Q is a
-            // separate menu handler and arrives with an exit code.
+            // separate menu handler and arrives with an exit code. Windows and
+            // Linux have no dock to go back to, so the last close is a quit.
             if code.is_none() {
+                #[cfg(not(target_os = "macos"))]
+                window::request_quit(handle);
                 return;
             }
             window::request_quit(handle);

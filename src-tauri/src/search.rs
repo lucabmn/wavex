@@ -1,5 +1,4 @@
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +68,7 @@ fn search_project_sync(options: &SearchOptions) -> Result<SearchResult, String> 
 }
 
 fn git_grep(root: &Path, options: &SearchOptions, query: &str) -> Option<SearchResult> {
-    let mut cmd = Command::new("git");
+    let mut cmd = crate::process::command("git");
     cmd.arg("-C").arg(root).arg("grep").arg("-z").arg("-n");
     if !options.case_sensitive {
         cmd.arg("-i");
@@ -134,7 +133,7 @@ fn git_grep(root: &Path, options: &SearchOptions, query: &str) -> Option<SearchR
             .and_then(|value| value.parse::<u32>().ok())
             .unwrap_or(1);
         let preview = String::from_utf8_lossy(preview_bytes).to_string();
-        let path = root.join(&relative).to_string_lossy().into_owned();
+        let path = crate::fs::path_to_js(&root.join(&relative));
         let column = match_column(
             &preview,
             query,

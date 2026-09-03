@@ -513,7 +513,6 @@ fn current_exe_is_bundled() -> bool {
 fn relaunch_from_dev_bundle() -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     use std::os::unix::process::CommandExt;
-    use std::process::Command;
 
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     if current_exe_is_bundled() {
@@ -543,7 +542,7 @@ fn relaunch_from_dev_bundle() -> Result<(), String> {
     perms.set_mode(0o755);
     std::fs::set_permissions(&bundled, perms).map_err(|e| e.to_string())?;
 
-    let err = Command::new(&bundled)
+    let err = crate::process::command(&bundled)
         .args(std::env::args_os().skip(1))
         .exec();
     Err(err.to_string())
@@ -556,9 +555,7 @@ fn write_dev_bundle_icons(app: &std::path::Path) -> Result<(), String> {
     std::fs::write(app.join("Contents/Info.plist"), DEV_BUNDLE_PLIST).map_err(|e| e.to_string())?;
     std::fs::write(resources.join("AppIcon.icns"), DEV_ICNS).map_err(|e| e.to_string())?;
     std::fs::write(resources.join("Assets.car"), DEV_ASSETS_CAR).map_err(|e| e.to_string())?;
-    let _ = std::process::Command::new("/usr/bin/touch")
-        .arg(app)
-        .status();
+    let _ = crate::process::command("/usr/bin/touch").arg(app).status();
     Ok(())
 }
 

@@ -8,14 +8,20 @@ pub const WINDOW_LABEL: &str = "menu-bar";
 const TRAY_ID: &str = "wavex-menu-bar";
 const AGENTS_CHANGED: &str = "menu_bar_agents_changed";
 const FOCUS_SESSION: &str = "focus_session_from_menu_bar";
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const POPOVER_WIDTH: f64 = 380.0;
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const POPOVER_HEIGHT: f64 = 500.0;
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const SCREEN_MARGIN: f64 = 8.0;
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const ANCHOR_GAP: f64 = 4.0;
 /// Must match the popover card's `rounded-[14px]`.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const POPOVER_RADIUS: f64 = 14.0;
 
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 struct MonitorGeometry {
     x: f64,
     y: f64,
@@ -25,6 +31,7 @@ struct MonitorGeometry {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 struct PhysicalGeometry {
     x: f64,
     y: f64,
@@ -32,6 +39,7 @@ struct PhysicalGeometry {
     height: f64,
 }
 
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn monitor_containing(monitors: &[MonitorGeometry], point: (f64, f64)) -> Option<MonitorGeometry> {
     monitors.iter().copied().find(|monitor| {
         point.0 >= monitor.x
@@ -41,6 +49,7 @@ fn monitor_containing(monitors: &[MonitorGeometry], point: (f64, f64)) -> Option
     })
 }
 
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn popup_position_for(
     monitors: &[MonitorGeometry],
     anchor: PhysicalGeometry,
