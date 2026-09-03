@@ -1,5 +1,6 @@
 import { normalizeProjectPath, prettyCwd } from "./paths";
 import { isWorktreePath, worktreeRepo } from "./worktrees/worktreeIndex";
+import { profileStorage } from "./profiles/profileStorage";
 
 export { normalizeProjectPath };
 
@@ -30,7 +31,7 @@ export function sameProjectPath(a: string, b: string): boolean {
 
 export function loadRecents(): RecentProject[] {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = profileStorage.getItem(KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -51,7 +52,7 @@ export function loadRecents(): RecentProject[] {
 
 function save(next: RecentProject[]) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    profileStorage.setItem(KEY, JSON.stringify(next));
   } catch {
     // private mode / quota
   }
@@ -98,7 +99,7 @@ export function archiveProject(path: string): RecentProject[] {
 
 export function loadArchivedProjects(): ArchivedProject[] {
   try {
-    const raw = localStorage.getItem(ARCHIVED_KEY);
+    const raw = profileStorage.getItem(ARCHIVED_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -129,7 +130,7 @@ export function subscribeArchivedProjects(onChange: () => void): () => void {
 
 function saveArchived(next: ArchivedProject[]) {
   try {
-    localStorage.setItem(ARCHIVED_KEY, JSON.stringify(next));
+    profileStorage.setItem(ARCHIVED_KEY, JSON.stringify(next));
   } catch {
     // private mode / quota
   }
@@ -161,7 +162,7 @@ export type ProjectRailSections = {
 
 function readPathList(key: string): string[] {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = profileStorage.getItem(key);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -182,7 +183,7 @@ function readPathList(key: string): string[] {
 
 function savePathList(key: string, paths: string[]) {
   try {
-    localStorage.setItem(key, JSON.stringify(paths));
+    profileStorage.setItem(key, JSON.stringify(paths));
   } catch {
     // private mode / quota
   }

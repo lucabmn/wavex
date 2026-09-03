@@ -9,6 +9,7 @@ mod macos;
 mod menu;
 mod menu_bar;
 mod notes;
+mod profiles;
 mod project_logo;
 mod pty;
 mod rate_limits;
@@ -141,6 +142,8 @@ pub fn run() {
         .manage(window_transfer::WindowTransferState::new())
         .setup(|app| {
             harness::reap_orphaned_harness_processes();
+            // Profiles decide where every other store lives, so they bind first.
+            profiles::init(app.handle())?;
             session_store::init(app.handle())?;
             checkpoint::init(app.handle())?;
             menu::install(app.handle())?;
@@ -285,6 +288,10 @@ pub fn run() {
             window::enable_window_glass,
             window_transfer::stage_window_transfer,
             window_transfer::take_window_transfer,
+            profiles::profile_bind,
+            profiles::profile_switch,
+            profiles::profile_switch_ready,
+            profiles::profile_delete_data,
             project_logo::save_project_logo,
             project_logo::remove_project_logo,
         ])

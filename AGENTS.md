@@ -32,6 +32,7 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/files/`: file index, tree, mentions, and watching
 - `src/lib/inbox/`: GitHub issues and pull requests
 - `src/lib/updates/`: updater and release notes
+- `src/lib/profiles/`: profiles, their registry, and profile-scoped storage
 - `src/lib/project/`: project logos, mascots, metadata
 - `src/lib/worktrees/`: git worktrees, their folders, and the repository they
   belong to
@@ -62,6 +63,24 @@ The Rust harness host supervises processes and transports. It must not acquire
 provider-specific product behavior that belongs in a TypeScript adapter. Preserve
 session bind, stop, forget, cancel, and idle-park semantics when changing a
 provider lifecycle.
+
+### Profiles
+
+A profile is a separate identity inside one install: its own projects, chats,
+agents, workspace, and preferences. It is app-wide, not per window — switching
+persists every window, stops the agents and terminals of the profile being left,
+swaps the native stores, and reloads.
+
+Browser state that belongs to a profile goes through `profileStorage` in
+`src/lib/profiles/`, never `localStorage` directly. Native state lives under the
+profile's data directory in `src-tauri/src/profiles.rs`. The default profile
+deliberately keeps the top-level directory and the unprefixed keys, so an
+install that predates profiles needs no migration. It can be renamed but not
+deleted.
+
+Provider authentication and CLI-owned agent definitions are not profile-scoped;
+they belong to the installed CLI. Say so in the UI rather than implying
+otherwise.
 
 ### Tauri boundary
 

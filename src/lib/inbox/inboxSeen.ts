@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { profileStorage } from "../profiles/profileStorage";
 
 const KEY = "wavex.inboxSeen";
 const LEGACY_KEY = "wavex.inboxSeenAt";
@@ -35,7 +36,7 @@ function isSeenMap(value: unknown): value is SeenMap {
 
 function loadInboxSeenStore(): SeenStore {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = profileStorage.getItem(KEY);
     if (!raw) return { seeded: false, items: {} };
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -56,8 +57,8 @@ function loadInboxSeenStore(): SeenStore {
 
 function saveInboxSeenStore(store: SeenStore) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ seeded: store.seeded, items: store.items }));
-    localStorage.removeItem(LEGACY_KEY);
+    profileStorage.setItem(KEY, JSON.stringify({ seeded: store.seeded, items: store.items }));
+    profileStorage.removeItem(LEGACY_KEY);
   } catch {
     // private mode / quota
   }

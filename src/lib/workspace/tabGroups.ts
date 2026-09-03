@@ -1,4 +1,5 @@
 import type { Tab } from "../../chrome/TitleBar";
+import { profileStorage } from "../profiles/profileStorage";
 
 /** Chrome-like palette — saturated enough to read on dark glass. */
 export const TAB_GROUP_COLORS = [
@@ -39,7 +40,7 @@ export function tabGroupLogoDisplayRevision(): number {
 
 function readRecord(key: string): Record<string, string> {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = profileStorage.getItem(key);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return {};
@@ -56,7 +57,7 @@ function readRecord(key: string): Record<string, string> {
 
 function writeRecord(key: string, value: Record<string, string>): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    profileStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* ignore quota errors */
   }
@@ -564,7 +565,7 @@ const COLLAPSED_KEY = "wavex:tab-groups:collapsed";
 
 export function loadCollapsedTabGroups(): Set<string> {
   try {
-    const raw = localStorage.getItem(COLLAPSED_KEY);
+    const raw = profileStorage.getItem(COLLAPSED_KEY);
     if (!raw) return new Set();
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return new Set();
@@ -576,7 +577,7 @@ export function loadCollapsedTabGroups(): Set<string> {
 
 export function saveCollapsedTabGroups(collapsed: Set<string>): void {
   try {
-    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed]));
+    profileStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed]));
   } catch {
     /* ignore quota errors */
   }

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { message } from "@tauri-apps/plugin-dialog";
+import { ask, message } from "@tauri-apps/plugin-dialog";
 import {
   useCallback,
   useEffect,
@@ -286,6 +286,7 @@ import {
   canAutoContinue,
   inFlightRefs,
   inFlightSnapshotKey,
+  profileSwitchWhileBusyMessage,
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
@@ -294,12 +295,15 @@ import { WorkView } from "./surfaces/WorkView";
 import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
 import { getWorkChatState } from "./lib/sessions/workChatStore";
 import type { InstalledUpdate } from "./lib/updates/updateNotice";
+import { listenProfileSwitch, switchProfile } from "./lib/profiles/profileStore";
 import {
+  beginProfileSwitch,
   bindResumedSessions,
   hasInFlightSessions,
   hideCurrentWindow,
   closeCurrentWindow,
   isAppQuitting,
+  isProfileSwitching,
   persistLiveTranscripts,
   persistQuitState,
   reapWindowRuntime,
@@ -383,6 +387,7 @@ export default function App({
   const [updateNotice, setUpdateNotice] = useState(installedUpdate);
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>(loadSettingsSection);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
   const editorNavigationToken = useRef(0);
   const [filePickerOpen, setFilePickerOpen] = useState(false);
@@ -527,7 +532,7 @@ export default function App({
     if (resumed?.sessions.length) bindResumedSessions(resumed.sessions);
     const stopBridge = startHarnessBridge();
     const reap = () => {
-      if (isAppQuitting()) return;
+      if (isAppQuitting() || isProfileSwitching()) return;
       void persistQuitState(
         sessionsRef.current,
         tabsRef.current,
@@ -550,6 +555,29 @@ export default function App({
       harnessFlush.current = null;
     };
   }, [resumed]);
+
+  // A profile switch is a quit and a relaunch for one profile: persist, let the
+  // native stores swap, then reload onto the profile that was chosen.
+  useEffect(() => {
+    const unlisten = listenProfileSwitch({
+      onPrepare: async () => {
+        flushHarnessEvents();
+        await persistQuitState(
+          sessionsRef.current,
+          tabsRef.current,
+          activeTabIdRef.current,
+          projectCwdRef.current,
+          "quit",
+          projectTerminalsRef.current,
+        ).catch(() => undefined);
+        beginProfileSwitch();
+      },
+      onChanged: () => window.location.reload(),
+    });
+    return () => {
+      void unlisten.then((off) => off()).catch(() => undefined);
+    };
+  }, [flushHarnessEvents]);
 
   useEffect(() => {
     void probeHarnessAvailability();
@@ -850,6 +878,9 @@ export default function App({
     if (pendingPersist.current.size === 0) return;
 
     const timer = window.setTimeout(() => {
+      // The stores belong to the profile being left from the moment this
+      // window acknowledged the switch; the workspace is already on disk.
+      if (isProfileSwitching()) return;
       const dirty = [...pendingPersist.current.values()];
       pendingPersist.current.clear();
       void Promise.all(
@@ -876,6 +907,7 @@ export default function App({
       return;
     }
     inFlightSyncKey.current = key;
+    if (isProfileSwitching()) return;
     void replaceInFlightSessions(refs).catch(() => undefined);
   }, [sessions, tabs]);
 
@@ -893,6 +925,7 @@ export default function App({
     if (workspaceSyncKey.current === key) return;
     workspaceSyncKey.current = key;
     const timer = window.setTimeout(() => {
+      if (isProfileSwitching()) return;
       void saveWorkspaceSnapshot(snapshot).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(timer);
@@ -3150,6 +3183,44 @@ export default function App({
     saveSettingsSection(section);
   }, []);
 
+  const onManageProfiles = useCallback(() => openSettings("profiles"), [openSettings]);
+
+  /** The switcher lives at the foot of the project rail, so reveal it first. */
+  const onToggleProfileMenu = useCallback(() => {
+    setSettingsOpen(false);
+    setProjectRailOpen((open) => {
+      if (open) return open;
+      saveProjectRailOpen(true);
+      return true;
+    });
+    setProfileMenuOpen((open) => !open);
+  }, []);
+
+  /**
+   * Swaps the whole app onto another profile. Every window persists first and
+   * the agents of the profile being left are stopped, so the confirmation says
+   * what running work is about to pause.
+   */
+  const onSwitchProfile = useCallback((profileId: string) => {
+    void (async () => {
+      const running = inFlightRefs(sessionsRef.current, tabsRef.current).length;
+      if (running > 0) {
+        const ok = await ask(profileSwitchWhileBusyMessage(running), {
+          title: "wavex",
+          kind: "warning",
+          okLabel: "Switch",
+        });
+        if (!ok) return;
+      }
+      await switchProfile(profileId).catch((error: unknown) => {
+        void message(error instanceof Error ? error.message : "Could not switch profile", {
+          title: "wavex",
+          kind: "error",
+        });
+      });
+    })();
+  }, []);
+
   const onOpenArchivedSession = useCallback(
     (sessionId: string) => {
       setSettingsOpen(false);
@@ -3241,6 +3312,7 @@ export default function App({
     onNewTerminalTab,
     onToggleProjectTerminal,
     openSettings,
+    onToggleProfileMenu,
   });
   actions.current = {
     onNew,
@@ -3265,6 +3337,7 @@ export default function App({
     onNewTerminalTab,
     onToggleProjectTerminal,
     openSettings,
+    onToggleProfileMenu,
   };
 
   const debounce = useRef({ name: "", at: 0 });
@@ -3391,6 +3464,12 @@ export default function App({
         e.preventDefault();
         e.stopPropagation();
         run("open_settings", () => actions.current.openSettings());
+        return;
+      }
+      if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        e.stopPropagation();
+        run("toggle_profile_menu", actions.current.onToggleProfileMenu);
         return;
       }
       if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "f") {
@@ -3598,6 +3677,10 @@ export default function App({
         onOpenSettings={onOpenSettings}
         onSelectSettingsSection={onSelectSettingsSection}
         onCloseSettings={onCloseSettings}
+        profileMenuOpen={profileMenuOpen}
+        onProfileMenuOpenChange={setProfileMenuOpen}
+        onSwitchProfile={onSwitchProfile}
+        onManageProfiles={onManageProfiles}
         updateNotice={updateNotice}
         onOpenWhatsNew={onOpenWhatsNew}
         onDismissUpdate={() => setUpdateNotice(null)}
@@ -3816,6 +3899,7 @@ export default function App({
             onDeleteSession={onDeleteHistorySession}
             onRestoreProject={onRestoreProject}
             onDeleteProject={(path) => onRemoveProject(path, { purgeData: true })}
+            onSwitchProfile={onSwitchProfile}
             onOpenWhatsNew={onOpenWhatsNew}
           />
         ) : null}

@@ -76,6 +76,7 @@ import { WorktreeList } from "./WorktreeList";
 import { HarnessIcon } from "./HarnessIcon";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 import { ProjectMascot } from "./ProjectMascot";
+import { ProfileSwitcher } from "./ProfileSwitcher";
 import { RailAction, RailSearch } from "./RailAction";
 import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
@@ -140,6 +141,10 @@ type Props = {
   settingsOpen?: boolean;
   settingsSection?: SettingsSectionId;
   onOpenSettings?: () => void;
+  profileMenuOpen?: boolean;
+  onProfileMenuOpenChange?: (open: boolean) => void;
+  onSwitchProfile?: (profileId: string) => void;
+  onManageProfiles?: () => void;
   onSelectSettingsSection?: (section: SettingsSectionId) => void;
   onCloseSettings?: () => void;
   updateNotice?: InstalledUpdate | null;
@@ -179,6 +184,10 @@ export function ProjectRail({
   settingsOpen = false,
   settingsSection = "general",
   onOpenSettings,
+  profileMenuOpen = false,
+  onProfileMenuOpenChange,
+  onSwitchProfile,
+  onManageProfiles,
   onSelectSettingsSection,
   onCloseSettings,
   updateNotice = null,
@@ -515,6 +524,12 @@ export function ProjectRail({
             onDismissUpdate={onDismissUpdate}
           />
           <div className="flex shrink-0 flex-col gap-px p-2 pt-0">
+            <ProfileSwitcher
+              open={profileMenuOpen}
+              onOpenChange={(open) => onProfileMenuOpenChange?.(open)}
+              onSwitch={(profileId) => onSwitchProfile?.(profileId)}
+              onManage={() => onManageProfiles?.()}
+            />
             <RailAction
               label="Settings"
               icon={Settings}

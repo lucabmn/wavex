@@ -1,4 +1,5 @@
 import { play, setEnabled, setVolume, type SoundName } from "cuelume";
+import { profileStorage } from "./profiles/profileStorage";
 
 const KEY = "wavex.sounds";
 
@@ -21,7 +22,7 @@ const CUES: Record<SoundCue, SoundName> = {
 
 export function loadSoundsEnabled(): boolean {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = profileStorage.getItem(KEY);
     if (raw == null) return SOUNDS_DEFAULT;
     return raw === "1" || raw === "true";
   } catch {
@@ -31,7 +32,7 @@ export function loadSoundsEnabled(): boolean {
 
 export function saveSoundsEnabled(value: boolean) {
   try {
-    localStorage.setItem(KEY, value ? "1" : "0");
+    profileStorage.setItem(KEY, value ? "1" : "0");
   } catch {
     // private mode / quota
   }

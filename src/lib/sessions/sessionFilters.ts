@@ -1,6 +1,7 @@
 import type { HarnessId } from "../session";
 import { HARNESSES } from "../session";
 import type { SessionSummary } from "./sessionStore";
+import { profileStorage } from "../profiles/profileStorage";
 
 export type SessionTimeFilter = "all" | "today" | "7d" | "30d";
 
@@ -40,9 +41,9 @@ export function harnessesInSessions(rows: SessionSummary[]): HarnessId[] {
 
 export function loadSessionSidebarFilters(): SessionSidebarFilters {
   try {
-    const raw = localStorage.getItem(FILTERS_KEY);
+    const raw = profileStorage.getItem(FILTERS_KEY);
     if (!raw) {
-      const legacyArchived = localStorage.getItem("wavex.sessionsShowArchived") === "1";
+      const legacyArchived = profileStorage.getItem("wavex.sessionsShowArchived") === "1";
       return legacyArchived
         ? { ...DEFAULT_SESSION_SIDEBAR_FILTERS, showArchived: true }
         : DEFAULT_SESSION_SIDEBAR_FILTERS;
@@ -67,7 +68,7 @@ export function loadSessionSidebarFilters(): SessionSidebarFilters {
 
 export function saveSessionSidebarFilters(filters: SessionSidebarFilters) {
   try {
-    localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
+    profileStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
   } catch {
     // private mode / quota
   }

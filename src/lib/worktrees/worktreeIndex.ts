@@ -1,4 +1,5 @@
 import { normalizeProjectPath } from "../paths";
+import { profileStorage } from "../profiles/profileStorage";
 
 /**
  * Which repository each known worktree belongs to.
@@ -15,7 +16,7 @@ type Index = Record<string, string>;
 
 function read(): Index {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = profileStorage.getItem(KEY);
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
@@ -32,7 +33,7 @@ function read(): Index {
 
 function write(index: Index) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(index));
+    profileStorage.setItem(KEY, JSON.stringify(index));
   } catch {
     // private mode / quota
   }
