@@ -39,6 +39,8 @@ export type HarnessAdapter = {
   generateCommitMessage?(cwd: string): Promise<string>;
   /** Optional LLM pull request title/body from branch diff context. */
   generatePrContent?(cwd: string): Promise<(PrContent & { base: string; head: string }) | null>;
+  /** Optional LLM briefing that lets another harness continue this session. */
+  generateHandoffBrief?(cwd: string, transcript: string): Promise<string | null>;
   /** Optional LLM branch name from a user message. */
   generateBranchName?(cwd: string, message: string): Promise<string | null>;
   /** Optional warmup for text-generation backends. */
@@ -207,6 +209,16 @@ export async function generateHarnessTitle(
   const adapter = getHarness(harness);
   if (!adapter?.generateTitle) return null;
   return adapter.generateTitle(input);
+}
+
+export async function generateHarnessHandoffBrief(
+  harness: HarnessId,
+  cwd: string,
+  transcript: string,
+): Promise<string | null> {
+  const adapter = getHarness(harness);
+  if (!adapter?.generateHandoffBrief) return null;
+  return adapter.generateHandoffBrief(cwd, transcript);
 }
 
 export async function generateHarnessCommitMessage(

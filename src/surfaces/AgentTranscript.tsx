@@ -92,6 +92,8 @@ type Props = {
   onOpenPlan?: (blockId: string) => void;
   onSecondOpinion?: (harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (harness: HarnessId, turn: Block[], model: string) => void;
+  /** Open the session a handed-off turn came from. */
+  onOpenSourceSession?: (sessionId: string) => void;
   /** Rewrite a user turn and send it again. Enables the pencil on that turn. */
   onEditTurn?: (blockId: string, text: string) => void;
   /** Ask for a fresh answer to the user turn this reply belongs to. */
@@ -117,6 +119,7 @@ export function AgentTranscript({
   onOpenPlan,
   onSecondOpinion,
   onHandoff,
+  onOpenSourceSession,
   onEditTurn,
   onRegenerateTurn,
   onJumpToBottomChange,
@@ -360,6 +363,7 @@ export function AgentTranscript({
                     onOpenDiff={onOpenDiff}
                     onOpenPlan={onOpenPlan}
                     onEditTurn={onEditTurn}
+                    onOpenSourceSession={onOpenSourceSession}
                     cwd={cwd}
                   />
                 ),
@@ -645,6 +649,7 @@ const TranscriptBlock = memo(function TranscriptBlock({
   onOpenDiff,
   onOpenPlan,
   onEditTurn,
+  onOpenSourceSession,
 }: {
   block: Block;
   layout: TranscriptLayout;
@@ -656,6 +661,7 @@ const TranscriptBlock = memo(function TranscriptBlock({
   onOpenDiff?: (path: string) => void;
   onOpenPlan?: (blockId: string) => void;
   onEditTurn?: (blockId: string, text: string) => void;
+  onOpenSourceSession?: (sessionId: string) => void;
 }) {
   if (block.role === "user") {
     return (
@@ -664,6 +670,7 @@ const TranscriptBlock = memo(function TranscriptBlock({
         layout={layout}
         stickyIndex={stickyIndex}
         onEdit={onEditTurn}
+        onOpenSourceSession={onOpenSourceSession}
       />
     );
   }
@@ -826,11 +833,13 @@ function UserMessageBlock({
   layout,
   stickyIndex,
   onEdit,
+  onOpenSourceSession,
 }: {
   block: Block;
   layout: TranscriptLayout;
   stickyIndex: number;
   onEdit?: (blockId: string, text: string) => void;
+  onOpenSourceSession?: (sessionId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
@@ -953,7 +962,7 @@ function UserMessageBlock({
         ) : null}
         {card ? (
           <div className={text ? "mb-1.5" : undefined}>
-            <SecondOpinionCard card={card} />
+            <SecondOpinionCard card={card} onOpenSource={onOpenSourceSession} />
           </div>
         ) : null}
         {text ? (
@@ -1783,8 +1792,14 @@ function HandoffDivider({ block }: { block: Block }) {
   const meta = block.handoff;
   if (!meta) return null;
 
+  // The briefing itself is edited above the composer, not here; this line only
+  // marks where the transcript changed hands.
   const preparing = meta.status === "preparing";
-  const label = preparing ? "Preparing a handoff" : HARNESS_TITLE[meta.to];
+  const label = preparing
+    ? "Preparing a handoff"
+    : meta.status === "review"
+      ? `Briefing ready for ${HARNESS_TITLE[meta.to]}`
+      : HARNESS_TITLE[meta.to];
 
   return (
     <div className="px-4 py-5">
@@ -1807,6 +1822,13 @@ function HandoffDivider({ block }: { block: Block }) {
           ) : (
             <>
               <HarnessIcon harness={meta.to} className="size-3.5 shrink-0" />
+              {meta.briefed ? (
+                <Sparkles
+                  className="size-3 shrink-0 text-content/35"
+                  strokeWidth={1.75}
+                  aria-label="Continued from a briefing"
+                />
+              ) : null}
             </>
           )}
         </div>

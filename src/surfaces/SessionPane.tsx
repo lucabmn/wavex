@@ -9,10 +9,14 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Composer } from "../chrome/Composer";
+import { HandoffReviewCard } from "../chrome/HandoffReviewCard";
+import { TerminalSpinner } from "../chrome/TerminalSpinner";
+import { handoffUnderReview, isPreparingHandoff } from "../lib/handoff";
 import { SessionReview } from "../chrome/SessionReview";
 import type { ApprovalDecision, UserQuestionReply } from "../lib/harness";
 import { looksLikeProject, type RecentProject } from "../lib/recents";
 import {
+  HARNESS_TITLE,
   sessionDisplayTitle,
   sessionWorkCwd,
   type Attachment,
@@ -60,6 +64,10 @@ type Props = {
   onOpenPlan: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
+  onHandoffSend?: (sessionId: string, brief: string) => void;
+  onHandoffBriefChange?: (sessionId: string, brief: string) => void;
+  onHandoffCardChange?: (sessionId: string, brief: string) => void;
+  onOpenSourceSession?: (sessionId: string) => void;
   onNewTerminal: (sessionId: string) => void;
   onPaneDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
 };
@@ -91,10 +99,26 @@ export const SessionPane = memo(function SessionPane({
   onOpenPlan,
   onSecondOpinion,
   onHandoff,
+  onHandoffSend,
+  onHandoffBriefChange,
+  onHandoffCardChange,
+  onOpenSourceSession,
   onNewTerminal,
   onPaneDragStart,
 }: Props) {
   const title = sessionDisplayTitle(session.title, session.harness);
+  const handoffSend = useCallback(
+    (brief: string) => onHandoffSend?.(session.id, brief),
+    [onHandoffSend, session.id],
+  );
+  const handoffBriefChange = useCallback(
+    (brief: string) => onHandoffBriefChange?.(session.id, brief),
+    [onHandoffBriefChange, session.id],
+  );
+  const handoffCardChange = useCallback(
+    (brief: string) => onHandoffCardChange?.(session.id, brief),
+    [onHandoffCardChange, session.id],
+  );
   const approve = useCallback(
     (requestId: number, decision: ApprovalDecision) => onApproval(session.id, requestId, decision),
     [onApproval, session.id],
@@ -146,6 +170,8 @@ export const SessionPane = memo(function SessionPane({
     return () => window.removeEventListener(ADD_TO_CHAT_EVENT, onAdd);
   }, [addSelectionToChat, focused]);
   const workCwd = sessionWorkCwd(session);
+  const review = onHandoffSend && onHandoffBriefChange ? handoffUnderReview(session) : null;
+  const preparingHandoff = isPreparingHandoff(session);
   const isEmpty = session.blocks.length === 0;
   const showDeckProjectPicker = isEmpty && !looksLikeProject(session.cwd);
   const dockComposer = !isEmpty || inSplit;
@@ -178,6 +204,7 @@ export const SessionPane = memo(function SessionPane({
       onInboxCardDismiss={() => onInboxCardDismiss?.(session.id)}
       onNoteCardDismiss={() => onNoteCardDismiss?.(session.id)}
       onHandoffCardDismiss={() => onHandoffCardDismiss?.(session.id)}
+      onHandoffCardChange={onHandoffCardChange ? handoffCardChange : undefined}
       onQuestionReply={replyQuestion}
       onFocus={() => onFocus(session.id)}
       onCwdChange={(cwd) => onCwdChange(session.id, cwd)}
@@ -275,6 +302,7 @@ export const SessionPane = memo(function SessionPane({
                   ? (harness, turn, model) => onHandoff(session.id, harness, turn, model)
                   : undefined
               }
+              onOpenSourceSession={onOpenSourceSession}
               onJumpToBottomChange={setShowJumpToBottom}
               onJumpToBottomReady={onJumpToBottomReady}
             />
@@ -295,7 +323,31 @@ export const SessionPane = memo(function SessionPane({
           </>
         )}
       </div>
-      {dockComposer ? <div className="mx-auto w-full max-w-4xl shrink-0">{composer}</div> : null}
+      {dockComposer ? (
+        <div className="mx-auto w-full max-w-4xl shrink-0">
+          {preparingHandoff ? (
+            <div className="px-3 pt-2">
+              <div className="flex items-center gap-2 rounded-md border border-content/10 bg-content/6 px-2.5 py-2 text-[12px] text-content/55">
+                <TerminalSpinner className="inline-block w-3.5 shrink-0 select-none text-center text-[11px] leading-none text-content/45" />
+                <span className="min-w-0 truncate">
+                  Writing a handoff briefing for {HARNESS_TITLE[session.harness]}…
+                </span>
+              </div>
+            </div>
+          ) : null}
+          {review ? (
+            <HandoffReviewCard
+              from={review.from}
+              to={review.to}
+              brief={review.text}
+              briefed={review.briefed}
+              onChange={handoffBriefChange}
+              onSend={handoffSend}
+            />
+          ) : null}
+          {composer}
+        </div>
+      ) : null}
     </div>
   );
 });

@@ -20,6 +20,10 @@ export type HandoffComposerCard = {
   brief: string;
   request?: string;
   files?: number;
+  /** Source session, so the receiving turn can link back to its transcript. */
+  sourceSessionId?: string;
+  /** The brief was written by an agent rather than assembled from the blocks. */
+  briefed?: boolean;
 };
 
 export function buildHandoffComposerCard(input: {
@@ -28,6 +32,8 @@ export function buildHandoffComposerCard(input: {
   brief: string;
   userRequest: string;
   files: string[];
+  sourceSessionId?: string;
+  briefed?: boolean;
 }): HandoffComposerCard {
   const request = input.userRequest.replace(/\s+/g, " ").trim();
   return {
@@ -36,6 +42,8 @@ export function buildHandoffComposerCard(input: {
     brief: input.brief,
     ...(request ? { request: request.slice(0, 240) } : {}),
     ...(input.files.length > 0 ? { files: input.files.length } : {}),
+    ...(input.sourceSessionId ? { sourceSessionId: input.sourceSessionId } : {}),
+    ...(input.briefed ? { briefed: true } : {}),
   };
 }
 
@@ -46,6 +54,8 @@ export function handoffTurnCard(card: HandoffComposerCard): SecondOpinionMeta {
     kind: "handoff",
     ...(card.request ? { request: card.request } : {}),
     ...(card.files != null && card.files > 0 ? { files: card.files } : {}),
+    ...(card.sourceSessionId ? { sourceSessionId: card.sourceSessionId } : {}),
+    ...(card.briefed ? { briefed: true } : {}),
   };
 }
 
@@ -56,6 +66,15 @@ const BRIEF_LIMIT = 1_800;
 const REQUEST_LIMIT = 1_500;
 const MAX_PRIOR_USERS = 2;
 const MIN_AGENT_BRIEF = 40;
+const TRANSCRIPT_LIMIT = 24_000;
+const TRANSCRIPT_HEAD_SHARE = 0.4;
+
+/**
+ * Below this much conversation a briefing is not cheaper than the recap it
+ * replaces, so short sessions skip both the agent turn and the review step and
+ * hand off exactly as they did before.
+ */
+export const HANDOFF_BRIEFING_MIN_CHARS = 1_500;
 
 export type ComposerSwitchPlan =
   | { kind: "model" }
@@ -115,6 +134,31 @@ export function isPreparingHandoff(session: Session): boolean {
   );
 }
 
+/** True while a briefing is being written or read, so no second handoff may start. */
+export function hasUnsettledHandoff(session: Session): boolean {
+  const status = lastHandoffBlock(session.blocks)?.handoff?.status;
+  return status === "preparing" || status === "review";
+}
+
+/** The briefing the user is currently reading, before it is sent anywhere. */
+export function handoffUnderReview(session: Session): {
+  id: string;
+  from: HarnessId;
+  to: HarnessId;
+  text: string;
+  briefed: boolean;
+} | null {
+  const last = lastHandoffBlock(session.blocks);
+  if (!last?.handoff || last.handoff.status !== "review") return null;
+  return {
+    id: last.id,
+    from: last.handoff.from,
+    to: last.handoff.to,
+    text: last.text,
+    briefed: last.handoff.briefed === true,
+  };
+}
+
 export function pendingHandoff(session: Session): {
   from: HarnessId;
   to: HarnessId;
@@ -152,6 +196,43 @@ export function appendReadyHandoff(
   });
 }
 
+/**
+ * Park an agent-written briefing in front of the user instead of sending it
+ * straight through. Only a real briefing gets here, so the block is `briefed`.
+ */
+export function reviewHandoff(session: Session, text: string): Session {
+  const last = lastHandoffBlock(session.blocks);
+  if (!last?.handoff) return session;
+  return patchHandoff(
+    session,
+    last.id,
+    { ...last.handoff, status: "review", pending: false, briefed: true },
+    stripGoalSections(text),
+  );
+}
+
+/** Keep the user's edits on the transcript block that owns the briefing. */
+export function editHandoffBrief(session: Session, text: string): Session {
+  const last = lastHandoffBlock(session.blocks);
+  if (!last?.handoff || last.handoff.status !== "review") return session;
+  return patchHandoff(session, last.id, last.handoff, text);
+}
+
+/**
+ * Accept the briefing as the user left it. An empty box is a declined summary,
+ * not a blocked handoff: `pendingHandoff` then falls back to the plain recap.
+ */
+export function approveHandoff(session: Session, text: string): Session {
+  const last = lastHandoffBlock(session.blocks);
+  if (!last?.handoff || last.handoff.status !== "review") return session;
+  return patchHandoff(
+    session,
+    last.id,
+    { ...last.handoff, status: "ready", pending: true },
+    stripGoalSections(text),
+  );
+}
+
 export function completeHandoff(session: Session, text: string): Session {
   const last = lastHandoffBlock(session.blocks);
   if (!last?.handoff) return session;
@@ -178,6 +259,11 @@ export function consumeHandoff(session: Session): Session {
   return patchHandoff(session, last.id, { ...last.handoff, pending: false });
 }
 
+/** Whether the agent answered with enough for `chooseHandoffBrief` to use it. */
+export function hasAgentBrief(agentText: string): boolean {
+  return stripGoalSections(agentText).length >= MIN_AGENT_BRIEF;
+}
+
 export function chooseHandoffBrief(agentText: string, fallback: string): string {
   const agent = stripGoalSections(agentText);
   if (agent.length >= MIN_AGENT_BRIEF) {
@@ -192,9 +278,27 @@ export function hasSessionEdits(session: Session): boolean {
   );
 }
 
+/** How much conversation the receiving agent would otherwise have to read. */
+export function handoffTranscriptSize(session: Session): number {
+  let size = 0;
+  for (const block of session.blocks) {
+    // Match `buildHandoffTranscript`: private thinking is not what the next
+    // agent reads, so it must not push a thin session over the threshold.
+    if (block.role === "handoff" || block.role === "reasoning") continue;
+    size += block.text.trim().length;
+  }
+  return size;
+}
+
+export function isHandoffWorthSummarizing(session: Session): boolean {
+  return handoffTranscriptSize(session) >= HANDOFF_BRIEFING_MIN_CHARS;
+}
+
 export function shouldAskOutgoingAgent(session: Session): boolean {
   const liveId = session.pendingSwitch?.fromProviderSessionId ?? session.providerSessionId;
-  return !!liveId && hasSessionEdits(session);
+  if (!liveId) return false;
+  if (!isHandoffWorthSummarizing(session)) return false;
+  return hasSessionEdits(session);
 }
 
 export function buildOutgoingHandoffPrompt(userRequest: string): string {
@@ -215,8 +319,65 @@ Rules:
 
 Include only sections that have session-specific content:
 - Session so far (a few bullets, not a transcript)
+- Decisions already made
+- Constraints the user stated
 - Files edited in this session
-- Suggested next step`;
+- Still open, and the suggested next step`;
+}
+
+/**
+ * Readable digest of a finished conversation. The split-pane handoff has no
+ * live child to ask, so the briefing is written from this text by a one-shot
+ * prompt, the same way commit messages and branch names already are.
+ */
+export function buildHandoffTranscript(session: Session, cwd = session.cwd): string {
+  const lines: string[] = [];
+  for (const block of session.blocks) {
+    if (block.role === "handoff" || block.role === "reasoning") continue;
+    const text = oneLine(block.text);
+    if (block.role === "user") {
+      if (text) lines.push(`User: ${limitSection(text, USER_LINE_LIMIT)}`);
+      continue;
+    }
+    if (block.role === "assistant" || block.role === "plan") {
+      if (text) lines.push(`Assistant: ${limitSection(text, ASSISTANT_LIMIT)}`);
+      continue;
+    }
+    if (block.role === "tool" || block.role === "approval") {
+      const label = toolHandoffLine(block, cwd);
+      if (label) lines.push(`Tool: ${oneLine(label)}`);
+    }
+  }
+  const joined = lines.join("\n");
+  if (joined.length <= TRANSCRIPT_LIMIT) return joined;
+  // Drop the middle, not the front: the opening carries the task and the
+  // user's constraints, the end carries the state still in play.
+  const head = joined.slice(0, Math.floor(TRANSCRIPT_LIMIT * TRANSCRIPT_HEAD_SHARE));
+  const tail = joined.slice(-(TRANSCRIPT_LIMIT - head.length));
+  return `${head}\n\n[middle omitted]\n\n${tail}`;
+}
+
+export function buildHandoffBriefPrompt(transcript: string): string {
+  return `Another coding agent is taking over the session below. Write the briefing it needs to keep working.
+
+<transcript>
+${transcript}
+</transcript>
+
+Under 150 words. Plain markdown. No title card, no greeting, no Goal heading. Do not repeat the transcript and do not invent work it does not show.
+
+Include only sections that have content:
+- Session so far (a few bullets)
+- Decisions and constraints the user stated
+- Files edited in this session
+- Open questions and the suggested next step`;
+}
+
+/** Models like to wrap a briefing in a fence or re-state the goal; drop both. */
+export function parseHandoffBrief(raw: string): string {
+  const fenced = raw.trim().match(/^```(?:markdown|md)?\n([\s\S]*?)```$/);
+  const body = stripGoalSections(fenced ? fenced[1] : raw);
+  return body.length >= MIN_AGENT_BRIEF ? limitSection(body, BRIEF_LIMIT) : "";
 }
 
 export function buildDeterministicHandoff(

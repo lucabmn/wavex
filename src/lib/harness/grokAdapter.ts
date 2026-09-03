@@ -10,7 +10,11 @@ import {
 } from "./grok";
 import { refreshGrokCatalog } from "./grokCatalog";
 import { runGrokTextPrompt, warmupGrokText } from "./grokText";
-import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
+import {
+  createGitTextGenerators,
+  createHandoffBriefGenerator,
+  createSessionTitleGenerator,
+} from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
 const gitText = createGitTextGenerators(runGrokTextPrompt, "Grok Build", 60_000);
@@ -29,6 +33,7 @@ export const grokAdapter: HarnessAdapter = {
   bindSession: bindGrokSession,
   refreshCatalog: refreshGrokCatalog,
   generateTitle: createSessionTitleGenerator(runGrokTextPrompt),
+  generateHandoffBrief: createHandoffBriefGenerator(runGrokTextPrompt),
   generateCommitMessage: gitText.generateCommitMessage,
   generatePrContent: gitText.generatePrContent,
   generateBranchName: gitText.generateBranchName,

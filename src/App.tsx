@@ -134,6 +134,7 @@ import {
   cancelHarnessTurn,
   canSteerHarness,
   forgetHarnessSession,
+  generateHarnessHandoffBrief,
   generateHarnessTitle,
   isLiveHarness,
   probeHarnessAvailability,
@@ -152,15 +153,23 @@ import {
 } from "./lib/harness";
 import {
   appendPreparingHandoff,
+  approveHandoff,
   buildDeterministicHandoff,
   buildHandoffComposerCard,
+  buildHandoffTranscript,
   chooseHandoffBrief,
+  editHandoffBrief,
+  hasAgentBrief,
   completeHandoff,
   consumeHandoff,
   HANDOFF_TITLE,
   handoffTurnCard,
+  handoffUnderReview,
+  hasUnsettledHandoff,
+  isHandoffWorthSummarizing,
   isPreparingHandoff,
   pendingHandoff,
+  reviewHandoff,
   planComposerSwitch,
   sessionChildHarnesses,
   sessionThroughTurn,
@@ -467,6 +476,29 @@ export default function App({
     canForward: false,
   });
   const turnGen = useRef(new Map<string, number>());
+  /** Attachments parked while a handoff briefing waits for the user to accept it. */
+  const handoffAttachments = useRef(new Map<string, Attachment[]>());
+
+  const takeHandoffAttachments = useCallback((sessionId: string): Attachment[] => {
+    const parked = handoffAttachments.current.get(sessionId) ?? [];
+    handoffAttachments.current.delete(sessionId);
+    return parked;
+  }, []);
+
+  /**
+   * Settle a briefing under review and publish it through the ref too, so the
+   * send that follows in the same tick reads the accepted text.
+   */
+  const settleHandoffReview = useCallback((sessionId: string, brief: string): boolean => {
+    const current = sessionsRef.current.find((s) => s.id === sessionId);
+    if (!current || !handoffUnderReview(current)) return false;
+    const next = sessionsRef.current.map((s) =>
+      s.id === sessionId ? approveHandoff(s, brief) : s,
+    );
+    sessionsRef.current = next;
+    setSessions(next);
+    return true;
+  }, []);
   const lastPersisted = useRef(new Map<string, string>());
   const lastBoundProvider = useRef(new Map<string, string>());
   const lastPersistedUserBlock = useRef(new Map<string, string>());
@@ -2604,7 +2636,9 @@ export default function App({
   const onModelChange = useCallback((sessionId: string, harness: HarnessId, model: string) => {
     const current = sessionsRef.current.find((s) => s.id === sessionId);
     if (!current) return;
-    if (isPreparingHandoff(current)) return;
+    // Re-arming a switch while a briefing is being written or read would leave
+    // two handoffs in flight for one transcript.
+    if (hasUnsettledHandoff(current)) return;
     const resolved = resolveModel(harness, model);
     if (current.modelSettings) {
       saveLastModelSettings(current.modelSettings, "fill");
@@ -2651,20 +2685,38 @@ export default function App({
   }, []);
 
   const onSubmit = useCallback(
-    (
+    function submitTurn(
       sessionId: string,
       text: string,
       attachments: Attachment[] = [],
-      options?: { secondOpinion?: SecondOpinionMeta },
-    ) => {
+      options?: { secondOpinion?: SecondOpinionMeta; resumeHandoff?: boolean },
+    ) {
       const current = sessionsRef.current.find((s) => s.id === sessionId);
       if (!current) return;
+      // The approved briefing carries the turn; there is no new message to add.
+      const resumeHandoff = options?.resumeHandoff === true;
       const noteCard = current.noteCard;
       const handoffCard = current.handoffCard;
-      if (!text.trim() && attachments.length === 0 && !noteCard && !handoffCard) {
+      if (!resumeHandoff && !text.trim() && attachments.length === 0 && !noteCard && !handoffCard) {
         return;
       }
       if (isPreparingHandoff(current)) return;
+      const review = handoffUnderReview(current);
+      if (review && !resumeHandoff) {
+        // Sending while a briefing is on screen accepts it as it stands. The
+        // alternative is dropping the message, which reads as a broken send.
+        const approved = approveHandoff(current, review.text);
+        const merged = sessionsRef.current.map((s) => (s.id === sessionId ? approved : s));
+        sessionsRef.current = merged;
+        setSessions(merged);
+        submitTurn(
+          sessionId,
+          text,
+          [...takeHandoffAttachments(sessionId), ...attachments],
+          options,
+        );
+        return;
+      }
       const workCwd = sessionWorkCwd(current);
       const harnessText = composeNoteMessage(noteCard, text);
 
@@ -2791,6 +2843,9 @@ export default function App({
               ],
             };
           }
+          if (resumeHandoff) {
+            return { ...next, title: titled, busy: true };
+          }
           if (pendingSwitch) {
             const sealed = stopStreaming({
               ...next,
@@ -2845,8 +2900,13 @@ export default function App({
             }
           : queuedHandoff;
         if (pendingSwitch) {
+          // Everything in here is best-effort. A throw would leave the divider
+          // stuck on "Preparing a handoff" with no turn behind it, so the
+          // briefing degrades to the recap instead of taking the turn down.
           let agentText = "";
+          let asked = false;
           if (shouldAskOutgoingAgent(current) && isLiveHarness(pendingSwitch.from)) {
+            asked = true;
             try {
               agentText = await requestOutgoingHandoff({
                 harness: pendingSwitch.from,
@@ -2861,13 +2921,35 @@ export default function App({
             }
           }
           if (turnGen.current.get(sessionId) !== gen) return;
-          const latest = sessionsRef.current.find((s) => s.id === sessionId);
-          const brief = chooseHandoffBrief(
-            agentText,
-            buildDeterministicHandoff(latest ?? current, text),
-          );
-          await forgetHarnessSession(pendingSwitch.from, sessionId);
+          await forgetHarnessSession(pendingSwitch.from, sessionId).catch(() => undefined);
           if (turnGen.current.get(sessionId) !== gen) return;
+          const source = sessionsRef.current.find((s) => s.id === sessionId) ?? current;
+          if (!asked && isHandoffWorthSummarizing(source)) {
+            // There was no live child to ask. Write the briefing from the
+            // transcript rather than shipping the recap. Only one of the two
+            // paths ever runs, so the switch cannot stack both timeouts.
+            agentText =
+              (await generateHarnessHandoffBrief(
+                pendingSwitch.from,
+                workCwd,
+                buildHandoffTranscript(source, workCwd),
+              ).catch(() => null)) ?? "";
+            if (turnGen.current.get(sessionId) !== gen) return;
+          }
+          const brief = chooseHandoffBrief(agentText, buildDeterministicHandoff(source, text));
+          if (hasAgentBrief(agentText)) {
+            // Only a written briefing is worth stopping for. A failed or
+            // skipped summary sends the recap straight through, as before.
+            // The turn resumes from `onHandoffSend`, so the attachments have
+            // to outlive this call.
+            handoffAttachments.current.set(sessionId, attachments);
+            setSessions((prev) =>
+              prev.map((s) =>
+                s.id === sessionId ? { ...reviewHandoff(s, brief), busy: false } : s,
+              ),
+            );
+            return;
+          }
           wrap = { from: pendingSwitch.from, to: current.harness, text: brief };
         }
 
@@ -2889,6 +2971,11 @@ export default function App({
             cwd: workCwd,
           });
           const earlier = queuedHandoff ? userMessagesAfterHandoff(current) : [];
+          // A resumed handoff has no fresh prompt: the message the user already
+          // sent is the request, and anything after it stays as trailing context.
+          const [queuedRequest, ...trailing] = earlier;
+          const handoffRequest = prompt.trim() || queuedRequest || CONTINUE_PROMPT;
+          const handoffEarlier = prompt.trim() ? earlier : trailing;
           await sendHarnessTurn({
             harness: current.harness,
             sessionId,
@@ -2897,7 +2984,7 @@ export default function App({
             modelSettings: current.modelSettings,
             runtimeMode: current.runtimeMode,
             text: wrap
-              ? wrapHandoffPrompt(wrap.text, wrap.from, prompt.trim() || CONTINUE_PROMPT, earlier)
+              ? wrapHandoffPrompt(wrap.text, wrap.from, handoffRequest, handoffEarlier)
               : prompt,
             attachments: prepared,
             onEvent: (event) => {
@@ -2948,8 +3035,24 @@ export default function App({
         }
       })();
     },
-    [enqueueHarnessEvent, flushHarnessEvents],
+    [enqueueHarnessEvent, flushHarnessEvents, settleHandoffReview, takeHandoffAttachments],
   );
+
+  /**
+   * Accept the briefing the user read, edited, or cleared. An empty text is a
+   * declined summary: the queued handoff then falls back to the plain recap.
+   */
+  const onHandoffSend = useCallback(
+    (sessionId: string, brief: string) => {
+      if (!settleHandoffReview(sessionId, brief)) return;
+      onSubmit(sessionId, "", takeHandoffAttachments(sessionId), { resumeHandoff: true });
+    },
+    [onSubmit, settleHandoffReview, takeHandoffAttachments],
+  );
+
+  const onHandoffBriefChange = useCallback((sessionId: string, brief: string) => {
+    setSessions((prev) => prev.map((s) => (s.id === sessionId ? editHandoffBrief(s, brief) : s)));
+  }, []);
 
   const openSessionBeside = useCallback(
     (sourceId: string, session: Session, cwd: string, focusComposer = false) => {
@@ -3025,21 +3128,51 @@ export default function App({
       const userRequest = turnUserRequest(turn);
       const files = turnEditedFiles(sliced.blocks, cwd);
       const display = sessionDisplayTitle(source.title, source.harness);
+      const recap = buildDeterministicHandoff(sliced);
       const session = {
         ...newSession(harness, cwd, model, source.runtimeMode),
         title: formatSessionTitle(harness, display === "New session" ? HANDOFF_TITLE : display),
         handoffCard: buildHandoffComposerCard({
           from,
           to: harness,
-          brief: buildDeterministicHandoff(sliced),
+          brief: recap,
           userRequest,
           files,
+          sourceSessionId: sourceId,
         }),
       };
       openSessionBeside(sourceId, session, cwd, true);
+
+      // The recap above keeps the card usable straight away; a long session
+      // then upgrades it to an agent briefing. The source child is never asked,
+      // so the session being handed off keeps running untouched.
+      if (!isHandoffWorthSummarizing(sliced)) return;
+      void generateHarnessHandoffBrief(harness, cwd, buildHandoffTranscript(sliced, cwd))
+        .then((brief) => {
+          if (!brief) return;
+          setSessions((prev) =>
+            prev.map((s) =>
+              // Only replace the seeded recap; anything else is the user typing.
+              s.id === session.id && s.handoffCard?.brief === recap
+                ? { ...s, handoffCard: { ...s.handoffCard, brief, briefed: true } }
+                : s,
+            ),
+          );
+        })
+        .catch(() => undefined);
     },
     [openSessionBeside],
   );
+
+  const onHandoffCardChange = useCallback((sessionId: string, brief: string) => {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId && s.handoffCard
+          ? { ...s, handoffCard: { ...s.handoffCard, brief } }
+          : s,
+      ),
+    );
+  }, []);
 
   const autoContinueKey = sessions
     .filter((session) => canAutoContinue(session) && isLiveHarness(session.harness))
@@ -3986,6 +4119,12 @@ export default function App({
                           onOpenPlan={onOpenPlan}
                           onSecondOpinion={onSecondOpinion}
                           onHandoff={onHandoff}
+                          onHandoffSend={onHandoffSend}
+                          onHandoffBriefChange={onHandoffBriefChange}
+                          onHandoffCardChange={onHandoffCardChange}
+                          onOpenSourceSession={(sessionId) =>
+                            void onSelectHistorySession(sessionId)
+                          }
                           onMovePane={onMovePane}
                           onNewTerminal={onNewTerminalInSession}
                           onTerminalMetaChange={onTerminalMetaChange}

@@ -10,7 +10,11 @@ import {
 } from "./opencode";
 import { refreshOpenCodeCatalog } from "./opencodeCatalog";
 import { runOpenCodeTextPrompt, warmupOpenCodeText } from "./opencodeText";
-import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
+import {
+  createGitTextGenerators,
+  createHandoffBriefGenerator,
+  createSessionTitleGenerator,
+} from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
 const gitText = createGitTextGenerators(runOpenCodeTextPrompt, "OpenCode");
@@ -28,6 +32,7 @@ export const openCodeAdapter: HarnessAdapter = {
   bindSession: bindOpenCodeSession,
   refreshCatalog: refreshOpenCodeCatalog,
   generateTitle: createSessionTitleGenerator(runOpenCodeTextPrompt),
+  generateHandoffBrief: createHandoffBriefGenerator(runOpenCodeTextPrompt),
   generateCommitMessage: gitText.generateCommitMessage,
   generatePrContent: gitText.generatePrContent,
   generateBranchName: gitText.generateBranchName,

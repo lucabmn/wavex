@@ -2,15 +2,24 @@ import { describe, expect, it } from "vitest";
 import {
   appendPreparingHandoff,
   appendReadyHandoff,
+  approveHandoff,
   buildDeterministicHandoff,
   buildHandoffComposerCard,
+  buildHandoffTranscript,
   buildOutgoingHandoffPrompt,
   chooseHandoffBrief,
   completeHandoff,
   consumeHandoff,
   handoffTurnCard,
+  editHandoffBrief,
+  handoffUnderReview,
+  hasAgentBrief,
   hasSessionEdits,
+  hasUnsettledHandoff,
+  isHandoffWorthSummarizing,
+  parseHandoffBrief,
   pendingHandoff,
+  reviewHandoff,
   planComposerSwitch,
   sessionChildHarnesses,
   sessionThroughTurn,
@@ -338,5 +347,207 @@ describe("wrapHandoffPrompt", () => {
       "Do not paste the whole transcript",
     );
     expect(buildOutgoingHandoffPrompt("add dark mode")).not.toContain("Goal (the user request)");
+  });
+});
+
+/** Enough conversation that a briefing is worth writing and worth reviewing. */
+function longSession(extra?: Partial<Session>): Session {
+  return sessionWith(
+    [
+      { id: "u1", role: "user", text: "ship the retry banner" },
+      { id: "a1", role: "assistant", text: "x".repeat(1_600) },
+    ],
+    extra,
+  );
+}
+
+describe("handoff review", () => {
+  it("parks the briefing in front of the user instead of sending it", () => {
+    let session = appendPreparingHandoff(longSession(), "cursor", "claude");
+    expect(hasUnsettledHandoff(session)).toBe(true);
+
+    session = reviewHandoff(session, "## Session so far\nRetry banner is half done.");
+    expect(handoffUnderReview(session)).toMatchObject({
+      from: "cursor",
+      to: "claude",
+      briefed: true,
+    });
+    expect(handoffUnderReview(session)?.text).toContain("Retry banner");
+    // Nothing is queued for injection while the user still owns the text.
+    expect(pendingHandoff(session)).toBeNull();
+    expect(hasUnsettledHandoff(session)).toBe(true);
+  });
+
+  it("sends the edited text once the user accepts it", () => {
+    let session = reviewHandoff(
+      appendPreparingHandoff(longSession(), "cursor", "claude"),
+      "generated recap",
+    );
+    session = approveHandoff(session, "hand-edited recap");
+    expect(handoffUnderReview(session)).toBeNull();
+    expect(hasUnsettledHandoff(session)).toBe(false);
+    expect(pendingHandoff(session)).toEqual({
+      from: "cursor",
+      to: "claude",
+      text: "hand-edited recap",
+    });
+  });
+
+  it("falls back to the plain recap when the briefing is declined", () => {
+    const session = approveHandoff(
+      reviewHandoff(appendPreparingHandoff(longSession(), "cursor", "claude"), "generated recap"),
+      "",
+    );
+    expect(pendingHandoff(session)?.text).toContain("ship the retry banner");
+  });
+
+  it("keeps edits on the block so a composer send cannot lose them", () => {
+    let session = reviewHandoff(
+      appendPreparingHandoff(longSession(), "cursor", "claude"),
+      "generated recap",
+    );
+    session = editHandoffBrief(session, "hand-edited recap");
+    expect(handoffUnderReview(session)?.text).toBe("hand-edited recap");
+    expect(pendingHandoff(approveHandoff(session, "hand-edited recap"))?.text).toBe(
+      "hand-edited recap",
+    );
+  });
+
+  it("only takes edits while the briefing is under review", () => {
+    const ready = appendReadyHandoff(longSession(), "cursor", "claude", "settled recap");
+    expect(editHandoffBrief(ready, "too late")).toBe(ready);
+  });
+
+  it("ignores an approval when nothing is under review", () => {
+    const session = appendPreparingHandoff(longSession(), "cursor", "claude");
+    expect(approveHandoff(session, "nope")).toBe(session);
+  });
+});
+
+describe("briefing threshold", () => {
+  it("skips summarizing a session shorter than the recap it would replace", () => {
+    const short = sessionWith([{ id: "u1", role: "user", text: "rename the button" }]);
+    expect(isHandoffWorthSummarizing(short)).toBe(false);
+    expect(isHandoffWorthSummarizing(longSession())).toBe(true);
+  });
+
+  it("does not let private thinking push a thin session over the threshold", () => {
+    const thinking = sessionWith([
+      { id: "u1", role: "user", text: "rename the button" },
+      { id: "r1", role: "reasoning", text: "x".repeat(4_000) },
+    ]);
+    expect(isHandoffWorthSummarizing(thinking)).toBe(false);
+  });
+
+  it("does not ask the outgoing agent for a briefing on a short session", () => {
+    const edit: Block = {
+      id: "t1",
+      role: "tool",
+      text: "Edit src/App.tsx",
+      tool: { kind: "write", title: "Edit src/App.tsx" },
+    };
+    const short = sessionWith([{ id: "u1", role: "user", text: "go" }, edit], {
+      providerSessionId: "acp-1",
+    });
+    expect(hasSessionEdits(short)).toBe(true);
+    expect(shouldAskOutgoingAgent(short)).toBe(false);
+
+    const long = sessionWith(
+      [
+        { id: "u1", role: "user", text: "go" },
+        { id: "a1", role: "assistant", text: "x".repeat(1_600) },
+        edit,
+      ],
+      { providerSessionId: "acp-1" },
+    );
+    expect(shouldAskOutgoingAgent(long)).toBe(true);
+  });
+});
+
+describe("stateless briefing", () => {
+  it("digests the transcript without the handoff scaffolding", () => {
+    const transcript = buildHandoffTranscript(
+      sessionWith([
+        { id: "u1", role: "user", text: "ship the retry banner" },
+        { id: "r1", role: "reasoning", text: "secret thinking" },
+        { id: "a1", role: "assistant", text: "banner added" },
+        {
+          id: "t1",
+          role: "tool",
+          text: "Edit Banner.tsx",
+          tool: { kind: "write", title: "Edit Banner.tsx" },
+        },
+        {
+          id: "h1",
+          role: "handoff",
+          text: "old recap",
+          handoff: { from: "cursor", to: "fx", status: "ready" },
+        },
+      ]),
+    );
+    expect(transcript).toContain("User: ship the retry banner");
+    expect(transcript).toContain("Assistant: banner added");
+    expect(transcript).toContain("Tool: Edit Banner.tsx");
+    expect(transcript).not.toContain("secret thinking");
+    expect(transcript).not.toContain("old recap");
+  });
+
+  it("unwraps a fenced answer and drops a restated goal", () => {
+    const raw =
+      "```markdown\n## Goal\nship it\n\n## Session so far\n- retry banner is half done\n```";
+    expect(parseHandoffBrief(raw)).toBe("## Session so far\n- retry banner is half done");
+  });
+
+  it("rejects an answer too thin to be a briefing", () => {
+    expect(parseHandoffBrief("Sure!")).toBe("");
+  });
+
+  it("only counts an answer as a briefing when it survives the recap fallback", () => {
+    const usable = "## Session so far\n- retry banner is half done, tests still red";
+    expect(hasAgentBrief(usable)).toBe(true);
+    expect(chooseHandoffBrief(usable, "recap")).toContain("retry banner");
+    expect(hasAgentBrief("ok")).toBe(false);
+    expect(chooseHandoffBrief("ok", "recap")).toBe("recap");
+  });
+
+  it("keeps the task definition when the transcript overflows the prompt", () => {
+    const transcript = buildHandoffTranscript(
+      sessionWith([
+        { id: "u1", role: "user", text: "never break the public API" },
+        ...Array.from({ length: 400 }, (_, index) => ({
+          id: `a${index}`,
+          role: "assistant" as const,
+          text: "y".repeat(400),
+        })),
+        { id: "uz", role: "user", text: "now finish the migration" },
+      ]),
+    );
+    expect(transcript).toContain("never break the public API");
+    expect(transcript).toContain("now finish the migration");
+    expect(transcript).toContain("[middle omitted]");
+  });
+});
+
+describe("handoff provenance", () => {
+  it("carries the source session onto the receiving turn", () => {
+    const card = buildHandoffComposerCard({
+      from: "claude",
+      to: "codex",
+      brief: "recap",
+      userRequest: "keep going",
+      files: ["src/App.tsx"],
+      sourceSessionId: "session-1",
+      briefed: true,
+    });
+    expect(card.sourceSessionId).toBe("session-1");
+    expect(handoffTurnCard(card)).toEqual({
+      from: "claude",
+      to: "codex",
+      kind: "handoff",
+      request: "keep going",
+      files: 1,
+      sourceSessionId: "session-1",
+      briefed: true,
+    });
   });
 });

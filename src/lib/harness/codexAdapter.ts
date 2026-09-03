@@ -9,7 +9,11 @@ import {
 } from "./codex";
 import { refreshCodexCatalog } from "./codexCatalog";
 import { runCodexTextPrompt, warmupCodexText } from "./codexText";
-import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
+import {
+  createGitTextGenerators,
+  createHandoffBriefGenerator,
+  createSessionTitleGenerator,
+} from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
 const gitText = createGitTextGenerators(runCodexTextPrompt, "Codex");
@@ -26,6 +30,7 @@ export const codexAdapter: HarnessAdapter = {
   bindSession: bindCodexSession,
   refreshCatalog: refreshCodexCatalog,
   generateTitle: createSessionTitleGenerator(runCodexTextPrompt),
+  generateHandoffBrief: createHandoffBriefGenerator(runCodexTextPrompt),
   generateCommitMessage: gitText.generateCommitMessage,
   generatePrContent: gitText.generatePrContent,
   generateBranchName: gitText.generateBranchName,
