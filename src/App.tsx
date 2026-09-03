@@ -238,7 +238,21 @@ import {
 } from "./lib/sessions/sessionStore";
 import { syncDockBadge } from "./lib/dockBadge";
 import { liveAgentsFromSessions } from "./lib/liveAgents";
+import { CommandPalette } from "./chrome/CommandPalette";
+import type { CommandId } from "./lib/commands";
 import {
+  canFlushQueue,
+  EMPTY_QUEUES,
+  enqueuePrompt,
+  pruneQueues,
+  queuedFor,
+  removeQueuedPrompt,
+  shouldQueuePrompt,
+  takeNextPrompt,
+  type PromptQueues,
+} from "./lib/promptQueue";
+import {
+  ACTIVITY_STOP_SESSION,
   MENU_BAR_ANSWER_APPROVAL,
   MENU_BAR_FOCUS_SESSION,
   publishMenuBarAgents,
@@ -280,6 +294,7 @@ import { PaneTree } from "./surfaces/PaneTree";
 import { ProjectTerminalDock } from "./surfaces/ProjectTerminalDock";
 import { SearchView } from "./surfaces/SearchView";
 import { SettingsView } from "./surfaces/SettingsView";
+import { ActivityView } from "./surfaces/ActivityView";
 import { UsageView } from "./surfaces/UsageView";
 import { InboxView } from "./surfaces/InboxView";
 import { NotesView } from "./surfaces/NotesView";
@@ -406,6 +421,12 @@ export default function App({
   const [inboxViewOpen, setInboxViewOpen] = useState(false);
   const [notesViewOpen, setNotesViewOpen] = useState(false);
   const [usageViewOpen, setUsageViewOpen] = useState(false);
+  const [activityViewOpen, setActivityViewOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  /** Prompts waiting on a running turn, per session. Never persisted. */
+  const [queues, setQueues] = useState<PromptQueues>(EMPTY_QUEUES);
+  const queuesRef = useRef(queues);
+  queuesRef.current = queues;
   const notesEnabled = useSyncExternalStore(subscribeNotesEnabled, loadNotesEnabled, () => true);
   const liveAgentsEnabled = useSyncExternalStore(
     subscribeLiveAgentsEnabled,
@@ -466,6 +487,13 @@ export default function App({
   notesViewOpenRef.current = notesViewOpen;
   const usageViewOpenRef = useRef(usageViewOpen);
   usageViewOpenRef.current = usageViewOpen;
+  const activityViewOpenRef = useRef(activityViewOpen);
+  activityViewOpenRef.current = activityViewOpen;
+  /**
+   * Sessions whose current turn the user stopped. A queued prompt must not fire
+   * into that gap; the chips stay until the user sends them.
+   */
+  const stoppedSessions = useRef(new Set<string>());
 
   useEffect(() => {
     if (!notesEnabled) setNotesViewOpen(false);
@@ -1091,6 +1119,7 @@ export default function App({
     setInboxViewOpen(false);
     setNotesViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     const cwd = active?.cwd ?? sessionDefaults?.cwd ?? projectCwd;
     const session = newDefaultSession(cwd, sessionDefaults?.runtimeMode);
     const tab = newTab(session.id);
@@ -1107,6 +1136,7 @@ export default function App({
         setInboxViewOpen(false);
         setNotesViewOpen(false);
         setUsageViewOpen(false);
+        setActivityViewOpen(false);
         setSidebarTab("sessions");
         const cwd = item.projectPath || active?.cwd || sessionDefaults?.cwd || projectCwd;
         const ref = `#${item.number}`;
@@ -1134,6 +1164,7 @@ export default function App({
       setInboxViewOpen(false);
       setNotesViewOpen(false);
       setUsageViewOpen(false);
+      setActivityViewOpen(false);
       setSidebarTab("sessions");
       const cwd =
         (card.sourceCwd && looksLikeProject(card.sourceCwd) ? card.sourceCwd : undefined) ||
@@ -2344,6 +2375,7 @@ export default function App({
       setInboxViewOpen(false);
       setNotesViewOpen(false);
       setUsageViewOpen(false);
+      setActivityViewOpen(false);
       const normalized = normalizeProjectPath(path);
       if (!looksLikeProject(normalized)) return;
 
@@ -2670,7 +2702,7 @@ export default function App({
       sessionId: string,
       text: string,
       attachments: Attachment[] = [],
-      options?: { secondOpinion?: SecondOpinionMeta },
+      options?: { secondOpinion?: SecondOpinionMeta; steer?: boolean },
     ) => {
       const current = sessionsRef.current.find((s) => s.id === sessionId);
       if (!current) return;
@@ -2688,17 +2720,33 @@ export default function App({
           ? current.pendingSwitch
           : null;
 
+      // A follow-up written mid-turn waits in the queue, where it stays visible
+      // and removable. ⌥Enter steers the running turn instead, where the
+      // harness supports it; fx, which cannot, used to drop the message.
+      const canSteer = isLiveHarness(current.harness) && canSteerHarness(current.harness);
+      if (
+        !pendingSwitch &&
+        shouldQueuePrompt({ steerRequested: !!options?.steer, busy: !!current.busy, canSteer })
+      ) {
+        setQueues((prev) =>
+          enqueuePrompt(prev, sessionId, {
+            id: crypto.randomUUID(),
+            text,
+            attachments,
+            queuedAt: Date.now(),
+          }),
+        );
+        return;
+      }
+
+      // A stop applies to everything queued behind it, so writing a fresh
+      // prompt does not release the queue. Only sending a chip does, and only
+      // once nothing is left waiting.
+      if (queuedFor(queuesRef.current, sessionId).length === 0) {
+        stoppedSessions.current.delete(sessionId);
+      }
+
       if (current.busy && !pendingSwitch) {
-        if (!isLiveHarness(current.harness) || !canSteerHarness(current.harness)) {
-          // Harnesses that cannot steer (fx) used to drop the message on the
-          // floor here, so a follow-up sent mid-turn just vanished. Say so.
-          enqueueHarnessEvent(sessionId, {
-            type: "status",
-            text: `${current.harness} cannot take a follow-up mid-turn — wait for this turn to finish, or stop it first.`,
-          });
-          flushHarnessEvents();
-          return;
-        }
         const visible = displayAttachments(attachments);
         const cards = userTurnCards(noteCard);
         setSessions((prev) =>
@@ -3077,8 +3125,70 @@ export default function App({
     return () => window.clearTimeout(timer);
   }, [autoContinueKey, onSubmit]);
 
+  const onRemoveQueued = useCallback((sessionId: string, promptId: string) => {
+    setQueues((prev) => removeQueuedPrompt(prev, sessionId, promptId));
+  }, []);
+
+  /**
+   * Send one queued prompt now. This is the deliberate send a stopped turn
+   * waits for, so it also releases the rest of that session's queue.
+   */
+  const onSendQueued = useCallback(
+    (sessionId: string, promptId: string) => {
+      const prompt = queuedFor(queuesRef.current, sessionId).find((entry) => entry.id === promptId);
+      if (!prompt) return;
+      stoppedSessions.current.delete(sessionId);
+      setQueues((prev) => removeQueuedPrompt(prev, sessionId, promptId));
+      onSubmit(sessionId, prompt.text, prompt.attachments);
+    },
+    [onSubmit],
+  );
+
+  // A closed session cannot flush, so its queue — and the stop that blocks
+  // that queue — would outlive it and greet the same id on reopen.
+  useEffect(() => {
+    const live = new Set(sessions.map((session) => session.id));
+    setQueues((prev) => pruneQueues(prev, live));
+    for (const id of stoppedSessions.current) {
+      if (!live.has(id)) stoppedSessions.current.delete(id);
+    }
+  }, [sessions]);
+
+  /**
+   * One queued prompt per pass. Sending it changes the queues, which runs this
+   * again for the next one — in order, and never two turns at once.
+   */
+  const flushKey = [...queues.keys()]
+    .map((sessionId) => {
+      const session = sessions.find((entry) => entry.id === sessionId);
+      if (!session) return `${sessionId}:gone`;
+      return `${sessionId}:${session.busy ? 1 : 0}:${sessionNeedsInput(session) ? 1 : 0}`;
+    })
+    .join("\n");
+
+  useEffect(() => {
+    for (const sessionId of queues.keys()) {
+      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+      if (!session) continue;
+      const flushable = canFlushQueue({
+        busy: !!session.busy,
+        needsInput: sessionNeedsInput(session),
+        stopped: stoppedSessions.current.has(sessionId),
+      });
+      if (!flushable) continue;
+      const taken = takeNextPrompt(queues, sessionId);
+      if (!taken.prompt) continue;
+      setQueues(taken.queues);
+      onSubmit(sessionId, taken.prompt.text, taken.prompt.attachments);
+      return;
+    }
+  }, [flushKey, onSubmit, queues]);
+
   const onStop = useCallback(
     (sessionId: string) => {
+      // Stopping is the user rejecting this turn. Anything queued behind it
+      // waits for a deliberate send instead of firing into the gap.
+      stoppedSessions.current.add(sessionId);
       const session = sessionsRef.current.find((s) => s.id === sessionId);
       turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
       flushHarnessEvents();
@@ -3192,6 +3302,7 @@ export default function App({
       setInboxViewOpen(false);
       setNotesViewOpen(false);
       setUsageViewOpen(false);
+      setActivityViewOpen(false);
       onOpenApprovalSession(sessionId);
     },
     [onOpenApprovalSession],
@@ -3256,6 +3367,7 @@ export default function App({
     setInboxViewOpen(false);
     setNotesViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     setFilePickerOpen(true);
   }, []);
 
@@ -3264,6 +3376,7 @@ export default function App({
     setInboxViewOpen(false);
     setNotesViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     setSidebarTab("files");
     setFilesSearchOpen(true);
     setSearchFocusToken((token) => token + 1);
@@ -3275,6 +3388,7 @@ export default function App({
     setInboxViewOpen(false);
     setNotesViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     setSearchViewOpen(true);
     setSearchViewFocusToken((token) => token + 1);
   }, []);
@@ -3289,6 +3403,7 @@ export default function App({
     setSearchViewOpen(false);
     setNotesViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     setInboxViewOpen(true);
   }, []);
 
@@ -3303,6 +3418,7 @@ export default function App({
     setSearchViewOpen(false);
     setInboxViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     setNotesViewOpen(true);
   }, []);
 
@@ -3323,12 +3439,27 @@ export default function App({
     setUsageViewOpen(false);
   }, []);
 
+  const onOpenActivity = useCallback(() => {
+    setFilePickerOpen(false);
+    setSettingsOpen(false);
+    setSearchViewOpen(false);
+    setInboxViewOpen(false);
+    setNotesViewOpen(false);
+    setUsageViewOpen(false);
+    setActivityViewOpen(true);
+  }, []);
+
+  const onLeaveActivity = useCallback(() => {
+    setActivityViewOpen(false);
+  }, []);
+
   const openSettings = useCallback((section?: SettingsSectionId) => {
     setFilePickerOpen(false);
     setSearchViewOpen(false);
     setInboxViewOpen(false);
     setNotesViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     if (section) {
       setSettingsSection(section);
       saveSettingsSection(section);
@@ -3419,8 +3550,20 @@ export default function App({
       setUsageViewOpen(false);
       return;
     }
+    if (activityViewOpen) {
+      setActivityViewOpen(false);
+      return;
+    }
     onVisitBack();
-  }, [onVisitBack, searchViewOpen, settingsOpen, inboxViewOpen, notesViewOpen, usageViewOpen]);
+  }, [
+    onVisitBack,
+    searchViewOpen,
+    settingsOpen,
+    inboxViewOpen,
+    notesViewOpen,
+    usageViewOpen,
+    activityViewOpen,
+  ]);
 
   const onRailForward = useCallback(() => {
     setSearchViewOpen(false);
@@ -3428,6 +3571,7 @@ export default function App({
     setInboxViewOpen(false);
     setNotesViewOpen(false);
     setUsageViewOpen(false);
+    setActivityViewOpen(false);
     onVisitForward();
   }, [onVisitForward]);
 
@@ -3476,8 +3620,10 @@ export default function App({
     onOpenInbox,
     onOpenNotes,
     onOpenUsage,
+    onOpenActivity,
     onSelectLiveAgent,
     onApproval,
+    onStop,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3503,8 +3649,10 @@ export default function App({
     onOpenInbox,
     onOpenNotes,
     onOpenUsage,
+    onOpenActivity,
     onSelectLiveAgent,
     onApproval,
+    onStop,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3553,6 +3701,67 @@ export default function App({
     [run],
   );
 
+  /**
+   * Bring Work forward with an empty chat, focused. This is what the global
+   * shortcut and the palette's Quick Ask both mean.
+   */
+  const onQuickAsk = useCallback(() => {
+    setPaletteOpen(false);
+    setAppMode("work");
+    requestWorkChatCommand("new");
+  }, []);
+
+  /**
+   * The palette's half of the command catalog: the ids this window can run.
+   * A command listed in `APP_COMMANDS` without an entry here is documentation
+   * for a key handled elsewhere, not a dead row in the palette.
+   */
+  const paletteHandlers = useMemo<Partial<Record<CommandId, () => void>>>(
+    () => ({
+      "app.search": () => runInCoding("open_search", actions.current.onOpenSearch),
+      "app.goToFile": () => runInCoding("go_to_file", actions.current.onGoToFile),
+      "app.findInFiles": () => runInCoding("find_in_project", actions.current.onFindInProject),
+      "app.openProject": () =>
+        runInCoding("open_project", () => {
+          void actions.current.pickProject();
+        }),
+      "app.toggleSidebar": () => runInWorkspace("toggle_sidebar", actions.current.onToggleSidebar),
+      "app.switchProfile": () => run("toggle_profile_menu", actions.current.onToggleProfileMenu),
+      "app.settings": () => run("open_settings", () => actions.current.openSettings()),
+      "app.toggleMode": () =>
+        run("toggle_mode", () => setAppMode(otherAppMode(appModeRef.current))),
+      "app.quickAsk": onQuickAsk,
+      "app.activity": () => runInCoding("open_activity", actions.current.onOpenActivity),
+      "app.inbox": () => runInCoding("open_inbox", actions.current.onOpenInbox),
+      "app.notes": () => runInCoding("open_notes", actions.current.onOpenNotes),
+      "app.usage": () => runInCoding("open_usage", actions.current.onOpenUsage),
+      "tab.new": () => runInWorkspace("new", actions.current.onNew, "new"),
+      "tab.closeOthers": () => runInWorkspace("close-others", actions.current.onCloseOtherTabs),
+      "tab.next": () => runInWorkspace("next", actions.current.onNext, "next"),
+      "tab.prev": () => runInWorkspace("prev", actions.current.onPrev, "previous"),
+      "tab.back": () => runInWorkspace("back", actions.current.onVisitBack),
+      "tab.forward": () => runInWorkspace("forward", actions.current.onVisitForward),
+      "tab.activateLast": () =>
+        runInWorkspace("activate-last", () => actions.current.onActivate(-1)),
+      "pane.close": () => runInWorkspace("close", actions.current.onClosePane),
+      "pane.splitRight": () =>
+        runInWorkspace("split-right", () => actions.current.onSplit("right")),
+      "pane.splitDown": () => runInWorkspace("split-down", () => actions.current.onSplit("down")),
+      "pane.focusLeft": () =>
+        runInWorkspace("focus-left", () => actions.current.onFocusDir("left")),
+      "pane.focusRight": () =>
+        runInWorkspace("focus-right", () => actions.current.onFocusDir("right")),
+      "pane.focusUp": () => runInWorkspace("focus-up", () => actions.current.onFocusDir("up")),
+      "pane.focusDown": () =>
+        runInWorkspace("focus-down", () => actions.current.onFocusDir("down")),
+      "terminal.new": () => runInWorkspace("new-terminal", actions.current.onNewTerminal),
+      "terminal.newTab": () => runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
+      "terminal.toggleDock": () =>
+        runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
+    }),
+    [onQuickAsk, run, runInCoding, runInWorkspace],
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Work owns its own bindings. Every shortcut below acts on the project
@@ -3577,7 +3786,7 @@ export default function App({
         const inPicker =
           target &&
           target.closest(
-            "[data-model-picker], [data-file-picker], [data-branch-picker], [data-skill-picker], [data-mention-picker], [data-app-search]",
+            "[data-model-picker], [data-file-picker], [data-branch-picker], [data-skill-picker], [data-mention-picker], [data-app-search], [data-command-palette]",
           );
         if (inPicker && typeof cmd === "object" && "activate" in cmd) {
           return;
@@ -3606,6 +3815,7 @@ export default function App({
         !inboxViewOpenRef.current &&
         !notesViewOpenRef.current &&
         !usageViewOpenRef.current &&
+        !activityViewOpenRef.current &&
         handleEditorFindKey(e)
       ) {
         e.stopPropagation();
@@ -3624,8 +3834,9 @@ export default function App({
         run("go_to_file", actions.current.onGoToFile);
         return;
       }
-      if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+      if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "f") {
         const target = e.target instanceof Element ? e.target : null;
+        // Ctrl+F is the shell's forward-char off macOS.
         if (target?.closest(".wavex-terminal") && e.ctrlKey && !e.metaKey) {
           return;
         }
@@ -3650,6 +3861,15 @@ export default function App({
         e.preventDefault();
         e.stopPropagation();
         run("find_in_project", actions.current.onFindInProject);
+        return;
+      }
+      if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "a") {
+        const target = e.target instanceof Element ? e.target : null;
+        // Ctrl+Shift+A belongs to the shell off macOS, where `mod` is Ctrl.
+        if (target?.closest(".wavex-terminal") && e.ctrlKey && !e.metaKey) return;
+        e.preventDefault();
+        e.stopPropagation();
+        run("open_activity", actions.current.onOpenActivity);
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -3664,6 +3884,23 @@ export default function App({
       e.preventDefault();
       e.stopPropagation();
       run("toggle_mode", () => setAppMode(otherAppMode(appModeRef.current)));
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [run]);
+
+  // The palette is the one shortcut both modes share: it is how a command with
+  // no key of its own is reached at all.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || e.shiftKey || e.altKey || e.key.toLowerCase() !== "k") return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (target?.closest(".wavex-terminal") && e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      run("command_palette", () => setPaletteOpen((open) => !open));
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
@@ -3718,6 +3955,7 @@ export default function App({
       listen("open_inbox", () => runInCoding("onOpenInbox", () => actions.current.onOpenInbox())),
       listen("open_notes", () => runInCoding("onOpenNotes", () => actions.current.onOpenNotes())),
       listen("open_usage", () => runInCoding("onOpenUsage", () => actions.current.onOpenUsage())),
+      listen("quick_ask", () => onQuickAsk()),
       listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
         runInCoding("focus_session", () => actions.current.onSelectLiveAgent(payload)),
       ),
@@ -3732,6 +3970,11 @@ export default function App({
           actions.current.onApproval(payload.sessionId, payload.requestId, payload.decision),
         { target: getCurrentWindow().label },
       ),
+      // Stopped from Activity, which may be a different window's surface. Same
+      // routing as an approval: only the window that owns the session answers.
+      listen<string>(ACTIVITY_STOP_SESSION, ({ payload }) => actions.current.onStop(payload), {
+        target: getCurrentWindow().label,
+      }),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
         void runUpdateFlow(true);
@@ -3742,9 +3985,22 @@ export default function App({
       listen("find_in_project", () =>
         runInCoding("find_in_project", () => actions.current.onFindInProject()),
       ),
+      // One accelerator, two meanings: the editor's find bar when an editor
+      // holds focus, app-wide Search otherwise. The macOS menu owns ⌘F, so the
+      // choice cannot be made by a key handler in the webview.
       listen("find", () => {
-        runInWorkspace("find", openFindInActiveEditor, "find");
+        runInWorkspace(
+          "find",
+          () => {
+            if (openFindInActiveEditor()) return;
+            actions.current.onOpenSearch();
+          },
+          "find",
+        );
       }),
+      listen("command_palette", () =>
+        run("command_palette", () => setPaletteOpen((open) => !open)),
+      ),
       listen("open_model_picker", () => {
         window.dispatchEvent(new Event("open_model_picker"));
       }),
@@ -3853,11 +4109,13 @@ export default function App({
         onOpenInbox={onOpenInbox}
         onOpenNotes={notesEnabled ? onOpenNotes : undefined}
         onOpenUsage={onOpenUsage}
+        onOpenActivity={onOpenActivity}
         onGoToFile={onGoToFile}
         searchActive={searchViewOpen}
         inboxActive={inboxViewOpen}
         notesActive={notesViewOpen}
         usageActive={usageViewOpen}
+        activityActive={activityViewOpen}
         notesEnabled={notesEnabled}
         projectRailOpen={projectRailOpen}
         onToggleProjectRail={onToggleProjectRail}
@@ -3885,12 +4143,22 @@ export default function App({
       >
         <div
           className={
-            searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
+            searchViewOpen ||
+            settingsOpen ||
+            inboxViewOpen ||
+            notesViewOpen ||
+            usageViewOpen ||
+            activityViewOpen
               ? "hidden"
               : "flex min-h-0 min-w-0 flex-1 flex-col"
           }
           aria-hidden={
-            searchViewOpen || settingsOpen || inboxViewOpen || notesViewOpen || usageViewOpen
+            searchViewOpen ||
+            settingsOpen ||
+            inboxViewOpen ||
+            notesViewOpen ||
+            usageViewOpen ||
+            activityViewOpen
           }
           inert={
             searchViewOpen ||
@@ -3898,6 +4166,7 @@ export default function App({
             inboxViewOpen ||
             notesViewOpen ||
             usageViewOpen ||
+            activityViewOpen ||
             undefined
           }
         >
@@ -3914,6 +4183,7 @@ export default function App({
               onPickProject={pickProject}
               onFindInProject={onFindInProject}
               onSearch={onOpenSearch}
+              onCommandPalette={() => setPaletteOpen((open) => !open)}
               onOpenInbox={onOpenInbox}
               onOpenNotes={notesEnabled ? onOpenNotes : undefined}
             />
@@ -4013,6 +4283,9 @@ export default function App({
                           onModelSettingsChange={onModelSettingsChange}
                           onRuntimeModeChange={onRuntimeModeChange}
                           onSubmit={onSubmit}
+                          queues={queues}
+                          onRemoveQueued={onRemoveQueued}
+                          onSendQueued={onSendQueued}
                           onStop={onStop}
                           onInboxCardDismiss={onInboxCardDismiss}
                           onNoteCardDismiss={onNoteCardDismiss}
@@ -4070,6 +4343,13 @@ export default function App({
             onToggleSidebar={onToggleSidebar}
           />
         ) : null}
+        {activityViewOpen ? (
+          <ActivityView
+            besideRail={projectRailOpen}
+            onClose={onLeaveActivity}
+            onToggleSidebar={onToggleSidebar}
+          />
+        ) : null}
         {notesViewOpen ? (
           <NotesView
             besideRail={projectRailOpen}
@@ -4098,6 +4378,7 @@ export default function App({
         inboxViewOpen ||
         notesViewOpen ||
         usageViewOpen ||
+        activityViewOpen ||
         settingsOpen ? null : (
           <UsageFooter
             providers={usageProviders}
@@ -4124,6 +4405,12 @@ export default function App({
           onDismissUpdate={() => setUpdateNotice(null)}
         />
       ) : null}
+
+      <CommandPalette
+        open={paletteOpen}
+        handlers={paletteHandlers}
+        onClose={() => setPaletteOpen(false)}
+      />
 
       {filePickerOpen ? (
         <FilePicker

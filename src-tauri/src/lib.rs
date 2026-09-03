@@ -15,6 +15,7 @@ mod profiles;
 mod project_logo;
 mod prompt_templates;
 mod pty;
+mod quick_ask;
 mod rate_limits;
 mod search;
 mod session_store;
@@ -161,6 +162,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(harness::HarnessHost::new())
         .manage(pty::PtyHost::new())
         .manage(window_transfer::WindowTransferState::new())
@@ -171,6 +173,7 @@ pub fn run() {
             session_store::init(app.handle())?;
             checkpoint::init(app.handle())?;
             menu::install(app.handle())?;
+            quick_ask::install(app.handle());
             #[cfg(target_os = "macos")]
             {
                 macos::install_dock_menu(app.handle());
@@ -278,6 +281,7 @@ pub fn run() {
             menu_bar::menu_bar_update_agents,
             menu_bar::menu_bar_open_app,
             menu_bar::menu_bar_focus_agent,
+            menu_bar::menu_bar_stop_agent,
             menu_bar::menu_bar_answer_approval,
             pty::pty_spawn,
             pty::pty_write,

@@ -62,6 +62,7 @@ tauri-plugin-updater = "2"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-window-state = "2.4.1"
+tauri-plugin-global-shortcut = "2"
 
 [target."cfg(windows)".dependencies]
 portable-pty = "0.9"

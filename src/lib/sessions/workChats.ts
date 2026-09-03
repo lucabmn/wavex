@@ -118,6 +118,15 @@ export const WORK_CHAT_COMMAND_EVENT = "wavex:work-chat-command";
 export type WorkChatCommand = "new" | "find" | "next" | "previous";
 
 let lastCommand = { name: "", at: 0 };
+let listening = 0;
+let pendingCommand: { command: WorkChatCommand; at: number } | null = null;
+
+/**
+ * How long a held command stays meaningful. Long enough for Work to mount,
+ * short enough that a window which never got there does not open a surprise
+ * chat minutes later.
+ */
+const PENDING_COMMAND_MS = 4000;
 
 /**
  * Ask the Work surface to run one of its own commands.
@@ -131,7 +140,27 @@ export function requestWorkChatCommand(command: WorkChatCommand): void {
   const now = performance.now();
   if (lastCommand.name === command && now - lastCommand.at < 80) return;
   lastCommand = { name: command, at: now };
+  // Switching to Work mounts the surface on the next render, after this call.
+  // A command sent in the same tick — the global Quick Ask shortcut does
+  // exactly that — would land on nobody, so hold it until Work can hear it.
+  if (listening === 0) {
+    pendingCommand = { command, at: now };
+    return;
+  }
   window.dispatchEvent(new CustomEvent(WORK_CHAT_COMMAND_EVENT, { detail: command }));
+}
+
+/** Work calls this as it starts listening; the return is the held command. */
+export function beginWorkChatCommands(): WorkChatCommand | null {
+  listening += 1;
+  const pending = pendingCommand;
+  pendingCommand = null;
+  if (!pending || performance.now() - pending.at > PENDING_COMMAND_MS) return null;
+  return pending.command;
+}
+
+export function endWorkChatCommands(): void {
+  listening = Math.max(0, listening - 1);
 }
 
 export type WorkChatListItem = {

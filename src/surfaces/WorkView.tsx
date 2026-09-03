@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ChatComposer, type ChatComposerHandle } from "../chrome/ChatComposer";
+import { queuedFor } from "../lib/promptQueue";
 import { Modal } from "../chrome/Modal";
 import { ModeSwitch } from "../chrome/ModeSwitch";
 import { DevModeSlot, IconButton, TabVisitNav } from "../chrome/TitleBar";
@@ -46,6 +47,8 @@ import {
   deleteWorkChat,
   dropChatOnTarget,
   getWorkChatState,
+  removeWorkChatQueuedPrompt,
+  sendWorkChatQueuedPrompt,
   loadWorkChats,
   regenerateWorkChatTurn,
   renameChatFolder,
@@ -73,6 +76,8 @@ import {
 import {
   WORK_CHAT_COMMAND_EVENT,
   filterWorkChats,
+  beginWorkChatCommands,
+  endWorkChatCommands,
   requestWorkChatCommand,
   visibleWorkChats,
   workChatListItems,
@@ -194,7 +199,12 @@ export function WorkView({
       runCommand((event as CustomEvent<WorkChatCommand>).detail);
     };
     window.addEventListener(WORK_CHAT_COMMAND_EVENT, onCommand);
-    return () => window.removeEventListener(WORK_CHAT_COMMAND_EVENT, onCommand);
+    const pending = beginWorkChatCommands();
+    if (pending) runCommand(pending);
+    return () => {
+      window.removeEventListener(WORK_CHAT_COMMAND_EVENT, onCommand);
+      endWorkChatCommands();
+    };
   }, [runCommand]);
 
   useEffect(() => {
@@ -465,6 +475,9 @@ export function WorkView({
               onSubmit={(text, attachments, options) =>
                 void sendWorkChatTurn(active.id, text, attachments, options)
               }
+              queued={queuedFor(state.queues, active.id)}
+              onRemoveQueued={(promptId) => removeWorkChatQueuedPrompt(active.id, promptId)}
+              onSendQueued={(promptId) => sendWorkChatQueuedPrompt(active.id, promptId)}
               onStop={() => void stopWorkChat(active.id)}
             />
           </>

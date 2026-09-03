@@ -21,8 +21,8 @@ pub fn dispatch(app: &AppHandle, id: &str) {
         | "forward_tab" | "split_right" | "split_down" | "focus_left" | "focus_right"
         | "focus_up" | "focus_down" | "toggle_sidebar" | "sidebar_opacity" | "open_project"
         | "go_to_file" | "open_search" | "open_inbox" | "open_notes" | "open_usage"
-        | "find_in_project" | "find" | "new_terminal" | "new_terminal_tab" | "toggle_terminal"
-        | "open_model_picker" | "open_settings" | "check_for_updates" => {
+        | "find_in_project" | "find" | "command_palette" | "new_terminal" | "new_terminal_tab"
+        | "toggle_terminal" | "open_model_picker" | "open_settings" | "check_for_updates" => {
             let _ = app.emit(id, ());
         }
         _ => {}
@@ -45,7 +45,8 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let go_to_file = MenuItemBuilder::with_id("go_to_file", "Go to File…")
         .accelerator("CmdOrCtrl+P")
         .build(app)?;
-    let open_search = MenuItemBuilder::with_id("open_search", "Search…")
+    let open_search = MenuItemBuilder::with_id("open_search", "Search…").build(app)?;
+    let command_palette = MenuItemBuilder::with_id("command_palette", "Command Palette…")
         .accelerator("CmdOrCtrl+K")
         .build(app)?;
     let open_inbox = MenuItemBuilder::with_id("open_inbox", "Inbox").build(app)?;
@@ -120,6 +121,7 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let file = SubmenuBuilder::new(app, "File")
         .item(&new_window)
         .item(&open_project)
+        .item(&command_palette)
         .item(&open_search)
         .item(&go_to_file)
         .item(&find_in_project)

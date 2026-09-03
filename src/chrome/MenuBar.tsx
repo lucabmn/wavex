@@ -18,6 +18,7 @@ type Props = {
   onPickProject?: () => void;
   onFindInProject?: () => void;
   onSearch?: () => void;
+  onCommandPalette?: () => void;
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
 };
@@ -34,6 +35,7 @@ export function MenuBar({
   onPickProject,
   onFindInProject,
   onSearch,
+  onCommandPalette,
   onOpenInbox,
   onOpenNotes,
 }: Props) {
@@ -114,6 +116,9 @@ export function MenuBar({
         case "open_project":
           onPickProject?.();
           break;
+        case "command_palette":
+          onCommandPalette?.();
+          break;
         case "open_search":
           onSearch?.();
           break;
@@ -160,6 +165,7 @@ export function MenuBar({
       onToggleTerminal,
       onPickProject,
       onSearch,
+      onCommandPalette,
       onOpenInbox,
       onOpenNotes,
       onShowSourceControl,
@@ -176,7 +182,13 @@ export function MenuBar({
           { kind: "item", id: "new_window", label: "New Window", shortcut: `${MOD}${SHIFT}N` },
           { kind: "sep" },
           { kind: "item", id: "open_project", label: "Open Project…", shortcut: `${MOD}O` },
-          { kind: "item", id: "open_search", label: "Search…", shortcut: `${MOD}K` },
+          {
+            kind: "item",
+            id: "command_palette",
+            label: "Command Palette…",
+            shortcut: `${MOD}K`,
+          },
+          { kind: "item", id: "open_search", label: "Search…", shortcut: `${MOD}F` },
           { kind: "item", id: "go_to_file", label: "Go to File…", shortcut: `${MOD}P` },
           {
             kind: "item",
