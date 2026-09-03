@@ -8,6 +8,10 @@ pub const WINDOW_LABEL: &str = "menu-bar";
 const TRAY_ID: &str = "wavex-menu-bar";
 const AGENTS_CHANGED: &str = "menu_bar_agents_changed";
 const FOCUS_SESSION: &str = "focus_session_from_menu_bar";
+const ANSWER_APPROVAL: &str = "answer_approval_from_menu_bar";
+/// A summary long enough to decide on, short enough that a runaway renderer
+/// cannot grow the native cache without bound.
+const MAX_APPROVAL_LABEL: usize = 400;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const POPOVER_WIDTH: f64 = 380.0;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -76,6 +80,15 @@ fn popup_position_for(
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct MenuBarApproval {
+    request_id: i64,
+    kind: String,
+    label: String,
+    answerable: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MenuBarAgent {
     id: String,
     cwd: String,
@@ -85,7 +98,29 @@ pub struct MenuBarAgent {
     started_at: Option<u64>,
     duration_ms: Option<u64>,
     needs_approval: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    approval: Option<MenuBarApproval>,
     done: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApprovalAnswer {
+    session_id: String,
+    request_id: i64,
+    decision: String,
+}
+
+/// Trim on a character boundary so a multi-byte summary cannot panic the host.
+fn clamp_label(label: &str) -> String {
+    if label.len() <= MAX_APPROVAL_LABEL {
+        return label.to_string();
+    }
+    let end = (0..=MAX_APPROVAL_LABEL)
+        .rev()
+        .find(|index| label.is_char_boundary(*index))
+        .unwrap_or(0);
+    format!("{}…", &label[..end])
 }
 
 type AgentSources = HashMap<String, Vec<MenuBarAgent>>;
@@ -135,6 +170,11 @@ pub fn menu_bar_update_agents(window: WebviewWindow, mut agents: Vec<MenuBarAgen
     // A corrupt renderer must not turn a tiny status surface into an unbounded
     // native cache. Real app windows never approach this limit.
     agents.truncate(100);
+    for agent in &mut agents {
+        if let Some(approval) = agent.approval.as_mut() {
+            approval.label = clamp_label(&approval.label);
+        }
+    }
     {
         let mut guard = sources().lock().unwrap_or_else(|error| error.into_inner());
         if agents.is_empty() {
@@ -163,21 +203,40 @@ fn publish(app: &AppHandle) {
     }
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let working = agents.iter().filter(|agent| !agent.done).count();
+        let waiting = agents
+            .iter()
+            .filter(|agent| agent.approval.is_some())
+            .count();
         // tray-icon's macOS `None` path does not clear a previous title, but
         // assigning an empty title does.
-        let title = if working > 0 {
-            working.min(99).to_string()
-        } else {
-            String::new()
-        };
-        let tooltip = match working {
-            0 => "wavex — no agents working".to_string(),
-            1 => "wavex — 1 agent working".to_string(),
-            count => format!("wavex — {count} agents working"),
-        };
+        let (title, tooltip) = tray_status(waiting, working);
         let _ = tray.set_title(Some(title));
         let _ = tray.set_tooltip(Some(tooltip));
     }
+}
+
+/// A blocked turn outranks a busy one: it is the only state the user can clear.
+fn tray_status(waiting: usize, working: usize) -> (String, String) {
+    if waiting > 0 {
+        let title = format!("!{}", waiting.min(99));
+        let tooltip = if waiting == 1 {
+            "wavex — 1 approval waiting".to_string()
+        } else {
+            format!("wavex — {waiting} approvals waiting")
+        };
+        return (title, tooltip);
+    }
+    let title = if working > 0 {
+        working.min(99).to_string()
+    } else {
+        String::new()
+    };
+    let tooltip = match working {
+        0 => "wavex — no agents working".to_string(),
+        1 => "wavex — 1 agent working".to_string(),
+        count => format!("wavex — {count} agents working"),
+    };
+    (title, tooltip)
 }
 
 #[tauri::command]
@@ -186,17 +245,48 @@ pub fn menu_bar_open_app(app: AppHandle) -> Result<(), String> {
     crate::window::show_hidden_or_open_new(&app)
 }
 
+fn owner_of(session_id: &str) -> Option<String> {
+    let guard = sources().lock().unwrap_or_else(|error| error.into_inner());
+    guard.iter().find_map(|(label, agents)| {
+        agents
+            .iter()
+            .any(|agent| agent.id == session_id)
+            .then(|| label.clone())
+    })
+}
+
+/// Answer without showing the popover's owner window. The decision is routed to
+/// the one window holding the session, never broadcast: two windows mid-transfer
+/// would otherwise both answer the same request.
+#[tauri::command]
+pub fn menu_bar_answer_approval(
+    app: AppHandle,
+    session_id: String,
+    request_id: i64,
+    decision: String,
+) -> Result<(), String> {
+    if decision != "allow" && decision != "deny" {
+        return Err(format!("unsupported approval decision: {decision}"));
+    }
+    let label = owner_of(&session_id).ok_or("no window owns this session")?;
+    let window = app
+        .get_webview_window(&label)
+        .ok_or("the window that owns this session is gone")?;
+    window
+        .emit(
+            ANSWER_APPROVAL,
+            ApprovalAnswer {
+                session_id,
+                request_id,
+                decision,
+            },
+        )
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn menu_bar_focus_agent(app: AppHandle, session_id: String) -> Result<(), String> {
-    let owner = {
-        let guard = sources().lock().unwrap_or_else(|error| error.into_inner());
-        guard.iter().find_map(|(label, agents)| {
-            agents
-                .iter()
-                .any(|agent| agent.id == session_id)
-                .then(|| label.clone())
-        })
-    };
+    let owner = owner_of(&session_id);
 
     hide(&app);
     let Some(label) = owner else {
@@ -367,6 +457,12 @@ mod tests {
             started_at: Some(started_at),
             duration_ms: None,
             needs_approval,
+            approval: needs_approval.then(|| MenuBarApproval {
+                request_id: 1,
+                kind: "approval".into(),
+                label: "Edit src/main.rs".into(),
+                answerable: true,
+            }),
             done: false,
         }
     }
@@ -419,5 +515,30 @@ mod tests {
             .map(|agent| agent.id)
             .collect();
         assert_eq!(ids, ["attention", "older", "newer"]);
+    }
+
+    #[test]
+    fn a_waiting_approval_outranks_working_agents_in_the_status_item() {
+        assert_eq!(
+            tray_status(2, 5),
+            ("!2".into(), "wavex — 2 approvals waiting".into())
+        );
+        assert_eq!(
+            tray_status(0, 1),
+            ("1".into(), "wavex — 1 agent working".into())
+        );
+        assert_eq!(
+            tray_status(0, 0),
+            (String::new(), "wavex — no agents working".into())
+        );
+    }
+
+    #[test]
+    fn clamps_a_long_summary_without_splitting_a_character() {
+        let label = "é".repeat(MAX_APPROVAL_LABEL);
+        let clamped = clamp_label(&label);
+        assert!(clamped.len() <= MAX_APPROVAL_LABEL + "…".len());
+        assert!(clamped.ends_with('…'));
+        assert_eq!(clamp_label("short"), "short");
     }
 }

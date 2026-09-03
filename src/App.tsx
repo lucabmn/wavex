@@ -236,7 +236,12 @@ import {
 } from "./lib/sessions/sessionStore";
 import { syncDockBadge } from "./lib/dockBadge";
 import { liveAgentsFromSessions } from "./lib/liveAgents";
-import { MENU_BAR_FOCUS_SESSION, publishMenuBarAgents } from "./lib/menuBar";
+import {
+  MENU_BAR_ANSWER_APPROVAL,
+  MENU_BAR_FOCUS_SESSION,
+  publishMenuBarAgents,
+  type MenuBarApprovalAnswer,
+} from "./lib/menuBar";
 import { hiddenApprovalNotices } from "./lib/approvalToast";
 import { nextUnseenFinishedSessions } from "./lib/sessions/sessionDone";
 import { playCue } from "./lib/sounds";
@@ -3451,6 +3456,7 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onSelectLiveAgent,
+    onApproval,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3477,6 +3483,7 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onSelectLiveAgent,
+    onApproval,
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
@@ -3692,6 +3699,11 @@ export default function App({
       listen("open_usage", () => runInCoding("onOpenUsage", () => actions.current.onOpenUsage())),
       listen<string>(MENU_BAR_FOCUS_SESSION, ({ payload }) =>
         runInCoding("focus_session", () => actions.current.onSelectLiveAgent(payload)),
+      ),
+      // Answered from the menu bar, so resolve the request where it lives and
+      // leave the window exactly as the user left it.
+      listen<MenuBarApprovalAnswer>(MENU_BAR_ANSWER_APPROVAL, ({ payload }) =>
+        actions.current.onApproval(payload.sessionId, payload.requestId, payload.decision),
       ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {

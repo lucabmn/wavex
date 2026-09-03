@@ -277,6 +277,7 @@ pub fn run() {
             menu_bar::menu_bar_update_agents,
             menu_bar::menu_bar_open_app,
             menu_bar::menu_bar_focus_agent,
+            menu_bar::menu_bar_answer_approval,
             pty::pty_spawn,
             pty::pty_write,
             pty::pty_resize,

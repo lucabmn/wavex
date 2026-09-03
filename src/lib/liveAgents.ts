@@ -1,7 +1,21 @@
+import { pendingApprovalForSession, type PendingApprovalNotice } from "./approvalToast";
 import { composeToolTitle } from "./harness/preview";
 import { isInFlightSession } from "./inFlight";
 import { displayPath } from "./paths";
 import { sessionDisplayTitle, type Block, type HarnessId, type Session } from "./session";
+
+/** The request blocking a turn, carried to surfaces that live outside the window. */
+export type LiveApproval = {
+  requestId: number;
+  kind: "approval" | "question";
+  /** The same one-line summary the in-window approval toast shows. */
+  label: string;
+  /**
+   * False when the request cannot be summarized well enough to answer blind,
+   * so the only honest offer is to open the session.
+   */
+  answerable: boolean;
+};
 
 export type LiveAgent = {
   id: string;
@@ -12,6 +26,7 @@ export type LiveAgent = {
   startedAt?: number;
   durationMs?: number;
   needsApproval: boolean;
+  approval?: LiveApproval;
   done: boolean;
 };
 
@@ -37,10 +52,11 @@ export function formatLiveElapsed(startedAt: number, now: number): string {
 }
 
 function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
-  const pending = session.blocks.find((block) => block.approval && !block.approval.decided);
-  const pendingQuestion = session.pendingQuestion;
+  // One selector behind the toast and the menu bar, so the two surfaces can
+  // never disagree about which request is outstanding.
+  const pending = pendingApprovalForSession(session);
   const done = unseenFinished && !isInFlightSession(session);
-  const activityBlock = pending ?? lastActivityBlock(session.blocks);
+  const approval = pending ? toLiveApproval(pending) : undefined;
   return {
     id: session.id,
     cwd: session.cwd,
@@ -48,14 +64,41 @@ function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
     harness: session.harness,
     activity: done
       ? "Done"
-      : pendingQuestion
-        ? pendingQuestion.title || pendingQuestion.questions[0]?.prompt || "Question"
-        : activityLabel(activityBlock, session.cwd),
+      : pending
+        ? pending.label
+        : activityLabel(lastActivityBlock(session.blocks), session.cwd),
     startedAt: turnStartedAt(session.blocks),
     durationMs: done ? turnDurationMs(session.blocks) : undefined,
-    needsApproval: Boolean(pending) || Boolean(pendingQuestion),
+    needsApproval: Boolean(pending),
+    ...(approval ? { approval } : {}),
     done,
   };
+}
+
+function toLiveApproval(pending: PendingApprovalNotice): LiveApproval {
+  return {
+    requestId: pending.requestId,
+    kind: pending.kind,
+    label: pending.label,
+    answerable: pending.kind === "approval" && describesToolCall(pending.block),
+  };
+}
+
+/**
+ * A tool call carries its own description. Without one the label degrades to a
+ * generic placeholder, which is not enough to approve a write in a real
+ * checkout from outside the window.
+ */
+function describesToolCall(block: Block | undefined): boolean {
+  if (!block) return false;
+  const preview = block.tool?.preview;
+  return Boolean(
+    block.text?.trim() ||
+    block.tool?.title?.trim() ||
+    preview?.path ||
+    preview?.fileName ||
+    preview?.query,
+  );
 }
 
 function compareLiveAgents(a: LiveAgent, b: LiveAgent): number {

@@ -98,6 +98,105 @@ describe("liveAgentsFromSessions", () => {
     });
   });
 
+  it("carries the pending approval so it can be answered outside the window", () => {
+    const waiting = chat("/tmp/b", {
+      busy: true,
+      blocks: [
+        { id: "u1", role: "user", text: "go", startedAt: 2_000 },
+        {
+          id: "a1",
+          role: "approval",
+          text: "Edited src/App.tsx",
+          tool: {
+            kind: "edit",
+            title: "Edited src/App.tsx",
+            status: "pending",
+            preview: { kind: "write", path: "src/App.tsx", fileName: "App.tsx" },
+          },
+          approval: { requestId: 7 },
+        },
+      ],
+    });
+    expect(liveAgentsFromSessions([waiting])[0]?.approval).toEqual({
+      requestId: 7,
+      kind: "approval",
+      label: "Edited src/App.tsx",
+      answerable: true,
+    });
+  });
+
+  it("answers the latest request when a session stacked two approvals", () => {
+    const waiting = chat("/tmp/b", {
+      busy: true,
+      blocks: [
+        { id: "u1", role: "user", text: "go", startedAt: 2_000 },
+        { id: "a1", role: "approval", text: "Read a.ts", approval: { requestId: 1 } },
+        { id: "a2", role: "approval", text: "Read b.ts", approval: { requestId: 2 } },
+      ],
+    });
+    expect(liveAgentsFromSessions([waiting])[0]?.approval).toMatchObject({
+      requestId: 2,
+      label: "Read b.ts",
+    });
+  });
+
+  it("refuses to offer a blind answer for an approval it cannot summarize", () => {
+    const waiting = chat("/tmp/b", {
+      busy: true,
+      blocks: [
+        { id: "u1", role: "user", text: "go", startedAt: 2_000 },
+        { id: "a1", role: "approval", text: "", approval: { requestId: 3 } },
+      ],
+    });
+    expect(liveAgentsFromSessions([waiting])[0]?.approval).toMatchObject({
+      requestId: 3,
+      answerable: false,
+    });
+  });
+
+  it("leaves a clarifying question to the session that can type an answer", () => {
+    const waiting = chat("/tmp/ask", {
+      busy: true,
+      pendingQuestion: {
+        requestId: 4,
+        title: "Which file?",
+        questions: [
+          {
+            id: "q1",
+            prompt: "Which file?",
+            multiSelect: false,
+            allowCustom: true,
+            options: [{ id: "a.ts", label: "a.ts" }],
+          },
+        ],
+      },
+    });
+    expect(liveAgentsFromSessions([waiting])[0]?.approval).toEqual({
+      requestId: 4,
+      kind: "question",
+      label: "Which file?",
+      answerable: false,
+    });
+  });
+
+  it("drops the request once the approval is decided", () => {
+    const decided = chat("/tmp/b", {
+      busy: true,
+      blocks: [
+        { id: "u1", role: "user", text: "go", startedAt: 2_000 },
+        {
+          id: "a1",
+          role: "approval",
+          text: "Read a.ts",
+          approval: { requestId: 1, decided: "allow" },
+        },
+      ],
+    });
+    const agent = liveAgentsFromSessions([decided])[0];
+    expect(agent?.approval).toBeUndefined();
+    expect(agent?.needsApproval).toBe(false);
+  });
+
   it("sorts working agents by longest-running turn first", () => {
     const newer = chat("/tmp/new", {
       busy: true,

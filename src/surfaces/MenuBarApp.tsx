@@ -5,8 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { BarChart, Bot, Check, CircleAlert, ExternalLink, RefreshCw } from "../chrome/icons";
 import { PlanLimitCards } from "../chrome/PlanLimitCards";
+import type { ApprovalDecision } from "../lib/harness";
 import { formatLiveElapsed, type LiveAgent } from "../lib/liveAgents";
-import { MENU_BAR_AGENTS_CHANGED } from "../lib/menuBar";
+import {
+  answerMenuBarApproval,
+  approvalKey,
+  focusMenuBarAgent,
+  MENU_BAR_AGENTS_CHANGED,
+  menuBarStatusLabel,
+  pendingApprovalAgents,
+  workingAgents,
+} from "../lib/menuBar";
 import { projectName } from "../lib/paths";
 import { HARNESS_LABEL } from "../lib/session";
 import { formatCount, formatTokens, formatUsd } from "../lib/usage/usageFormat";
@@ -92,6 +101,7 @@ export function MenuBarApp() {
   }, [tab]);
 
   const working = agents.filter((agent) => !agent.done).length;
+  const waiting = pendingApprovalAgents(agents).length;
 
   return (
     // The native window carries the popover's corner radius, blur, and shadow,
@@ -102,14 +112,22 @@ export function MenuBarApp() {
         <header className="flex h-11 shrink-0 items-center gap-2 border-b border-content/10 px-3">
           <img src="/logo.png" alt="" className="h-3.5 w-5 object-contain" draggable={false} />
           <span className="text-[12px] font-semibold tracking-tight">wavex</span>
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-content/45">
+          <span
+            className={`ml-auto inline-flex items-center gap-1.5 text-[11px] ${
+              waiting > 0 ? "text-amber-400" : "text-content/45"
+            }`}
+          >
             <span
               aria-hidden
               className={`size-1.5 rounded-full ${
-                working > 0 ? "bg-accent shadow-[0_0_7px_var(--color-accent)]" : "bg-content/20"
+                waiting > 0
+                  ? "bg-amber-400 shadow-[0_0_7px_var(--color-amber-400,#fbbf24)]"
+                  : working > 0
+                    ? "bg-accent shadow-[0_0_7px_var(--color-accent)]"
+                    : "bg-content/20"
               }`}
             />
-            {working > 0 ? `${working} working` : "All quiet"}
+            {menuBarStatusLabel(agents)}
           </span>
         </header>
 
@@ -152,7 +170,11 @@ export function MenuBarApp() {
 
         <footer className="flex h-10 shrink-0 items-center border-t border-content/10 px-3">
           <span className="text-[10px] text-content/45">
-            {tab === "agents" ? "Click a session to jump back in" : "From local CLI transcripts"}
+            {tab !== "agents"
+              ? "From local CLI transcripts"
+              : waiting > 0
+                ? "Answer here — the window stays where it is"
+                : "Click a session to jump back in"}
           </span>
           <button
             type="button"
@@ -208,6 +230,8 @@ function MenuTabButton({
 function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean }) {
   const [now, setNow] = useState(() => Date.now());
   const ticking = focused && agents.some((agent) => !agent.done && agent.startedAt != null);
+  const waiting = pendingApprovalAgents(agents);
+  const running = workingAgents(agents);
 
   useEffect(() => {
     if (!ticking) return;
@@ -233,18 +257,151 @@ function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean 
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-1">
-          {agents.map((agent) => (
-            <li key={agent.id}>
-              <AgentRow agent={agent} now={now} />
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-2">
+          {waiting.length > 0 ? (
+            <div>
+              <GroupLabel>Waiting for you</GroupLabel>
+              <ul className="flex flex-col gap-1.5">
+                {waiting.map((agent) => (
+                  <li key={approvalKey(agent)}>
+                    <ApprovalCard agent={agent} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {running.length > 0 ? (
+            <div>
+              {waiting.length > 0 ? <GroupLabel>Running</GroupLabel> : null}
+              <ul className="flex flex-col gap-1">
+                {running.map((agent) => (
+                  <li key={agent.id}>
+                    <AgentRow agent={agent} now={now} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       )}
     </section>
   );
 }
 
+function GroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="px-1.5 pb-1.5 pt-1 text-[10px] font-medium uppercase tracking-wide text-content/30">
+      {children}
+    </h2>
+  );
+}
+
+/**
+ * A blocked turn, answerable without restoring the window. It shows exactly
+ * what the in-window approval shows — no repository contents, prompts, or paths
+ * beyond that summary.
+ */
+export function ApprovalCard({ agent }: { agent: LiveAgent }) {
+  const [answer, setAnswer] = useState<ApprovalDecision | null>(null);
+  const approval = agent.approval;
+  if (!approval) return null;
+
+  const project = projectName(agent.cwd);
+  const question = approval.kind === "question";
+
+  const respond = (decision: ApprovalDecision) => {
+    // The round trip goes popover -> host -> owning window -> harness, so lock
+    // the card on the first click; Allow then Deny is otherwise one slip away.
+    if (answer) return;
+    setAnswer(decision);
+    void answerMenuBarApproval(agent, decision).then((sent) => {
+      if (sent) return;
+      // No window owns the session any more. Opening it is the only honest
+      // remaining answer.
+      setAnswer(null);
+      focusMenuBarAgent(agent.id);
+    });
+  };
+
+  return (
+    <article className="overflow-hidden rounded-xl border border-amber-400/25 bg-amber-400/[0.05]">
+      <div className="flex items-start gap-2.5 px-2.5 pb-2 pt-2.5">
+        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-content/[0.07]">
+          <HarnessIcon harness={agent.harness} className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold leading-snug">
+              {agent.title}
+            </span>
+            <span className="flex shrink-0 items-center gap-1 text-[10px] text-amber-400">
+              <CircleAlert className="size-3" strokeWidth={1.75} aria-hidden />
+              {question ? "Question" : "Approval"}
+            </span>
+          </div>
+          <p className="mt-1 line-clamp-3 text-[11px] leading-relaxed text-content/70">
+            {approval.label}
+          </p>
+          <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-content/35">
+            <span className="truncate">{HARNESS_LABEL[agent.harness]}</span>
+            <span aria-hidden>·</span>
+            <span className="truncate">{project}</span>
+          </p>
+        </div>
+      </div>
+
+      {approval.answerable ? (
+        <div className="flex items-center gap-1.5 border-t border-amber-400/15 px-2.5 py-2">
+          <button
+            type="button"
+            disabled={answer != null}
+            aria-label={`Allow: ${approval.label}`}
+            onClick={() => respond("allow")}
+            className="h-6 flex-1 rounded-md bg-content px-2.5 text-[11px] font-medium text-background-base hover:bg-content/85 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
+          >
+            {answer === "allow" ? "Allowing…" : "Allow"}
+          </button>
+          <button
+            type="button"
+            disabled={answer != null}
+            aria-label={`Deny: ${approval.label}`}
+            onClick={() => respond("deny")}
+            className="h-6 flex-1 rounded-md bg-content/10 px-2.5 text-[11px] font-medium text-content/75 hover:bg-content/20 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
+          >
+            {answer === "deny" ? "Denying…" : "Deny"}
+          </button>
+          <button
+            type="button"
+            aria-label={`Open ${agent.title} in wavex`}
+            title="Open in wavex"
+            onClick={() => focusMenuBarAgent(agent.id)}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-content/40 hover:bg-content/10 hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
+          </button>
+        </div>
+      ) : (
+        <div className="border-t border-amber-400/15 px-2.5 py-2">
+          <button
+            type="button"
+            onClick={() => focusMenuBarAgent(agent.id)}
+            className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md bg-content/10 text-[11px] font-medium text-content/75 hover:bg-content/20 focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            Open session to answer
+            <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
+          </button>
+          <p className="mt-1.5 text-center text-[10px] text-content/35">
+            {question
+              ? "This one needs a written answer"
+              : "Not enough context to answer from here"}
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+/** A session that is not blocked on the user: it only needs a way back in. */
 function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
   const elapsed = agent.done
     ? agent.durationMs != null
@@ -253,17 +410,13 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
     : agent.startedAt != null
       ? formatLiveElapsed(agent.startedAt, now)
       : "";
-  const activity = agent.needsApproval
-    ? "Needs approval"
-    : agent.done
-      ? "Finished"
-      : agent.activity;
+  const activity = agent.done ? "Finished" : agent.activity;
   const project = projectName(agent.cwd);
 
   return (
     <button
       type="button"
-      onClick={() => void invoke("menu_bar_focus_agent", { sessionId: agent.id })}
+      onClick={() => focusMenuBarAgent(agent.id)}
       className="group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2.5 text-left hover:bg-content/[0.07] focus-visible:outline-2 focus-visible:outline-accent"
       aria-label={[agent.title, HARNESS_LABEL[agent.harness], project, activity, elapsed]
         .filter(Boolean)
@@ -276,16 +429,10 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
         <span className="block truncate text-[12px] font-semibold leading-snug">{agent.title}</span>
         <span
           className={`mt-1 flex min-w-0 items-center gap-1.5 text-[11px] ${
-            agent.needsApproval
-              ? "text-amber-400"
-              : agent.done
-                ? "text-emerald-400"
-                : "text-content/50"
+            agent.done ? "text-emerald-400" : "text-content/50"
           }`}
         >
-          {agent.needsApproval ? (
-            <CircleAlert className="size-3 shrink-0" strokeWidth={1.75} aria-hidden />
-          ) : agent.done ? (
+          {agent.done ? (
             <Check className="size-3 shrink-0" strokeWidth={2} aria-hidden />
           ) : (
             <span className="size-1.5 shrink-0 rounded-full bg-accent animate-pulse" aria-hidden />
