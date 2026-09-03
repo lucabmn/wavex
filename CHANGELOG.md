@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-09-04
+
+- Run any app command by name from a command palette on `Cmd+K`; Search moves
+  to `Cmd+F`, where the editor's find bar still wins while an editor has focus.
+- Queue a prompt written while a turn is running. It waits above the composer,
+  where it can be sent or removed, and goes out when the turn ends on its own.
+  Work chats used to drop such a message without a trace.
+- Open Work with an empty chat from anywhere with a global
+  `Cmd+Shift+Space`.
+- Add Activity, a surface listing every agent running in this install —
+  across windows, projects, and worktrees — with the project it works in, how
+  long it has run, what it is waiting on, and a stop button.
+- Review a diff without the mouse: `j`/`k` walk hunks, `n`/`p` walk files, `s`
+  stages the hunk or file, `u` unstages, and `d` discards behind a
+  confirmation.
+- Unstage a file directly from the working-tree diff.
+- List every shortcut the app answers to on the Keybindings page, including
+  Settings and the Work/Coding switch, which were missing.
+
 ## [0.5.0] - 2026-09-03
 
 - Add custom prompt templates saved to projects, accessible from the Composer
