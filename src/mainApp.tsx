@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import App from "./App";
 import { handleQuitRequested, loadBootWorkspace } from "./lib/appLifecycle";
+import { registerBuiltinHarnesses } from "./lib/harness";
 import { bindActiveProfile, watchProfiles } from "./lib/profiles/profileStore";
 import { initSounds } from "./lib/sounds";
 import { consumeInstalledUpdate } from "./lib/updates/updateNotice";
@@ -33,6 +34,10 @@ function BootGate({ children }: { children: React.ReactNode }) {
 
 export function mountMainApp() {
   initSounds();
+  // Before the workspace loads, not with the first render: restoring it asks
+  // the adapters to rebuild any turn that kept running while this profile was
+  // off screen, and an empty registry answers that nothing can.
+  registerBuiltinHarnesses();
   void watchProfiles();
   void listen("quit_requested", () => {
     void handleQuitRequested();
