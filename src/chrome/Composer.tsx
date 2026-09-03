@@ -41,13 +41,20 @@ import { harnessSupportsAttachments } from "../lib/session";
 import type { UserQuestionPrompt, UserQuestionReply } from "../lib/userQuestion";
 import {
   createBlankSkill,
-  rankSkills,
-  replaceSlashToken,
+  replaceSlashToken as replaceSlashTokenText,
   skillTextParts,
   slashTokenAt,
   type Skill,
   type SlashToken,
 } from "../lib/skills";
+import { composerPickerEntries, type ComposerPickerEntry } from "../lib/composerPicker";
+import {
+  insertTemplateBody,
+  newPromptTemplateDraft,
+  promptTemplateDraft,
+  type PromptTemplate,
+  type PromptTemplateDraft,
+} from "../lib/project/promptTemplates";
 import { AccessPicker } from "./AccessPicker";
 import { ComposerRunner } from "./ComposerRunner";
 import { ContextMeter } from "./ContextMeter";
@@ -63,6 +70,7 @@ import { ModelPicker } from "./ModelPicker";
 import { ModelSettings } from "./ModelSettings";
 import { QuestionForm } from "./QuestionForm";
 import { SkillPicker } from "./SkillPicker";
+import { PromptTemplateDialog } from "./PromptTemplateDialog";
 import { projectName } from "../lib/paths";
 import { consumeQuoteRequest, type QuoteRequest } from "../lib/quoteDraft";
 import { useTabGroupLogos } from "../hooks/useTabGroupLogos";
@@ -83,6 +91,7 @@ import {
 } from "../lib/notes";
 import { resolveTabGroupLogo } from "../lib/workspace/tabGroups";
 import { useComposerSkills } from "./useComposerSkills";
+import { usePromptTemplates } from "./usePromptTemplates";
 
 type Props = {
   enabled?: boolean;
@@ -208,8 +217,12 @@ export function Composer({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [fileDrag, setFileDrag] = useState(false);
   const [slash, setSlash] = useState<SlashToken | null>(null);
-  const [skillActive, setSkillActive] = useState(0);
+  const [pickerActive, setPickerActive] = useState(0);
   const [creatingSkill, setCreatingSkill] = useState(false);
+  const [templateEditor, setTemplateEditor] = useState<{
+    draft: PromptTemplateDraft;
+    existing: PromptTemplate | null;
+  } | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
   const [files, setFiles] = useState<ProjectFile[]>(() => peekProjectFiles(cwd) ?? []);
@@ -228,17 +241,35 @@ export function Composer({
   attachmentsRef.current = attachments;
 
   const mentionOpen = mention !== null && (looksLikeProject(cwd) || notesEnabled);
-  const pickerOpen = creatingSkill || slash !== null;
+  const pickerOpen = (creatingSkill || slash !== null) && !templateEditor;
   const skillCatalog = useComposerSkills({
     harness,
     executionCwd,
     pickerOpen,
   });
+  const templateCatalog = usePromptTemplates({ cwd, pickerOpen });
   const skills = skillCatalog.skills;
   const skillLimit = harness === "pi" ? Number.POSITIVE_INFINITY : undefined;
-  const rankedSkills = rankSkills(skills, slash?.query ?? "", skillLimit);
+  const templates = templateCatalog.templates;
+  const pickerEntries = useMemo(
+    () =>
+      composerPickerEntries({
+        skills,
+        templates,
+        query: slash?.query ?? "",
+        skillLimit,
+      }),
+    [skillLimit, skills, slash?.query, templates],
+  );
   const attachmentsSupported = harnessSupportsAttachments(harness);
-  const skillNames = useMemo(() => new Set(skills.map((skill) => skill.invocation)), [skills]);
+  const skillNames = useMemo(
+    () =>
+      new Set([
+        ...skills.map((skill) => skill.invocation),
+        ...templates.map((template) => template.name),
+      ]),
+    [skills, templates],
+  );
   const mentionFiles = useMemo(
     () => (notesEnabled ? [...files, ...notesAsProjectFiles(notes)] : files),
     [files, notes, notesEnabled],
@@ -327,14 +358,16 @@ export function Composer({
   }, [busy, runnerEnabled]);
 
   useEffect(() => {
-    setSkillActive(0);
-  }, [slash?.query, cwd]);
+    setPickerActive(0);
+    // Templates render above the skills, so a list that arrives late shifts
+    // every row the user may already have highlighted.
+  }, [slash?.query, cwd, templates]);
 
   useEffect(() => {
-    setSkillActive((index) =>
-      rankedSkills.length === 0 ? 0 : Math.min(index, rankedSkills.length - 1),
+    setPickerActive((index) =>
+      pickerEntries.length === 0 ? 0 : Math.min(index, pickerEntries.length - 1),
     );
-  }, [rankedSkills.length]);
+  }, [pickerEntries.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -417,8 +450,9 @@ export function Composer({
     onQuoteRequestConsumed?.(quoteRequest.id);
   }, [onQuoteRequestConsumed, quoteRequest, syncHasValue]);
 
-  const pickSkill = useCallback(
-    (skill: Skill) => {
+  /** Rewrite the draft around the `/token` the picker was opened on. */
+  const replaceSlashToken = useCallback(
+    (rewrite: (value: string, token: SlashToken) => { text: string; cursor: number }) => {
       const el = ref.current;
       const token = slashRef.current;
       if (!el || !token) {
@@ -426,20 +460,58 @@ export function Composer({
         setCreatingSkill(false);
         return;
       }
-      const next = replaceSlashToken(el.value, token, skill.invocation);
-      el.value = next;
+      const result = rewrite(el.value, token);
+      el.value = result.text;
       resizeTextarea(el);
-      let cursor = token.start + skill.invocation.length + 1;
-      if (next[cursor] === " ") cursor += 1;
-      el.setSelectionRange(cursor, cursor);
-      setDraft(next);
-      syncHasValue(next, attachmentsRef.current);
+      el.setSelectionRange(result.cursor, result.cursor);
+      setDraft(result.text);
+      syncHasValue(result.text, attachmentsRef.current);
       setSlash(null);
       setCreatingSkill(false);
       el.focus();
     },
     [syncHasValue],
   );
+
+  const pickSkill = useCallback(
+    (skill: Skill) => {
+      replaceSlashToken((value, token) => {
+        const text = replaceSlashTokenText(value, token, skill.invocation);
+        let cursor = token.start + skill.invocation.length + 1;
+        if (text[cursor] === " ") cursor += 1;
+        return { text, cursor };
+      });
+    },
+    [replaceSlashToken],
+  );
+
+  /**
+   * A template expands into ordinary editable text instead of sending a turn,
+   * so its `@file` mentions resolve exactly like typed ones.
+   */
+  const pickTemplate = useCallback(
+    (template: PromptTemplate) => {
+      replaceSlashToken((value, token) => insertTemplateBody(value, token, template.body));
+    },
+    [replaceSlashToken],
+  );
+
+  const pickEntry = useCallback(
+    (entry: ComposerPickerEntry) => {
+      if (entry.kind === "template") pickTemplate(entry.template);
+      else pickSkill(entry.skill);
+    },
+    [pickSkill, pickTemplate],
+  );
+
+  const editTemplate = useCallback((template: PromptTemplate) => {
+    setTemplateEditor({ draft: promptTemplateDraft(template), existing: template });
+  }, []);
+
+  const closeTemplateEditor = useCallback(() => {
+    setTemplateEditor(null);
+    ref.current?.focus();
+  }, []);
 
   const pickMention = useCallback(
     (file: ProjectFile) => {
@@ -470,7 +542,7 @@ export function Composer({
     if (!focused) return;
     if (
       document.querySelector(
-        "[data-model-picker], [data-access-picker], [data-model-settings], [data-file-picker], [data-branch-picker], [data-skill-picker], [data-mention-picker]",
+        "[data-model-picker], [data-access-picker], [data-model-settings], [data-file-picker], [data-branch-picker], [data-skill-picker], [data-mention-picker], [data-prompt-template-dialog]",
       )
     )
       return;
@@ -631,16 +703,17 @@ export function Composer({
     }
 
     if (slash) {
+      const entry = pickerEntries[pickerActive];
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        if (rankedSkills.length === 0) return;
-        setSkillActive((index) => (index + 1) % rankedSkills.length);
+        if (pickerEntries.length === 0) return;
+        setPickerActive((index) => (index + 1) % pickerEntries.length);
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        if (rankedSkills.length === 0) return;
-        setSkillActive((index) => (index - 1 + rankedSkills.length) % rankedSkills.length);
+        if (pickerEntries.length === 0) return;
+        setPickerActive((index) => (index - 1 + pickerEntries.length) % pickerEntries.length);
         return;
       }
       if (e.key === "Escape") {
@@ -648,17 +721,20 @@ export function Composer({
         setSlash(null);
         return;
       }
+      if (e.key === "Enter" && e.altKey && entry?.kind === "template") {
+        e.preventDefault();
+        editTemplate(entry.template);
+        return;
+      }
       if (e.key === "Tab") {
         e.preventDefault();
-        const skill = rankedSkills[skillActive];
-        if (skill) pickSkill(skill);
+        if (entry) pickEntry(entry);
         return;
       }
       if (e.key === "Enter" && !e.shiftKey) {
-        const skill = rankedSkills[skillActive];
-        if (skill) {
+        if (entry) {
           e.preventDefault();
-          pickSkill(skill);
+          pickEntry(entry);
           return;
         }
         if (!slash.query) {
@@ -705,15 +781,24 @@ export function Composer({
         {pickerOpen ? (
           <div className="absolute inset-x-0 bottom-full z-30 mb-1">
             <SkillPicker
-              skills={rankedSkills}
+              entries={pickerEntries}
               query={slash?.query ?? ""}
-              active={skillActive}
+              active={pickerActive}
               creating={creatingSkill}
               cwd={cwd}
+              templatesEnabled={templateCatalog.projectPath != null}
               error={createError}
               busy={createBusy}
-              onActive={setSkillActive}
-              onPick={pickSkill}
+              onActive={setPickerActive}
+              onPick={pickEntry}
+              onEditTemplate={editTemplate}
+              onNewTemplate={() => {
+                const draft = newPromptTemplateDraft(
+                  templateCatalog.projectPath,
+                  slash?.query ?? "",
+                );
+                if (draft) setTemplateEditor({ draft, existing: null });
+              }}
               onStartCreate={() => {
                 setCreatingSkill(true);
                 setCreateError(null);
@@ -755,6 +840,21 @@ export function Composer({
               }}
             />
           </div>
+        ) : null}
+        {templateEditor ? (
+          <PromptTemplateDialog
+            draft={templateEditor.draft}
+            existing={templateEditor.existing}
+            onClose={closeTemplateEditor}
+            onSaved={() => {
+              closeTemplateEditor();
+              void templateCatalog.refresh(true).catch(() => undefined);
+            }}
+            onDeleted={() => {
+              closeTemplateEditor();
+              void templateCatalog.refresh(true).catch(() => undefined);
+            }}
+          />
         ) : null}
         {mentionOpen && !pickerOpen ? (
           <div className="absolute inset-x-0 bottom-full z-30 mb-1">
