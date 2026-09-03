@@ -91,10 +91,14 @@ Agents are the user's choice at the moment of the switch. Stopped, they offer
 Continue on return. Kept, their CLIs stay alive and finish their work, and the
 menu bar lists them under the profile they belong to. Neither answer keeps them
 on screen: the adapter that owns a turn is per-session state in the webview and
-dies with the reload, so `harness.rs` gates a child's output on the active
-profile matching the one it was spawned under, and the transcript records that
-the turn was left running rather than cut. Nothing may reattach a live stream to
-a reloaded webview without an adapter that can rebuild that state.
+dies with the reload, so `harness.rs` cuts a detached child's output at the
+stream and the transcript records that the turn was left running rather than
+cut. Nothing may reattach a live stream to a reloaded webview.
+
+What comes back instead is the CLI's own record. On return, a harness with
+`importDetachedTurn` rebuilds the turn from the transcript the CLI wrote and
+replaces the note with it; the others keep the note, which is still true for
+them. That is a rebuild of a finished turn, not a replay into a live adapter.
 
 Browser state that belongs to a profile goes through `profileStorage` in
 `src/lib/profiles/`, never `localStorage` directly. Native state lives under the

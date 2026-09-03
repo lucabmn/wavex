@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
 import {
+  applyHarnessEvent,
   bindHarnessSession,
   forgetHarnessSession,
+  importDetachedHarnessTurn,
   isLiveHarness,
   killAllChildren,
 } from "./harness";
@@ -10,10 +12,13 @@ import {
   hasInFlightSessions,
   inFlightRefs,
   isInFlightSession,
+  dropKeptRunningNote,
+  lastTurnStartedAt,
   markTurnInterrupted,
   markTurnKeptRunning,
   quitWhileBusyMessage,
   wasTurnInterrupted,
+  wasTurnKeptRunning,
   workspaceFromResumed,
   type ResumedWorkspace,
 } from "./inFlight";
@@ -251,7 +256,7 @@ async function loadResumedWorkspaceOnce(): Promise<ResumedWorkspace | null> {
     workspace = {
       ...workspace,
       sessions: await Promise.all(
-        workspace.sessions.map((session) => restoreSessionCheckout(session)),
+        workspace.sessions.map((session) => recoverDetachedTurn(restoreSessionCheckout(session))),
       ),
     };
   }
@@ -265,6 +270,32 @@ async function loadResumedWorkspaceOnce(): Promise<ResumedWorkspace | null> {
     );
   }
   return workspace;
+}
+
+/**
+ * Puts back the turn an agent finished while its profile was off screen.
+ *
+ * Nothing rendered that turn — the adapter that owned it died with the switch
+ * — so the only record is the CLI's own. Harnesses that keep one hand it back
+ * here; the rest keep the note, which is still the truth for them.
+ */
+async function recoverDetachedTurn(session: Session): Promise<Session> {
+  if (!wasTurnKeptRunning(session) || !session.providerSessionId) return session;
+  if (!isLiveHarness(session.harness)) return session;
+  // Without a start time there is no way to tell the lost turn from the ones
+  // already in the transcript, and importing the difference blind would
+  // duplicate the whole conversation.
+  const since = lastTurnStartedAt(session);
+  if (since <= 0) return session;
+  const events = await importDetachedHarnessTurn(session.harness, {
+    cwd: sessionWorkCwd(session),
+    providerSessionId: session.providerSessionId,
+    since,
+  }).catch(() => []);
+  if (events.length === 0) return session;
+  const recovered = events.reduce(applyHarnessEvent, dropKeptRunningNote(session));
+  await upsertSession(recovered).catch(() => null);
+  return recovered;
 }
 
 export function bindResumedSessions(sessions: Session[]): void {

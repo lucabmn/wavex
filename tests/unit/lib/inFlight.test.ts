@@ -5,7 +5,9 @@ import {
   INTERRUPT_MESSAGE,
   KEPT_RUNNING_MESSAGE,
   canAutoContinue,
+  dropKeptRunningNote,
   hasInFlightSessions,
+  lastTurnStartedAt,
   inFlightRefs,
   isInFlightSession,
   markTurnInterrupted,
@@ -13,6 +15,7 @@ import {
   quitWhileBusyMessage,
   shouldWriteInFlightSnapshot,
   wasTurnInterrupted,
+  wasTurnKeptRunning,
   workspaceFromResumed,
 } from "@/lib/inFlight";
 import { newSession, type Session } from "@/lib/session";
@@ -277,5 +280,31 @@ describe("markTurnKeptRunning", () => {
     const requit = markTurnInterrupted(kept);
     expect(requit.blocks.filter((block) => block.text === INTERRUPT_MESSAGE)).toHaveLength(0);
     expect(requit.blocks.filter((block) => block.text === KEPT_RUNNING_MESSAGE)).toHaveLength(1);
+  });
+});
+
+describe("recovering a turn left running", () => {
+  const kept = markTurnKeptRunning(
+    chat("/tmp/a", {
+      busy: true,
+      blocks: [{ id: "u1", role: "user", text: "hello", startedAt: 1_700 }],
+    }),
+  );
+
+  it("recognises the note and where the lost turn began", () => {
+    expect(wasTurnKeptRunning(kept)).toBe(true);
+    expect(lastTurnStartedAt(kept)).toBe(1_700);
+  });
+
+  it("drops only the note, so the turn can take its place", () => {
+    const bare = dropKeptRunningNote(kept);
+    expect(bare.blocks.map((block) => block.role)).toEqual(["user"]);
+    expect(dropKeptRunningNote(bare)).toBe(bare);
+  });
+
+  it("leaves a quit note alone, which no transcript can fill in", () => {
+    const quit = markTurnInterrupted(chat("/tmp/a", { busy: true }));
+    expect(wasTurnKeptRunning(quit)).toBe(false);
+    expect(dropKeptRunningNote(quit)).toBe(quit);
   });
 });

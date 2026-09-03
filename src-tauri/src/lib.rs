@@ -18,6 +18,7 @@ mod rate_limits;
 mod search;
 mod session_store;
 mod skills;
+mod transcript;
 mod usage;
 mod window;
 mod window_transfer;
@@ -315,6 +316,7 @@ pub fn run() {
             window::hide_window,
             window::destroy_window,
             window::confirm_quit,
+            transcript::harness_claude_transcript,
             window::enable_window_glass,
             window::disable_window_glass,
             window_transfer::stage_window_transfer,

@@ -18,6 +18,7 @@ export {
 } from "./availability";
 export {
   getHarness,
+  importDetachedHarnessTurn,
   requireHarness,
   isLiveHarness,
   sendHarnessTurn,

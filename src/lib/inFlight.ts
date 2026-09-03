@@ -131,6 +131,29 @@ export function wasTurnInterrupted(session: Session): boolean {
   return lastBlockIsCut(session);
 }
 
+/** The agent went on working here after the profile left the screen. */
+export function wasTurnKeptRunning(session: Session): boolean {
+  return lastBlockIs(session, KEPT_RUNNING_MESSAGE);
+}
+
+/**
+ * Drops the kept-running note so the turn it stood in for can take its place.
+ * Nothing else in the transcript moves: the note is always the last block.
+ */
+export function dropKeptRunningNote(session: Session): Session {
+  if (!wasTurnKeptRunning(session)) return session;
+  return { ...session, blocks: session.blocks.slice(0, -1) };
+}
+
+/** When the turn wavex stopped following began. */
+export function lastTurnStartedAt(session: Session): number {
+  for (let index = session.blocks.length - 1; index >= 0; index--) {
+    const block = session.blocks[index];
+    if (block.role === "user" && block.startedAt) return block.startedAt;
+  }
+  return 0;
+}
+
 /**
  * Provider thread exists and the quit note is still the last block.
  * A Continue (or any later user turn) appends after it, so this stays one-shot.
