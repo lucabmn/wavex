@@ -144,6 +144,7 @@ import {
   sendHarnessTurn,
   steerHarnessTurn,
   startHarnessBridge,
+  cancelPendingApprovals,
   stopStreaming,
   pickTextHarness,
   type ApprovalDecision,
@@ -3081,7 +3082,7 @@ export default function App({
       setSessions((prev) =>
         prev.map((s) => {
           if (s.id !== sessionId) return s;
-          const stopped = stopStreaming(s);
+          const stopped = cancelPendingApprovals(stopStreaming(s));
           return isPreparingHandoff(stopped)
             ? completeHandoff(stopped, buildDeterministicHandoff(stopped))
             : stopped;
@@ -3709,8 +3710,14 @@ export default function App({
       ),
       // Answered from the menu bar, so resolve the request where it lives and
       // leave the window exactly as the user left it.
-      listen<MenuBarApprovalAnswer>(MENU_BAR_ANSWER_APPROVAL, ({ payload }) =>
-        actions.current.onApproval(payload.sessionId, payload.requestId, payload.decision),
+      // Scoped to this window's label: a bare listener registers EventTarget::Any
+      // and would receive the host's targeted emit anyway, so every window would
+      // answer the same request.
+      listen<MenuBarApprovalAnswer>(
+        MENU_BAR_ANSWER_APPROVAL,
+        ({ payload }) =>
+          actions.current.onApproval(payload.sessionId, payload.requestId, payload.decision),
+        { target: getCurrentWindow().label },
       ),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {

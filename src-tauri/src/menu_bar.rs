@@ -263,7 +263,9 @@ fn owner_of(session_id: &str) -> Option<String> {
 
 /// Answer without showing any window. The decision goes to the one window that
 /// holds the session, never to every window: two of them mid-transfer would
-/// otherwise both answer the same request.
+/// otherwise both answer the same request. This filter only bites because the
+/// listener in `App.tsx` registers under its own window label — a listener with
+/// no target is `EventTarget::Any` and receives every emit regardless.
 #[tauri::command]
 pub fn menu_bar_answer_approval(
     app: AppHandle,
