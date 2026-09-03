@@ -2110,10 +2110,10 @@ fn command_basename(command: &str) -> &str {
         .unwrap_or(command)
 }
 
-#[cfg(unix)]
 /// Bookkeeping that decides which children a profile switch stops, detaches,
-/// or leaves alone. Kept apart from the process tests below, which need Unix
-/// signals and do not build on Windows.
+/// or leaves alone. Kept apart from the process tests below, which are
+/// `cfg(unix)`: they drive real signals, and the accessors these use would
+/// read as dead code on Windows if they lived there.
 #[cfg(test)]
 mod profile_tests {
     use super::*;
@@ -2163,6 +2163,7 @@ mod profile_tests {
     }
 }
 
+#[cfg(unix)]
 #[cfg(test)]
 mod tests {
     use super::*;
