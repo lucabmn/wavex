@@ -3147,6 +3147,13 @@ export default function App({
     (sessionId: string, requestId: number, decision: ApprovalDecision) => {
       const session = sessionsRef.current.find((s) => s.id === sessionId);
       if (!session) return;
+      // The menu bar answers from a snapshot that lags the window by one
+      // publish, so it can arrive for a request the window already resolved.
+      // Answering twice would reach the harness twice.
+      const undecided = session.blocks.some(
+        (block) => block.approval?.requestId === requestId && !block.approval.decided,
+      );
+      if (!undecided) return;
       respondHarnessApproval(session.harness, sessionId, requestId, decision);
     },
     [],

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ApprovalDecision } from "./harness";
 import { IS_MAC } from "./platform";
-import type { LiveAgent } from "./liveAgents";
+import type { LiveAgent, LiveApproval } from "./liveAgents";
 
 export const MENU_BAR_AGENTS_CHANGED = "menu_bar_agents_changed";
 export const MENU_BAR_FOCUS_SESSION = "focus_session_from_menu_bar";
@@ -12,6 +12,12 @@ export type MenuBarApprovalAnswer = {
   sessionId: string;
   requestId: number;
   decision: ApprovalDecision;
+};
+
+/** One outstanding request, with the session it belongs to. */
+export type MenuBarRequest = {
+  agent: LiveAgent;
+  approval: LiveApproval;
 };
 
 let lastSnapshot = "";
@@ -28,43 +34,44 @@ export function publishMenuBarAgents(agents: LiveAgent[]): void {
   });
 }
 
-/** Sessions blocked on the user, newest request last, in the popover's order. */
-export function pendingApprovalAgents(agents: LiveAgent[]): LiveAgent[] {
-  return agents.filter((agent) => agent.approval != null);
+/** Everything blocked on the user, in the order the agents asked. */
+export function pendingRequests(agents: LiveAgent[]): MenuBarRequest[] {
+  return agents.flatMap((agent) =>
+    (agent.approvals ?? []).map((approval) => ({ agent, approval })),
+  );
 }
 
-export function workingAgents(agents: LiveAgent[]): LiveAgent[] {
-  return agents.filter((agent) => agent.approval == null);
+/** Sessions that are not blocked on the user: they only need a way back in. */
+export function unblockedAgents(agents: LiveAgent[]): LiveAgent[] {
+  return agents.filter((agent) => !agent.approvals?.length);
 }
 
-/** Identity of one request, stable across republished snapshots. */
-export function approvalKey(agent: LiveAgent): string {
-  return `${agent.id}:${agent.approval?.requestId ?? "none"}`;
+/** Identity of one request, so a session moving on remounts its card. */
+export function requestKey(request: MenuBarRequest): string {
+  return `${request.agent.id}:${request.approval.requestId}`;
 }
 
-/** The popover header's one-line state. Mirrors the tray tooltip's wording. */
+/** The popover header's one-line state, waiting requests ahead of busy ones. */
 export function menuBarStatusLabel(agents: LiveAgent[]): string {
-  const waiting = pendingApprovalAgents(agents).length;
+  const waiting = pendingRequests(agents).length;
   if (waiting > 0) return waiting === 1 ? "1 needs you" : `${waiting} need you`;
   const working = agents.filter((agent) => !agent.done).length;
   return working > 0 ? `${working} working` : "All quiet";
 }
 
 /**
- * Answer in the window that owns the session. Resolves false when no window
- * claims it any more — a transferred or closed session can only be answered by
- * opening it.
+ * Answer in the window that owns the session. Resolves false when the host
+ * would not route it — no window claims the session any more — in which case
+ * opening it is the only honest answer left.
  */
 export async function answerMenuBarApproval(
-  agent: LiveAgent,
+  request: MenuBarRequest,
   decision: ApprovalDecision,
 ): Promise<boolean> {
-  const approval = agent.approval;
-  if (!approval) return false;
   try {
     await invoke("menu_bar_answer_approval", {
-      sessionId: agent.id,
-      requestId: approval.requestId,
+      sessionId: request.agent.id,
+      requestId: request.approval.requestId,
       decision,
     });
     return true;

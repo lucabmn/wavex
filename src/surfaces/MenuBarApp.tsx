@@ -9,12 +9,13 @@ import type { ApprovalDecision } from "../lib/harness";
 import { formatLiveElapsed, type LiveAgent } from "../lib/liveAgents";
 import {
   answerMenuBarApproval,
-  approvalKey,
   focusMenuBarAgent,
   MENU_BAR_AGENTS_CHANGED,
   menuBarStatusLabel,
-  pendingApprovalAgents,
-  workingAgents,
+  pendingRequests,
+  requestKey,
+  unblockedAgents,
+  type MenuBarRequest,
 } from "../lib/menuBar";
 import { projectName } from "../lib/paths";
 import { HARNESS_LABEL } from "../lib/session";
@@ -101,7 +102,7 @@ export function MenuBarApp() {
   }, [tab]);
 
   const working = agents.filter((agent) => !agent.done).length;
-  const waiting = pendingApprovalAgents(agents).length;
+  const waiting = pendingRequests(agents).length;
 
   return (
     // The native window carries the popover's corner radius, blur, and shadow,
@@ -121,7 +122,7 @@ export function MenuBarApp() {
               aria-hidden
               className={`size-1.5 rounded-full ${
                 waiting > 0
-                  ? "bg-amber-400 shadow-[0_0_7px_var(--color-amber-400,#fbbf24)]"
+                  ? "bg-amber-400 shadow-[0_0_7px] shadow-amber-400/70"
                   : working > 0
                     ? "bg-accent shadow-[0_0_7px_var(--color-accent)]"
                     : "bg-content/20"
@@ -230,8 +231,8 @@ function MenuTabButton({
 function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean }) {
   const [now, setNow] = useState(() => Date.now());
   const ticking = focused && agents.some((agent) => !agent.done && agent.startedAt != null);
-  const waiting = pendingApprovalAgents(agents);
-  const running = workingAgents(agents);
+  const waiting = pendingRequests(agents);
+  const idle = unblockedAgents(agents);
 
   useEffect(() => {
     if (!ticking) return;
@@ -262,19 +263,19 @@ function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean 
             <div>
               <GroupLabel>Waiting for you</GroupLabel>
               <ul className="flex flex-col gap-1.5">
-                {waiting.map((agent) => (
-                  <li key={approvalKey(agent)}>
-                    <ApprovalCard agent={agent} />
+                {waiting.map((request) => (
+                  <li key={requestKey(request)}>
+                    <ApprovalCard request={request} />
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
-          {running.length > 0 ? (
+          {idle.length > 0 ? (
             <div>
-              {waiting.length > 0 ? <GroupLabel>Running</GroupLabel> : null}
+              {waiting.length > 0 ? <GroupLabel>Other sessions</GroupLabel> : null}
               <ul className="flex flex-col gap-1">
-                {running.map((agent) => (
+                {idle.map((agent) => (
                   <li key={agent.id}>
                     <AgentRow agent={agent} now={now} />
                   </li>
@@ -296,25 +297,35 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** How long an answer may stay in flight before the card offers itself again. */
+const ANSWER_TIMEOUT_MS = 5_000;
+
 /**
  * A blocked turn, answerable without restoring the window. It shows exactly
  * what the in-window approval shows — no repository contents, prompts, or paths
  * beyond that summary.
  */
-export function ApprovalCard({ agent }: { agent: LiveAgent }) {
+export function ApprovalCard({ request }: { request: MenuBarRequest }) {
   const [answer, setAnswer] = useState<ApprovalDecision | null>(null);
-  const approval = agent.approval;
-  if (!approval) return null;
-
+  const { agent, approval } = request;
   const project = projectName(agent.cwd);
   const question = approval.kind === "question";
+
+  useEffect(() => {
+    if (!answer) return;
+    // A resolved request republishes the snapshot, which unmounts this card. If
+    // that never arrives the owning window dropped the answer, so hand the
+    // buttons back rather than leaving a card stuck on "Allowing…".
+    const timer = window.setTimeout(() => setAnswer(null), ANSWER_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [answer]);
 
   const respond = (decision: ApprovalDecision) => {
     // The round trip goes popover -> host -> owning window -> harness, so lock
     // the card on the first click; Allow then Deny is otherwise one slip away.
     if (answer) return;
     setAnswer(decision);
-    void answerMenuBarApproval(agent, decision).then((sent) => {
+    void answerMenuBarApproval(request, decision).then((sent) => {
       if (sent) return;
       // No window owns the session any more. Opening it is the only honest
       // remaining answer.

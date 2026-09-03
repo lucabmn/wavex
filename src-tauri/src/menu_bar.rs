@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use tauri::{AppHandle, Emitter, EventTarget, Manager, WebviewWindow};
 
 pub const WINDOW_LABEL: &str = "menu-bar";
 const TRAY_ID: &str = "wavex-menu-bar";
@@ -78,6 +78,13 @@ fn popup_position_for(
     Some((x, y))
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ApprovalDecision {
+    Allow,
+    Deny,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MenuBarApproval {
@@ -98,8 +105,8 @@ pub struct MenuBarAgent {
     started_at: Option<u64>,
     duration_ms: Option<u64>,
     needs_approval: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    approval: Option<MenuBarApproval>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    approvals: Vec<MenuBarApproval>,
     done: bool,
 }
 
@@ -108,7 +115,7 @@ pub struct MenuBarAgent {
 struct ApprovalAnswer {
     session_id: String,
     request_id: i64,
-    decision: String,
+    decision: ApprovalDecision,
 }
 
 /// Trim on a character boundary so a multi-byte summary cannot panic the host.
@@ -171,7 +178,8 @@ pub fn menu_bar_update_agents(window: WebviewWindow, mut agents: Vec<MenuBarAgen
     // native cache. Real app windows never approach this limit.
     agents.truncate(100);
     for agent in &mut agents {
-        if let Some(approval) = agent.approval.as_mut() {
+        agent.approvals.truncate(20);
+        for approval in &mut agent.approvals {
             approval.label = clamp_label(&approval.label);
         }
     }
@@ -203,10 +211,7 @@ fn publish(app: &AppHandle) {
     }
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let working = agents.iter().filter(|agent| !agent.done).count();
-        let waiting = agents
-            .iter()
-            .filter(|agent| agent.approval.is_some())
-            .count();
+        let waiting: usize = agents.iter().map(|agent| agent.approvals.len()).sum();
         // tray-icon's macOS `None` path does not clear a previous title, but
         // assigning an empty title does.
         let (title, tooltip) = tray_status(waiting, working);
@@ -216,13 +221,14 @@ fn publish(app: &AppHandle) {
 }
 
 /// A blocked turn outranks a busy one: it is the only state the user can clear.
+/// "Requests", not "approvals": a clarifying question parks a turn just as hard.
 fn tray_status(waiting: usize, working: usize) -> (String, String) {
     if waiting > 0 {
         let title = format!("!{}", waiting.min(99));
         let tooltip = if waiting == 1 {
-            "wavex — 1 approval waiting".to_string()
+            "wavex — 1 request waiting for you".to_string()
         } else {
-            format!("wavex — {waiting} approvals waiting")
+            format!("wavex — {waiting} requests waiting for you")
         };
         return (title, tooltip);
     }
@@ -255,33 +261,30 @@ fn owner_of(session_id: &str) -> Option<String> {
     })
 }
 
-/// Answer without showing the popover's owner window. The decision is routed to
-/// the one window holding the session, never broadcast: two windows mid-transfer
-/// would otherwise both answer the same request.
+/// Answer without showing any window. The decision goes to the one window that
+/// holds the session, never to every window: two of them mid-transfer would
+/// otherwise both answer the same request.
 #[tauri::command]
 pub fn menu_bar_answer_approval(
     app: AppHandle,
     session_id: String,
     request_id: i64,
-    decision: String,
+    decision: ApprovalDecision,
 ) -> Result<(), String> {
-    if decision != "allow" && decision != "deny" {
-        return Err(format!("unsupported approval decision: {decision}"));
-    }
     let label = owner_of(&session_id).ok_or("no window owns this session")?;
-    let window = app
-        .get_webview_window(&label)
-        .ok_or("the window that owns this session is gone")?;
-    window
-        .emit(
-            ANSWER_APPROVAL,
-            ApprovalAnswer {
-                session_id,
-                request_id,
-                decision,
-            },
-        )
-        .map_err(|error| error.to_string())
+    if app.get_webview_window(&label).is_none() {
+        return Err("the window that owns this session is gone".into());
+    }
+    app.emit_to(
+        EventTarget::webview_window(&label),
+        ANSWER_APPROVAL,
+        ApprovalAnswer {
+            session_id,
+            request_id,
+            decision,
+        },
+    )
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -457,12 +460,16 @@ mod tests {
             started_at: Some(started_at),
             duration_ms: None,
             needs_approval,
-            approval: needs_approval.then(|| MenuBarApproval {
-                request_id: 1,
-                kind: "approval".into(),
-                label: "Edit src/main.rs".into(),
-                answerable: true,
-            }),
+            approvals: if needs_approval {
+                vec![MenuBarApproval {
+                    request_id: 1,
+                    kind: "approval".into(),
+                    label: "Edit src/main.rs".into(),
+                    answerable: true,
+                }]
+            } else {
+                Vec::new()
+            },
             done: false,
         }
     }
@@ -521,7 +528,7 @@ mod tests {
     fn a_waiting_approval_outranks_working_agents_in_the_status_item() {
         assert_eq!(
             tray_status(2, 5),
-            ("!2".into(), "wavex — 2 approvals waiting".into())
+            ("!2".into(), "wavex — 2 requests waiting for you".into())
         );
         assert_eq!(
             tray_status(0, 1),

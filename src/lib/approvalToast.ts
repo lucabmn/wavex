@@ -10,29 +10,44 @@ export type PendingApprovalNotice = {
   block?: Block;
 };
 
+/**
+ * Every undecided request in a session, in transcript order. A clarifying
+ * question parks the whole turn, so it is the only outstanding request while
+ * it lasts.
+ */
+export function pendingApprovalsForSession(session: Session): PendingApprovalNotice[] {
+  if (session.pendingQuestion) {
+    return [
+      {
+        sessionId: session.id,
+        requestId: session.pendingQuestion.requestId,
+        label:
+          session.pendingQuestion.title ||
+          session.pendingQuestion.questions[0]?.prompt ||
+          "Question",
+        kind: "question",
+      },
+    ];
+  }
+  return session.blocks.flatMap((block) => {
+    const approval = block.approval;
+    if (!approval || approval.decided) return [];
+    return [
+      {
+        sessionId: session.id,
+        requestId: approval.requestId,
+        label: toolCallLabel(block, session.cwd),
+        kind: "approval" as const,
+        block,
+      },
+    ];
+  });
+}
+
 /** Latest undecided approval or clarifying question in a session, if any. */
 export function pendingApprovalForSession(session: Session): PendingApprovalNotice | null {
-  if (session.pendingQuestion) {
-    return {
-      sessionId: session.id,
-      requestId: session.pendingQuestion.requestId,
-      label:
-        session.pendingQuestion.title || session.pendingQuestion.questions[0]?.prompt || "Question",
-      kind: "question",
-    };
-  }
-  for (let i = session.blocks.length - 1; i >= 0; i--) {
-    const block = session.blocks[i];
-    if (!block.approval || block.approval.decided) continue;
-    return {
-      sessionId: session.id,
-      requestId: block.approval.requestId,
-      label: toolCallLabel(block, session.cwd),
-      kind: "approval",
-      block,
-    };
-  }
-  return null;
+  const pending = pendingApprovalsForSession(session);
+  return pending[pending.length - 1] ?? null;
 }
 
 /** True when the conversation pane for this session is focused and active. */

@@ -1,20 +1,24 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { LiveAgent } from "@/lib/liveAgents";
+import type { LiveApproval } from "@/lib/liveAgents";
+import type { MenuBarRequest } from "@/lib/menuBar";
 import { ApprovalCard, MenuBarApp } from "@/surfaces/MenuBarApp";
 
-function waitingAgent(approval: LiveAgent["approval"]): LiveAgent {
+function request(approval: LiveApproval): MenuBarRequest {
   return {
-    id: "s1",
-    cwd: "/tmp/wavex",
-    title: "Fix the sidebar",
-    harness: "claude",
-    activity: "Edited src/App.tsx",
-    startedAt: 1_000,
-    needsApproval: true,
+    agent: {
+      id: "s1",
+      cwd: "/tmp/wavex",
+      title: "Fix the sidebar",
+      harness: "claude",
+      activity: approval.label,
+      startedAt: 1_000,
+      needsApproval: true,
+      approvals: [approval],
+      done: false,
+    },
     approval,
-    done: false,
   };
 }
 
@@ -35,7 +39,7 @@ describe("ApprovalCard", () => {
   it("offers both in-window answers with the session's own context", () => {
     const markup = renderToStaticMarkup(
       createElement(ApprovalCard, {
-        agent: waitingAgent({
+        request: request({
           requestId: 7,
           kind: "approval",
           label: "Edited src/App.tsx",
@@ -54,7 +58,7 @@ describe("ApprovalCard", () => {
   it("falls back to opening the session when the request cannot be answered here", () => {
     const markup = renderToStaticMarkup(
       createElement(ApprovalCard, {
-        agent: waitingAgent({
+        request: request({
           requestId: 4,
           kind: "question",
           label: "Which file?",

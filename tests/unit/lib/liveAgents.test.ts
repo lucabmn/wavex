@@ -117,15 +117,17 @@ describe("liveAgentsFromSessions", () => {
         },
       ],
     });
-    expect(liveAgentsFromSessions([waiting])[0]?.approval).toEqual({
-      requestId: 7,
-      kind: "approval",
-      label: "Edited src/App.tsx",
-      answerable: true,
-    });
+    expect(liveAgentsFromSessions([waiting])[0]?.approvals).toEqual([
+      {
+        requestId: 7,
+        kind: "approval",
+        label: "Edited src/App.tsx",
+        answerable: true,
+      },
+    ]);
   });
 
-  it("answers the latest request when a session stacked two approvals", () => {
+  it("lists every request when a session stacked two approvals", () => {
     const waiting = chat("/tmp/b", {
       busy: true,
       blocks: [
@@ -134,22 +136,33 @@ describe("liveAgentsFromSessions", () => {
         { id: "a2", role: "approval", text: "Read b.ts", approval: { requestId: 2 } },
       ],
     });
-    expect(liveAgentsFromSessions([waiting])[0]?.approval).toMatchObject({
-      requestId: 2,
-      label: "Read b.ts",
-    });
+    const agent = liveAgentsFromSessions([waiting])[0];
+    expect(agent?.approvals?.map((request) => request.label)).toEqual(["Read a.ts", "Read b.ts"]);
+    expect(agent?.activity).toBe("Read b.ts");
   });
 
   it("refuses to offer a blind answer for an approval it cannot summarize", () => {
-    const waiting = chat("/tmp/b", {
+    const nameless = chat("/tmp/b", {
       busy: true,
       blocks: [
         { id: "u1", role: "user", text: "go", startedAt: 2_000 },
         { id: "a1", role: "approval", text: "", approval: { requestId: 3 } },
       ],
     });
-    expect(liveAgentsFromSessions([waiting])[0]?.approval).toMatchObject({
+    // A bare tool name describes the tool, not what it is about to do.
+    const weak = chat("/tmp/c", {
+      busy: true,
+      blocks: [
+        { id: "u1", role: "user", text: "go", startedAt: 2_000 },
+        { id: "a1", role: "approval", text: "Run command", approval: { requestId: 4 } },
+      ],
+    });
+    expect(liveAgentsFromSessions([nameless])[0]?.approvals?.[0]).toMatchObject({
       requestId: 3,
+      answerable: false,
+    });
+    expect(liveAgentsFromSessions([weak])[0]?.approvals?.[0]).toMatchObject({
+      requestId: 4,
       answerable: false,
     });
   });
@@ -171,12 +184,14 @@ describe("liveAgentsFromSessions", () => {
         ],
       },
     });
-    expect(liveAgentsFromSessions([waiting])[0]?.approval).toEqual({
-      requestId: 4,
-      kind: "question",
-      label: "Which file?",
-      answerable: false,
-    });
+    expect(liveAgentsFromSessions([waiting])[0]?.approvals).toEqual([
+      {
+        requestId: 4,
+        kind: "question",
+        label: "Which file?",
+        answerable: false,
+      },
+    ]);
   });
 
   it("drops the request once the approval is decided", () => {
@@ -193,7 +208,7 @@ describe("liveAgentsFromSessions", () => {
       ],
     });
     const agent = liveAgentsFromSessions([decided])[0];
-    expect(agent?.approval).toBeUndefined();
+    expect(agent?.approvals).toBeUndefined();
     expect(agent?.needsApproval).toBe(false);
   });
 

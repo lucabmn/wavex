@@ -1,5 +1,5 @@
-import { pendingApprovalForSession, type PendingApprovalNotice } from "./approvalToast";
-import { composeToolTitle } from "./harness/preview";
+import { pendingApprovalsForSession, type PendingApprovalNotice } from "./approvalToast";
+import { composeToolTitle, isWeakToolTitle } from "./harness/preview";
 import { isInFlightSession } from "./inFlight";
 import { displayPath } from "./paths";
 import { sessionDisplayTitle, type Block, type HarnessId, type Session } from "./session";
@@ -26,7 +26,8 @@ export type LiveAgent = {
   startedAt?: number;
   durationMs?: number;
   needsApproval: boolean;
-  approval?: LiveApproval;
+  /** Every request blocking this session, oldest first. */
+  approvals?: LiveApproval[];
   done: boolean;
 };
 
@@ -53,10 +54,10 @@ export function formatLiveElapsed(startedAt: number, now: number): string {
 
 function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
   // One selector behind the toast and the menu bar, so the two surfaces can
-  // never disagree about which request is outstanding.
-  const pending = pendingApprovalForSession(session);
+  // never disagree about which requests are outstanding.
+  const pending = pendingApprovalsForSession(session);
+  const latest = pending[pending.length - 1];
   const done = unseenFinished && !isInFlightSession(session);
-  const approval = pending ? toLiveApproval(pending) : undefined;
   return {
     id: session.id,
     cwd: session.cwd,
@@ -64,13 +65,13 @@ function toLiveAgent(session: Session, unseenFinished: boolean): LiveAgent {
     harness: session.harness,
     activity: done
       ? "Done"
-      : pending
-        ? pending.label
+      : latest
+        ? latest.label
         : activityLabel(lastActivityBlock(session.blocks), session.cwd),
     startedAt: turnStartedAt(session.blocks),
     durationMs: done ? turnDurationMs(session.blocks) : undefined,
-    needsApproval: Boolean(pending),
-    ...(approval ? { approval } : {}),
+    needsApproval: pending.length > 0,
+    ...(pending.length > 0 ? { approvals: pending.map(toLiveApproval) } : {}),
     done,
   };
 }
@@ -80,25 +81,20 @@ function toLiveApproval(pending: PendingApprovalNotice): LiveApproval {
     requestId: pending.requestId,
     kind: pending.kind,
     label: pending.label,
-    answerable: pending.kind === "approval" && describesToolCall(pending.block),
+    answerable: pending.kind === "approval" && describesToolCall(pending),
   };
 }
 
 /**
- * A tool call carries its own description. Without one the label degrades to a
- * generic placeholder, which is not enough to approve a write in a real
- * checkout from outside the window.
+ * A bare "Edit" or "Run command" names the tool, not the act. Approving a write
+ * in a real checkout on that much is a blind answer, so those requests keep the
+ * session as their only surface.
  */
-function describesToolCall(block: Block | undefined): boolean {
-  if (!block) return false;
-  const preview = block.tool?.preview;
-  return Boolean(
-    block.text?.trim() ||
-    block.tool?.title?.trim() ||
-    preview?.path ||
-    preview?.fileName ||
-    preview?.query,
-  );
+function describesToolCall(pending: PendingApprovalNotice): boolean {
+  const preview = pending.block?.tool?.preview;
+  if (preview?.path || preview?.fileName || preview?.query) return true;
+  const label = pending.label.trim();
+  return label.length > 0 && !isWeakToolTitle(label);
 }
 
 function compareLiveAgents(a: LiveAgent, b: LiveAgent): number {
