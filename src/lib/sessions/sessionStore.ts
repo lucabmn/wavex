@@ -382,19 +382,22 @@ function asHarness(value: string): HarnessId {
   return (HARNESSES as string[]).includes(value) ? (value as HarnessId) : "cursor";
 }
 
-const HANDOFF_STATUSES: HandoffStatus[] = ["preparing", "ready"];
+const HANDOFF_STATUSES: HandoffStatus[] = ["preparing", "review", "ready"];
 
 function sanitizeHandoff(value: Block["handoff"]): HandoffMeta | undefined {
   if (!value) return undefined;
   if (!(HARNESSES as string[]).includes(value.from)) return undefined;
   if (!(HARNESSES as string[]).includes(value.to)) return undefined;
   if (!HANDOFF_STATUSES.includes(value.status)) return undefined;
-  const interrupted = value.status === "preparing";
+  // A restart during writing or review leaves the brief unsent; keep it queued
+  // so the next message still carries it instead of dropping the context.
+  const interrupted = value.status !== "ready";
   return {
     from: value.from,
     to: value.to,
     status: "ready",
     pending: interrupted || !!value.pending,
+    ...(value.briefed ? { briefed: true as const } : {}),
   };
 }
 
@@ -413,6 +416,10 @@ function sanitizeSecondOpinion(value: Block["secondOpinion"]): SecondOpinionMeta
     ...(request ? { request } : {}),
     ...(files > 0 ? { files } : {}),
     ...(value.kind === "handoff" ? { kind: "handoff" as const } : {}),
+    ...(typeof value.sourceSessionId === "string" && value.sourceSessionId
+      ? { sourceSessionId: value.sourceSessionId }
+      : {}),
+    ...(value.briefed ? { briefed: true as const } : {}),
   };
 }
 

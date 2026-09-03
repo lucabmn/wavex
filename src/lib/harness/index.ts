@@ -29,6 +29,7 @@ export {
   forgetHarnessSession,
   bindHarnessSession,
   refreshHarnessCatalogs,
+  generateHarnessHandoffBrief,
   generateHarnessTitle,
   generateHarnessCommitMessage,
   generateHarnessPrContent,

@@ -1,12 +1,15 @@
-import { ChevronRight } from "./icons";
+import { ChevronRight, MessageSquare, Sparkles } from "./icons";
 import { HARNESS_TITLE, type SecondOpinionMeta } from "../lib/session";
 import { HarnessIcon } from "./HarnessIcon";
 
 type Props = {
   card: SecondOpinionMeta;
+  /** Open the session this turn was handed off from. */
+  onOpenSource?: (sessionId: string) => void;
 };
 
-export function SecondOpinionCard({ card }: Props) {
+export function SecondOpinionCard({ card, onOpenSource }: Props) {
+  const source = card.sourceSessionId;
   const files =
     card.files != null && card.files > 0
       ? `${card.files} ${card.files === 1 ? "file" : "files"}`
@@ -25,6 +28,23 @@ export function SecondOpinionCard({ card }: Props) {
         <span className="truncate">{HARNESS_TITLE[card.to]}</span>
       </div>
       {files ? <div className="mt-1 text-[11px] leading-4 text-content/45">{files}</div> : null}
+      {card.briefed ? (
+        <div className="mt-1 flex items-center gap-1 text-[11px] leading-4 text-content/45">
+          <Sparkles className="size-3 shrink-0" strokeWidth={1.75} />
+          <span>Started from a briefing</span>
+        </div>
+      ) : null}
+      {source && onOpenSource ? (
+        <button
+          type="button"
+          // The briefing is a summary; the full transcript has to stay one click away.
+          onClick={() => onOpenSource(source)}
+          className="mt-1 flex items-center gap-1 rounded text-[11px] leading-4 text-content/50 hover:text-content"
+        >
+          <MessageSquare className="size-3 shrink-0" strokeWidth={1.75} />
+          <span className="underline underline-offset-2">Open the original session</span>
+        </button>
+      ) : null}
     </div>
   );
 }

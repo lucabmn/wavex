@@ -61,6 +61,10 @@ type Shared = {
   onOpenPlan: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
+  onHandoffSend?: (sessionId: string, brief: string) => void;
+  onHandoffBriefChange?: (sessionId: string, brief: string) => void;
+  onHandoffCardChange?: (sessionId: string, brief: string) => void;
+  onOpenSourceSession?: (sessionId: string) => void;
   onMovePane: (fromId: string, toId: string, edge: PaneEdge) => void;
   onNewTerminal: (sessionId: string) => void;
   onTerminalMetaChange?: (fileId: string, patch: TerminalMetaPatch) => void;
@@ -113,6 +117,10 @@ function PaneTreeComponent({
   onOpenPlan,
   onSecondOpinion,
   onHandoff,
+  onHandoffSend,
+  onHandoffBriefChange,
+  onHandoffCardChange,
+  onOpenSourceSession,
   onMovePane,
   onNewTerminal,
   onTerminalMetaChange,
@@ -288,6 +296,10 @@ function PaneTreeComponent({
                 onOpenPlan={onOpenPlan}
                 onSecondOpinion={onSecondOpinion}
                 onHandoff={onHandoff}
+                onHandoffSend={onHandoffSend}
+                onHandoffBriefChange={onHandoffBriefChange}
+                onHandoffCardChange={onHandoffCardChange}
+                onOpenSourceSession={onOpenSourceSession}
                 onNewTerminal={onNewTerminal}
                 onPaneDragStart={onPaneDragStart}
               />

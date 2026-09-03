@@ -97,6 +97,44 @@ describe("sanitizeSessionForPersist", () => {
     });
   });
 
+  it("queues an unsent briefing so a restart does not drop it", () => {
+    const session = newSession("cursor", "/tmp/project");
+    session.blocks = [
+      { id: "u1", role: "user", text: "hey" },
+      {
+        id: "h1",
+        role: "handoff",
+        text: "Session so far: retry banner",
+        handoff: { from: "cursor", to: "claude", status: "review", briefed: true },
+      },
+    ];
+    expect(sanitizeSessionForPersist(session).blocks[1]).toMatchObject({
+      text: "Session so far: retry banner",
+      handoff: { from: "cursor", to: "claude", status: "ready", pending: true, briefed: true },
+    });
+  });
+
+  it("keeps the source session reachable from a handed-off turn", () => {
+    const session = newSession("codex", "/tmp/project");
+    session.blocks = [
+      {
+        id: "u1",
+        role: "user",
+        text: "Handoff",
+        secondOpinion: {
+          from: "claude",
+          to: "codex",
+          kind: "handoff",
+          sourceSessionId: "session-1",
+          briefed: true,
+        },
+      },
+    ];
+    expect(sanitizeSessionForPersist(session).blocks[0]).toMatchObject({
+      secondOpinion: { sourceSessionId: "session-1", briefed: true },
+    });
+  });
+
   it("keeps a second-opinion card on the user turn", () => {
     const session = newSession("codex", "/tmp/project");
     session.blocks = [

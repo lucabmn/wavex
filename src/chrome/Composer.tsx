@@ -117,6 +117,7 @@ type Props = {
   onInboxCardDismiss?: () => void;
   onNoteCardDismiss?: () => void;
   onHandoffCardDismiss?: () => void;
+  onHandoffCardChange?: (brief: string) => void;
   onQuestionReply?: (requestId: number, reply: UserQuestionReply) => void;
   onSubmit: (text: string, attachments: Attachment[]) => void;
   onStop?: () => void;
@@ -188,6 +189,7 @@ export function Composer({
   onInboxCardDismiss,
   onNoteCardDismiss,
   onHandoffCardDismiss,
+  onHandoffCardChange,
   onQuestionReply,
   onSubmit,
   onStop,
@@ -822,7 +824,11 @@ export function Composer({
           {noteCard ? <NoteMiniCard card={noteCard} onDismiss={onNoteCardDismiss} /> : null}
 
           {handoffCard ? (
-            <HandoffMiniCard card={handoffCard} onDismiss={onHandoffCardDismiss} />
+            <HandoffMiniCard
+              card={handoffCard}
+              onDismiss={onHandoffCardDismiss}
+              onBriefChange={onHandoffCardChange}
+            />
           ) : null}
 
           <div className="relative">

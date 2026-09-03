@@ -10,7 +10,7 @@ import {
 import { refreshPiCatalog } from "./piCatalog";
 import { runTextPrompt, warmupPiText } from "./piText";
 import { PI_FLAVOR } from "./piFlavor";
-import { createSessionTitleGenerator } from "./textGenerators";
+import { createHandoffBriefGenerator, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
 export const piAdapter: HarnessAdapter = {
@@ -25,6 +25,7 @@ export const piAdapter: HarnessAdapter = {
   bindSession: bindPiSession,
   refreshCatalog: refreshPiCatalog,
   generateTitle: createSessionTitleGenerator((input) => runTextPrompt(PI_FLAVOR, input)),
+  generateHandoffBrief: createHandoffBriefGenerator((input) => runTextPrompt(PI_FLAVOR, input)),
   warmupText: warmupPiText,
 };
 

@@ -1,4 +1,5 @@
 import { gitRangeContext, gitStagedContext } from "../fs";
+import { buildHandoffBriefPrompt, parseHandoffBrief } from "../handoff";
 import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
@@ -22,6 +23,7 @@ export type TextPromptRunner = (input: {
 }) => Promise<string>;
 
 const TITLE_TIMEOUT_MS = 45_000;
+const HANDOFF_BRIEF_TIMEOUT_MS = 60_000;
 const DEFAULT_GIT_TIMEOUT_MS = 90_000;
 
 export function createSessionTitleGenerator(run: TextPromptRunner) {
@@ -39,6 +41,31 @@ export function createSessionTitleGenerator(run: TextPromptRunner) {
       return parseGeneratedThreadTitle(output);
     } catch (error) {
       console.debug("[wavex] session title", error);
+      return null;
+    }
+  };
+}
+
+/**
+ * Briefing for a session handed to another harness. Stateless on purpose: the
+ * source session must keep its own child untouched, so the transcript travels
+ * in the prompt instead of being asked of a live conversation.
+ */
+export function createHandoffBriefGenerator(run: TextPromptRunner) {
+  return async function generateHandoffBrief(
+    cwd: string,
+    transcript: string,
+  ): Promise<string | null> {
+    if (!transcript.trim()) return null;
+    try {
+      const output = await run({
+        cwd,
+        prompt: buildHandoffBriefPrompt(transcript),
+        timeoutMs: HANDOFF_BRIEF_TIMEOUT_MS,
+      });
+      return parseHandoffBrief(output) || null;
+    } catch (error) {
+      console.debug("[wavex] handoff brief", error);
       return null;
     }
   };

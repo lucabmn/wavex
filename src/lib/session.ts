@@ -33,7 +33,11 @@ export type BlockRole =
   | "system"
   | "handoff";
 
-export type HandoffStatus = "preparing" | "ready";
+/**
+ * `preparing` while the briefing is being written, `review` while the user can
+ * read and edit it, `ready` once it is the text that gets sent.
+ */
+export type HandoffStatus = "preparing" | "review" | "ready";
 
 export type HandoffMeta = {
   from: HarnessId;
@@ -41,6 +45,8 @@ export type HandoffMeta = {
   status: HandoffStatus;
   /** Inject this brief into prompts to `to` until that harness accepts a turn. */
   pending?: boolean;
+  /** The briefing came from the outgoing agent rather than the plain recap. */
+  briefed?: boolean;
 };
 
 /** Compact transcript card for a second-opinion or split-pane handoff turn. */
@@ -51,6 +57,10 @@ export type SecondOpinionMeta = {
   files?: number;
   /** Split-pane continue. Default is a second-opinion review. */
   kind?: "handoff";
+  /** Session this turn was handed off from, so its transcript stays reachable. */
+  sourceSessionId?: string;
+  /** This turn started from an agent-written briefing rather than a plain recap. */
+  briefed?: boolean;
 };
 
 export type ToolPreviewKind = "read" | "write" | "shell" | "search";

@@ -10,7 +10,11 @@ import {
 } from "./claude";
 import { refreshClaudeCatalog } from "./claudeCatalog";
 import { runClaudeTextPrompt, warmupClaudeText } from "./claudeText";
-import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
+import {
+  createGitTextGenerators,
+  createHandoffBriefGenerator,
+  createSessionTitleGenerator,
+} from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
 const gitText = createGitTextGenerators(runClaudeTextPrompt, "Claude Code");
@@ -28,6 +32,7 @@ export const claudeAdapter: HarnessAdapter = {
   bindSession: bindClaudeSession,
   refreshCatalog: refreshClaudeCatalog,
   generateTitle: createSessionTitleGenerator(runClaudeTextPrompt),
+  generateHandoffBrief: createHandoffBriefGenerator(runClaudeTextPrompt),
   generateCommitMessage: gitText.generateCommitMessage,
   generatePrContent: gitText.generatePrContent,
   generateBranchName: gitText.generateBranchName,
