@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-09-03
+
+- Add custom prompt templates saved to projects, accessible from the Composer
+  picker, and editable from the composer chrome.
+- Show a persistent footer in the Work sidebar matching the Coding view's
+  context display.
+- Add profile-switch overlay in the app header for quick profile navigation.
+- Improve skill picker search and rendering for better category visibility.
+- Enhance live-agent monitoring and session state tracking.
+- Improve menu bar context menu and approval toast behavior.
+
 ## [0.4.0] - 2026-09-03
 
 - Run wavex on Linux and Windows with native terminals, cross-platform CLI
