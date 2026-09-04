@@ -754,14 +754,19 @@ function LanguageServersPage() {
         const binary = languageServerBinary(server.id);
         const live = running.filter((entry) => entry.serverId === server.id);
         const choice = languageServerChoice(server.id);
+        const failure = live.find((entry) => entry.status.state === "failed")?.status;
         return (
           <Row
             key={server.id}
             label={server.name}
             description={
-              binary
-                ? `Found ${binary}. Covers ${server.extensions.join(", ")}.`
-                : `Not installed. Install it with \`${server.installHint}\`.`
+              // A failure says what went wrong, in the server's own words.
+              // "Failed to start" alone leaves the user nowhere to go.
+              failure?.state === "failed"
+                ? failure.message
+                : binary
+                  ? `Found ${binary}. Covers ${server.extensions.join(", ")}.`
+                  : `Not installed. Install it with \`${server.installHint}\`.`
             }
           >
             <span className="text-[11.5px] whitespace-nowrap text-content/50">

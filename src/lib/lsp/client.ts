@@ -37,6 +37,9 @@ const INITIALIZE_TIMEOUT_MS = 60_000;
 /** Long enough for rust-analyzer to flush, short enough not to hold a quit. */
 const SHUTDOWN_TIMEOUT_MS = 1_500;
 
+/** Enough of a failing server's output to say what went wrong. */
+const MAX_STDERR_LINES = 10;
+
 export type LspStatus =
   | { state: "starting" }
   | { state: "ready" }
@@ -62,6 +65,8 @@ export class LspClient {
   private stopped = false;
   /** Last stderr lines, so a failed start can say why rather than "failed". */
   private readonly stderr: string[] = [];
+  /** Set once the server has failed, so late stderr can still explain it. */
+  private failure: string | null = null;
 
   constructor(
     readonly server: LanguageServerDefinition,
@@ -77,8 +82,7 @@ export class LspClient {
   /** Idempotent: every document that opens against this server awaits it. */
   start(): Promise<void> {
     this.ready ??= this.handshake().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      this.events.onStatus({ state: "failed", message: this.explain(message) });
+      this.fail(error instanceof Error ? error.message : String(error));
       // Rethrow so callers `catch` rather than proceed against a dead server.
       throw error;
     });
@@ -325,13 +329,10 @@ export class LspClient {
       {
         onMessage: (message) => connection.push(message),
         onStderr: (line) => this.rememberStderr(line),
-        onExit: () => {
+        onExit: (code) => {
           connection.close("The language server exited");
           if (this.stopped) return;
-          this.events.onStatus({
-            state: "failed",
-            message: this.explain(`${this.server.name} exited`),
-          });
+          this.fail(`${this.server.name} exited${code === null ? "" : ` with code ${code}`}`);
         },
       },
     );
@@ -439,14 +440,26 @@ export class LspClient {
     return null;
   }
 
+  /**
+   * A child that dies on the first line writes its reason to stderr, and that
+   * write races the exit. Whatever arrives after a failure is folded into the
+   * message, so "exited" becomes "exited: env: node: no such file".
+   */
   private rememberStderr(line: string): void {
     this.stderr.push(line);
-    if (this.stderr.length > 10) this.stderr.shift();
+    if (this.stderr.length > MAX_STDERR_LINES) this.stderr.shift();
+    if (this.failure) this.events.onStatus({ state: "failed", message: this.explain() });
   }
 
-  private explain(message: string): string {
+  private fail(message: string): void {
+    this.failure = message;
+    this.events.onStatus({ state: "failed", message: this.explain() });
+  }
+
+  private explain(): string {
+    const message = this.failure ?? `${this.server.name} failed to start`;
     const detail = this.stderr.filter(Boolean).slice(-2).join(" ");
-    return detail ? `${message}: ${detail}` : message;
+    return detail ? `${message} — ${detail}` : message;
   }
 }
 

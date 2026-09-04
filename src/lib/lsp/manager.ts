@@ -231,6 +231,26 @@ export function clientForOpenDocument(path: string): LspClient | null {
   return null;
 }
 
+/**
+ * Drop the failed instances of one definition so the next open starts fresh.
+ *
+ * Only on an explicit retry. A failed client is otherwise kept and reused —
+ * returning its rejected start immediately — so a server that cannot run is not
+ * respawned on every file the user opens.
+ */
+export async function retryLspServersFor(serverId: string): Promise<void> {
+  const failed = [...entries.entries()].filter(
+    ([, entry]) => entry.client.server.id === serverId && entry.status.state === "failed",
+  );
+  if (failed.length === 0) return;
+  for (const [key, entry] of failed) {
+    clearIdle(entry);
+    entries.delete(key);
+  }
+  emitStatus();
+  await Promise.all(failed.map(([, entry]) => entry.client.stop().catch(() => undefined)));
+}
+
 /** Stop every running instance of one definition, e.g. when it is turned off. */
 export async function stopLspServersFor(serverId: string): Promise<void> {
   const stopping = [...entries.entries()].filter(

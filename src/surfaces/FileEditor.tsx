@@ -24,9 +24,9 @@ import {
 } from "@codemirror/view";
 import { AlertCircle, ChevronDown, ChevronUp, RotateCcw } from "../chrome/icons";
 import { minimalSetup } from "codemirror";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownViewShell, useMarkdownMode } from "../chrome/MarkdownModeToggle";
-import { LanguageServerOffer } from "../chrome/LanguageServerOffer";
+import { LanguageServerBar } from "../chrome/LanguageServerBar";
 import { RenameSymbolDialog } from "../chrome/RenameSymbolDialog";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -72,7 +72,7 @@ import { editorSearch } from "../lib/editor/editorSearch";
 import { acquireDocument } from "../lib/lsp/manager";
 import { probeLanguageServers } from "../lib/lsp/availability";
 import { languageServerChoice, subscribeLanguageServerChoices } from "../lib/lsp/enabled";
-import { serverForPath, type LanguageServerDefinition } from "../lib/lsp/servers";
+import { serverForPath } from "../lib/lsp/servers";
 
 type EditorNavigationRequest = EditorNavigation & { token: number };
 
@@ -472,8 +472,8 @@ function CodeMirrorEditor({
   // server extension reads through it and does nothing while it is empty.
   const lspSessionRef = useRef(newLspSessionRef());
   const [notice, setNotice] = useState("");
-  // The server this file would use, while the user has not answered for it.
-  const [offer, setOffer] = useState<LanguageServerDefinition | null>(null);
+  /** The server this file would use, whatever the user has answered about it. */
+  const lspServer = useMemo(() => serverForPath(path), [path]);
   const [lspAttempt, setLspAttempt] = useState(0);
   const [rename, setRename] = useState<{
     symbol: string;
@@ -763,14 +763,9 @@ function CodeMirrorEditor({
     // built from, so `didOpen` and the buffer start in agreement. A file the
     // server has already answered for keeps its diagnostics from the store;
     // one it has not yet seen keeps the syntax diagnostics until it does.
-    const server = serverForPath(path);
-    if (server) {
-      const choice = languageServerChoice(server.id);
-      // Offered once per server, on the first file it covers. Either answer is
-      // remembered, so this never becomes a banner the user has to keep closing.
-      setOffer(choice === "undecided" ? server : null);
-      if (choice === "undecided") void probeLanguageServers();
-    }
+    // The bar needs to know whether the server is installed before it can offer
+    // it, and a probe is cheap and cached.
+    if (serverForPath(path)) void probeLanguageServers();
 
     const openedDoc = view.state.doc;
     void acquireDocument(path, cwd, openedDoc.toString()).then((handle) => {
@@ -874,17 +869,15 @@ function CodeMirrorEditor({
   // only the next file. The view is rebuilt so its language server session is
   // acquired — or released — under the new answer.
   useEffect(() => {
-    const server = serverForPath(path);
-    if (!server) return;
-    let choice = languageServerChoice(server.id);
+    if (!lspServer) return;
+    let choice = languageServerChoice(lspServer.id);
     return subscribeLanguageServerChoices(() => {
-      const next = languageServerChoice(server.id);
+      const next = languageServerChoice(lspServer.id);
       if (next === choice) return;
       choice = next;
-      setOffer(next === "undecided" ? server : null);
       setLspAttempt((attempt) => attempt + 1);
     });
-  }, [path]);
+  }, [lspServer]);
 
   useEffect(() => {
     if (!notice) return;
@@ -906,15 +899,13 @@ function CodeMirrorEditor({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      {offer ? (
-        <LanguageServerOffer
-          server={offer}
-          onAnswered={() => {
-            setOffer(null);
-            // Rebuild the view's language server session: an Enable has to take
-            // effect on the file in front of the user, not on the next one.
-            setLspAttempt((attempt) => attempt + 1);
-          }}
+      {lspServer ? (
+        <LanguageServerBar
+          server={lspServer}
+          // Rebuild the view's language server session: an answer has to take
+          // effect on the file in front of the user, not on the next one.
+          onAnswered={() => setLspAttempt((attempt) => attempt + 1)}
+          onRetry={() => setLspAttempt((attempt) => attempt + 1)}
         />
       ) : null}
       {showDiff ? (
