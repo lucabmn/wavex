@@ -17,6 +17,8 @@ import { displayPath, projectName } from "../lib/paths";
 import { IS_MAC } from "../lib/platform";
 import { HARNESS_LABEL } from "../lib/session";
 
+type ActivityFilter = "all" | "waiting" | "working" | "done";
+
 type Props = {
   besideRail?: boolean;
   onClose: () => void;
@@ -35,6 +37,7 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
   const [agents, setAgents] = useState<LiveAgent[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ActivityFilter>("all");
 
   useEffect(() => {
     let live = true;
@@ -74,16 +77,34 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
   }, []);
 
   const status = useMemo(() => menuBarStatusLabel(agents), [agents]);
+  const counts = useMemo(
+    () => ({
+      waiting: agents.filter((agent) => agent.needsApproval).length,
+      working: agents.filter((agent) => !agent.done && !agent.needsApproval).length,
+      done: agents.filter((agent) => agent.done).length,
+    }),
+    [agents],
+  );
+  const filteredAgents = useMemo(
+    () =>
+      agents.filter((agent) => {
+        if (filter === "waiting") return agent.needsApproval;
+        if (filter === "working") return !agent.done && !agent.needsApproval;
+        if (filter === "done") return agent.done;
+        return true;
+      }),
+    [agents, filter],
+  );
   const projects = useMemo(() => {
     const groups = new Map<string, LiveAgent[]>();
-    for (const agent of agents) {
+    for (const agent of filteredAgents) {
       const key = agent.cwd || "~";
       const list = groups.get(key);
       if (list) list.push(agent);
       else groups.set(key, [agent]);
     }
     return [...groups.entries()];
-  }, [agents]);
+  }, [filteredAgents]);
 
   const stop = (agent: LiveAgent) => {
     setError(null);
@@ -111,10 +132,56 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
           </span>
           <span className="min-w-0 truncate text-content">{status}</span>
         </div>
+        {counts.waiting > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              const next = agents.find((agent) => agent.needsApproval);
+              if (next) focusMenuBarAgent(next.id);
+            }}
+            className="mr-2 hidden shrink-0 items-center gap-1.5 rounded-md bg-amber-400/12 px-2 py-1 text-[11.5px] font-medium text-amber-300 hover:bg-amber-400/18 sm:flex"
+          >
+            <CircleAlert className="size-3.5" strokeWidth={1.75} />
+            Review next
+          </button>
+        ) : null}
         <WindowControls />
       </div>
 
       <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
+        {agents.length > 0 ? (
+          <div
+            role="group"
+            aria-label="Filter agent activity"
+            className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
+          >
+            <ActivityFilterButton
+              label="All"
+              count={agents.length}
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+            />
+            <ActivityFilterButton
+              label="Needs you"
+              count={counts.waiting}
+              active={filter === "waiting"}
+              tone="attention"
+              onClick={() => setFilter("waiting")}
+            />
+            <ActivityFilterButton
+              label="Working"
+              count={counts.working}
+              active={filter === "working"}
+              onClick={() => setFilter("working")}
+            />
+            <ActivityFilterButton
+              label="Done"
+              count={counts.done}
+              active={filter === "done"}
+              onClick={() => setFilter("done")}
+            />
+          </div>
+        ) : null}
         {error ? (
           <p className="flex items-center gap-2 px-4 pt-3 text-[12px] text-amber-300">
             <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -125,6 +192,17 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
           <p className="px-4 py-6 text-[13px] text-content/45">
             No agent is working right now. Turns from every window show up here while they run.
           </p>
+        ) : filteredAgents.length === 0 ? (
+          <div className="flex flex-col items-start gap-2 px-4 py-6">
+            <p className="text-[13px] text-content/45">Nothing matches this filter.</p>
+            <button
+              type="button"
+              onClick={() => setFilter("all")}
+              className="rounded-md bg-content/10 px-2 py-1 text-[11.5px] text-content/70 hover:bg-content/15 hover:text-content"
+            >
+              Show all activity
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col gap-4 p-3">
             {projects.map(([cwd, rows]) => (
@@ -147,6 +225,41 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
         )}
       </div>
     </div>
+  );
+}
+
+function ActivityFilterButton({
+  label,
+  count,
+  active,
+  tone = "default",
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  tone?: "default" | "attention";
+  onClick: () => void;
+}) {
+  const attention = tone === "attention" && count > 0;
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`inline-flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] transition-colors ${
+        active
+          ? attention
+            ? "bg-amber-400/15 text-amber-300"
+            : "bg-content/12 text-content"
+          : attention
+            ? "text-amber-300/80 hover:bg-amber-400/10 hover:text-amber-300"
+            : "text-content/45 hover:bg-content/8 hover:text-content/75"
+      }`}
+    >
+      <span className="truncate">{label}</span>
+      <span className="tabular-nums opacity-70">{count}</span>
+    </button>
   );
 }
 
