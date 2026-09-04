@@ -328,7 +328,7 @@ import {
   CONTINUE_PROMPT,
   canAutoContinue,
   inFlightRefs,
-  profileSwitchWhileBusyMessage,
+  inFlightSessions,
   inFlightSnapshotKey,
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
@@ -342,6 +342,7 @@ import type { InstalledUpdate } from "./lib/updates/updateNotice";
 import { listenProfileSwitch, loadProfiles, switchProfile } from "./lib/profiles/profileStore";
 import { findProfile, type Profile } from "./lib/profiles/profile";
 import { ProfileSwitchOverlay } from "./chrome/ProfileSwitchOverlay";
+import { ProfileSwitchConfirm } from "./chrome/ProfileSwitchConfirm";
 import {
   beginProfileSwitch,
   bindResumedSessions,
@@ -447,6 +448,7 @@ export default function App({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   /** Set for every window from the moment a switch starts until the reload. */
   const [switchingToProfile, setSwitchingToProfile] = useState<Profile | null>(null);
+  const [profileSwitchConfirm, setProfileSwitchConfirm] = useState<string | null>(null);
   /** First-run setup. Shown once per profile until completed or skipped. */
   const [onboardingDone, setOnboardingDone] = useState(isOnboarded);
 
@@ -3681,33 +3683,50 @@ export default function App({
 
   /**
    * Swaps the whole app onto another profile. Every window persists first and
-   * the agents of the profile being left are stopped, so the confirmation says
-   * what running work is about to pause.
+   * the agents of the profile being left are stopped, so a confirmation names
+   * the running work that is about to pause instead of quoting a bare count.
    */
-  const onSwitchProfile = useCallback((profileId: string) => {
-    void (async () => {
-      const running = inFlightRefs(sessionsRef.current, tabsRef.current).length;
-      if (running > 0) {
-        const ok = await ask(profileSwitchWhileBusyMessage(running), {
-          title: "wavex",
-          kind: "warning",
-          okLabel: "Switch",
-        });
-        if (!ok) return;
-      }
-      await switchProfile(profileId).catch((error: unknown) => {
-        // Only a rejected id gets here, which Rust checks before it asks any
-        // window to prepare, so the shade is not up yet. Restoring both anyway
-        // costs nothing and keeps the window usable if that ever stops holding.
-        setSwitchingToProfile(null);
-        void invoke("enable_window_glass").catch(() => undefined);
-        void message(error instanceof Error ? error.message : "Could not switch profile", {
-          title: "wavex",
-          kind: "error",
-        });
+  const runProfileSwitch = useCallback((profileId: string) => {
+    void switchProfile(profileId).catch((error: unknown) => {
+      // Only a rejected id gets here, which Rust checks before it asks any
+      // window to prepare, so the shade is not up yet. Restoring both anyway
+      // costs nothing and keeps the window usable if that ever stops holding.
+      setSwitchingToProfile(null);
+      void invoke("enable_window_glass").catch(() => undefined);
+      void message(error instanceof Error ? error.message : "Could not switch profile", {
+        title: "wavex",
+        kind: "error",
       });
-    })();
+    });
   }, []);
+
+  const onSwitchProfile = useCallback(
+    (profileId: string) => {
+      // Unknown id: let the switch fail through to the error toast below.
+      if (!findProfile(loadProfiles(), profileId)) {
+        runProfileSwitch(profileId);
+        return;
+      }
+      const running = inFlightSessions(sessionsRef.current, tabsRef.current);
+      const terminals = projectTerminalsRef.current.reduce(
+        (count, dock) => count + dock.pane.files.length,
+        0,
+      );
+      if (running.length === 0 && terminals === 0) {
+        runProfileSwitch(profileId);
+        return;
+      }
+      setProfileSwitchConfirm(profileId);
+    },
+    [runProfileSwitch],
+  );
+
+  const onConfirmProfileSwitch = useCallback(() => {
+    if (profileSwitchConfirm === null) return;
+    const target = profileSwitchConfirm;
+    setProfileSwitchConfirm(null);
+    runProfileSwitch(target);
+  }, [profileSwitchConfirm, runProfileSwitch]);
 
   const onOpenArchivedSession = useCallback(
     (sessionId: string) => {
@@ -4634,6 +4653,18 @@ export default function App({
         <WhatsNewDialog version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
       ) : null}
       {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
+      {profileSwitchConfirm !== null ? (
+        <ProfileSwitchConfirm
+          target={findProfile(loadProfiles(), profileSwitchConfirm) ?? null}
+          running={inFlightSessions(sessions, tabs)}
+          terminalCount={projectTerminals.reduce(
+            (count, dock) => count + dock.pane.files.length,
+            0,
+          )}
+          onCancel={() => setProfileSwitchConfirm(null)}
+          onConfirm={onConfirmProfileSwitch}
+        />
+      ) : null}
       {showOnboarding ? (
         <OnboardingView
           cwd={projectCwd}

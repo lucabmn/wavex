@@ -6,6 +6,7 @@ import {
   canAutoContinue,
   hasInFlightSessions,
   inFlightRefs,
+  inFlightSessions,
   isInFlightSession,
   markTurnInterrupted,
   quitWhileBusyMessage,
@@ -80,6 +81,25 @@ describe("inFlightRefs", () => {
     blank.busy = true;
     expect(inFlightRefs([blank], [newTab(blank.id)])).toEqual([]);
     expect(hasInFlightSessions([blank])).toBe(true);
+  });
+});
+
+describe("inFlightSessions", () => {
+  it("returns the live sessions behind the refs, in tab order", () => {
+    const parked = chat("/tmp/parked", { busy: true });
+    const openBusy = chat("/tmp/open", { busy: true });
+    const idle = chat("/tmp/idle");
+
+    const tabs = [newTab(idle.id), newTab(openBusy.id)];
+    expect(inFlightSessions([parked, openBusy, idle], tabs).map((s) => s.id)).toEqual([
+      openBusy.id,
+      parked.id,
+    ]);
+  });
+
+  it("is empty when nothing is in flight", () => {
+    const idle = chat("/tmp/idle");
+    expect(inFlightSessions([idle], [newTab(idle.id)])).toEqual([]);
   });
 });
 
