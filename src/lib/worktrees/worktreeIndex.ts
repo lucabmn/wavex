@@ -1,4 +1,5 @@
-import { normalizeProjectPath, pathKey } from "../paths";
+import { projectKey } from "../host";
+import { normalizeProjectPath } from "../paths";
 import { profileStorage } from "../profiles/profileStorage";
 
 /**
@@ -13,7 +14,7 @@ import { profileStorage } from "../profiles/profileStorage";
 const KEY = "wavex.worktreeIndex";
 
 /**
- * Keyed by `pathKey`, valued with the repository's display path. The rail
+ * Keyed by `projectKey`, valued with the repository's display path. The rail
  * compares on the key, so a Windows folder that reaches us in two cases still
  * resolves to one repository.
  */
@@ -28,7 +29,7 @@ function read(): Index {
     const out: Index = {};
     for (const [path, repo] of Object.entries(parsed as Record<string, unknown>)) {
       if (typeof repo !== "string" || !repo || !path) continue;
-      out[pathKey(path)] = normalizeProjectPath(repo);
+      out[projectKey(path)] = normalizeProjectPath(repo);
     }
     return out;
   } catch {
@@ -56,13 +57,13 @@ export function loadWorktreeIndex(): Index {
  */
 export function rememberWorktrees(repoPath: string, worktreePaths: Iterable<string>): void {
   const repo = normalizeProjectPath(repoPath);
-  const repoKey = pathKey(repo);
+  const repoKey = projectKey(repo);
   const next: Index = {};
   for (const [path, owner] of Object.entries(read())) {
-    if (pathKey(owner) !== repoKey) next[path] = owner;
+    if (projectKey(owner) !== repoKey) next[path] = owner;
   }
   for (const path of worktreePaths) {
-    const key = pathKey(path);
+    const key = projectKey(path);
     if (key === repoKey) continue;
     next[key] = repo;
   }
@@ -72,17 +73,17 @@ export function rememberWorktrees(repoPath: string, worktreePaths: Iterable<stri
 /** Record a single worktree, without disturbing what is known about the rest. */
 export function rememberWorktree(repoPath: string, worktreePath: string): void {
   const repo = normalizeProjectPath(repoPath);
-  const key = pathKey(worktreePath);
-  if (key === pathKey(repo)) return;
+  const key = projectKey(worktreePath);
+  if (key === projectKey(repo)) return;
   const index = read();
-  if (index[key] && pathKey(index[key]) === pathKey(repo)) return;
+  if (index[key] && projectKey(index[key]) === projectKey(repo)) return;
   index[key] = repo;
   write(index);
 }
 
 /** Repository a worktree folder belongs to, or `null` for a plain project. */
 export function worktreeRepo(path: string): string | null {
-  return read()[pathKey(path)] ?? null;
+  return read()[projectKey(path)] ?? null;
 }
 
 export function isWorktreePath(path: string): boolean {
@@ -91,7 +92,7 @@ export function isWorktreePath(path: string): boolean {
 
 /** Forget a single worktree, after it was removed from disk. */
 export function forgetWorktree(path: string): void {
-  const key = pathKey(path);
+  const key = projectKey(path);
   const index = read();
   if (!(key in index)) return;
   delete index[key];

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Session } from "@/lib/session";
+import { LOCAL_HOST_ID } from "@/lib/host";
 import type { SessionSummary } from "@/lib/sessions/sessionStore";
 import {
   NEW_WORK_CHAT_TITLE,
@@ -16,6 +17,7 @@ import {
 function summary(overrides: Partial<SessionSummary> & { id: string }): SessionSummary {
   return {
     cwd: "/tmp/work-chats",
+    hostId: LOCAL_HOST_ID,
     harness: "cursor",
     model: "gpt-5",
     runtimeMode: "supervised",

@@ -2,6 +2,7 @@
  * wavex Link transport seam. Host-owned commands and streams route through a
  * host identity; client-local window and dialog behavior stays outside it.
  */
+import { LOCAL_HOST_ID, isRemoteHostId, type HostId } from "../host";
 import { normalizeRemoteEndpoint } from "./endpoint";
 import { RemoteHostTransport, type RemoteTransportOptions } from "./remote";
 import { createTauriTransport } from "./tauri";
@@ -26,20 +27,19 @@ export type {
 } from "./types";
 export { normalizeRemoteEndpoint, ticketEndpoint } from "./endpoint";
 export { RESYNC_REQUIRED_EVENT } from "./events";
-
-export const LOCAL_HOST_ID = "local";
+export { LOCAL_HOST_ID, type HostId } from "../host";
 export { RemoteHostTransport, type RemoteTransportOptions } from "./remote";
 
 const local = createTauriTransport();
 const remoteHosts = new Map<string, RemoteHostTransport>();
 const listeners = new Set<() => void>();
-let defaultHostId = LOCAL_HOST_ID;
+let defaultHostId: HostId = LOCAL_HOST_ID;
 
 function announce(): void {
   for (const listener of listeners) listener();
 }
 
-function transportFor(hostId: string): HostTransport {
+function transportFor(hostId: HostId): HostTransport {
   if (hostId === LOCAL_HOST_ID) return local;
   const transport = remoteHosts.get(hostId);
   if (!transport) throw new Error(`Host ${hostId} is not configured`);
@@ -56,7 +56,7 @@ export async function connectRemoteHost(
   connection: RemoteConnection,
   options: RemoteTransportOptions = {},
 ): Promise<void> {
-  if (!hostId || hostId === LOCAL_HOST_ID) throw new Error("A remote host needs its own identity");
+  if (!isRemoteHostId(hostId)) throw new Error("A remote host needs its own identity");
   remoteHosts.get(hostId)?.close();
   const transport = new RemoteHostTransport(
     hostId,
@@ -73,13 +73,13 @@ export async function connectRemoteHost(
   }
 }
 
-export function completeRemoteResync(hostId: string): void {
+export function completeRemoteResync(hostId: HostId): void {
   const transport = remoteHosts.get(hostId);
   if (!transport) throw new Error(`Host ${hostId} is not configured`);
   transport.completeResync();
 }
 
-export function disconnectRemoteHost(hostId: string): void {
+export function disconnectRemoteHost(hostId: HostId): void {
   const transport = remoteHosts.get(hostId);
   if (!transport) return;
   transport.close();
@@ -89,13 +89,13 @@ export function disconnectRemoteHost(hostId: string): void {
 }
 
 /** Browser bootstrap only. Desktop workspaces route each project explicitly. */
-export function setDefaultHost(hostId: string): void {
+export function setDefaultHost(hostId: HostId): void {
   transportFor(hostId);
   defaultHostId = hostId;
   announce();
 }
 
-export function getDefaultHostId(): string {
+export function getDefaultHostId(): HostId {
   return defaultHostId;
 }
 
@@ -126,7 +126,7 @@ export function subscribeConnection(listener: () => void): UnlistenFn {
 }
 
 export function invokeOn<T>(
-  hostId: string,
+  hostId: HostId,
   command: string,
   args?: Record<string, unknown>,
 ): Promise<T> {
@@ -134,7 +134,7 @@ export function invokeOn<T>(
 }
 
 export function listenOn<T>(
-  hostId: string,
+  hostId: HostId,
   event: string,
   handler: EventHandler<T>,
   options?: ListenOptions,
@@ -142,7 +142,7 @@ export function listenOn<T>(
   return transportFor(hostId).listen(event, handler, options);
 }
 
-export function emitOn(hostId: string, event: string, payload?: unknown): Promise<void> {
+export function emitOn(hostId: HostId, event: string, payload?: unknown): Promise<void> {
   return transportFor(hostId).emit(event, payload);
 }
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { LOCAL_HOST_ID } from "@/lib/host";
 import type { SessionSummary } from "@/lib/sessions/sessionStore";
 import {
   addSessionToFolder,
@@ -28,6 +29,7 @@ function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSu
   return {
     id,
     cwd: "/tmp/project",
+    hostId: LOCAL_HOST_ID,
     harness: "cursor",
     model: "gpt-5",
     runtimeMode: "supervised",
