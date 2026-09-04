@@ -10,6 +10,8 @@ const cancelled: string[] = [];
 let live = true;
 let turn: ((input: SendTurnInput) => Promise<void>) | null = null;
 let listed: { id: string; title: string; updatedAt: number }[] = [];
+let deleteError: Error | null = null;
+let listError: Error | null = null;
 
 vi.mock("@/lib/sessions/workChats", async () => {
   const actual = await vi.importActual<typeof import("@/lib/sessions/workChats")>(
@@ -24,8 +26,9 @@ vi.mock("@/lib/sessions/sessionStore", async () => {
   );
   return {
     ...actual,
-    listSessionsByScope: async () =>
-      listed.map((row) => ({
+    listSessionsByScope: async () => {
+      if (listError) throw listError;
+      return listed.map((row) => ({
         id: row.id,
         cwd: "/tmp/work-chats",
         harness: "cursor" as const,
@@ -35,9 +38,11 @@ vi.mock("@/lib/sessions/sessionStore", async () => {
         createdAt: 0,
         updatedAt: row.updatedAt,
         scope: "work" as const,
-      })),
+      }));
+    },
     getSession: async (id: string) => stored.get(id) ?? null,
     deleteSession: async (id: string) => {
+      if (deleteError) throw deleteError;
       deleted.push(id);
     },
     upsertSession: async (session: { id: string; title: string }) => {
@@ -116,6 +121,8 @@ beforeEach(() => {
   forgotten.length = 0;
   cancelled.length = 0;
   listed = [];
+  deleteError = null;
+  listError = null;
   live = true;
   turn = null;
   store.resetWorkChatStore();
@@ -445,6 +452,17 @@ describe("deleteWorkChat", () => {
     expect(store.getWorkChatState().activeId).toBe(first);
     expect(store.findWorkChat(second)).toBeNull();
   });
+
+  it("keeps the visible chat and provider thread when persistence fails", async () => {
+    const id = await store.createWorkChat("claude");
+    deleteError = new Error("database busy");
+
+    await expect(store.deleteWorkChat(id)).rejects.toThrow("database busy");
+
+    expect(store.findWorkChat(id)?.id).toBe(id);
+    expect(store.getWorkChatState().activeId).toBe(id);
+    expect(forgotten).toEqual([]);
+  });
 });
 
 describe("deleting a chat that was never opened", () => {
@@ -462,6 +480,19 @@ describe("deleting a chat that was never opened", () => {
 });
 
 describe("loadWorkChats", () => {
+  it("can retry after a failed load", async () => {
+    listError = new Error("offline");
+    await store.loadWorkChats();
+    expect(store.getWorkChatState().error).toBe("offline");
+
+    listError = null;
+    listed = [{ id: "a", title: "Recovered", updatedAt: 1 }];
+    await store.reloadWorkChats();
+
+    expect(store.getWorkChatState().error).toBeNull();
+    expect(store.getWorkChatState().summaries).toHaveLength(1);
+  });
+
   it("selects the most recent stored chat", async () => {
     listed = [{ id: "a", title: "Older", updatedAt: 1 }];
     stored.set("a", {

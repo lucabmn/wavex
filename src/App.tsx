@@ -2204,7 +2204,21 @@ export default function App({
       const summary = history.find((entry) => entry.id === sessionId) ?? open ?? null;
       const label = summary ? sessionDisplayTitle(summary.title, summary.harness) : "this session";
 
-      if (!window.confirm(`Delete “${label}”?`)) return;
+      const confirmed = await ask(`Delete “${label}”? This conversation cannot be recovered.`, {
+        title: "Delete conversation",
+        kind: "warning",
+      });
+      if (!confirmed) return;
+
+      try {
+        await deleteSession(sessionId);
+      } catch (error: unknown) {
+        await message(error instanceof Error ? error.message : "Could not delete the session.", {
+          title: "Couldn’t delete session",
+          kind: "error",
+        });
+        return;
+      }
 
       if (open?.busy) {
         turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
@@ -4066,6 +4080,7 @@ export default function App({
         activeSessionId={active?.id}
         status={historyFailed ? "error" : "idle"}
         pending={historyPending}
+        onRetrySessions={() => void refreshHistory(sidebarCwd)}
         onSelectSession={onSelectHistorySession}
         onPlaceSessionOnPane={onPlaceSessionOnPane}
         onRenameSession={onRenameHistorySession}

@@ -20,9 +20,11 @@ import { WindowControls } from "../chrome/WindowControls";
 import {
   Archive,
   ChevronDown,
+  CircleAlert,
   ChevronRight,
   Folder,
   FolderPlus,
+  Loader,
   MessageSquare,
   PanelLeft,
   PenLine,
@@ -50,6 +52,7 @@ import {
   removeWorkChatQueuedPrompt,
   sendWorkChatQueuedPrompt,
   loadWorkChats,
+  reloadWorkChats,
   regenerateWorkChatTurn,
   renameChatFolder,
   renameWorkChat,
@@ -124,7 +127,16 @@ export function WorkView({
   const [dropTarget, setDropTarget] = useState<WorkChatDropTarget | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [listOpen, setListOpen] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    item: WorkChatListItem;
+    busy: boolean;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [folderDeleteTarget, setFolderDeleteTarget] = useState<WorkChatFolder | null>(null);
   const composer = useRef<ChatComposerHandle>(null);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
+  const folderDeleteCancelRef = useRef<HTMLButtonElement>(null);
   const searchField = useRef<HTMLInputElement>(null);
   const listLock = useLockOverscroll<HTMLDivElement>();
 
@@ -245,6 +257,20 @@ export function WorkView({
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteWorkChat(deleteTarget.item.id);
+      setDeleteTarget(null);
+    } catch (error: unknown) {
+      setDeleteError(error instanceof Error ? error.message : "Could not delete the chat.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const renderChat = (item: WorkChatListItem) => (
     <ChatRow
       key={item.id}
@@ -264,7 +290,10 @@ export function WorkView({
       }}
       onPin={() => void setWorkChatPinned(item.id, !item.pinned)}
       onArchive={() => void setWorkChatArchived(item.id, !item.archived)}
-      onDelete={() => void deleteWorkChat(item.id)}
+      onDelete={() => {
+        setDeleteError(null);
+        setDeleteTarget({ item, busy: byId.get(item.id)?.busy === true });
+      }}
     />
   );
 
@@ -362,7 +391,20 @@ export function WorkView({
             <p className="px-1 py-2 text-[12px] text-content/45">Loading…</p>
           ) : null}
           {state.error ? (
-            <p className="px-1 py-2 text-[12px] text-red-400/90">{state.error}</p>
+            <div role="alert" className="mx-1 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
+              <span className="flex items-start gap-2 text-[12px] leading-snug text-red-300">
+                <CircleAlert className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.75} />
+                <span className="min-w-0 flex-1 break-words">{state.error}</span>
+              </span>
+              <button
+                type="button"
+                disabled={state.loading}
+                onClick={() => void reloadWorkChats()}
+                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-content/15 hover:text-content disabled:opacity-40"
+              >
+                Try again
+              </button>
+            </div>
           ) : null}
           {!state.loading && entries.length === 0 ? (
             <p className="px-1 py-2 text-[12px] text-content/45">
@@ -388,7 +430,7 @@ export function WorkView({
                 }}
                 onEditPrompt={() => setPromptFolderId(entry.folder.id)}
                 onNewChat={() => onNewChat(entry.folder.id)}
-                onDelete={() => deleteChatFolder(entry.folder.id)}
+                onDelete={() => setFolderDeleteTarget(entry.folder)}
               >
                 {entry.folder.collapsed ? null : entry.chats.length === 0 ? (
                   <p className="px-2 py-1.5 text-[11.5px] text-content/35">Drag chats here.</p>
@@ -497,6 +539,93 @@ export function WorkView({
           </div>
         )}
       </section>
+
+      {deleteTarget ? (
+        <Modal
+          title="Delete chat?"
+          description={deleteTarget.item.title}
+          size="sm"
+          onClose={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+          initialFocusRef={deleteCancelRef}
+          closeDisabled={deleting}
+        >
+          <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
+            <p className="text-[12px] leading-relaxed text-content/60">
+              This permanently removes the conversation and its provider thread. This action cannot
+              be undone.
+            </p>
+            {deleteTarget.busy ? (
+              <p className="rounded-md bg-amber-400/10 px-2.5 py-2 text-[11.5px] leading-snug text-amber-300">
+                The current turn will be stopped before the chat is removed.
+              </p>
+            ) : null}
+            {deleteError ? (
+              <p role="alert" className="max-h-24 overflow-y-auto text-[11.5px] text-red-300">
+                {deleteError}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <button
+                ref={deleteCancelRef}
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void confirmDelete()}
+                className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
+              >
+                {deleting ? <Loader className="size-3.5 animate-spin" strokeWidth={1.75} /> : null}
+                {deleteTarget.busy ? "Stop & delete" : "Delete chat"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {folderDeleteTarget ? (
+        <Modal
+          title="Delete project?"
+          description={folderDeleteTarget.name}
+          size="sm"
+          onClose={() => setFolderDeleteTarget(null)}
+          initialFocusRef={folderDeleteCancelRef}
+        >
+          <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
+            <p className="text-[12px] leading-relaxed text-content/60">
+              The chats stay in your list, but the project and its shared brief are permanently
+              removed.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                ref={folderDeleteCancelRef}
+                type="button"
+                onClick={() => setFolderDeleteTarget(null)}
+                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteChatFolder(folderDeleteTarget.id);
+                  setFolderDeleteTarget(null);
+                }}
+                className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30"
+              >
+                Delete project
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
 
       {promptFolder ? (
         <FolderPromptDialog
