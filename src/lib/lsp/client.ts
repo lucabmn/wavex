@@ -186,6 +186,7 @@ export class LspClient {
       contentChanges,
     });
     this.schedulePull(path, PULL_DEBOUNCE_MS);
+    this.scheduleDependentPulls(path);
   }
 
   saveDocument(path: string, text: string): void {
@@ -196,6 +197,7 @@ export class LspClient {
       text,
     });
     this.schedulePull(path, 0);
+    this.scheduleDependentPulls(path);
   }
 
   closeDocument(path: string): void {
@@ -350,7 +352,28 @@ export class LspClient {
    */
   private schedulePull(path: string, delay: number): void {
     if (!this.capabilities.diagnosticProvider) return;
-    const key = pathKey(path);
+    this.schedulePullFor(pathKey(path), delay);
+  }
+
+  /**
+   * Re-ask for every other open document too.
+   *
+   * A server with `interFileDependencies` says an edit here can change the
+   * diagnostics there, and one with no workspace diagnostics will not volunteer
+   * them. Breaking a signature in one pane has to light up the pane importing
+   * it, so each open document is asked again — a handful of requests, and the
+   * per-document state already cancels whichever of them a keystroke outruns.
+   */
+  private scheduleDependentPulls(changed: string): void {
+    const provider = this.capabilities.diagnosticProvider;
+    if (typeof provider !== "object" || !provider.interFileDependencies) return;
+    const key = pathKey(changed);
+    for (const other of this.documents.keys()) {
+      if (other !== key) this.schedulePullFor(other, PULL_DEBOUNCE_MS);
+    }
+  }
+
+  private schedulePullFor(key: string, delay: number): void {
     const state = this.pulls.get(key) ?? { timer: null, controller: null };
     this.pulls.set(key, state);
 
@@ -360,12 +383,12 @@ export class LspClient {
     state.controller = null;
     state.timer = setTimeout(() => {
       state.timer = null;
-      void this.pull(path, state);
+      void this.pull(key, state);
     }, delay);
   }
 
-  private async pull(path: string, state: PullState): Promise<void> {
-    const document = this.documents.get(pathKey(path));
+  private async pull(key: string, state: PullState): Promise<void> {
+    const document = this.documents.get(key);
     const connection = this.connection;
     if (!document || !connection) return;
 
@@ -387,7 +410,9 @@ export class LspClient {
     state.controller = null;
     if (!report) return;
 
-    state.resultId = report.resultId ?? state.resultId;
+    // A full report without one is the server withdrawing the handle, not
+    // keeping the old one alive.
+    state.resultId = report.resultId;
     // "unchanged" means the last answer still stands, which is already stored.
     if (report.kind !== "full") return;
     this.events.onDiagnostics(document.uri, report.items ?? []);
