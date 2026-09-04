@@ -10,13 +10,23 @@ import type { ChangeSet, Text } from "@codemirror/state";
 import { pathKey } from "../paths";
 import { LspConnection } from "./connection";
 import { contentChangesFor } from "./documentSync";
-import { resolveLanguageServer, startLanguageServer, stopLanguageServer } from "./host";
-import { languageIdForPath, type LanguageServerDefinition } from "./servers";
+import {
+  resolveLanguageServer,
+  startLanguageServer,
+  stopLanguageServer,
+  type LspBinary,
+} from "./host";
+import {
+  languageIdForPath,
+  type LanguageServerDefinition,
+  type LanguageServerLaunch,
+} from "./servers";
 import { pathToUri } from "./uri";
 import type {
   LspCompletionItem,
   LspCompletionList,
   LspDiagnostic,
+  LspDocumentDiagnosticReport,
   LspDocumentSymbol,
   LspHover,
   LspLocation,
@@ -40,6 +50,15 @@ const SHUTDOWN_TIMEOUT_MS = 1_500;
 /** Enough of a failing server's output to say what went wrong. */
 const MAX_STDERR_LINES = 10;
 
+/**
+ * How long a pull-diagnostics server is left alone after a keystroke.
+ *
+ * A pull is a whole-file check, so asking on every character would queue work
+ * the next character invalidates. Long enough to cover typing an identifier,
+ * short enough that a finished edit lights up while the cursor is still there.
+ */
+const PULL_DEBOUNCE_MS = 300;
+
 export type LspStatus =
   | { state: "starting" }
   | { state: "ready" }
@@ -57,10 +76,24 @@ type TrackedDocument = {
   version: number;
 };
 
+/**
+ * A pull-diagnostics conversation about one document.
+ *
+ * `resultId` is the server's handle on the last answer, which lets it reply
+ * "unchanged" instead of resending an identical list.
+ */
+type PullState = {
+  timer: ReturnType<typeof setTimeout> | null;
+  /** Aborts the request in flight; its answer describes text that is gone. */
+  controller: AbortController | null;
+  resultId?: string;
+};
+
 export class LspClient {
   private connection: LspConnection | null = null;
   private capabilities: LspServerCapabilities = {};
   private readonly documents = new Map<string, TrackedDocument>();
+  private readonly pulls = new Map<string, PullState>();
   private ready: Promise<void> | null = null;
   private stopped = false;
   /** Last stderr lines, so a failed start can say why rather than "failed". */
@@ -95,6 +128,8 @@ export class LspClient {
     this.stopped = true;
     const connection = this.connection;
     this.documents.clear();
+    for (const state of this.pulls.values()) cancelPull(state);
+    this.pulls.clear();
     if (connection && !connection.isClosed) {
       // A polite shutdown lets rust-analyzer drop its on-disk caches cleanly.
       // It is best-effort: the host terminates the child either way.
@@ -125,6 +160,7 @@ export class LspClient {
     connection.notify("textDocument/didOpen", {
       textDocument: { uri, languageId, version: document.version, text },
     });
+    this.schedulePull(path, 0);
   }
 
   /**
@@ -149,6 +185,7 @@ export class LspClient {
       textDocument: { uri: document.uri, version: document.version },
       contentChanges,
     });
+    this.schedulePull(path, PULL_DEBOUNCE_MS);
   }
 
   saveDocument(path: string, text: string): void {
@@ -158,6 +195,7 @@ export class LspClient {
       textDocument: { uri: document.uri },
       text,
     });
+    this.schedulePull(path, 0);
   }
 
   closeDocument(path: string): void {
@@ -165,6 +203,7 @@ export class LspClient {
     const document = this.documents.get(key);
     if (!document) return;
     this.documents.delete(key);
+    this.forgetPull(key);
     this.connection?.notify("textDocument/didClose", {
       textDocument: { uri: document.uri },
     });
@@ -301,6 +340,66 @@ export class LspClient {
       .catch(() => null);
   }
 
+  /**
+   * Ask for this document's diagnostics once the edits settle.
+   *
+   * Some servers push diagnostics and some wait to be asked — TypeScript 7
+   * answers `textDocument/diagnostic` with the type errors and only pushes
+   * project-level ones, keyed to `tsconfig.json`. Both land in the same store,
+   * so nothing above the client has to know which kind it is talking to.
+   */
+  private schedulePull(path: string, delay: number): void {
+    if (!this.capabilities.diagnosticProvider) return;
+    const key = pathKey(path);
+    const state = this.pulls.get(key) ?? { timer: null, controller: null };
+    this.pulls.set(key, state);
+
+    if (state.timer !== null) clearTimeout(state.timer);
+    // Whatever is in flight was asked about text that no longer exists.
+    state.controller?.abort();
+    state.controller = null;
+    state.timer = setTimeout(() => {
+      state.timer = null;
+      void this.pull(path, state);
+    }, delay);
+  }
+
+  private async pull(path: string, state: PullState): Promise<void> {
+    const document = this.documents.get(pathKey(path));
+    const connection = this.connection;
+    if (!document || !connection) return;
+
+    const controller = new AbortController();
+    state.controller = controller;
+    const report = await connection
+      .request<LspDocumentDiagnosticReport | null>(
+        "textDocument/diagnostic",
+        {
+          textDocument: { uri: document.uri },
+          ...(state.resultId === undefined ? {} : { previousResultId: state.resultId }),
+        },
+        controller.signal,
+      )
+      .catch(() => null);
+
+    // A newer pull, a close, or a stop replaced this one while it was out.
+    if (state.controller !== controller) return;
+    state.controller = null;
+    if (!report) return;
+
+    state.resultId = report.resultId ?? state.resultId;
+    // "unchanged" means the last answer still stands, which is already stored.
+    if (report.kind !== "full") return;
+    this.events.onDiagnostics(document.uri, report.items ?? []);
+  }
+
+  private forgetPull(key: string): void {
+    const state = this.pulls.get(key);
+    if (!state) return;
+    cancelPull(state);
+    this.pulls.delete(key);
+  }
+
   private syncKind(): LspTextDocumentSyncKind {
     const sync = this.capabilities.textDocumentSync;
     if (typeof sync === "number") return sync;
@@ -314,15 +413,14 @@ export class LspClient {
         `${this.server.name} is not installed. Install it with \`${this.server.installHint}\`.`,
       );
     }
-    // Resolved before the child exists, not baked into the definition: what a
-    // server needs told about a checkout depends on the checkout, and a server
-    // that says up front it cannot run against this one is refused here — with
-    // its own reason — rather than spawned so it can exit with a worse one.
-    const setup = await this.server
-      .initializationOptions?.({ root: this.root, binary: binary.path })
-      .catch(() => null);
-    if (setup && !setup.ok) throw new Error(setup.reason);
-    this.initializationOptions = setup?.ok ? setup.options : null;
+    // Resolved before the child exists, not baked into the definition: which
+    // executable serves a checkout, and what it needs told, depends on the
+    // checkout. A definition that says up front it cannot run against this one
+    // is refused here — with its own reason — rather than spawned so it can
+    // exit with a worse one.
+    const launch = await this.launchFor(binary);
+    if (!launch.ok) throw new Error(launch.reason);
+    this.initializationOptions = launch.initializationOptions ?? null;
 
     this.events.onStatus({ state: "starting" });
 
@@ -335,7 +433,7 @@ export class LspClient {
 
     await startLanguageServer(
       this.serverId,
-      { command: binary.path, args: this.server.args },
+      { command: launch.command, args: launch.args },
       this.root,
       {
         onMessage: (message) => connection.push(message),
@@ -372,6 +470,16 @@ export class LspClient {
     this.events.onStatus({ state: "ready" });
   }
 
+  private async launchFor(binary: LspBinary): Promise<LanguageServerLaunch> {
+    if (!this.server.resolve) {
+      return { ok: true, command: binary.path, args: this.server.args };
+    }
+    return this.server.resolve({ root: this.root, binary }).catch((error: unknown) => ({
+      ok: false as const,
+      reason: error instanceof Error ? error.message : String(error),
+    }));
+  }
+
   private initializeParams() {
     const rootUri = pathToUri(this.root);
     return {
@@ -403,6 +511,10 @@ export class LspClient {
             willSaveWaitUntil: false,
           },
           publishDiagnostics: { relatedInformation: true, versionSupport: false },
+          // Pull diagnostics, for servers that answer instead of publishing.
+          // Related documents are not asked for: wavex shows diagnostics for
+          // the files it has open, and those it pulls for itself.
+          diagnostic: { dynamicRegistration: false, relatedDocumentSupport: false },
           completion: {
             dynamicRegistration: false,
             contextSupport: true,
@@ -472,6 +584,12 @@ export class LspClient {
     const detail = this.stderr.filter(Boolean).slice(-2).join(" ");
     return detail ? `${message} — ${detail}` : message;
   }
+}
+
+/** Drop a pending pull: nothing is waiting for the answer any more. */
+function cancelPull(state: PullState): void {
+  if (state.timer !== null) clearTimeout(state.timer);
+  state.controller?.abort();
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {

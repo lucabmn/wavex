@@ -99,6 +99,20 @@ Cargo workspace runs one server rather than one per package. The cost is one
 server per open checkout, bounded by refcounting documents and stopping a
 server that has had nothing open for a while.
 
+A definition may pick its own executable per checkout through `resolve`, because
+one language can have more than one engine. TypeScript is the case that forces
+it: version 7 is a native binary that speaks the protocol itself, while version
+5 ships `tsserver.js`, which is not a server but the back end
+`typescript-language-server` drives and has to be told the path of. The
+checkout's own TypeScript is preferred over a global one either way, so the
+errors in the editor are the ones `tsc` would report.
+
+Diagnostics arrive both ways and land in one store. Most servers push
+`publishDiagnostics`; a server advertising `diagnosticProvider` is asked with
+`textDocument/diagnostic` instead, debounced after a change and cancelled when
+the next one supersedes it. TypeScript 7 needs this — it answers pulls with the
+type errors and pushes only project-level ones, keyed to `tsconfig.json`.
+
 wavex never downloads a server, and never starts one on its own: it uses what
 the user has installed and quotes the install line for what it does not find.
 A server is a long-lived process that indexes a whole checkout, so opening a

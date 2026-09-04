@@ -136,7 +136,17 @@ export type LspServerCapabilities = {
   documentSymbolProvider?: boolean | object;
   workspaceSymbolProvider?: boolean | object;
   documentFormattingProvider?: boolean | object;
+  /** Present when the server answers `textDocument/diagnostic` instead of pushing. */
+  diagnosticProvider?: boolean | { identifier?: string; interFileDependencies?: boolean };
 };
+
+/**
+ * The answer to `textDocument/diagnostic`. `unchanged` means the previous
+ * answer still stands, which is why the client remembers the `resultId`.
+ */
+export type LspDocumentDiagnosticReport =
+  | { kind: "full"; resultId?: string; items?: LspDiagnostic[] }
+  | { kind: "unchanged"; resultId: string };
 
 /** Symbol kinds, for the icons a result list shows. */
 export const LSP_SYMBOL_KIND: Record<number, string> = {

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   LANGUAGE_SERVERS,
-  tsserverCandidates,
+  nativeTypescriptBinaries,
+  nativeTypescriptDirs,
+  typescriptLaunch,
+  typescriptPackages,
   languageIdForPath,
   serverForPath,
   serverKey,
@@ -101,21 +104,113 @@ describe("serverKey", () => {
   });
 });
 
-describe("tsserverCandidates", () => {
+describe("typescriptPackages", () => {
   it("prefers the checkout's own TypeScript over a global one", () => {
-    expect(tsserverCandidates("/app", "/Users/me/.local/bin/typescript-language-server")).toEqual([
-      "/app/node_modules/typescript/lib/tsserver.js",
-      "/Users/me/.local/lib/node_modules/typescript/lib/tsserver.js",
-    ]);
+    expect(typescriptPackages("/app", "/Users/me/.local/bin/typescript-language-server")[0]).toBe(
+      "/app/node_modules/typescript",
+    );
   });
 
-  it("finds the npm global layout beside the server", () => {
-    const [, global] = tsserverCandidates("/app", "/opt/homebrew/bin/typescript-language-server");
-    expect(global).toBe("/opt/homebrew/lib/node_modules/typescript/lib/tsserver.js");
+  it("finds both npm global layouts beside the resolved binary", () => {
+    const [, unix, windows] = typescriptPackages(
+      "/app",
+      "C:/Users/me/AppData/Roaming/npm/typescript-language-server.cmd",
+    );
+    expect(unix).toBe("C:/Users/me/AppData/Roaming/lib/node_modules/typescript");
+    expect(windows).toBe("C:/Users/me/AppData/Roaming/npm/node_modules/typescript");
   });
 
   it("does not double a trailing slash on the checkout", () => {
-    const [workspace] = tsserverCandidates("/app/", "/usr/local/bin/typescript-language-server");
-    expect(workspace).toBe("/app/node_modules/typescript/lib/tsserver.js");
+    expect(typescriptPackages("/app/", "/usr/local/bin/typescript-language-server")[0]).toBe(
+      "/app/node_modules/typescript",
+    );
+  });
+});
+
+describe("nativeTypescriptDirs", () => {
+  it("looks where a package manager may nest or hoist the platform package", () => {
+    expect(nativeTypescriptDirs("/app/node_modules/typescript")).toEqual([
+      "/app/node_modules/typescript/node_modules/@typescript",
+      "/app/node_modules/@typescript",
+    ]);
+  });
+});
+
+describe("nativeTypescriptBinaries", () => {
+  it("covers the Windows entry point too", () => {
+    expect(nativeTypescriptBinaries("/p/@typescript/typescript-win32-x64")).toEqual([
+      "/p/@typescript/typescript-win32-x64/lib/tsc",
+      "/p/@typescript/typescript-win32-x64/lib/tsc.exe",
+    ]);
+  });
+});
+
+describe("typescriptLaunch", () => {
+  const languageServer = {
+    path: "/Users/me/.local/bin/typescript-language-server",
+    name: "typescript-language-server",
+  };
+  const tsc = { path: "/Users/me/.local/bin/tsc", name: "tsc" };
+  const lookedIn = ["/app/node_modules/typescript"];
+
+  it("runs TypeScript 7 as its own language server", () => {
+    const engine = {
+      kind: "native" as const,
+      command: "/app/node_modules/typescript/node_modules/@typescript/x/lib/tsc",
+    };
+    expect(typescriptLaunch({ engine, binary: languageServer, packages: [], lookedIn })).toEqual({
+      ok: true,
+      command: engine.command,
+      args: ["--lsp", "--stdio"],
+    });
+  });
+
+  it("prefers the native server even when typescript-language-server is installed", () => {
+    const engine = { kind: "native" as const, command: "/app/native/tsc" };
+    const launch = typescriptLaunch({ engine, binary: languageServer, packages: [], lookedIn });
+    expect(launch.ok && launch.command).toBe("/app/native/tsc");
+  });
+
+  it("points typescript-language-server at the tsserver it has to drive", () => {
+    const engine = {
+      kind: "tsserver" as const,
+      path: "/app/node_modules/typescript/lib/tsserver.js",
+    };
+    expect(typescriptLaunch({ engine, binary: languageServer, packages: [], lookedIn })).toEqual({
+      ok: true,
+      command: languageServer.path,
+      args: ["--stdio"],
+      initializationOptions: { tsserver: { path: engine.path } },
+    });
+  });
+
+  it("refuses a TypeScript 5 with no front end to drive it", () => {
+    const engine = {
+      kind: "tsserver" as const,
+      path: "/app/node_modules/typescript/lib/tsserver.js",
+    };
+    const launch = typescriptLaunch({ engine, binary: tsc, packages: [], lookedIn });
+    expect(launch.ok).toBe(false);
+    expect(!launch.ok && launch.reason).toContain("typescript-language-server");
+  });
+
+  it("names the TypeScript it found when that install serves neither way", () => {
+    const launch = typescriptLaunch({
+      engine: null,
+      binary: languageServer,
+      packages: ["/app/node_modules/typescript"],
+      lookedIn,
+    });
+    expect(!launch.ok && launch.reason).toContain("/app/node_modules/typescript");
+  });
+
+  it("says where it looked when the project has no TypeScript at all", () => {
+    const launch = typescriptLaunch({
+      engine: null,
+      binary: languageServer,
+      packages: [],
+      lookedIn: ["/app/node_modules/typescript", "/usr/lib/node_modules/typescript"],
+    });
+    expect(!launch.ok && launch.reason).toContain("/usr/lib/node_modules/typescript");
   });
 });
