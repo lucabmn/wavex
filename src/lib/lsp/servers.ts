@@ -7,7 +7,7 @@
  * exactly the editor it has today.
  */
 
-import { basename } from "../fs";
+import { basename, statFiles } from "../fs";
 import { isEqualOrInside, normalizeProjectPath, parentPath, pathKey } from "../paths";
 
 export type LanguageServerDefinition = {
@@ -26,7 +26,11 @@ export type LanguageServerDefinition = {
    * wins, so a monorepo gets one server rather than one per package.
    */
   rootMarkers: string[];
-  initializationOptions?: unknown;
+  /**
+   * Options that depend on the checkout, resolved once when the server starts.
+   * Returning `null` means the server's own defaults.
+   */
+  initializationOptions?: (root: string) => Promise<unknown>;
   /** How to install it, quoted verbatim in the UI. */
   installHint: string;
 };
@@ -51,6 +55,7 @@ export const LANGUAGE_SERVERS: LanguageServerDefinition[] = [
     extensions: Object.keys(TYPESCRIPT_LANGUAGE_IDS),
     languageIds: TYPESCRIPT_LANGUAGE_IDS,
     rootMarkers: ["tsconfig.json", "jsconfig.json", "package.json", ".git"],
+    initializationOptions: typescriptOptions,
     installHint: "npm install -g typescript-language-server typescript",
   },
   {
@@ -84,6 +89,23 @@ export const LANGUAGE_SERVERS: LanguageServerDefinition[] = [
     installHint: "go install golang.org/x/tools/gopls@latest",
   },
 ];
+
+/**
+ * Point the TypeScript server at the checkout's own TypeScript.
+ *
+ * `typescript-language-server` is only a front end: it needs a `tsserver` to
+ * drive, and it looks for one in the workspace. Without this a checkout whose
+ * TypeScript is a dependency like any other — which is most of them — starts
+ * the server only to have it exit with "Could not find a valid TypeScript
+ * installation". Naming the path also pins the project's own version rather
+ * than whatever happens to be installed globally, which is what decides
+ * whether the errors it reports match the ones `tsc` reports.
+ */
+async function typescriptOptions(root: string): Promise<unknown> {
+  const path = `${root}/node_modules/typescript/lib/tsserver.js`;
+  const [found] = await statFiles([path]).catch(() => []);
+  return found?.mtimeMs == null ? null : { tsserver: { path } };
+}
 
 export function fileExtension(path: string): string {
   const name = basename(path).toLowerCase();

@@ -427,6 +427,74 @@ mod tests {
         assert!(read_frame(&mut reader).is_err());
     }
 
+    /// The host's own start path, against whatever the machine has installed.
+    ///
+    /// Framing and spawning are only half the question: a language server
+    /// installed through npm is a `#!/usr/bin/env node` script, so it starts
+    /// only if the child's environment can find its interpreter. That is what
+    /// `apply_gui_env` is for, and nothing else in the suite exercises it.
+    /// Skipped where the server, or the workspace TypeScript it drives, is not
+    /// installed — which is every CI runner.
+    #[test]
+    fn a_real_language_server_answers_initialize() {
+        let Some(program) = crate::harness::resolve_gui_binary("typescript-language-server") else {
+            return;
+        };
+
+        // The repository root, not the crate: `typescript-language-server` needs
+        // a `tsserver` from the workspace it is rooted at, and that is where the
+        // checkout's `node_modules` lives.
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("the crate has a parent directory")
+            .to_path_buf();
+        let tsserver = root.join("node_modules/typescript/lib/tsserver.js");
+        if !tsserver.is_file() {
+            return;
+        }
+
+        let mut cmd = crate::process::command(&program);
+        cmd.arg("--stdio")
+            .current_dir(&root)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        crate::harness::apply_gui_env(&mut cmd);
+        let mut child = cmd.spawn().expect("spawn the language server");
+
+        let mut stdin = child.stdin.take().unwrap();
+        let request = format!(
+            r#"{{"jsonrpc":"2.0","id":1,"method":"initialize","params":{{"processId":null,"rootUri":"file://{}","initializationOptions":{{"tsserver":{{"path":"{}"}}}},"capabilities":{{}}}}}}"#,
+            root.display(),
+            tsserver.display(),
+        );
+        let request = request.as_bytes();
+        write!(stdin, "Content-Length: {}\r\n\r\n", request.len()).unwrap();
+        stdin.write_all(request).unwrap();
+        stdin.flush().unwrap();
+
+        // A server logs and reports progress before it answers, so read on to
+        // the frame carrying this request's id.
+        let mut reader = BufReader::new(child.stdout.take().unwrap());
+        let mut answer = String::new();
+        while let Ok(Some(body)) = read_frame(&mut reader) {
+            let frame = String::from_utf8_lossy(&body).into_owned();
+            if frame.contains(r#""id":1"#) {
+                answer = frame;
+                break;
+            }
+        }
+        // Reaped, not just signalled: a killed child that is never waited on
+        // stays a zombie for as long as the test binary runs.
+        let _ = child.kill();
+        let _ = child.wait();
+
+        assert!(
+            answer.contains("capabilities"),
+            "the server answered: {answer}"
+        );
+    }
+
     #[test]
     fn an_oversized_frame_is_refused_before_allocating() {
         let input = format!("Content-Length: {}\r\n\r\n", MAX_FRAME_BYTES + 1);

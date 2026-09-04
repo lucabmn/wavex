@@ -67,6 +67,7 @@ export class LspClient {
   private readonly stderr: string[] = [];
   /** Set once the server has failed, so late stderr can still explain it. */
   private failure: string | null = null;
+  private initializationOptions: unknown = null;
 
   constructor(
     readonly server: LanguageServerDefinition,
@@ -337,6 +338,11 @@ export class LspClient {
       },
     );
 
+    // Resolved before `initialize` rather than baked into the definition: what
+    // a server needs told about a checkout depends on the checkout.
+    this.initializationOptions =
+      (await this.server.initializationOptions?.(this.root).catch(() => null)) ?? null;
+
     const result = await withTimeout(
       connection.request<{ capabilities?: LspServerCapabilities }>(
         "initialize",
@@ -370,7 +376,7 @@ export class LspClient {
       workspaceFolders: rootUri
         ? [{ uri: rootUri, name: this.root.split("/").filter(Boolean).pop() ?? this.root }]
         : null,
-      initializationOptions: this.server.initializationOptions ?? null,
+      initializationOptions: this.initializationOptions,
       capabilities: {
         general: {
           // Asked for explicitly, and asserted in the result: UTF-16 code units
