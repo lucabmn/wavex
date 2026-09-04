@@ -41,7 +41,8 @@ import {
 } from "../lib/appearance";
 import { basename, revealPath, type GitDiffStats } from "../lib/fs";
 import { IS_MAC, MOD, REVEAL_LABEL } from "../lib/platform";
-import { pathKey, projectName } from "../lib/paths";
+import { projectKey } from "../lib/host";
+import { projectName } from "../lib/paths";
 import {
   collectRailProjects,
   loadPinnedProjects,
@@ -244,7 +245,7 @@ export function ProjectRail({
 
   useEffect(() => {
     setPinnedPaths((prev) => {
-      const next = prev.filter((path) => allProjects.has(pathKey(path)));
+      const next = prev.filter((path) => allProjects.has(projectKey(path)));
       if (next.length === prev.length) return prev;
       savePinnedProjects(next);
       return next;

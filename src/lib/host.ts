@@ -110,14 +110,6 @@ export function projectKey(value: string): string {
   return ref ? projectRefKey(ref) : pathKey(value);
 }
 
-/**
- * Client-side browser state about one host's machine — recent projects, the
- * worktree index, rail order. The local host keeps the key it already uses.
- */
-export function hostScopedStorageKey(key: string, hostId: HostId): string {
-  return isLocalHostId(hostId) ? key : `${key}@${hostId}`;
-}
-
 /** Session ids are minted per host, so two hosts can hand out the same one. */
 export function sessionRefKey(hostId: HostId, sessionId: string): string {
   return isLocalHostId(hostId) ? sessionId : `${hostId}\u0000${sessionId}`;

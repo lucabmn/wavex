@@ -44,6 +44,7 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/sessions/`: session collections, history, filters, and persistence
 - `src/lib/workspace/`: tabs, panes, splits, groups, and snapshots
 - `src/lib/terminal/`: PTY plumbing and terminal dock state
+- `src/lib/transport/`: the host transport seam and its remote connection
 - `src/lib/editor/`: editor documents, git gutter, lint, and search
 - `src/lib/files/`: file index, tree, mentions, and watching
 - `src/lib/inbox/`: GitHub issues and pull requests
@@ -97,6 +98,25 @@ deleted.
 Provider authentication and CLI-owned agent definitions are not profile-scoped;
 they belong to the installed CLI. Say so in the UI rather than implying
 otherwise.
+
+### Hosts and the transport seam
+
+The part that owns the checkout and supervises agents does not have to be the
+part that draws the UI. Command calls and event subscriptions therefore go
+through `src/lib/transport`, which dispatches either to local Tauri IPC or to a
+remote host, instead of importing `@tauri-apps/api/core` directly. Emitting is
+the exception: it broadcasts between this client's windows, so it stays local.
+
+`src/lib/host.ts` is the vocabulary for which machine an identity belongs to. A
+path is unique only on the machine that owns it, so projects compare through
+`projectKey` and sessions through `sessionRefKey`. This device keeps the
+unqualified form — the bare path, the bare session id — exactly as the default
+profile keeps the unprefixed keys, so an install that has never connected to a
+remote host needs no migration.
+
+A remote host is the user's own machine reached directly or through a tunnel.
+That keeps "no account or hosted backend" intact; a hosted relay would not, and
+is a separate decision.
 
 ### Tauri boundary
 

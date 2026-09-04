@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -35,6 +36,10 @@ struct Journal {
 
 pub struct HostEventJournal {
     stream_id: String,
+    /// Nothing is retained until a client asks to follow the stream. A local
+    /// WebView reads its events straight off the Tauri emit, and PTY bytes and
+    /// harness lines run hot enough that a copy per chunk is not free.
+    following: AtomicBool,
     journal: Mutex<Journal>,
 }
 
@@ -46,12 +51,17 @@ impl HostEventJournal {
             .as_nanos();
         Self {
             stream_id: format!("{}-{started:x}", std::process::id()),
+            following: AtomicBool::new(false),
             journal: Mutex::new(Journal {
                 next_sequence: 1,
                 bytes: 0,
                 events: VecDeque::new(),
             }),
         }
+    }
+
+    fn is_following(&self) -> bool {
+        self.following.load(Ordering::Relaxed)
     }
 
     fn record(&self, event: &str, payload: Value) {
@@ -83,6 +93,7 @@ impl HostEventJournal {
     }
 
     fn replay(&self, after_sequence: u64) -> HostEventReplay {
+        self.following.store(true, Ordering::Relaxed);
         let journal = self
             .journal
             .lock()
@@ -116,9 +127,11 @@ impl HostEventJournal {
 /// Publish once to the local WebViews and retain the same payload for remote
 /// replay. Process readers never wait for a network client.
 pub fn publish<T: Serialize + Clone>(app: &AppHandle, event: &str, payload: T) {
-    if let Ok(value) = serde_json::to_value(&payload) {
-        if let Some(journal) = app.try_state::<HostEventJournal>() {
-            journal.record(event, value);
+    if let Some(journal) = app.try_state::<HostEventJournal>() {
+        if journal.is_following() {
+            if let Ok(value) = serde_json::to_value(&payload) {
+                journal.record(event, value);
+            }
         }
     }
     let _ = app.emit(event, payload);
@@ -135,6 +148,19 @@ pub fn host_events_since(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nothing_is_retained_until_a_client_follows_the_stream() {
+        let journal = HostEventJournal::new();
+        assert!(!journal.is_following());
+
+        let replay = journal.replay(0);
+        assert!(journal.is_following());
+        assert!(replay.events.is_empty());
+
+        journal.record("one", serde_json::json!({ "value": 1 }));
+        assert_eq!(journal.replay(0).events.len(), 1);
+    }
 
     #[test]
     fn replay_is_ordered_and_excludes_acknowledged_events() {

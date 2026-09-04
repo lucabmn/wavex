@@ -68,6 +68,7 @@ export class RemoteHostTransport implements HostTransport {
   private sequence = 0;
   private pendingResync: { streamId: string; latestSequence: number } | null = null;
   private closed = false;
+  private refusal: string | null = null;
   private pending = new Map<number, PendingCall>();
   private listeners = new Map<string, Set<EventHandler<unknown>>>();
   private snapshot: ConnectionSnapshot;
@@ -101,6 +102,7 @@ export class RemoteHostTransport implements HostTransport {
   }
 
   connect(): Promise<void> {
+    if (this.refusal) return Promise.reject(new Error(this.refusal));
     if (this.snapshot.phase === "connected") return Promise.resolve();
     if (this.snapshot.phase === "resynchronizing" && this.canSend()) return Promise.resolve();
     const promise = this.connectionPromise ?? this.makeConnectionPromise();
@@ -153,10 +155,6 @@ export class RemoteHostTransport implements HostTransport {
       handlers.delete(handler as EventHandler<unknown>);
       if (handlers.size === 0) this.listeners.delete(event);
     };
-  }
-
-  async emit(): Promise<void> {
-    throw new Error("Client-local events cannot be emitted to a remote host");
   }
 
   /** Resume event delivery only after the caller replaced stale domain state. */
@@ -327,16 +325,21 @@ export class RemoteHostTransport implements HostTransport {
   private onEvent(message: EventMessage): void {
     if (message.streamId !== this.streamId || message.sequence <= this.sequence) return;
     if (message.sequence !== this.sequence + 1) {
-      this.send({ type: "resync", streamId: this.streamId, afterSequence: this.sequence });
-      this.setSnapshot({
-        ...this.snapshot,
-        phase: "resynchronizing",
-        error: "Some host updates were missed; resynchronizing…",
-      });
+      if (this.snapshot.phase !== "resynchronizing") {
+        this.send({ type: "resync", streamId: this.streamId, afterSequence: this.sequence });
+        this.setSnapshot({
+          ...this.snapshot,
+          phase: "resynchronizing",
+          error: "Some host updates were missed; resynchronizing…",
+        });
+      }
       return;
     }
 
     this.sequence = message.sequence;
+    if (this.snapshot.phase === "resynchronizing" && !this.pendingResync) {
+      this.setSnapshot({ ...this.snapshot, phase: "connected", error: undefined });
+    }
     this.dispatch(message.event, message.payload, message.sequence);
   }
 
@@ -381,6 +384,7 @@ export class RemoteHostTransport implements HostTransport {
 
   private failAuthentication(message: string): void {
     this.closed = true;
+    this.refusal = message;
     this.setSnapshot({ ...this.snapshot, phase: "offline", retryInMs: undefined, error: message });
     this.rejectConnection(message);
   }

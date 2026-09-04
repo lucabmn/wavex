@@ -1,5 +1,5 @@
 import { getDefaultHostId, invokeOn } from "../transport";
-import { LOCAL_HOST_ID, sessionRefKey, type HostId } from "../host";
+import { sessionRefKey, type HostId } from "../host";
 import { persistableAttachment } from "../attachments";
 import type { ContextUsage } from "../contextUsage";
 import { normalizeProjectPath } from "../recents";
@@ -315,13 +315,13 @@ let workspaceWrite: Promise<unknown> = Promise.resolve();
 export async function saveWorkspaceSnapshot(snapshot: unknown): Promise<void> {
   const run = workspaceWrite
     .catch(() => undefined)
-    .then(() => invokeOn(LOCAL_HOST_ID, "workspace_set_snapshot", { snapshot }));
+    .then(() => invokeOn(getDefaultHostId(), "workspace_set_snapshot", { snapshot }));
   workspaceWrite = run;
   await run;
 }
 
 export async function loadWorkspaceSnapshot(): Promise<unknown | null> {
-  const raw = await invokeOn<unknown | null>(LOCAL_HOST_ID, "workspace_get_snapshot");
+  const raw = await invokeOn<unknown | null>(getDefaultHostId(), "workspace_get_snapshot");
   return raw ?? null;
 }
 

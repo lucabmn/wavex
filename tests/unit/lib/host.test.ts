@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   LOCAL_HOST_ID,
   formatProjectRef,
-  hostScopedStorageKey,
   isLocalHostId,
   isRemoteHostId,
   localProject,
@@ -110,17 +109,11 @@ describe("projectKey", () => {
 });
 
 describe("host-scoped identities", () => {
-  it("leaves local storage keys and session keys unprefixed", () => {
-    expect(hostScopedStorageKey("wavex.recentProjects", LOCAL_HOST_ID)).toBe(
-      "wavex.recentProjects",
-    );
+  it("leaves a local session key unprefixed", () => {
     expect(sessionRefKey(LOCAL_HOST_ID, "abc123")).toBe("abc123");
   });
 
   it("qualifies a remote host so two hosts cannot share a slot", () => {
-    expect(hostScopedStorageKey("wavex.recentProjects", "dev-box")).toBe(
-      "wavex.recentProjects@dev-box",
-    );
     expect(sessionRefKey("dev-box", "abc123")).not.toBe(sessionRefKey("cloud-vm", "abc123"));
     expect(sessionRefKey("dev-box", "abc123")).not.toBe("abc123");
   });

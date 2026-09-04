@@ -27,6 +27,7 @@ export type {
 } from "./types";
 export { normalizeRemoteEndpoint, ticketEndpoint } from "./endpoint";
 export { RESYNC_REQUIRED_EVENT } from "./events";
+export { hostEventsSince, type HostEvent, type HostEventReplay } from "./hostEvents";
 export { LOCAL_HOST_ID, type HostId } from "../host";
 export { RemoteHostTransport, type RemoteTransportOptions } from "./remote";
 
@@ -142,10 +143,6 @@ export function listenOn<T>(
   return transportFor(hostId).listen(event, handler, options);
 }
 
-export function emitOn(hostId: HostId, event: string, payload?: unknown): Promise<void> {
-  return transportFor(hostId).emit(event, payload);
-}
-
 /** Existing local wrappers keep this shape while host identity migrates upward. */
 export function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   return invokeOn<T>(defaultHostId, command, args);
@@ -159,6 +156,10 @@ export function listen<T>(
   return listenOn(defaultHostId, event, handler, options);
 }
 
+/**
+ * Tell the other windows of this client something changed. This never travels
+ * to a host: it is window state, and a host has no windows.
+ */
 export function emit(event: string, payload?: unknown): Promise<void> {
-  return emitOn(defaultHostId, event, payload);
+  return local.emit(event, payload);
 }

@@ -206,6 +206,43 @@ describe("RemoteHostTransport", () => {
     await expect(reloaded).resolves.toBe("fresh");
   });
 
+  it("keeps failing a refused connection instead of hanging a later call", async () => {
+    const transport = new RemoteHostTransport(
+      "host-1",
+      { endpoint: "wss://dev.example.com/api/v1/connect", token: "bad" },
+      { fetch: async () => response({}, 401), socket: vi.fn() },
+    );
+
+    await expect(transport.connect()).rejects.toThrow("Authentication failed");
+    await expect(transport.invoke("session_list_in_flight")).rejects.toThrow(
+      "Authentication failed",
+    );
+    await expect(transport.connect()).rejects.toThrow("Authentication failed");
+  });
+
+  it("asks for a replay once per gap, not once per event that follows it", async () => {
+    const { socket, transport } = setup();
+    const connected = transport.connect();
+    await vi.waitFor(() => expect(socket.protocols).toHaveLength(2));
+    completeHandshake(socket);
+    await connected;
+
+    for (const sequence of [11, 12, 13]) {
+      socket.message({
+        type: "event",
+        streamId: "stream-a",
+        sequence,
+        event: "harness-stdout",
+        payload: { line: "gap" },
+      });
+    }
+
+    const resyncs = socket.sent
+      .map((value) => JSON.parse(value))
+      .filter((item) => item.type === "resync");
+    expect(resyncs).toEqual([{ type: "resync", streamId: "stream-a", afterSequence: 8 }]);
+  });
+
   it("reports authentication failure without opening a socket", async () => {
     const socket = vi.fn();
     const transport = new RemoteHostTransport(

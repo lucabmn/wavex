@@ -1,6 +1,6 @@
-import type { HostTransport, ListenOptions, TransportEvent, UnlistenFn } from "./types";
+import type { ListenOptions, LocalTransport, TransportEvent, UnlistenFn } from "./types";
 
-export function createTauriTransport(): HostTransport {
+export function createTauriTransport(): LocalTransport {
   return {
     async invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
       const { invoke } = await import("@tauri-apps/api/core");
