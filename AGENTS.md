@@ -44,7 +44,9 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/sessions/`: session collections, history, filters, and persistence
 - `src/lib/workspace/`: tabs, panes, splits, groups, and snapshots
 - `src/lib/terminal/`: PTY plumbing and terminal dock state
-- `src/lib/editor/`: editor documents, git gutter, lint, and search
+- `src/lib/editor/`: editor documents, git gutter, diagnostics, search, and
+  the CodeMirror side of language server support
+- `src/lib/lsp/`: the language server protocol, its clients, and their lifecycle
 - `src/lib/files/`: file index, tree, mentions, and watching
 - `src/lib/inbox/`: GitHub issues and pull requests
 - `src/lib/updates/`: updater and release notes
@@ -79,6 +81,28 @@ The Rust harness host supervises processes and transports. It must not acquire
 provider-specific product behavior that belongs in a TypeScript adapter. Preserve
 session bind, stop, forget, cancel, and idle-park semantics when changing a
 provider lifecycle.
+
+### Language servers
+
+The coding view drives installed language servers. `src-tauri/src/lsp.rs`
+supervises the child processes and moves whole `Content-Length` frames across
+the boundary; everything above that — the handshake, capabilities, document
+sync, and every request — lives in `src/lib/lsp/`. It is a separate host from
+`harness.rs` on purpose: that one reads newline-delimited JSON and carries
+agent-session semantics a language server does not have.
+
+A server is rooted **per worktree checkout**, never at the shared repository. A
+worktree holds a different branch's files, and a server rooted above it would
+index — and report diagnostics against — text that is not in the file being
+edited. Inside a checkout the outermost root marker wins, so a monorepo or a
+Cargo workspace runs one server rather than one per package. The cost is one
+server per open checkout, bounded by refcounting documents and stopping a
+server that has had nothing open for a while.
+
+wavex never downloads a server: it uses what the user has installed and quotes
+the install line for what it does not find. Servers stop on profile switch,
+window close, and quit, like agents and terminals. A missing, crashed, or
+still-starting server leaves the editor exactly as it behaves without one.
 
 ### Profiles
 

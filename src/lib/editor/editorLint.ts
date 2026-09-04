@@ -1,23 +1,31 @@
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
-import { diagnosticCount, linter, type Diagnostic } from "@codemirror/lint";
-import type { EditorState, Extension } from "@codemirror/state";
+import { forEachDiagnostic, linter, type Diagnostic } from "@codemirror/lint";
+import type { EditorState, Extension, Text } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { basename } from "../fs";
 
 /**
- * Syntax diagnostics straight off the Lezer parse tree.
+ * The editor's diagnostics, from a language server where there is one and from
+ * the Lezer parse tree where there is not.
  *
  * The parser already runs for syntax highlighting, and its error recovery
  * leaves error nodes in the tree wherever it could not proceed. Reading those
  * back out costs one tree walk and no new parsing, so this catches the typo
  * class of mistakes — unclosed brackets, stray quotes, malformed statements —
- * without any of the weight of a real type checker or language server.
+ * without any of the weight of a real type checker.
+ *
+ * A language server answers about types, imports, and names, which is strictly
+ * more than the grammar can know. Once it has answered for a document its
+ * diagnostics replace the syntax ones outright rather than being merged: the
+ * two disagree about the same code, and the grammar is the one that guesses.
+ * That also retires the known-gap filters below for every file a server covers.
  *
  * Highlighter grammars are not spec-complete. Known gaps (arrow type
  * predicates, typed `catch`, Tailwind `@source`, …) are filtered so they
- * don't light up as errors. Rust is highlighted but not linted: `@lezer/rust`
- * still misses `let`-`else` and attributes on statements, and those holes
- * cascade through the rest of the file.
+ * don't light up as errors. Rust is highlighted but not linted here:
+ * `@lezer/rust` still misses `let`-`else` and attributes on statements, and
+ * those holes cascade through the rest of the file — rust-analyzer is what
+ * gives a Rust file real diagnostics.
  */
 
 /** Mirrors `MAX_FORMAT_CHARS` in lib/format: past this, a file is a viewer. */
@@ -56,18 +64,38 @@ const LINTABLE_EXTENSIONS = new Set([
   ".py",
 ]);
 
-export function editorLint(path: string, onErrorCount?: (count: number) => void): Extension {
-  if (!isLintable(path)) return [];
+export type EditorLintOptions = {
+  onErrorCount?: (count: number) => void;
+  /**
+   * Server diagnostics for the document, or `null` when no server has answered
+   * for it yet. Returning a list — including an empty one — means the server is
+   * authoritative and the syntax source is skipped.
+   */
+  serverDiagnostics?: (doc: Text) => Diagnostic[] | null;
+};
+
+export function editorLint(path: string, options: EditorLintOptions = {}): Extension {
+  const { onErrorCount, serverDiagnostics } = options;
+  // The lint machinery is installed whenever a server might answer, not only
+  // for the extensions the grammar can lint. Without it a `.rs` file would have
+  // no lint field for rust-analyzer's diagnostics to land in.
+  if (!serverDiagnostics && !isLintable(path)) return [];
+  const lintable = isLintable(path);
+
   return [
-    linter((view) => syntaxDiagnostics(view.state), {
-      delay: LINT_DELAY_MS,
-      /**
-       * The language arrives in a compartment after an async import, and large
-       * files parse in chunks. Neither is a document change, so without this a
-       * file opened with an error in it stays clean until the first keystroke.
-       */
-      needsRefresh: (update) => syntaxTree(update.state) !== syntaxTree(update.startState),
-    }),
+    linter(
+      (view) =>
+        serverDiagnostics?.(view.state.doc) ?? (lintable ? syntaxDiagnostics(view.state) : []),
+      {
+        delay: LINT_DELAY_MS,
+        /**
+         * The language arrives in a compartment after an async import, and large
+         * files parse in chunks. Neither is a document change, so without this a
+         * file opened with an error in it stays clean until the first keystroke.
+         */
+        needsRefresh: (update) => syntaxTree(update.state) !== syntaxTree(update.startState),
+      },
+    ),
     onErrorCount ? errorCountReporter(onErrorCount) : [],
     lintTheme,
   ];
@@ -77,11 +105,17 @@ export function editorLint(path: string, onErrorCount?: (count: number) => void)
  * Diagnostics land in the lint state field on the linter's own timer rather
  * than as part of an edit, so a tab that wants to show an error badge has to
  * watch for the field changing underneath it.
+ *
+ * Errors only: a warning or a hint in the tab badge would stop the strip being
+ * an honest summary of which files are broken.
  */
 function errorCountReporter(onErrorCount: (count: number) => void): Extension {
   let reported = 0;
   return EditorView.updateListener.of((update) => {
-    const count = diagnosticCount(update.state);
+    let count = 0;
+    forEachDiagnostic(update.state, (diagnostic) => {
+      if (diagnostic.severity === "error") count += 1;
+    });
     if (count === reported) return;
     reported = count;
     onErrorCount(count);

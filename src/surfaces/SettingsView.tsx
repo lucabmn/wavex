@@ -9,6 +9,14 @@ import {
   type ReactNode,
 } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
+import {
+  getLanguageServerAvailabilitySnapshot,
+  languageServerBinary,
+  probeLanguageServers,
+  subscribeLanguageServerAvailability,
+} from "../lib/lsp/availability";
+import { lspStatusSnapshot, subscribeLspStatus, type LspServerStatus } from "../lib/lsp/manager";
+import { LANGUAGE_SERVERS } from "../lib/lsp/servers";
 import { DeleteProfileDialog } from "../chrome/DeleteProfileDialog";
 import { ProfileAvatar } from "../chrome/ProfileAvatar";
 import { ProfileDialog } from "../chrome/ProfileDialog";
@@ -209,6 +217,7 @@ export function SettingsView({
           {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
           {section === "keybindings" ? <KeybindingsPage /> : null}
           {section === "providers" ? <ProvidersPage /> : null}
+          {section === "language-servers" ? <LanguageServersPage /> : null}
           {section === "archive" ? (
             <ArchivePage
               cwd={cwd}
@@ -691,6 +700,61 @@ function ProvidersPage() {
       ))}
     </>
   );
+}
+
+/**
+ * Language servers are found, not installed. The page reports what is on the
+ * user's PATH and quotes the install line for what is not — the same posture
+ * wavex takes with the agent CLIs.
+ */
+function LanguageServersPage() {
+  useSyncExternalStore(
+    subscribeLanguageServerAvailability,
+    getLanguageServerAvailabilitySnapshot,
+    getLanguageServerAvailabilitySnapshot,
+  );
+  const running = useSyncExternalStore(subscribeLspStatus, lspStatusSnapshot, lspStatusSnapshot);
+
+  useEffect(() => {
+    void probeLanguageServers();
+  }, []);
+
+  return (
+    <>
+      <p className="pb-2 text-[12px] leading-relaxed text-content/45">
+        wavex uses the language servers you already have installed and never downloads one. A server
+        starts when you open a file it covers and stops when you close the project, switch profile,
+        or quit. Files of a language with no server keep the editor’s built-in syntax checking.
+      </p>
+      {LANGUAGE_SERVERS.map((server) => {
+        const binary = languageServerBinary(server.id);
+        const live = running.filter((entry) => entry.serverId === server.id);
+        return (
+          <Row
+            key={server.id}
+            label={server.name}
+            description={
+              binary
+                ? `Found ${binary}. Covers ${server.extensions.join(", ")}.`
+                : `Not installed. Install it with \`${server.installHint}\`.`
+            }
+          >
+            <span className="text-[11.5px] whitespace-nowrap text-content/50">
+              {languageServerStateLabel(live)}
+            </span>
+          </Row>
+        );
+      })}
+    </>
+  );
+}
+
+function languageServerStateLabel(running: LspServerStatus[]): string {
+  if (running.length === 0) return "Not running";
+  if (running.some((entry) => entry.status.state === "failed")) return "Failed to start";
+  const ready = running.filter((entry) => entry.status.state === "ready").length;
+  if (ready === 0) return "Starting…";
+  return ready === 1 ? "Running" : `Running in ${ready} checkouts`;
 }
 
 function ProviderRow({

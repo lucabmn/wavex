@@ -1,4 +1,5 @@
 import { acceptCompletion, completionStatus } from "@codemirror/autocomplete";
+import { forceLinting } from "@codemirror/lint";
 import { indentLess, indentMore } from "@codemirror/commands";
 import { foldGutter, foldKeymap, getIndentUnit, indentUnit } from "@codemirror/language";
 import {
@@ -25,10 +26,11 @@ import { AlertCircle, ChevronDown, ChevronUp, RotateCcw } from "../chrome/icons"
 import { minimalSetup } from "codemirror";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MarkdownViewShell, useMarkdownMode } from "../chrome/MarkdownModeToggle";
+import { RenameSymbolDialog } from "../chrome/RenameSymbolDialog";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { isLightScheme } from "../lib/appearance";
-import { formatText } from "../lib/format";
+import { formatText, hasPrettierParser } from "../lib/format";
 import {
   basename,
   gitFileDiff,
@@ -56,11 +58,25 @@ import {
   setGitOriginal,
 } from "../lib/editor/editorGit";
 import { editorLint } from "../lib/editor/editorLint";
+import {
+  editorLsp,
+  type LspNavigationCommands,
+  type LspWorkspaceCommands,
+} from "../lib/editor/editorLsp";
+import { lspAutocomplete } from "../lib/editor/editorLspCompletion";
+import { serverDiagnosticsSource } from "../lib/editor/editorLspDiagnostics";
+import { formatWithServer } from "../lib/editor/editorLspFormat";
+import { newLspSessionRef } from "../lib/editor/editorLspSession";
 import { editorSearch } from "../lib/editor/editorSearch";
+import { acquireDocument } from "../lib/lsp/manager";
+import { serverForPath } from "../lib/lsp/servers";
 
 type EditorNavigationRequest = EditorNavigation & { token: number };
 
 const editorScheme = new Compartment();
+
+/** Long enough to read “No definition found”, short enough not to linger. */
+const NOTICE_MS = 2_500;
 
 type Props = {
   path: string;
@@ -71,6 +87,8 @@ type Props = {
   onDirtyChange: (path: string, dirty: boolean) => void;
   onErrorCountChange?: (path: string, count: number) => void;
   onOpenFile?: (path: string) => void;
+  /** Where a language server result goes. Absent outside the workspace. */
+  lspCommands?: LspWorkspaceCommands;
 };
 
 type LoadState =
@@ -89,6 +107,7 @@ export function FileEditor({
   onDirtyChange,
   onErrorCountChange,
   onOpenFile,
+  lspCommands,
 }: Props) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
@@ -364,6 +383,7 @@ export function FileEditor({
               <CodeMirrorEditor
                 key={`${path}:${reloadKey}`}
                 path={path}
+                cwd={cwd}
                 value={loadState.content}
                 showDiff={showDiff}
                 gitOriginal={gitOriginal}
@@ -374,6 +394,7 @@ export function FileEditor({
                 onSave={save}
                 onStageGit={showDiff ? stageGit : undefined}
                 onDocChange={setDraft}
+                lspCommands={lspCommands}
               />
             </div>
           }
@@ -382,6 +403,7 @@ export function FileEditor({
         <CodeMirrorEditor
           key={`${path}:${reloadKey}`}
           path={path}
+          cwd={cwd}
           value={loadState.content}
           showDiff={showDiff}
           gitOriginal={gitOriginal}
@@ -391,6 +413,7 @@ export function FileEditor({
           onErrorCountChange={errorCountChange}
           onSave={save}
           onStageGit={showDiff ? stageGit : undefined}
+          lspCommands={lspCommands}
         />
       )}
       <footer className="flex h-6 shrink-0 items-center border-t border-content/10 px-2.5 font-mono text-[10.5px] text-content/40">
@@ -413,6 +436,7 @@ export function FileEditor({
 
 function CodeMirrorEditor({
   path,
+  cwd,
   value,
   showDiff,
   gitOriginal,
@@ -423,8 +447,10 @@ function CodeMirrorEditor({
   onSave,
   onStageGit,
   onDocChange,
+  lspCommands,
 }: {
   path: string;
+  cwd: string;
   value: string;
   showDiff: boolean;
   gitOriginal: string | null;
@@ -435,9 +461,34 @@ function CodeMirrorEditor({
   onSave: (content: string) => Promise<void>;
   onStageGit?: (contents: string) => Promise<void>;
   onDocChange?: (content: string) => void;
+  lspCommands?: LspWorkspaceCommands;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  // Filled once the language server has the document open. Every language
+  // server extension reads through it and does nothing while it is empty.
+  const lspSessionRef = useRef(newLspSessionRef());
+  const [notice, setNotice] = useState("");
+  const [rename, setRename] = useState<{
+    symbol: string;
+    resolve: (name: string | null) => void;
+  } | null>(null);
+  /**
+   * The workspace half comes from `App`; the dialog and the notice belong to
+   * the editor the request came from, so a result never appears over an
+   * unrelated pane. Held in a ref because the extension is built once, when the
+   * view is created, and these change on every render.
+   */
+  const lspCommandsRef = useRef<LspNavigationCommands | null>(null);
+  lspCommandsRef.current = {
+    goToTarget: (target, origin) => lspCommands?.goToTarget(target, origin),
+    showReferences: (symbol, targets) => lspCommands?.showReferences(symbol, targets),
+    applyWorkspaceEdit: (symbol, edit) =>
+      lspCommands?.applyWorkspaceEdit(symbol, edit) ?? Promise.resolve(null),
+    promptRename: (symbol) =>
+      new Promise<string | null>((resolve) => setRename({ symbol, resolve })),
+    report: setNotice,
+  };
   const savedDocumentRef = useRef<Text | null>(null);
   const dirtyRef = useRef(false);
   const activeRef = useRef(active);
@@ -532,6 +583,10 @@ function CodeMirrorEditor({
     if (!host) return;
 
     const language = new Compartment();
+    // Completion swaps wholesale rather than merging: where a server answers,
+    // the grammar's buffer-word suggestions are noise beside real symbols.
+    const completion = new Compartment();
+    const session = lspSessionRef.current;
     let disposed = false;
     let saveGeneration = 0;
     let view: EditorView;
@@ -541,29 +596,57 @@ function CodeMirrorEditor({
       setDirty(saved ? !view.state.doc.eq(saved) : false);
     };
 
+    /**
+     * Prettier keeps the files it owns: it reads the project's `.prettierrc`,
+     * and swapping it for a server's built-in style would change how every
+     * existing `.ts` save comes out. The server formats the rest — `.rs`,
+     * `.go`, `.py` — with the project's own rustfmt, gofmt, or formatter
+     * configuration, which those files get no formatting from today.
+     */
+    const formatOnSave = async (before: string) => {
+      if (hasPrettierParser(path)) {
+        const result = await formatText(path, before, view.state.selection.main.head);
+        if (disposed || !result) return;
+        if (result.formatted === before || view.state.doc.toString() !== before) return;
+        replaceEditorDoc(view, result.formatted, {
+          selection: {
+            anchor: Math.min(Math.max(0, result.cursorOffset), result.formatted.length),
+          },
+        });
+        return;
+      }
+
+      const anchor = view.state.selection.main.head;
+      const formatted = await formatWithServer(path, session, before, {
+        tabSize: view.state.tabSize,
+        insertSpaces: view.state.facet(indentUnit) !== "\t",
+      }).catch(() => null);
+      if (disposed || formatted === null) return;
+      if (view.state.doc.toString() !== before) return;
+      replaceEditorDoc(view, formatted, {
+        selection: { anchor: Math.min(anchor, formatted.length) },
+      });
+    };
+
     const save = () => {
       const generation = ++saveGeneration;
       void (async () => {
         const before = view.state.doc.toString();
-        const result = await formatText(path, before, view.state.selection.main.head);
+        await formatOnSave(before);
         if (disposed || generation !== saveGeneration) return;
 
-        if (result && result.formatted !== before && view.state.doc.toString() === before) {
-          replaceEditorDoc(view, result.formatted, {
-            selection: {
-              anchor: Math.min(Math.max(0, result.cursorOffset), result.formatted.length),
-            },
-          });
-        }
-
         const document = view.state.doc;
+        const text = document.toString();
         try {
-          await onSaveRef.current(document.toString());
+          await onSaveRef.current(text);
         } catch {
           return;
         }
         if (disposed || generation !== saveGeneration) return;
         savedDocumentRef.current = document;
+        // The server watches the file too, but `didSave` is what makes a server
+        // that only checks on save — rust-analyzer's `cargo check` — re-run.
+        session.current?.save(text);
         markDirty();
       })();
       return true;
@@ -593,8 +676,16 @@ function CodeMirrorEditor({
         editorScheme.of(schemeExtensions(isLightScheme() ? "light" : "dark")),
         editorMatching,
         editorTyping(path),
-        editorAutocomplete,
-        editorLint(path, (count) => onErrorCountChangeRef.current(count)),
+        completion.of(editorAutocomplete),
+        editorLint(path, {
+          onErrorCount: (count) => onErrorCountChangeRef.current(count),
+          // Only where a server could answer. A file no server covers keeps
+          // exactly the lint extension it has today, or none at all.
+          serverDiagnostics: serverForPath(path)
+            ? serverDiagnosticsSource(path, session)
+            : undefined,
+        }),
+        editorLsp(path, session, lspCommandsRef),
         editorSearch,
         Prec.high(
           keymap.of([
@@ -616,6 +707,13 @@ function CodeMirrorEditor({
         EditorView.updateListener.of((update) => {
           if (!update.docChanged) return;
           onDocChangeRef.current?.(update.state.doc.toString());
+          // Every change reaches the server, including the disk reload below:
+          // the buffer is the document the server must agree with, and a
+          // version it never saw would put its diagnostics on the wrong lines.
+          session.current?.change(update.state.doc, {
+            before: update.startState.doc,
+            changes: update.changes,
+          });
           if (update.transactions.some((tr) => tr.annotation(diskReload))) {
             return;
           }
@@ -655,6 +753,25 @@ function CodeMirrorEditor({
       }
     });
 
+    // The document is opened against the server with the text the view was
+    // built from, so `didOpen` and the buffer start in agreement. A file the
+    // server has already answered for keeps its diagnostics from the store;
+    // one it has not yet seen keeps the syntax diagnostics until it does.
+    const openedDoc = view.state.doc;
+    void acquireDocument(path, cwd, openedDoc.toString()).then((handle) => {
+      if (!handle) return;
+      if (disposed) {
+        handle.release();
+        return;
+      }
+      session.current = handle;
+      // Starting a server takes seconds. Anything typed while the handshake was
+      // in flight is not in the text that went out with `didOpen`.
+      if (!view.state.doc.eq(openedDoc)) handle.change(view.state.doc);
+      view.dispatch({ effects: completion.reconfigure(lspAutocomplete(path, session)) });
+      forceLinting(view);
+    });
+
     return () => {
       disposed = true;
       onErrorCountChangeRef.current(0);
@@ -662,9 +779,13 @@ function CodeMirrorEditor({
       viewRef.current = null;
       savedDocumentRef.current = null;
       setChunkNav(null);
+      // Release before destroying: the last editor on a file tells the server
+      // to close it, and a closed document must not outlive its view.
+      session.current?.release();
+      session.current = null;
       view.destroy();
     };
-  }, [lockOverscroll, path, showDiff, syncChunkNav]);
+  }, [cwd, lockOverscroll, path, showDiff, syncChunkNav]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -735,6 +856,12 @@ function CodeMirrorEditor({
   }, [navigation]);
 
   useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  useEffect(() => {
     if (!active) return;
     const view = viewRef.current;
     if (!view) return;
@@ -747,7 +874,7 @@ function CodeMirrorEditor({
   }, [active, path]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       {showDiff ? (
         <DiffChunkNav
           index={chunkNav?.index ?? 0}
@@ -759,6 +886,29 @@ function CodeMirrorEditor({
         />
       ) : null}
       <div ref={hostRef} className="min-h-0 flex-1" />
+      {notice ? (
+        <div
+          role="status"
+          className="pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit max-w-[80%] truncate rounded-md bg-background-base/90 px-2.5 py-1 text-[11.5px] text-content/70 shadow-lg ring-1 ring-content/10"
+        >
+          {notice}
+        </div>
+      ) : null}
+      {rename ? (
+        <RenameSymbolDialog
+          symbol={rename.symbol}
+          onCancel={() => {
+            rename.resolve(null);
+            setRename(null);
+            viewRef.current?.focus();
+          }}
+          onRename={(newName) => {
+            rename.resolve(newName);
+            setRename(null);
+            viewRef.current?.focus();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

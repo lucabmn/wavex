@@ -202,5 +202,8 @@ pub fn confirm_quit(app: AppHandle) {
     if let Some(host) = app.try_state::<crate::pty::PtyHost>() {
         host.kill_all();
     }
+    if let Some(host) = app.try_state::<crate::lsp::LspHost>() {
+        host.stop_all();
+    }
     app.exit(0);
 }

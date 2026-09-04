@@ -17,6 +17,7 @@ import { WhatsNewDialog } from "./chrome/WhatsNewDialog";
 import { TitleBar } from "./chrome/TitleBar";
 import { MenuBar } from "./chrome/MenuBar";
 import { FilePicker } from "./chrome/FilePicker";
+import { SymbolPicker } from "./chrome/SymbolPicker";
 import { UsageFooter } from "./chrome/UsageFooter";
 import { useProjectBranches } from "./hooks/useProjectBranches";
 import {
@@ -32,7 +33,9 @@ import {
   basename,
   notifyGitChanged,
   pickFolder,
+  readTextFile,
   restoreSessionCheckout,
+  writeTextFile,
   type GitHistoryCommit,
 } from "./lib/fs";
 import {
@@ -76,6 +79,7 @@ import {
   neighborLeafId,
   newFileTab,
   newPlanTab,
+  newReferencesTab,
   newTab,
   newTerminalFile,
   newTerminalWorkspaceTab,
@@ -180,13 +184,25 @@ import {
 import { nudgeWatchedFiles } from "./lib/files/fileWatch";
 import { type EditorNavigationTarget, type OpenFileFn } from "./lib/search";
 import {
+  codeNavigationBack,
+  codeNavigationForward,
+  EMPTY_CODE_NAVIGATION,
+  pruneCodeNavigation,
+  pushCodeLocation,
+  type CodeLocation,
+  type CodeNavigationHistory,
+} from "./lib/editor/codeNavigation";
+import type { LspWorkspaceCommands } from "./lib/editor/editorLsp";
+import type { LspWorkspaceEdit } from "./lib/lsp/types";
+import { planRename } from "./lib/lsp/rename";
+import {
   mergeModelSettings,
   preferredModelSettings,
   resolveModel,
   saveLastModelSettings,
 } from "./lib/models";
 import { planTitle } from "./lib/plan";
-import { displayPath, isEqualOrInside, projectName, rebasePath } from "./lib/paths";
+import { displayPath, isEqualOrInside, pathKey, projectName, rebasePath } from "./lib/paths";
 import { removeProjectData } from "./lib/project/projectData";
 import {
   archiveProject,
@@ -442,7 +458,16 @@ export default function App({
   const [switchingToProfile, setSwitchingToProfile] = useState<Profile | null>(null);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
   const editorNavigationToken = useRef(0);
+  /**
+   * Where code navigation has been. A ref rather than state: nothing renders
+   * from it, and a jump through a call graph should not repaint the workspace.
+   */
+  const codeNavRef = useRef<{ history: CodeNavigationHistory; current: CodeLocation | null }>({
+    history: EMPTY_CODE_NAVIGATION,
+    current: null,
+  });
   const [filePickerOpen, setFilePickerOpen] = useState(false);
+  const [symbolPickerOpen, setSymbolPickerOpen] = useState(false);
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(
     () => new Set(windowTransfer?.dirtyFileIds ?? []),
   );
@@ -739,6 +764,14 @@ export default function App({
     const focused = activeTab ? focusedFileTab(activeTab) : undefined;
     return !!focused && ids.has(focused.id);
   }, [activeTab, currentProjectDock, runningTerminals]);
+
+  /** The file the editor is on, for commands that ask about the current file. */
+  const focusedEditorPath = useMemo(() => {
+    const focused = activeTab ? focusedFileTab(activeTab) : undefined;
+    return focused && isFilesystemTab(focused) ? focused.path : null;
+  }, [activeTab]);
+  const focusedEditorPathRef = useRef(focusedEditorPath);
+  focusedEditorPathRef.current = focusedEditorPath;
 
   const nextApprovalSessionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -2595,6 +2628,109 @@ export default function App({
     [activeTabId],
   );
 
+  /**
+   * Carry out a rename the server planned.
+   *
+   * The edits address the files as they are on disk. A file with unsaved
+   * changes would have those changes overwritten, so the rename stops instead
+   * of silently choosing one of the two versions.
+   */
+  const applyRenameEdit = useCallback(
+    async (symbol: string, edit: LspWorkspaceEdit): Promise<string | null> => {
+      const plan = await planRename(
+        symbol,
+        edit,
+        dirtyFilePaths(tabsRef.current, dirtyFilesRef.current),
+        (path) => readTextFile(path).catch(() => null),
+      );
+      if (!plan.ok) return plan.reason;
+      if (plan.files.length === 0) return null;
+
+      const failed: string[] = [];
+      for (const file of plan.files) {
+        await writeTextFile(file.path, file.text).catch(() => failed.push(basename(file.path)));
+      }
+      invalidateProjectFiles();
+      notifyGitChanged();
+      return failed.length > 0 ? `Couldn’t write ${failed.join(", ")}` : null;
+    },
+    [],
+  );
+
+  /**
+   * A language server result opens the way anything else does — in the focused
+   * editor pane, reusing the tab when the file is already open — and records
+   * where it came from so Go Back returns to the call site rather than to
+   * whatever tab happened to be behind it.
+   */
+  const lspCommands = useMemo<LspWorkspaceCommands>(
+    () => ({
+      goToTarget: (target, origin) => {
+        const destination: CodeLocation = {
+          path: target.path,
+          line: target.line,
+          column: target.column,
+        };
+        codeNavRef.current = {
+          history: pushCodeLocation(codeNavRef.current.history, origin, destination),
+          current: destination,
+        };
+        onOpenFile(target.path, { line: target.line, column: target.column });
+      },
+      showReferences: (symbol, targets) => {
+        const tab = tabsRef.current.find((entry) => entry.id === activeTabIdRef.current);
+        if (!tab) return;
+        const file = newReferencesTab(sidebarCwdRef.current, { symbol, targets });
+        setTabs((prev) =>
+          prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
+        );
+        setComposerFocused(false);
+      },
+      applyWorkspaceEdit: applyRenameEdit,
+    }),
+    [applyRenameEdit, onOpenFile],
+  );
+
+  /**
+   * Go Back spends the code navigation history first.
+   *
+   * A definition jump inside one file, or between two files that are both
+   * already open, never changes the workspace tab — so the tab history has
+   * nothing to unwind and Back would jump somewhere the user did not come from.
+   */
+  const codeNavigationStep = useCallback(
+    (direction: "back" | "forward") => {
+      const openPaths = openEditorPaths(tabsRef.current);
+      const history = pruneCodeNavigation(codeNavRef.current.history, openPaths);
+      // Only the location this history put the user at is worth remembering on
+      // the way past it. Once they have moved somewhere else themselves — a tab
+      // click, a search hit — the stored location is no longer where they are,
+      // and pushing it onto the forward stack would send Forward somewhere they
+      // have never been.
+      const current = codeNavRef.current.current;
+      const at =
+        current && pathKey(current.path) === pathKey(focusedEditorPathRef.current ?? "")
+          ? current
+          : null;
+      const step =
+        direction === "back" ? codeNavigationBack(history, at) : codeNavigationForward(history, at);
+      if (!step) {
+        codeNavRef.current = { ...codeNavRef.current, history };
+        return false;
+      }
+      codeNavRef.current = { history: step.history, current: step.location };
+      onOpenFile(step.location.path, {
+        line: step.location.line,
+        column: step.location.column,
+      });
+      return true;
+    },
+    [onOpenFile],
+  );
+
+  const codeNavigationStepRef = useRef(codeNavigationStep);
+  codeNavigationStepRef.current = codeNavigationStep;
+
   const onOpenPlan = useCallback(
     (sessionId: string, blockId: string) => {
       const tab = tabsRef.current.find((entry) => entry.id === activeTabId);
@@ -3371,6 +3507,15 @@ export default function App({
     setFilePickerOpen(true);
   }, []);
 
+  const onGoToSymbol = useCallback(() => {
+    setSearchViewOpen(false);
+    setInboxViewOpen(false);
+    setNotesViewOpen(false);
+    setUsageViewOpen(false);
+    setActivityViewOpen(false);
+    setSymbolPickerOpen(true);
+  }, []);
+
   const onFindInProject = useCallback(() => {
     setSearchViewOpen(false);
     setInboxViewOpen(false);
@@ -3554,6 +3699,7 @@ export default function App({
       setActivityViewOpen(false);
       return;
     }
+    if (codeNavigationStepRef.current("back")) return;
     onVisitBack();
   }, [
     onVisitBack,
@@ -3572,6 +3718,7 @@ export default function App({
     setNotesViewOpen(false);
     setUsageViewOpen(false);
     setActivityViewOpen(false);
+    if (codeNavigationStepRef.current("forward")) return;
     onVisitForward();
   }, [onVisitForward]);
 
@@ -3615,6 +3762,7 @@ export default function App({
     onFocusDir,
     onToggleSidebar,
     onGoToFile,
+    onGoToSymbol,
     onFindInProject,
     onOpenSearch,
     onOpenInbox,
@@ -3644,6 +3792,7 @@ export default function App({
     onFocusDir,
     onToggleSidebar,
     onGoToFile,
+    onGoToSymbol,
     onFindInProject,
     onOpenSearch,
     onOpenInbox,
@@ -3720,6 +3869,7 @@ export default function App({
     () => ({
       "app.search": () => runInCoding("open_search", actions.current.onOpenSearch),
       "app.goToFile": () => runInCoding("go_to_file", actions.current.onGoToFile),
+      "app.goToSymbol": () => runInCoding("go_to_symbol", actions.current.onGoToSymbol),
       "app.findInFiles": () => runInCoding("find_in_project", actions.current.onFindInProject),
       "app.openProject": () =>
         runInCoding("open_project", () => {
@@ -3832,6 +3982,12 @@ export default function App({
         e.preventDefault();
         e.stopPropagation();
         run("go_to_file", actions.current.onGoToFile);
+        return;
+      }
+      if (mod && !e.altKey && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        e.stopPropagation();
+        run("go_to_symbol", actions.current.onGoToSymbol);
         return;
       }
       if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "f") {
@@ -3949,6 +4105,9 @@ export default function App({
         }),
       ),
       listen("go_to_file", () => runInCoding("onGoToFile", () => actions.current.onGoToFile())),
+      listen("go_to_symbol", () =>
+        runInCoding("onGoToSymbol", () => actions.current.onGoToSymbol()),
+      ),
       listen("open_search", () =>
         runInCoding("onOpenSearch", () => actions.current.onOpenSearch()),
       ),
@@ -4176,6 +4335,7 @@ export default function App({
               onNewTerminal={onNewTerminal}
               onToggleTerminal={onToggleProjectTerminal}
               onGoToFile={onGoToFile}
+              onGoToSymbol={onGoToSymbol}
               onToggleSidebar={onToggleSidebar}
               onShowSourceControl={onToggleChanges}
               onCloseCurrentTab={activeTabId ? () => onCloseTab(activeTabId) : undefined}
@@ -4294,6 +4454,7 @@ export default function App({
                           onQuestionReply={onQuestionReply}
                           onOpenFile={onOpenFile}
                           editorNavigation={editorNavigation}
+                          lspCommands={lspCommands}
                           onOpenDiff={onOpenDiff}
                           onOpenPlan={onOpenPlan}
                           onSecondOpinion={onSecondOpinion}
@@ -4422,6 +4583,16 @@ export default function App({
         />
       ) : null}
 
+      {symbolPickerOpen ? (
+        <SymbolPicker
+          open
+          cwd={gitCwd}
+          path={focusedEditorPath}
+          onOpenFile={onOpenFile}
+          onClose={() => setSymbolPickerOpen(false)}
+        />
+      ) : null}
+
       <ApprovalToasts
         notices={hiddenApprovalToasts}
         onFocusSession={onOpenApprovalSession}
@@ -4433,6 +4604,32 @@ export default function App({
       {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
     </div>
   );
+}
+
+/** Every file path open in an editor pane, across every tab. */
+function openEditorPaths(tabs: WorkspaceTab[]): string[] {
+  const paths: string[] = [];
+  for (const tab of tabs) {
+    for (const pane of tab.editorPanes) {
+      for (const file of pane.files) {
+        if (isFilesystemTab(file)) paths.push(file.path);
+      }
+    }
+  }
+  return paths;
+}
+
+/** `pathKey` of every open file with unsaved changes, across every tab. */
+function dirtyFilePaths(tabs: WorkspaceTab[], dirtyFileIds: ReadonlySet<string>): Set<string> {
+  const paths = new Set<string>();
+  for (const tab of tabs) {
+    for (const pane of tab.editorPanes) {
+      for (const file of pane.files) {
+        if (isFilesystemTab(file) && dirtyFileIds.has(file.id)) paths.add(pathKey(file.path));
+      }
+    }
+  }
+  return paths;
 }
 
 function selectedChangePath(tab: WorkspaceTab, gitCwd?: string): string | undefined {

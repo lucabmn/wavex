@@ -27,6 +27,18 @@ export async function formatText(
   }
 }
 
+/**
+ * Whether Prettier owns this file's formatting.
+ *
+ * Where it does, it stays the formatter: it reads the project's own
+ * `.prettierrc`, and a language server that merely advertises
+ * `documentFormattingProvider` — as `typescript-language-server` always does —
+ * would otherwise silently replace it with its own built-in style.
+ */
+export function hasPrettierParser(path: string): boolean {
+  return parserForPath(path) !== null;
+}
+
 function parserForPath(path: string): ParserName | null {
   const name = basename(path).toLowerCase();
   const extension = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";

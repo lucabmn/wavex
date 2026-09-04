@@ -12,6 +12,7 @@ export type CommandId =
   | "app.commandPalette"
   | "app.search"
   | "app.goToFile"
+  | "app.goToSymbol"
   | "app.findInFiles"
   | "app.openProject"
   | "app.newWindow"
@@ -48,6 +49,9 @@ export type CommandId =
   | "composer.steer"
   | "editor.find"
   | "editor.replace"
+  | "editor.goToDefinition"
+  | "editor.findReferences"
+  | "editor.renameSymbol"
   | "diff.nextHunk"
   | "diff.prevHunk"
   | "diff.stage"
@@ -72,6 +76,12 @@ export const APP_COMMANDS: AppCommand[] = [
   // Shares ⌘F with the editor's find bar, which wins while an editor has focus.
   { id: "app.search", label: "App: Search", keys: `${MOD}F`, when: "!editorFocus" },
   { id: "app.goToFile", label: "App: Go to File", keys: `${MOD}P`, when: "Always" },
+  {
+    id: "app.goToSymbol",
+    label: "App: Go to Symbol",
+    keys: `${MOD}⇧O`,
+    when: "Always",
+  },
   { id: "app.findInFiles", label: "App: Find in Files", keys: `${MOD}${SHIFT}F`, when: "Always" },
   { id: "app.openProject", label: "App: Open Project", keys: `${MOD}O`, when: "Always" },
   { id: "app.newWindow", label: "App: New Window", keys: `${MOD}${SHIFT}N`, when: "Always" },
@@ -157,6 +167,30 @@ export const APP_COMMANDS: AppCommand[] = [
     id: "editor.replace",
     label: "Editor: Replace",
     keys: `${MOD}${ALT}F`,
+    when: "editorFocus",
+    listOnly: true,
+  },
+  // Handled by the language server keymap inside CodeMirror. Listed here so the
+  // palette and the keybindings pane stay the full account of what the editor
+  // answers to.
+  {
+    id: "editor.goToDefinition",
+    label: "Editor: Go to Definition",
+    keys: "F12",
+    when: "editorFocus",
+    listOnly: true,
+  },
+  {
+    id: "editor.findReferences",
+    label: "Editor: Find References",
+    keys: "⇧F12",
+    when: "editorFocus",
+    listOnly: true,
+  },
+  {
+    id: "editor.renameSymbol",
+    label: "Editor: Rename Symbol",
+    keys: "F2",
     when: "editorFocus",
     listOnly: true,
   },
