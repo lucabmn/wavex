@@ -145,6 +145,8 @@ type Props = {
   updateNotice?: InstalledUpdate | null;
   onOpenWhatsNew?: (version: string) => void;
   onDismissUpdate?: () => void;
+  /** The session/files sidebar is visible beside this rail. */
+  besideSidebar?: boolean;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
 };
@@ -190,10 +192,15 @@ export function ProjectRail({
   updateNotice = null,
   onOpenWhatsNew,
   onDismissUpdate,
+  besideSidebar = false,
 }: Props) {
   const resize = useDragResize({
     min: PROJECT_RAIL_WIDTH_MIN,
-    max: () => Math.min(PROJECT_RAIL_WIDTH_MAX, Math.floor(window.innerWidth * 0.35)),
+    max: () =>
+      Math.min(
+        PROJECT_RAIL_WIDTH_MAX,
+        Math.floor(window.innerWidth * (besideSidebar ? 0.225 : 0.35)),
+      ),
     defaultWidth: PROJECT_RAIL_WIDTH_DEFAULT,
     initial: loadProjectRailWidth(),
     onCommit: saveProjectRailWidth,
@@ -219,6 +226,10 @@ export function ProjectRail({
   const scrollRef = useRef<HTMLDivElement>(null);
   const groupLogos = useTabGroupLogos();
   const allProjects = useMemo(() => collectRailProjects(recents, cwd), [cwd, recents]);
+  const attentionCount = useMemo(
+    () => liveAgents.filter((agent) => agent.needsApproval).length,
+    [liveAgents],
+  );
   const sections = useMemo(
     () => projectRailSections(recents, cwd, railOrder, pinnedPaths),
     [cwd, pinnedPaths, railOrder, recents],
@@ -456,7 +467,12 @@ export function ProjectRail({
               icon={Bot}
               onClick={onOpenActivity}
               active={activityActive}
-              ariaLabel="Agent activity"
+              badge={attentionCount || undefined}
+              ariaLabel={
+                attentionCount > 0
+                  ? `Agent activity, ${attentionCount} ${attentionCount === 1 ? "item needs you" : "items need you"}`
+                  : "Agent activity"
+              }
             />
           </div>
 
@@ -603,16 +619,20 @@ export function ProjectRail({
       ) : null}
       <div
         role="separator"
+        tabIndex={0}
         aria-orientation="vertical"
         aria-label="Resize project sidebar"
         aria-valuenow={resize.width}
+        aria-valuetext={`${resize.width} pixels`}
+        aria-keyshortcuts="ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight Home End Enter"
         aria-valuemin={PROJECT_RAIL_WIDTH_MIN}
-        aria-valuemax={PROJECT_RAIL_WIDTH_MAX}
-        className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none ${
+        aria-valuemax={resize.maxWidth}
+        className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none focus-visible:bg-accent/60 focus-visible:outline-none ${
           resize.dragging ? "bg-content/15" : "hover:bg-content/10"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
+        onKeyDown={resize.onKeyDown}
       />
     </nav>
   );

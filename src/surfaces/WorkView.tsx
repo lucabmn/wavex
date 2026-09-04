@@ -614,7 +614,7 @@ function FolderSection({
             aria-label={`Edit brief for ${folder.name}`}
             title="Project brief"
             onClick={onEditPrompt}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <StickyNote className="size-3" strokeWidth={1.75} />
           </button>
@@ -622,7 +622,7 @@ function FolderSection({
             type="button"
             aria-label={`New chat in ${folder.name}`}
             onClick={onNewChat}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Plus className="size-3" strokeWidth={1.75} />
           </button>
@@ -631,7 +631,7 @@ function FolderSection({
             aria-label={`Delete project ${folder.name}`}
             title="Delete project — its chats are kept"
             onClick={onDelete}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block"
+            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Trash2 className="size-3" strokeWidth={1.75} />
           </button>
@@ -922,7 +922,7 @@ function ChatRow({
           aria-label={pinned ? `Unpin ${title}` : `Pin ${title}`}
           aria-pressed={pinned}
           onClick={onPin}
-          className={`shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block ${
+          className={`shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             pinned ? "block" : "hidden"
           }`}
         >
@@ -932,7 +932,7 @@ function ChatRow({
           type="button"
           aria-label={archived ? `Unarchive ${title}` : `Archive ${title}`}
           onClick={onArchive}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {archived ? (
             <Undo2 className="size-3" strokeWidth={1.75} />
@@ -944,7 +944,7 @@ function ChatRow({
           type="button"
           aria-label={`Rename ${title}`}
           onClick={onRenameStart}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block"
+          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <PenLine className="size-3" strokeWidth={1.75} />
         </button>
@@ -952,7 +952,7 @@ function ChatRow({
           type="button"
           aria-label={`Delete ${title}`}
           onClick={onDelete}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block"
+          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Trash2 className="size-3" strokeWidth={1.75} />
         </button>

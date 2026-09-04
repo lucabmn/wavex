@@ -16,6 +16,7 @@ import { useHomeDir } from "../hooks/useHomeDir";
 import { useProjectBranchesState } from "../hooks/useProjectBranches";
 import { useWorktrees } from "../hooks/useWorktrees";
 import { Popover } from "./Popover";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = {
   /** Any folder in the repository the worktree is added to. */
@@ -53,6 +54,12 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
   );
   const path = trimmed ? suggestWorktreePath(home, repoRoot, trimmed, taken) : "";
   const baseBranch = base ?? branches?.current ?? null;
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose: onCancel,
+    initialFocusRef: inputRef,
+    escapeDisabled: Boolean(busy) || baseOpen,
+    trapDisabled: baseOpen,
+  });
 
   // A branch lives in one worktree at a time, so an existing checkout is not an
   // error to recover from — it is the worktree the user is looking for.
@@ -61,21 +68,6 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
     [trimmed, worktrees],
   );
   const canSubmit = Boolean(trimmed) && Boolean(home) && !busy && !existing;
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || baseOpen) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (!busy) onCancel();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [baseOpen, busy, onCancel]);
 
   const create = async (open: boolean) => {
     if (!canSubmit || !path) return;
@@ -108,7 +100,9 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
         }}
       />
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-busy={Boolean(busy)}
         aria-label="New worktree"

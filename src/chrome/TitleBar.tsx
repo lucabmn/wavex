@@ -36,6 +36,7 @@ import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
 import { IS_MAC, MOD } from "../lib/platform";
 import type { RecentProject } from "../lib/recents";
+import { nextTabIndex } from "../lib/tabNavigation";
 
 export type { TitleTab as Tab };
 
@@ -233,6 +234,9 @@ function TitleTabItem({
       ) : null}
       <button
         type="button"
+        role="tab"
+        aria-selected={active}
+        tabIndex={active ? 0 : -1}
         title={tooltip}
         aria-label={tooltip}
         data-tauri-drag-region="false"
@@ -240,7 +244,7 @@ function TitleTabItem({
           if (sortable.consumeClick()) return;
           onSelect(tab.id);
         }}
-        className={`relative flex h-7.5 min-w-0 flex-1 cursor-default items-center gap-1.5 self-center rounded-md px-2.5 text-left ${
+        className={`relative flex h-7.5 min-w-0 flex-1 cursor-default items-center gap-1.5 self-center rounded-md px-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           closable ? "pr-7" : "pr-2.5"
         } ${
           active
@@ -293,6 +297,7 @@ function TitleTabItem({
       {closable ? (
         <button
           type="button"
+          tabIndex={active ? 0 : -1}
           title="Close Tab"
           aria-label={`Close ${headline}`}
           data-no-drag
@@ -302,7 +307,7 @@ function TitleTabItem({
             e.stopPropagation();
             onClose(tab.id);
           }}
-          className="absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 opacity-0 hover:bg-content/10 hover:text-content group-hover:opacity-100"
+          className="absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 opacity-0 hover:bg-content/10 hover:text-content group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <X className="size-3" strokeWidth={1.75} />
         </button>
@@ -666,7 +671,22 @@ function TitleBarComponent({
           ) : null}
           <div
             ref={setTabStripRef}
+            role="tablist"
+            aria-label="Workspace tabs"
             className="scrollbar-none flex h-full min-w-0 cursor-default items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-none px-1.5"
+            onKeyDown={(event) => {
+              const current = (event.target as HTMLElement).closest<HTMLButtonElement>(
+                '[role="tab"]',
+              );
+              const root = tabStripRef.current;
+              if (!current || !root) return;
+              const buttons = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+              const next = nextTabIndex(buttons.indexOf(current), buttons.length, event.key);
+              if (next == null) return;
+              event.preventDefault();
+              buttons[next]?.focus();
+              buttons[next]?.click();
+            }}
           >
             {tabs.map((tab, index) => (
               <div

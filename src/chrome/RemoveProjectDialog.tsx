@@ -4,6 +4,7 @@ import { LAYER } from "../lib/layers";
 import { prettyCwd } from "../lib/paths";
 import { projectSessionCount } from "../lib/project/projectData";
 import { projectPromptTemplateCount } from "../lib/project/promptTemplates";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = {
   name: string;
@@ -20,10 +21,10 @@ export function RemoveProjectDialog({ name, path, onCancel, onConfirm }: Props) 
   const [sessions, setSessions] = useState<number | null>(null);
   const [templates, setTemplates] = useState<number | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose: onCancel,
+    initialFocusRef: cancelRef,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -38,22 +39,13 @@ export function RemoveProjectDialog({ name, path, onCancel, onConfirm }: Props) 
     };
   }, [path]);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      onCancel();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onCancel]);
-
   return createPortal(
     <div className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
       <div className="absolute inset-0 bg-black/30" onMouseDown={onCancel} />
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-label={`Delete ${name}`}
         onMouseDown={(event) => event.stopPropagation()}
