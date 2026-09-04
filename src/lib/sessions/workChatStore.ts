@@ -171,6 +171,13 @@ export function loadWorkChats(): Promise<void> {
   return loaded;
 }
 
+/** Retry after a failed load without allowing concurrent duplicate loads. */
+export function reloadWorkChats(): Promise<void> {
+  if (state.loading) return loaded ?? Promise.resolve();
+  loaded = null;
+  return loadWorkChats();
+}
+
 async function loadOnce(): Promise<void> {
   set({ loading: true, error: null });
   try {
@@ -299,6 +306,10 @@ export async function renameWorkChat(id: string, title: string): Promise<void> {
 }
 
 export async function deleteWorkChat(id: string): Promise<void> {
+  // Persist first. If SQLite rejects the mutation, the visible chat and its
+  // provider thread stay intact so the user can retry without losing context.
+  await deleteSession(id);
+
   // Drop the provider thread too: the transcript is going away, so resuming it
   // later would answer against a conversation the user cannot see. A chat the
   // user never opened still has one, so its harness has to be looked up.
@@ -317,7 +328,6 @@ export async function deleteWorkChat(id: string): Promise<void> {
   // The project stays even if that was its last chat.
   commitFolders(removeChatFromFolders(state.folders, id));
   forgetWorkChatOrder([id]);
-  await deleteSession(id).catch(() => undefined);
 }
 
 export async function setWorkChatPinned(id: string, pinned: boolean): Promise<void> {

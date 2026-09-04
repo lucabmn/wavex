@@ -155,6 +155,7 @@ type Props = {
   status: "idle" | "error";
   /** First listing for this project has not arrived yet. */
   pending: boolean;
+  onRetrySessions?: () => void;
   onSelectSession: (sessionId: string) => void;
   onPrefetchSession?: (sessionId: string) => void;
   onPlaceSessionOnPane?: (sessionId: string, targetId: string, edge: PaneEdge) => void;
@@ -235,6 +236,7 @@ function SidebarComponent({
   openSessions = [],
   status,
   pending,
+  onRetrySessions,
   onSelectSession,
   onPrefetchSession,
   onPlaceSessionOnPane,
@@ -1023,7 +1025,21 @@ function SidebarComponent({
               cannot claim "No sessions yet" before the rows have landed.
             */}
               {pendingFirstLoad ? null : status === "error" && sessions.length === 0 ? (
-                <p className="px-3 py-2 text-[12px] text-content/50">Couldn’t load sessions</p>
+                <div role="alert" className="m-2 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
+                  <span className="flex items-center gap-2 text-[12px] text-red-300">
+                    <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
+                    Couldn’t load sessions
+                  </span>
+                  {onRetrySessions ? (
+                    <button
+                      type="button"
+                      onClick={onRetrySessions}
+                      className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-content/15 hover:text-content"
+                    >
+                      Try again
+                    </button>
+                  ) : null}
+                </div>
               ) : visibleSessions.length === 0 ? (
                 // A narrowed-down result is a transient answer to what the user
                 // just typed, so it stays a quiet line of text. Only the genuine
