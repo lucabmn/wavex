@@ -169,6 +169,7 @@ import {
   shouldAskOutgoingAgent,
   userMessagesAfterHandoff,
   wrapHandoffPrompt,
+  type HandoffComposerCard,
 } from "./lib/handoff";
 import { requestOutgoingHandoff } from "./lib/handoffTurn";
 import {
@@ -241,15 +242,18 @@ import { liveAgentsFromSessions } from "./lib/liveAgents";
 import { CommandPalette } from "./chrome/CommandPalette";
 import type { CommandId } from "./lib/commands";
 import {
-  canFlushQueue,
   EMPTY_QUEUES,
+  canDispatchQueuedHead,
   enqueuePrompt,
+  isEditingQueuedHead,
   pruneQueues,
   queuedFor,
+  queuedHead,
+  queuedPromptForSubmit,
   removeQueuedPrompt,
   shouldQueuePrompt,
-  takeNextPrompt,
   type PromptQueues,
+  updateQueuedPrompt,
 } from "./lib/promptQueue";
 import {
   ACTIVITY_STOP_SESSION,
@@ -298,9 +302,10 @@ import { ActivityView } from "./surfaces/ActivityView";
 import { UsageView } from "./surfaces/UsageView";
 import { InboxView } from "./surfaces/InboxView";
 import { NotesView } from "./surfaces/NotesView";
-import { inboxComposerCard, type InboxItem } from "./lib/inbox/githubTasks";
+import { inboxComposerCard, type InboxComposerCard, type InboxItem } from "./lib/inbox/githubTasks";
 import {
   loadDiffViewer,
+  loadFollowUpBehavior,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   loadSettingsSection,
@@ -322,8 +327,8 @@ import {
   CONTINUE_PROMPT,
   canAutoContinue,
   inFlightRefs,
-  inFlightSnapshotKey,
   profileSwitchWhileBusyMessage,
+  inFlightSnapshotKey,
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
@@ -491,9 +496,20 @@ export default function App({
   activityViewOpenRef.current = activityViewOpen;
   /**
    * Sessions whose current turn the user stopped. A queued prompt must not fire
-   * into that gap; the chips stay until the user sends them.
+   * into that gap; the queue stays paused until the user resumes it.
    */
   const stoppedSessions = useRef(new Set<string>());
+  /**
+   * Sessions with a resume in flight. The continued turn has not marked the
+   * session busy yet, so without this the queue would flush its head before
+   * the continuation starts.
+   */
+  const resumingSessions = useRef(new Set<string>());
+  const queueDispatchingRef = useRef(new Set<string>());
+  /** Open queue-row edits, per session. Only the head row holds dispatch. */
+  const [editingQueued, setEditingQueued] = useState<Record<string, string>>({});
+  const editingQueuedRef = useRef(editingQueued);
+  editingQueuedRef.current = editingQueued;
 
   useEffect(() => {
     if (!notesEnabled) setNotesViewOpen(false);
@@ -2221,8 +2237,8 @@ export default function App({
       } else {
         void forgetHarnessSession(harness, sessionId);
       }
-      lastPersisted.current.delete(sessionId);
       await deleteSession(sessionId).catch(() => undefined);
+      lastPersisted.current.delete(sessionId);
 
       if (!tabsRef.current.some((tab) => leafIds(tab.layout).includes(sessionId))) {
         setSessions((prev) => prev.filter((session) => session.id !== sessionId));
@@ -2702,16 +2718,37 @@ export default function App({
       sessionId: string,
       text: string,
       attachments: Attachment[] = [],
-      options?: { secondOpinion?: SecondOpinionMeta; steer?: boolean },
+      options?: {
+        secondOpinion?: SecondOpinionMeta;
+        steer?: boolean;
+        queuedPromptId?: string;
+        noteCard?: NoteComposerCard;
+        handoffCard?: HandoffComposerCard;
+        inboxCard?: InboxComposerCard;
+      },
     ) => {
       const current = sessionsRef.current.find((s) => s.id === sessionId);
       if (!current) return;
-      const noteCard = current.noteCard;
-      const handoffCard = current.handoffCard;
+      // A queued row stays queued until this submit actually starts a turn: a
+      // preparing handoff, a re-queue, or a no-op must not swallow it.
+      if (options?.queuedPromptId) {
+        const mode = options.steer ? "steer" : "dispatch";
+        if (!queuedPromptForSubmit(queuesRef.current, sessionId, options.queuedPromptId, mode)) {
+          return;
+        }
+      }
+      const noteCard = options && "noteCard" in options ? options.noteCard : current.noteCard;
+      const handoffCard =
+        options && "handoffCard" in options ? options.handoffCard : current.handoffCard;
+      const inboxCard = options && "inboxCard" in options ? options.inboxCard : current.inboxCard;
       if (!text.trim() && attachments.length === 0 && !noteCard && !handoffCard) {
+        resumingSessions.current.delete(sessionId);
         return;
       }
-      if (isPreparingHandoff(current)) return;
+      if (isPreparingHandoff(current)) {
+        resumingSessions.current.delete(sessionId);
+        return;
+      }
       const workCwd = sessionWorkCwd(current);
       const harnessText = composeNoteMessage(noteCard, text);
 
@@ -2721,29 +2758,52 @@ export default function App({
           : null;
 
       // A follow-up written mid-turn waits in the queue, where it stays visible
-      // and removable. ⌥Enter steers the running turn instead, where the
-      // harness supports it; fx, which cannot, used to drop the message.
+      // and removable — unless follow-ups steer. ⌥Enter always tries to steer
+      // the running turn instead, where the harness supports it. Steering that
+      // is asked for but impossible queues anyway, because the alternative
+      // was dropping the message.
       const canSteer = isLiveHarness(current.harness) && canSteerHarness(current.harness);
       if (
         !pendingSwitch &&
-        shouldQueuePrompt({ steerRequested: !!options?.steer, busy: !!current.busy, canSteer })
+        shouldQueuePrompt({
+          steerRequested: !!options?.steer,
+          busy: !!current.busy,
+          canSteer,
+          followUpBehavior: loadFollowUpBehavior(),
+        })
       ) {
+        // Already queued (a steer that landed back here, or a raced dispatch):
+        // keep the row where it is instead of duplicating it.
+        if (options?.queuedPromptId) return;
         setQueues((prev) =>
           enqueuePrompt(prev, sessionId, {
             id: crypto.randomUUID(),
             text,
             attachments,
             queuedAt: Date.now(),
+            noteCard,
+            handoffCard,
+            inboxCard,
           }),
+        );
+        // The chips moved into the queue; the composer must not send them twice.
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === sessionId
+              ? { ...s, inboxCard: undefined, noteCard: undefined, handoffCard: undefined }
+              : s,
+          ),
         );
         return;
       }
 
-      // A stop applies to everything queued behind it, so writing a fresh
-      // prompt does not release the queue. Only sending a chip does, and only
-      // once nothing is left waiting.
+      // A stop pauses everything queued behind it, so writing a fresh prompt
+      // does not release the queue. Only resuming does.
       if (queuedFor(queuesRef.current, sessionId).length === 0) {
         stoppedSessions.current.delete(sessionId);
+      }
+      if (options?.queuedPromptId) {
+        setQueues((prev) => removeQueuedPrompt(prev, sessionId, options.queuedPromptId as string));
       }
 
       if (current.busy && !pendingSwitch) {
@@ -3129,17 +3189,64 @@ export default function App({
     setQueues((prev) => removeQueuedPrompt(prev, sessionId, promptId));
   }, []);
 
+  const onEditQueued = useCallback((sessionId: string, promptId: string, text: string) => {
+    setQueues((prev) => updateQueuedPrompt(prev, sessionId, promptId, text));
+    setEditingQueued((prev) => {
+      if (prev[sessionId] == null) return prev;
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+  }, []);
+
+  const onQueuedEditingChange = useCallback((sessionId: string, promptId?: string) => {
+    setEditingQueued((prev) => {
+      if (promptId == null) {
+        if (prev[sessionId] == null) return prev;
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      }
+      return prev[sessionId] === promptId ? prev : { ...prev, [sessionId]: promptId };
+    });
+  }, []);
+
   /**
-   * Send one queued prompt now. This is the deliberate send a stopped turn
-   * waits for, so it also releases the rest of that session's queue.
+   * Steer one queued row into the running turn now. The row stays queued until
+   * the steer actually starts, so a harness that cannot take it swallows
+   * nothing. This is also the deliberate send a paused queue waits for.
    */
-  const onSendQueued = useCallback(
+  const onSteerQueued = useCallback(
     (sessionId: string, promptId: string) => {
-      const prompt = queuedFor(queuesRef.current, sessionId).find((entry) => entry.id === promptId);
+      const prompt = queuedPromptForSubmit(queuesRef.current, sessionId, promptId, "steer");
       if (!prompt) return;
       stoppedSessions.current.delete(sessionId);
-      setQueues((prev) => removeQueuedPrompt(prev, sessionId, promptId));
-      onSubmit(sessionId, prompt.text, prompt.attachments);
+      onSubmit(sessionId, prompt.text, prompt.attachments, {
+        steer: true,
+        queuedPromptId: prompt.id,
+        noteCard: prompt.noteCard,
+        handoffCard: prompt.handoffCard,
+        inboxCard: prompt.inboxCard,
+      });
+    },
+    [onSubmit],
+  );
+
+  const onResumeQueue = useCallback(
+    (sessionId: string) => {
+      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+      if (!session || session.busy || !stoppedSessions.current.has(sessionId)) {
+        return;
+      }
+      if (queuedFor(queuesRef.current, sessionId).length === 0) {
+        stoppedSessions.current.delete(sessionId);
+        return;
+      }
+      stoppedSessions.current.delete(sessionId);
+      // Hold auto-dispatch until the continued turn marks the session busy,
+      // so the head does not jump ahead of the continuation.
+      resumingSessions.current.add(sessionId);
+      onSubmit(sessionId, CONTINUE_PROMPT, [], { steer: true });
     },
     [onSubmit],
   );
@@ -3152,42 +3259,100 @@ export default function App({
     for (const id of stoppedSessions.current) {
       if (!live.has(id)) stoppedSessions.current.delete(id);
     }
+    for (const id of resumingSessions.current) {
+      if (!live.has(id)) resumingSessions.current.delete(id);
+    }
+    setEditingQueued((prev) => {
+      const next: Record<string, string> = {};
+      let changed = false;
+      for (const [id, promptId] of Object.entries(prev)) {
+        if (live.has(id)) next[id] = promptId;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [sessions]);
+
+  // The continued turn marks the session busy once it starts; until then the
+  // resume bridge holds auto-dispatch.
+  useEffect(() => {
+    for (const session of sessions) {
+      if (session.busy) resumingSessions.current.delete(session.id);
+    }
   }, [sessions]);
 
   /**
-   * One queued prompt per pass. Sending it changes the queues, which runs this
-   * again for the next one — in order, and never two turns at once.
+   * One queued head per pass, revalidated in a timer: the head must still be
+   * the head and the session still dispatchable when the submit actually
+   * runs, otherwise a follow-up could disappear or steer into the wrong turn.
+   * Sending it changes the queues, which runs this again for the next one —
+   * in order, and never two turns at once.
    */
-  const flushKey = [...queues.keys()]
-    .map((sessionId) => {
-      const session = sessions.find((entry) => entry.id === sessionId);
-      if (!session) return `${sessionId}:gone`;
-      return `${sessionId}:${session.busy ? 1 : 0}:${sessionNeedsInput(session) ? 1 : 0}`;
-    })
-    .join("\n");
-
   useEffect(() => {
-    for (const sessionId of queues.keys()) {
-      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
-      if (!session) continue;
-      const flushable = canFlushQueue({
-        busy: !!session.busy,
-        needsInput: sessionNeedsInput(session),
-        stopped: stoppedSessions.current.has(sessionId),
-      });
-      if (!flushable) continue;
-      const taken = takeNextPrompt(queues, sessionId);
-      if (!taken.prompt) continue;
-      setQueues(taken.queues);
-      onSubmit(sessionId, taken.prompt.text, taken.prompt.attachments);
-      return;
+    const timers: number[] = [];
+    const scheduled = new Set<string>();
+    for (const session of sessions) {
+      if (session.busy || queueDispatchingRef.current.has(session.id)) continue;
+      const head = queuedHead(queues, session.id);
+      if (!head) continue;
+      if (
+        !canDispatchQueuedHead({
+          busy: !!session.busy,
+          needsInput: sessionNeedsInput(session),
+          stopped: stoppedSessions.current.has(session.id),
+          resuming: resumingSessions.current.has(session.id),
+          hasHead: true,
+          editingHead: isEditingQueuedHead(queues, session.id, editingQueued[session.id]),
+          preparingHandoff: isPreparingHandoff(session),
+        })
+      ) {
+        continue;
+      }
+      queueDispatchingRef.current.add(session.id);
+      scheduled.add(session.id);
+      timers.push(
+        window.setTimeout(() => {
+          queueDispatchingRef.current.delete(session.id);
+          const latest = sessionsRef.current.find((entry) => entry.id === session.id);
+          const current = queuedHead(queuesRef.current, session.id);
+          if (!latest || !current || current.id !== head.id) return;
+          if (
+            !canDispatchQueuedHead({
+              busy: !!latest.busy,
+              needsInput: sessionNeedsInput(latest),
+              stopped: stoppedSessions.current.has(session.id),
+              resuming: resumingSessions.current.has(session.id),
+              hasHead: true,
+              editingHead: isEditingQueuedHead(
+                queuesRef.current,
+                session.id,
+                editingQueuedRef.current[session.id],
+              ),
+              preparingHandoff: isPreparingHandoff(latest),
+            })
+          ) {
+            return;
+          }
+          onSubmit(session.id, current.text, current.attachments, {
+            queuedPromptId: current.id,
+            noteCard: current.noteCard,
+            handoffCard: current.handoffCard,
+            inboxCard: current.inboxCard,
+          });
+        }, 0),
+      );
     }
-  }, [flushKey, onSubmit, queues]);
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer);
+      for (const id of scheduled) queueDispatchingRef.current.delete(id);
+    };
+  }, [onSubmit, sessions, queues, editingQueued]);
 
   const onStop = useCallback(
     (sessionId: string) => {
       // Stopping is the user rejecting this turn. Anything queued behind it
-      // waits for a deliberate send instead of firing into the gap.
+      // pauses instead of firing into the gap; resuming continues the turn
+      // first, then the queue.
       stoppedSessions.current.add(sessionId);
       const session = sessionsRef.current.find((s) => s.id === sessionId);
       turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
@@ -4284,8 +4449,12 @@ export default function App({
                           onRuntimeModeChange={onRuntimeModeChange}
                           onSubmit={onSubmit}
                           queues={queues}
+                          queuePausedIds={stoppedSessions.current}
                           onRemoveQueued={onRemoveQueued}
-                          onSendQueued={onSendQueued}
+                          onEditQueued={onEditQueued}
+                          onQueuedEditingChange={onQueuedEditingChange}
+                          onSteerQueued={onSteerQueued}
+                          onResumeQueue={onResumeQueue}
                           onStop={onStop}
                           onInboxCardDismiss={onInboxCardDismiss}
                           onNoteCardDismiss={onNoteCardDismiss}

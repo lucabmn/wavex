@@ -79,6 +79,34 @@ export function saveSettingsSection(id: SettingsSectionId) {
   }
 }
 
+const FOLLOW_UP_BEHAVIOR_KEY = "wavex.followUpBehavior";
+
+export type FollowUpBehavior = "steer" | "queue";
+
+export const FOLLOW_UP_BEHAVIOR_DEFAULT: FollowUpBehavior = "queue";
+
+function isFollowUpBehavior(value: unknown): value is FollowUpBehavior {
+  return value === "queue" || value === "steer";
+}
+
+export function loadFollowUpBehavior(): FollowUpBehavior {
+  try {
+    const raw = profileStorage.getItem(FOLLOW_UP_BEHAVIOR_KEY);
+    return isFollowUpBehavior(raw) ? raw : FOLLOW_UP_BEHAVIOR_DEFAULT;
+  } catch {
+    return FOLLOW_UP_BEHAVIOR_DEFAULT;
+  }
+}
+
+export function saveFollowUpBehavior(value: FollowUpBehavior) {
+  const next = isFollowUpBehavior(value) ? value : FOLLOW_UP_BEHAVIOR_DEFAULT;
+  try {
+    profileStorage.setItem(FOLLOW_UP_BEHAVIOR_KEY, next);
+  } catch {
+    // private mode / quota
+  }
+}
+
 const COMPOSER_RUNNER_KEY = "wavex.composerRunner";
 
 export const COMPOSER_RUNNER_DEFAULT = true;

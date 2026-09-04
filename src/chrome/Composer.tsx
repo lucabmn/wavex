@@ -132,8 +132,15 @@ type Props = {
   onSubmit: (text: string, attachments: Attachment[], options?: { steer?: boolean }) => void;
   /** Prompts waiting for the running turn to end, oldest first. */
   queued?: QueuedPrompt[];
+  /** The queue waits for a deliberate resume after the user stopped the turn. */
+  queuePaused?: boolean;
+  /** A queued row can steer the running turn instead of waiting behind it. */
+  canSteerQueue?: boolean;
   onRemoveQueued?: (promptId: string) => void;
-  onSendQueued?: (promptId: string) => void;
+  onEditQueued?: (promptId: string, text: string) => void;
+  onQueuedEditingChange?: (promptId?: string) => void;
+  onSteerQueued?: (promptId: string) => void;
+  onResumeQueue?: () => void;
   onStop?: () => void;
   onOpenFile?: (path: string) => void;
   children?: ReactNode;
@@ -208,8 +215,13 @@ export function Composer({
   onQuestionReply,
   onSubmit,
   queued = NO_QUEUED,
+  queuePaused = false,
+  canSteerQueue = false,
   onRemoveQueued,
-  onSendQueued,
+  onEditQueued,
+  onQueuedEditingChange,
+  onSteerQueued,
+  onResumeQueue,
   onStop,
   onOpenFile,
   children,
@@ -795,7 +807,17 @@ export function Composer({
         <QuestionForm prompt={question} onReply={onQuestionReply} />
       ) : null}
       {children}
-      <QueueStrip queued={queued} onRemove={onRemoveQueued} onSend={onSendQueued} />
+      <QueueStrip
+        queued={queued}
+        paused={queuePaused}
+        canSteer={canSteerQueue}
+        onRemove={onRemoveQueued}
+        onEdit={onEditQueued}
+        onEditingChange={onQueuedEditingChange}
+        onSteer={onSteerQueued}
+        onSend={canSteerQueue ? undefined : onSteerQueued}
+        onResume={onResumeQueue}
+      />
       <div className="relative overflow-visible">
         {pickerOpen ? (
           <div className="absolute inset-x-0 bottom-full z-30 mb-1">

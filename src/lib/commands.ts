@@ -139,7 +139,8 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "terminal.newTab", label: "Terminal: New Tab", keys: `${MOD}${SHIFT}\``, when: "Always" },
   { id: "terminal.toggleDock", label: "Terminal: Toggle Dock", keys: `${MOD}J`, when: "Always" },
   {
-    // Enter alone queues while a turn runs; this is the way past the queue.
+    // Follow-ups queue while a turn runs unless they steer; ⌥Enter always
+    // steers instead, and this is the way past the queue.
     id: "composer.steer",
     label: "Composer: Steer Running Turn",
     keys: `${ALT}Enter`,
