@@ -295,6 +295,7 @@ import { ProjectTerminalDock } from "./surfaces/ProjectTerminalDock";
 import { SearchView } from "./surfaces/SearchView";
 import { SettingsView } from "./surfaces/SettingsView";
 import { ActivityView } from "./surfaces/ActivityView";
+import { OnboardingView } from "./surfaces/OnboardingView";
 import { UsageView } from "./surfaces/UsageView";
 import { InboxView } from "./surfaces/InboxView";
 import { NotesView } from "./surfaces/NotesView";
@@ -328,6 +329,7 @@ import {
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
 import { otherAppMode, type AppMode } from "./lib/workspace/appMode";
+import { isOnboarded, markOnboarded } from "./lib/onboarding";
 import { WorkView } from "./surfaces/WorkView";
 import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
 import { getWorkChatState } from "./lib/sessions/workChatStore";
@@ -440,6 +442,13 @@ export default function App({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   /** Set for every window from the moment a switch starts until the reload. */
   const [switchingToProfile, setSwitchingToProfile] = useState<Profile | null>(null);
+  /** First-run setup. Shown once per profile until completed or skipped. */
+  const [onboardingDone, setOnboardingDone] = useState(isOnboarded);
+
+  const onCompleteOnboarding = useCallback(() => {
+    markOnboarded();
+    setOnboardingDone(true);
+  }, []);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
   const editorNavigationToken = useRef(0);
   const [filePickerOpen, setFilePickerOpen] = useState(false);
@@ -4041,6 +4050,16 @@ export default function App({
   // rather than hiding the surface that is supposed to show it.
   const workMode = appMode === "work" && !settingsOpen;
 
+  /**
+   * First-run setup: no stored projects, no resumed work, nothing written yet.
+   * Existing installs (recents, history, a non-blank session) never see it.
+   */
+  const showOnboarding =
+    !onboardingDone &&
+    !windowTransfer &&
+    recents.length === 0 &&
+    sessions.every((session) => isBlankSession(session));
+
   return (
     <div
       className={`flex h-full text-content ${
@@ -4431,6 +4450,13 @@ export default function App({
         <WhatsNewDialog version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
       ) : null}
       {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
+      {showOnboarding ? (
+        <OnboardingView
+          cwd={projectCwd}
+          onPickProject={() => void pickProject()}
+          onComplete={onCompleteOnboarding}
+        />
+      ) : null}
     </div>
   );
 }
