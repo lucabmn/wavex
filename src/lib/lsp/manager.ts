@@ -15,6 +15,7 @@ import { LspClient, type LspStatus } from "./client";
 
 import { stopAllLanguageServers } from "./host";
 import { clearDiagnosticsFor, publishDiagnostics, resetDiagnostics } from "./diagnostics";
+import { isLanguageServerEnabled } from "./enabled";
 import {
   pickServerRoot,
   rootCandidates,
@@ -42,7 +43,7 @@ export type LspServerStatus = {
 type Entry = {
   client: LspClient;
   /** Open documents by `pathKey`, refcounted across panes. */
-  documents: Map<string, number>;
+  documents: Map<string, { path: string; open: number }>;
   idleTimer: ReturnType<typeof setTimeout> | null;
   status: LspStatus;
 };
@@ -64,9 +65,10 @@ export type DocumentHandle = {
 /**
  * Open `path` against its language server, starting the server if needed.
  *
- * Resolves to `null` when wavex knows no server for the language, the server
- * is not installed, or it failed to start — every one of which leaves the
- * editor exactly as it behaves without language server support.
+ * Resolves to `null` when wavex knows no server for the language, the user has
+ * not turned that server on, it is not installed, or it failed to start — every
+ * one of which leaves the editor exactly as it behaves without language server
+ * support.
  */
 export async function acquireDocument(
   path: string,
@@ -75,6 +77,9 @@ export async function acquireDocument(
 ): Promise<DocumentHandle | null> {
   const definition = serverForPath(path);
   if (!definition || !cwd || cwd === "~") return null;
+  // Nothing starts on its own. The editor offers the server the first time a
+  // file it covers is opened, and only an answered yes gets past here.
+  if (!isLanguageServerEnabled(definition.id)) return null;
 
   const root = await resolveRoot(definition, path, cwd);
   const key = serverKey(definition.id, root, getCurrentWindow().label);
@@ -90,8 +95,8 @@ export async function acquireDocument(
   }
 
   const documentKey = pathKey(path);
-  const open = entry.documents.get(documentKey) ?? 0;
-  entry.documents.set(documentKey, open + 1);
+  const open = entry.documents.get(documentKey)?.open ?? 0;
+  entry.documents.set(documentKey, { path, open: open + 1 });
   if (open === 0) entry.client.openDocument(path, text);
 
   let released = false;
@@ -111,13 +116,13 @@ export async function acquireDocument(
 function releaseDocument(key: string, documentKey: string, path: string): void {
   const entry = entries.get(key);
   if (!entry) return;
-  const open = entry.documents.get(documentKey) ?? 0;
+  const open = entry.documents.get(documentKey)?.open ?? 0;
   if (open <= 1) {
     entry.documents.delete(documentKey);
     entry.client.closeDocument(path);
     clearDiagnosticsFor(path);
   } else {
-    entry.documents.set(documentKey, open - 1);
+    entry.documents.set(documentKey, { path, open: open - 1 });
   }
   if (entry.documents.size === 0) scheduleIdle(key, entry);
 }
@@ -224,6 +229,21 @@ export function clientForOpenDocument(path: string): LspClient | null {
     if (entry.client.hasDocument(path)) return entry.client;
   }
   return null;
+}
+
+/** Stop every running instance of one definition, e.g. when it is turned off. */
+export async function stopLspServersFor(serverId: string): Promise<void> {
+  const stopping = [...entries.entries()].filter(
+    ([, entry]) => entry.client.server.id === serverId,
+  );
+  if (stopping.length === 0) return;
+  for (const [key, entry] of stopping) {
+    clearIdle(entry);
+    entries.delete(key);
+    for (const document of entry.documents.values()) clearDiagnosticsFor(document.path);
+  }
+  emitStatus();
+  await Promise.all(stopping.map(([, entry]) => entry.client.stop().catch(() => undefined)));
 }
 
 /**

@@ -99,8 +99,12 @@ Cargo workspace runs one server rather than one per package. The cost is one
 server per open checkout, bounded by refcounting documents and stopping a
 server that has had nothing open for a while.
 
-wavex never downloads a server: it uses what the user has installed and quotes
-the install line for what it does not find. Servers stop on profile switch,
+wavex never downloads a server, and never starts one on its own: it uses what
+the user has installed and quotes the install line for what it does not find.
+A server is a long-lived process that indexes a whole checkout, so opening a
+file is not consent to run one. The editor offers it once, on the first file
+that language covers; the answer is remembered per profile and lives in
+Settings. Nothing about the editor changes until the answer is yes. Servers stop on profile switch,
 window close, and quit, like agents and terminals. A missing, crashed, or
 still-starting server leaves the editor exactly as it behaves without one.
 

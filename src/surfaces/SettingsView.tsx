@@ -15,7 +15,18 @@ import {
   probeLanguageServers,
   subscribeLanguageServerAvailability,
 } from "../lib/lsp/availability";
-import { lspStatusSnapshot, subscribeLspStatus, type LspServerStatus } from "../lib/lsp/manager";
+import {
+  languageServerChoice,
+  languageServerChoicesSnapshot,
+  setLanguageServerEnabled,
+  subscribeLanguageServerChoices,
+} from "../lib/lsp/enabled";
+import {
+  lspStatusSnapshot,
+  stopLspServersFor,
+  subscribeLspStatus,
+  type LspServerStatus,
+} from "../lib/lsp/manager";
 import { LANGUAGE_SERVERS } from "../lib/lsp/servers";
 import { DeleteProfileDialog } from "../chrome/DeleteProfileDialog";
 import { ProfileAvatar } from "../chrome/ProfileAvatar";
@@ -713,22 +724,36 @@ function LanguageServersPage() {
     getLanguageServerAvailabilitySnapshot,
     getLanguageServerAvailabilitySnapshot,
   );
+  useSyncExternalStore(
+    subscribeLanguageServerChoices,
+    languageServerChoicesSnapshot,
+    languageServerChoicesSnapshot,
+  );
   const running = useSyncExternalStore(subscribeLspStatus, lspStatusSnapshot, lspStatusSnapshot);
 
   useEffect(() => {
     void probeLanguageServers();
   }, []);
 
+  const onToggle = (serverId: string, enabled: boolean) => {
+    setLanguageServerEnabled(serverId, enabled);
+    // Turning one off stops it now rather than leaving it indexing until the
+    // idle timer notices. Turning one on takes effect as files are opened.
+    if (!enabled) void stopLspServersFor(serverId);
+  };
+
   return (
     <>
       <p className="pb-2 text-[12px] leading-relaxed text-content/45">
-        wavex uses the language servers you already have installed and never downloads one. A server
-        starts when you open a file it covers and stops when you close the project, switch profile,
-        or quit. Files of a language with no server keep the editor’s built-in syntax checking.
+        wavex uses the language servers you already have installed and never downloads one. None run
+        until you turn them on — the editor offers one the first time you open a file it covers. A
+        server starts with the first such file, and stops when you close the project, switch
+        profile, or quit.
       </p>
       {LANGUAGE_SERVERS.map((server) => {
         const binary = languageServerBinary(server.id);
         const live = running.filter((entry) => entry.serverId === server.id);
+        const choice = languageServerChoice(server.id);
         return (
           <Row
             key={server.id}
@@ -740,8 +765,16 @@ function LanguageServersPage() {
             }
           >
             <span className="text-[11.5px] whitespace-nowrap text-content/50">
-              {languageServerStateLabel(live)}
+              {choice === "undecided" && live.length === 0
+                ? "Not asked yet"
+                : languageServerStateLabel(live)}
             </span>
+            <Toggle
+              label={`Use ${server.name}`}
+              on={choice === "enabled"}
+              disabled={!binary}
+              onChange={(next) => onToggle(server.id, next)}
+            />
           </Row>
         );
       })}
@@ -1243,10 +1276,13 @@ function Slider({
 function Toggle({
   label,
   on,
+  disabled = false,
   onChange,
 }: {
   label: string;
   on: boolean;
+  /** For a switch whose thing is unavailable — an uninstalled server. */
+  disabled?: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
@@ -1255,11 +1291,12 @@ function Toggle({
       role="switch"
       aria-label={label}
       aria-checked={on}
+      disabled={disabled}
       onClick={() => {
         playCue("switch");
         onChange(!on);
       }}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
         on ? "bg-accent" : "bg-content/20"
       }`}
     >

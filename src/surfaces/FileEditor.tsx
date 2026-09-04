@@ -26,6 +26,7 @@ import { AlertCircle, ChevronDown, ChevronUp, RotateCcw } from "../chrome/icons"
 import { minimalSetup } from "codemirror";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MarkdownViewShell, useMarkdownMode } from "../chrome/MarkdownModeToggle";
+import { LanguageServerOffer } from "../chrome/LanguageServerOffer";
 import { RenameSymbolDialog } from "../chrome/RenameSymbolDialog";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -69,7 +70,9 @@ import { formatWithServer } from "../lib/editor/editorLspFormat";
 import { newLspSessionRef } from "../lib/editor/editorLspSession";
 import { editorSearch } from "../lib/editor/editorSearch";
 import { acquireDocument } from "../lib/lsp/manager";
-import { serverForPath } from "../lib/lsp/servers";
+import { probeLanguageServers } from "../lib/lsp/availability";
+import { languageServerChoice, subscribeLanguageServerChoices } from "../lib/lsp/enabled";
+import { serverForPath, type LanguageServerDefinition } from "../lib/lsp/servers";
 
 type EditorNavigationRequest = EditorNavigation & { token: number };
 
@@ -469,6 +472,9 @@ function CodeMirrorEditor({
   // server extension reads through it and does nothing while it is empty.
   const lspSessionRef = useRef(newLspSessionRef());
   const [notice, setNotice] = useState("");
+  // The server this file would use, while the user has not answered for it.
+  const [offer, setOffer] = useState<LanguageServerDefinition | null>(null);
+  const [lspAttempt, setLspAttempt] = useState(0);
   const [rename, setRename] = useState<{
     symbol: string;
     resolve: (name: string | null) => void;
@@ -757,6 +763,15 @@ function CodeMirrorEditor({
     // built from, so `didOpen` and the buffer start in agreement. A file the
     // server has already answered for keeps its diagnostics from the store;
     // one it has not yet seen keeps the syntax diagnostics until it does.
+    const server = serverForPath(path);
+    if (server) {
+      const choice = languageServerChoice(server.id);
+      // Offered once per server, on the first file it covers. Either answer is
+      // remembered, so this never becomes a banner the user has to keep closing.
+      setOffer(choice === "undecided" ? server : null);
+      if (choice === "undecided") void probeLanguageServers();
+    }
+
     const openedDoc = view.state.doc;
     void acquireDocument(path, cwd, openedDoc.toString()).then((handle) => {
       if (!handle) return;
@@ -785,7 +800,7 @@ function CodeMirrorEditor({
       session.current = null;
       view.destroy();
     };
-  }, [cwd, lockOverscroll, path, showDiff, syncChunkNav]);
+  }, [cwd, lockOverscroll, lspAttempt, path, showDiff, syncChunkNav]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -855,6 +870,22 @@ function CodeMirrorEditor({
     };
   }, [navigation]);
 
+  // Turning a server on in Settings has to reach the editors already open, not
+  // only the next file. The view is rebuilt so its language server session is
+  // acquired — or released — under the new answer.
+  useEffect(() => {
+    const server = serverForPath(path);
+    if (!server) return;
+    let choice = languageServerChoice(server.id);
+    return subscribeLanguageServerChoices(() => {
+      const next = languageServerChoice(server.id);
+      if (next === choice) return;
+      choice = next;
+      setOffer(next === "undecided" ? server : null);
+      setLspAttempt((attempt) => attempt + 1);
+    });
+  }, [path]);
+
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(""), NOTICE_MS);
@@ -875,6 +906,17 @@ function CodeMirrorEditor({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      {offer ? (
+        <LanguageServerOffer
+          server={offer}
+          onAnswered={() => {
+            setOffer(null);
+            // Rebuild the view's language server session: an Enable has to take
+            // effect on the file in front of the user, not on the next one.
+            setLspAttempt((attempt) => attempt + 1);
+          }}
+        />
+      ) : null}
       {showDiff ? (
         <DiffChunkNav
           index={chunkNav?.index ?? 0}
