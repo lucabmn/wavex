@@ -16,6 +16,7 @@ import {
   workspaceFromResumed,
   type ResumedWorkspace,
 } from "./inFlight";
+import { stopWindowLspServers } from "./lsp/manager";
 import { leafIds, type WorkspaceTab } from "./workspace/layout";
 import { killPty } from "./terminal/pty";
 import { projectTerminalFileIds, type ProjectTerminalDock } from "./terminal/projectTerminal";
@@ -413,6 +414,10 @@ export async function reapWindowRuntime(
   // Catalog probes, title generators, and usage scrapers are not session
   // children. Drop them so an unused Pi/Codex probe cannot outlive the window.
   await killAllChildren().catch(() => undefined);
+  // Language servers are per project, not per session, so nothing above has
+  // stopped them. This window's only: another window may be open on the same
+  // project, and rust-analyzer there is still indexing for it.
+  await stopWindowLspServers().catch(() => undefined);
 }
 
 function terminalFileIds(tabs: WorkspaceTab[]): string[] {

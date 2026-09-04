@@ -5,6 +5,7 @@ mod cursor_store;
 mod fs;
 mod harness;
 mod inbox_media;
+mod lsp;
 #[cfg(target_os = "macos")]
 mod macos;
 mod menu;
@@ -165,6 +166,7 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(harness::HarnessHost::new())
         .manage(pty::PtyHost::new())
+        .manage(lsp::LspHost::new())
         .manage(window_transfer::WindowTransferState::new())
         .setup(|app| {
             harness::reap_orphaned_harness_processes();
@@ -274,6 +276,11 @@ pub fn run() {
             harness::harness_sse_open,
             harness::harness_sse_close,
             harness::harness_exec,
+            lsp::lsp_resolve,
+            lsp::lsp_start,
+            lsp::lsp_send,
+            lsp::lsp_stop,
+            lsp::lsp_stop_all,
             rate_limits::fetch_claude_usage,
             rate_limits::codex_usage_cache_read,
             rate_limits::codex_usage_cache_write,
@@ -395,6 +402,9 @@ pub fn run() {
 fn reap_harness_children(handle: &tauri::AppHandle) {
     if let Some(host) = handle.try_state::<harness::HarnessHost>() {
         host.kill_all();
+    }
+    if let Some(host) = handle.try_state::<lsp::LspHost>() {
+        host.stop_all();
     }
     if let Some(host) = handle.try_state::<pty::PtyHost>() {
         host.kill_all();

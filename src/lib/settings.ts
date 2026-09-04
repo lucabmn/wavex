@@ -9,6 +9,7 @@ export type SettingsSectionId =
   | "appearance"
   | "keybindings"
   | "providers"
+  | "language-servers"
   | "archive";
 
 export const SETTINGS_SECTIONS: {
@@ -40,6 +41,11 @@ export const SETTINGS_SECTIONS: {
     id: "providers",
     label: "Providers",
     description: "Agent CLIs wavex can drive, and the model new sessions start with.",
+  },
+  {
+    id: "language-servers",
+    label: "Language servers",
+    description: "Language servers wavex can drive in the coding view, and where each one is.",
   },
   {
     id: "archive",

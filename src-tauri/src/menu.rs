@@ -20,9 +20,10 @@ pub fn dispatch(app: &AppHandle, id: &str) {
         "new_tab" | "close_tab" | "close_other_tabs" | "next_tab" | "prev_tab" | "back_tab"
         | "forward_tab" | "split_right" | "split_down" | "focus_left" | "focus_right"
         | "focus_up" | "focus_down" | "toggle_sidebar" | "sidebar_opacity" | "open_project"
-        | "go_to_file" | "open_search" | "open_inbox" | "open_notes" | "open_usage"
-        | "find_in_project" | "find" | "command_palette" | "new_terminal" | "new_terminal_tab"
-        | "toggle_terminal" | "open_model_picker" | "open_settings" | "check_for_updates" => {
+        | "go_to_file" | "go_to_symbol" | "open_search" | "open_inbox" | "open_notes"
+        | "open_usage" | "find_in_project" | "find" | "command_palette" | "new_terminal"
+        | "new_terminal_tab" | "toggle_terminal" | "open_model_picker" | "open_settings"
+        | "check_for_updates" => {
             let _ = app.emit(id, ());
         }
         _ => {}
@@ -44,6 +45,9 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .build(app)?;
     let go_to_file = MenuItemBuilder::with_id("go_to_file", "Go to File…")
         .accelerator("CmdOrCtrl+P")
+        .build(app)?;
+    let go_to_symbol = MenuItemBuilder::with_id("go_to_symbol", "Go to Symbol…")
+        .accelerator("CmdOrCtrl+Shift+O")
         .build(app)?;
     let open_search = MenuItemBuilder::with_id("open_search", "Search…").build(app)?;
     let command_palette = MenuItemBuilder::with_id("command_palette", "Command Palette…")
@@ -124,6 +128,7 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&command_palette)
         .item(&open_search)
         .item(&go_to_file)
+        .item(&go_to_symbol)
         .item(&find_in_project)
         .separator()
         .item(&new_tab)
