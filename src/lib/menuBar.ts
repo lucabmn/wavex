@@ -1,4 +1,4 @@
-import { invoke } from "./transport";
+import { invokeLocal as invoke } from "./transport";
 import type { ApprovalDecision } from "./harness";
 import type { LiveAgent, LiveApproval } from "./liveAgents";
 

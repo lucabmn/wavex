@@ -4,6 +4,7 @@
  */
 import { LOCAL_HOST_ID, isRemoteHostId, type HostId } from "../host";
 import { normalizeRemoteEndpoint } from "./endpoint";
+import type { HostEventReplay } from "./hostEvents";
 import { RemoteHostTransport, type RemoteTransportOptions } from "./remote";
 import { createTauriTransport } from "./tauri";
 import type {
@@ -27,7 +28,7 @@ export type {
 } from "./types";
 export { normalizeRemoteEndpoint, ticketEndpoint } from "./endpoint";
 export { RESYNC_REQUIRED_EVENT } from "./events";
-export { hostEventsSince, type HostEvent, type HostEventReplay } from "./hostEvents";
+export { type HostEvent, type HostEventReplay } from "./hostEvents";
 export { LOCAL_HOST_ID, type HostId } from "../host";
 export { RemoteHostTransport, type RemoteTransportOptions } from "./remote";
 
@@ -162,4 +163,29 @@ export function listen<T>(
  */
 export function emit(event: string, payload?: unknown): Promise<void> {
   return local.emit(event, payload);
+}
+
+/**
+ * Native window behavior this client owns — the Dock badge, the menu bar
+ * popover, vibrancy, traffic lights, the native menu's own events. It belongs
+ * to the machine drawing the window, so it never follows the default host: a
+ * remote host has no Dock to badge, and a browser tab has none of it at all.
+ */
+export function hostEventsSince(
+  afterSequence: number,
+  hostId: HostId = LOCAL_HOST_ID,
+): Promise<HostEventReplay> {
+  return invokeOn<HostEventReplay>(hostId, "host_events_since", { afterSequence });
+}
+
+export function invokeLocal<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  return local.invoke<T>(command, args);
+}
+
+export function listenLocal<T>(
+  event: string,
+  handler: EventHandler<T>,
+  options?: ListenOptions,
+): Promise<UnlistenFn> {
+  return local.listen(event, handler, options);
 }

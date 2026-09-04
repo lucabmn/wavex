@@ -1,4 +1,4 @@
-import { invoke } from "../lib/transport";
+import { invokeLocal as invoke } from "../lib/transport";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { ALT, MOD, SHIFT } from "../lib/platform";

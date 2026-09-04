@@ -1,4 +1,4 @@
-import { invoke } from "./transport";
+import { invokeLocal as invoke } from "./transport";
 import { sessionNeedsInput, type Session } from "./session";
 
 let lastCount = -1;

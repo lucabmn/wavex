@@ -1,4 +1,4 @@
-import { invoke } from "./transport";
+import { invokeLocal as invoke } from "./transport";
 import type { WindowTransferPayload } from "./windowTransfer";
 
 let transferPromise: Promise<WindowTransferPayload | null> | null = null;

@@ -8,9 +8,6 @@
  * nothing, because PTY bytes and harness lines are too hot to copy for a
  * reader that may never exist.
  */
-import { invokeOn } from "./index";
-import { LOCAL_HOST_ID, type HostId } from "../host";
-
 export type HostEvent = {
   sequence: number;
   event: string;
@@ -26,10 +23,3 @@ export type HostEventReplay = {
   resyncRequired: boolean;
   events: HostEvent[];
 };
-
-export function hostEventsSince(
-  afterSequence: number,
-  hostId: HostId = LOCAL_HOST_ID,
-): Promise<HostEventReplay> {
-  return invokeOn<HostEventReplay>(hostId, "host_events_since", { afterSequence });
-}

@@ -1,4 +1,4 @@
-import { invoke, listen } from "../lib/transport";
+import { invokeLocal as invoke, listenLocal as listen } from "../lib/transport";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";

@@ -1,4 +1,4 @@
-import { invoke, listen } from "./lib/transport";
+import { invoke, invokeLocal, listenLocal as listen } from "./lib/transport";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask, message } from "@tauri-apps/plugin-dialog";
 import {
@@ -626,7 +626,7 @@ export default function App({
         // The shade goes up before the persist, which takes long enough to
         // read as a frozen app, and stays up over the reload behind it.
         setSwitchingToProfile(findProfile(loadProfiles(), profileId) ?? null);
-        void invoke("disable_window_glass").catch(() => undefined);
+        void invokeLocal("disable_window_glass").catch(() => undefined);
         flushHarnessEvents();
         await persistQuitState(
           sessionsRef.current,
@@ -3511,7 +3511,7 @@ export default function App({
         // window to prepare, so the shade is not up yet. Restoring both anyway
         // costs nothing and keeps the window usable if that ever stops holding.
         setSwitchingToProfile(null);
-        void invoke("enable_window_glass").catch(() => undefined);
+        void invokeLocal("enable_window_glass").catch(() => undefined);
         void message(error instanceof Error ? error.message : "Could not switch profile", {
           title: "wavex",
           kind: "error",
@@ -3598,7 +3598,7 @@ export default function App({
   }, [tabs]);
 
   useEffect(() => {
-    void invoke("set_traffic_lights_visible", { visible: true }).catch(() => {});
+    void invokeLocal("set_traffic_lights_visible", { visible: true }).catch(() => {});
   }, []);
 
   const actions = useRef({

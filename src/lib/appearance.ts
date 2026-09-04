@@ -1,4 +1,4 @@
-import { invoke } from "./transport";
+import { invokeLocal as invoke } from "./transport";
 import { HAS_NATIVE_GLASS, IS_MAC } from "./platform";
 import { profileStorage } from "./profiles/profileStorage";
 
