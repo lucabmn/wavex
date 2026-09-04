@@ -86,7 +86,7 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "app.settings", label: "App: Settings", keys: `${MOD},`, when: "Always" },
   {
     id: "app.toggleMode",
-    label: "App: Switch Work and Coding",
+    label: "App: Switch Chat and Workspace",
     keys: `${MOD}${SHIFT}M`,
     when: "Always",
   },

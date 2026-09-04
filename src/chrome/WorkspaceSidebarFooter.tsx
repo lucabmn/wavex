@@ -16,7 +16,7 @@ type Props = {
   onOpenSettings?: () => void;
 };
 
-/** Shared footer for the Coding and Work sidebars. */
+/** Shared footer for the Workspace and Chat sidebars. */
 export function WorkspaceSidebarFooter({
   profileMenuOpen = false,
   onProfileMenuOpenChange,

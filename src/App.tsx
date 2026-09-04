@@ -392,7 +392,7 @@ export default function App({
     () => windowTransfer?.projectTerminals ?? resumed?.projectTerminals ?? [],
   );
   const [projectTerminalFocused, setProjectTerminalFocused] = useState(false);
-  // Work vs Coding. The coding workspace stays mounted behind Work so live
+  // Chat vs Workspace. The workspace stays mounted behind Chat so live
   // terminals, editors, and streaming turns survive a mode switch.
   const [appMode, setAppMode] = useState<AppMode>(() => resumed?.mode ?? "coding");
   const [activeTabId, setActiveTabId] = useState(
@@ -3671,7 +3671,7 @@ export default function App({
 
   /**
    * A menu item that opens something — a project, a file, Search, Inbox. The
-   * user asked for a coding surface, so bring it forward rather than running
+   * user asked for a workspace surface, so bring it forward rather than running
    * the action behind the chat.
    */
   const runInCoding = useCallback(
@@ -3764,9 +3764,9 @@ export default function App({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Work owns its own bindings. Every shortcut below acts on the project
+      // Chat owns its own bindings. Every shortcut below acts on the project
       // workspace — tabs, panes, the file picker — which is hidden behind the
-      // chat surface, so none of them may fire while Work is in front. The
+      // chat surface, so none of them may fire while Chat is in front. The
       // mode toggle itself is bound outside this handler.
       if (appModeRef.current === "work") return;
       const cmd = tabCommand(e);
@@ -4037,7 +4037,7 @@ export default function App({
     );
   }, [currentProjectDock, dockVisible]);
 
-  // Settings renders inside the coding shell, so Work steps aside for it
+  // Settings renders inside the workspace shell, so Chat steps aside for it
   // rather than hiding the surface that is supposed to show it.
   const workMode = appMode === "work" && !settingsOpen;
 
@@ -4134,7 +4134,7 @@ export default function App({
         onDismissUpdate={() => setUpdateNotice(null)}
       />
 
-      {/* Coding stays mounted while Work is in front — terminals, editors, and
+      {/* Workspace stays mounted while Chat is in front — terminals, editors, and
           streaming turns must not be torn down by a mode switch — but it is
           display:none and inert, not merely covered by a translucent panel. */}
       <div
