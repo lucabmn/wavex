@@ -86,7 +86,7 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "app.settings", label: "App: Settings", keys: `${MOD},`, when: "Always" },
   {
     id: "app.toggleMode",
-    label: "App: Switch Work and Coding",
+    label: "App: Switch Chat and Workspace",
     keys: `${MOD}${SHIFT}M`,
     when: "Always",
   },
@@ -139,7 +139,8 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "terminal.newTab", label: "Terminal: New Tab", keys: `${MOD}${SHIFT}\``, when: "Always" },
   { id: "terminal.toggleDock", label: "Terminal: Toggle Dock", keys: `${MOD}J`, when: "Always" },
   {
-    // Enter alone queues while a turn runs; this is the way past the queue.
+    // Follow-ups queue while a turn runs unless they steer; ⌥Enter always
+    // steers instead, and this is the way past the queue.
     id: "composer.steer",
     label: "Composer: Steer Running Turn",
     keys: `${ALT}Enter`,
@@ -187,16 +188,91 @@ export type PaletteEntry = {
 };
 
 /**
+ * The palette is the single entry point for keyboard navigation. A leading
+ * character selects what it searches, so ⌘K covers what used to be four
+ * overlapping finders (palette, go-to-file, search, project search):
+ *
+ * - `> commands` (default, prefix optional) — run an app command by name
+ * - `@ files` — jump to a file, same destination as ⌘P
+ * - `# search` — search across conversations and file contents
+ * - `? shortcuts` — every documented shortcut, including list-only keys
+ */
+export type PaletteMode = "commands" | "files" | "search" | "help";
+
+export const PALETTE_MODES: Record<
+  PaletteMode,
+  { prefix: string; label: string; placeholder: string; empty: string }
+> = {
+  commands: {
+    prefix: ">",
+    label: "Commands",
+    placeholder: "Run a command",
+    empty: "No matching command",
+  },
+  files: {
+    prefix: "@",
+    label: "Files",
+    placeholder: "Go to file…",
+    empty: "No file command matches",
+  },
+  search: {
+    prefix: "#",
+    label: "Search",
+    placeholder: "Search conversations and files…",
+    empty: "No search command matches",
+  },
+  help: {
+    prefix: "?",
+    label: "Shortcuts",
+    placeholder: "Search all shortcuts…",
+    empty: "No shortcut matches",
+  },
+};
+
+const PALETTE_MODE_BY_PREFIX: Record<string, PaletteMode> = {
+  ">": "commands",
+  "@": "files",
+  "#": "search",
+  "?": "help",
+};
+
+/** Split a palette query into its mode prefix and the remaining needle. */
+export function parsePaletteQuery(query: string): { mode: PaletteMode; rest: string } {
+  const trimmed = query.trimStart();
+  const mode = PALETTE_MODE_BY_PREFIX[trimmed[0]];
+  if (!mode) return { mode: "commands", rest: query };
+  return { mode, rest: trimmed.slice(1).trimStart() };
+}
+
+/** Command ids each non-default mode searches. Help sees the full catalog. */
+const FILE_COMMANDS: ReadonlySet<CommandId> = new Set(["app.goToFile", "app.openProject"]);
+const SEARCH_COMMANDS: ReadonlySet<CommandId> = new Set([
+  "app.search",
+  "app.findInFiles",
+  "app.goToFile",
+]);
+
+/**
  * Palette rows: only commands the caller can actually run, ranked by the query.
  * An empty query keeps catalog order, which puts the app-wide verbs first.
+ * A leading mode prefix (`>`, `@`, `#`, `?`) narrows the searched commands;
+ * `?` also lists list-only shortcuts, which are documentation elsewhere.
  */
 export function paletteEntries(
   commands: readonly AppCommand[],
   runnable: ReadonlySet<CommandId>,
   query: string,
 ): PaletteEntry[] {
-  const available = commands.filter((command) => !command.listOnly && runnable.has(command.id));
-  const needle = query.trim();
+  const { mode, rest } = parsePaletteQuery(query);
+  const scope = mode === "files" ? FILE_COMMANDS : mode === "search" ? SEARCH_COMMANDS : null;
+  const available = commands.filter((command) => {
+    // Help documents every shortcut, including list-only keys the palette
+    // cannot run. Everywhere else only runnable commands are offered.
+    if (mode === "help") return runnable.has(command.id) || !!command.listOnly;
+    if (command.listOnly || !runnable.has(command.id)) return false;
+    return scope === null || scope.has(command.id);
+  });
+  const needle = rest.trim();
   if (!needle) {
     return available.map((command) => ({ command, positions: [], score: 0 }));
   }

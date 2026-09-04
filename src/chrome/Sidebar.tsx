@@ -116,6 +116,7 @@ import { SessionFiltersMenu } from "./SessionFiltersMenu";
 import { SessionsEmpty } from "./SessionsEmpty";
 import { SidebarUpdateFooter } from "./SidebarUpdate";
 import { SourceControl } from "./SourceControl";
+import { nextTabIndex } from "../lib/tabNavigation";
 
 const MIN_WIDTH = 260;
 const MAX_WIDTH = 560;
@@ -154,6 +155,7 @@ type Props = {
   status: "idle" | "error";
   /** First listing for this project has not arrived yet. */
   pending: boolean;
+  onRetrySessions?: () => void;
   onSelectSession: (sessionId: string) => void;
   onPrefetchSession?: (sessionId: string) => void;
   onPlaceSessionOnPane?: (sessionId: string, targetId: string, edge: PaneEdge) => void;
@@ -234,6 +236,7 @@ function SidebarComponent({
   openSessions = [],
   status,
   pending,
+  onRetrySessions,
   onSelectSession,
   onPrefetchSession,
   onPlaceSessionOnPane,
@@ -303,9 +306,13 @@ function SidebarComponent({
 }: Props) {
   const gitRoot = gitCwd || cwd;
   const inboxUnseen = useInboxUnseen(recents, cwd);
+  const projectRailExpected = Boolean(
+    onSelectProject && onOpenProject && (projectRailOpen || settingsOpen),
+  );
   const resize = useDragResize({
     min: MIN_WIDTH,
-    max: () => Math.min(MAX_WIDTH, Math.floor(window.innerWidth * 0.5)),
+    max: () =>
+      Math.min(MAX_WIDTH, Math.floor(window.innerWidth * (projectRailExpected ? 0.325 : 0.5))),
     defaultWidth: DEFAULT_WIDTH,
     initial: rememberedWidth,
     onCommit: (next) => {
@@ -789,6 +796,17 @@ function SidebarComponent({
     onTabChange(itemId);
   };
 
+  const onWorkspaceTabKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const current = (event.target as HTMLElement).closest<HTMLButtonElement>('[role="tab"]');
+    if (!current) return;
+    const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    const next = nextTabIndex(buttons.indexOf(current), buttons.length, event.key);
+    if (next == null) return;
+    event.preventDefault();
+    buttons[next]?.focus();
+    buttons[next]?.click();
+  };
+
   const changeAdditions = changeStats?.additions ?? 0;
   const changeDeletions = changeStats?.deletions ?? 0;
   const hasChangeStats = changeAdditions > 0 || changeDeletions > 0;
@@ -830,6 +848,7 @@ function SidebarComponent({
           type="button"
           role="tab"
           aria-selected={active}
+          tabIndex={active ? 0 : -1}
           aria-label={
             isChangesTab
               ? hasChangeStats
@@ -848,7 +867,7 @@ function SidebarComponent({
             if (sortable.consumeClick()) return;
             onTabPick(itemId);
           }}
-          className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md px-2 text-[12px] leading-none ${
+          className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md px-2 text-[12px] leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             active
               ? "bg-content/10 text-content"
               : "text-content/50 hover:bg-content/5 hover:text-content"
@@ -884,6 +903,7 @@ function SidebarComponent({
             role="tablist"
             aria-label="Workspace"
             className="flex h-9 shrink-0 items-center gap-px border-b border-content/10 px-2"
+            onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
           </div>
@@ -929,6 +949,7 @@ function SidebarComponent({
             role="tablist"
             aria-label="Workspace"
             className="flex h-9 shrink-0 items-center gap-px overflow-visible border-b border-content/10 px-2"
+            onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
           </div>
@@ -1004,7 +1025,21 @@ function SidebarComponent({
               cannot claim "No sessions yet" before the rows have landed.
             */}
               {pendingFirstLoad ? null : status === "error" && sessions.length === 0 ? (
-                <p className="px-3 py-2 text-[12px] text-content/50">Couldn’t load sessions</p>
+                <div role="alert" className="m-2 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
+                  <span className="flex items-center gap-2 text-[12px] text-red-300">
+                    <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
+                    Couldn’t load sessions
+                  </span>
+                  {onRetrySessions ? (
+                    <button
+                      type="button"
+                      onClick={onRetrySessions}
+                      className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-content/15 hover:text-content"
+                    >
+                      Try again
+                    </button>
+                  ) : null}
+                </div>
               ) : visibleSessions.length === 0 ? (
                 // A narrowed-down result is a transient answer to what the user
                 // just typed, so it stays a quiet line of text. Only the genuine
@@ -1228,16 +1263,20 @@ function SidebarComponent({
       ) : null}
       <div
         role="separator"
+        tabIndex={0}
         aria-orientation="vertical"
         aria-label="Resize sidebar"
         aria-valuenow={resize.width}
+        aria-valuetext={`${resize.width} pixels`}
+        aria-keyshortcuts="ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight Home End Enter"
         aria-valuemin={MIN_WIDTH}
-        aria-valuemax={MAX_WIDTH}
-        className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none ${
+        aria-valuemax={resize.maxWidth}
+        className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none focus-visible:bg-accent/60 focus-visible:outline-none ${
           resize.dragging ? "bg-content/15" : "hover:bg-content/10"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
+        onKeyDown={resize.onKeyDown}
       />
     </aside>
   );
@@ -1292,6 +1331,7 @@ function SidebarComponent({
           updateNotice={updateNotice}
           onOpenWhatsNew={onOpenWhatsNew}
           onDismissUpdate={onDismissUpdate}
+          besideSidebar={sidebarVisible}
         />
       ) : null}
       {sidebarVisible ? sidebarContent : null}

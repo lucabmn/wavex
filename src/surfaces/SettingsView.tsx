@@ -97,16 +97,19 @@ import {
   loadClaudeHooks,
   loadComposerRunner,
   loadDiffViewer,
+  loadFollowUpBehavior,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   saveClaudeHooks,
   saveComposerRunner,
   saveDiffViewer,
+  saveFollowUpBehavior,
   saveLiveAgentsEnabled,
   saveNotesEnabled,
   settingsSectionDescription,
   settingsSectionLabel,
   type DiffViewer,
+  type FollowUpBehavior,
   type SettingsSectionId,
 } from "../lib/settings";
 import { loadSoundsEnabled, playCue, saveSoundsEnabled } from "../lib/sounds";
@@ -230,6 +233,7 @@ function GeneralPage({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => 
   const [transcriptLayout, setTranscriptLayout] = useState<TranscriptLayout>(loadTranscriptLayout);
   const [transcriptAnchor, setTranscriptAnchor] = useState(loadTranscriptAnchor);
   const [diffViewer, setDiffViewer] = useState<DiffViewer>(loadDiffViewer);
+  const [followUpBehavior, setFollowUpBehavior] = useState<FollowUpBehavior>(loadFollowUpBehavior);
   const [composerRunner, setComposerRunner] = useState(loadComposerRunner);
   const [notesEnabled, setNotesEnabled] = useState(loadNotesEnabled);
   const [liveAgentsEnabled, setLiveAgentsEnabled] = useState(loadLiveAgentsEnabled);
@@ -259,6 +263,11 @@ function GeneralPage({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => 
   const onDiffViewer = (next: DiffViewer) => {
     saveDiffViewer(next);
     setDiffViewer(next);
+  };
+
+  const onFollowUpBehavior = (next: FollowUpBehavior) => {
+    saveFollowUpBehavior(next);
+    setFollowUpBehavior(next);
   };
 
   const onComposerRunner = (next: boolean) => {
@@ -314,6 +323,20 @@ function GeneralPage({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => 
             { value: "unified", label: "Unified" },
           ]}
           onChange={onDiffViewer}
+        />
+      </Row>
+      <Row
+        label="Follow-up behavior"
+        description="Queue follow-ups until the active turn finishes, or steer the active turn immediately."
+      >
+        <Segmented
+          label="Follow-up behavior"
+          value={followUpBehavior}
+          options={[
+            { value: "queue", label: "Queue" },
+            { value: "steer", label: "Steer" },
+          ]}
+          onChange={onFollowUpBehavior}
         />
       </Row>
       <Row
@@ -1118,7 +1141,8 @@ function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex gap-0.5 rounded-md border border-content/10 p-0.5 text-[12px]"
+      className="grid w-40 gap-0.5 rounded-md border border-content/10 p-0.5 text-[12px]"
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((option) => (
         <button
@@ -1127,7 +1151,7 @@ function Segmented<T extends string>({
           role="radio"
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`rounded-[5px] px-3 py-1 ${
+          className={`min-w-0 rounded-[5px] px-1.5 py-1 ${
             value === option.value
               ? "bg-content/10 text-content"
               : "text-content/50 hover:text-content"

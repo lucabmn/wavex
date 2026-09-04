@@ -56,8 +56,12 @@ type Shared = {
     options?: { steer?: boolean },
   ) => void;
   queues?: PromptQueues;
+  queuePausedIds?: ReadonlySet<string>;
   onRemoveQueued?: (sessionId: string, promptId: string) => void;
-  onSendQueued?: (sessionId: string, promptId: string) => void;
+  onEditQueued?: (sessionId: string, promptId: string, text: string) => void;
+  onQueuedEditingChange?: (sessionId: string, promptId?: string) => void;
+  onSteerQueued?: (sessionId: string, promptId: string) => void;
+  onResumeQueue?: (sessionId: string) => void;
   onStop: (sessionId: string) => void;
   onInboxCardDismiss?: (sessionId: string) => void;
   onNoteCardDismiss?: (sessionId: string) => void;
@@ -111,8 +115,12 @@ function PaneTreeComponent({
   onRuntimeModeChange,
   onSubmit,
   queues = EMPTY_QUEUES,
+  queuePausedIds,
   onRemoveQueued,
-  onSendQueued,
+  onEditQueued,
+  onQueuedEditingChange,
+  onSteerQueued,
+  onResumeQueue,
   onStop,
   onInboxCardDismiss,
   onNoteCardDismiss,
@@ -290,8 +298,12 @@ function PaneTreeComponent({
                 onRuntimeModeChange={onRuntimeModeChange}
                 onSubmit={onSubmit}
                 queued={queuedFor(queues, session.id)}
+                queuePaused={queuePausedIds?.has(session.id) ?? false}
                 onRemoveQueued={onRemoveQueued}
-                onSendQueued={onSendQueued}
+                onEditQueued={onEditQueued}
+                onQueuedEditingChange={onQueuedEditingChange}
+                onSteerQueued={onSteerQueued}
+                onResumeQueue={onResumeQueue}
                 onStop={onStop}
                 onInboxCardDismiss={onInboxCardDismiss}
                 onNoteCardDismiss={onNoteCardDismiss}
@@ -379,11 +391,34 @@ function Sash({
   return (
     <div
       role="separator"
+      tabIndex={0}
       aria-orientation={row ? "vertical" : "horizontal"}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(boundary * 100)}
-      className={row ? "absolute z-10 w-px bg-content/10" : "absolute z-10 h-px bg-content/10"}
+      aria-valuetext={`${Math.round(boundary * 100)} percent`}
+      aria-keyshortcuts={row ? "ArrowLeft ArrowRight Enter" : "ArrowUp ArrowDown Enter"}
+      onKeyDown={(event) => {
+        const previous = row ? "ArrowLeft" : "ArrowUp";
+        const next = row ? "ArrowRight" : "ArrowDown";
+        const step = event.shiftKey ? 0.08 : 0.02;
+        let nextBoundary: number | null = null;
+        if (event.key === previous) nextBoundary = boundary - step;
+        else if (event.key === next) nextBoundary = boundary + step;
+        else if (event.key === "Enter") {
+          const before = sash.sizes.slice(0, sash.index).reduce((sum, size) => sum + size, 0);
+          nextBoundary = before + (sash.sizes[sash.index] + sash.sizes[sash.index + 1]) / 2;
+        }
+        if (nextBoundary == null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onCommit(nextBoundary);
+      }}
+      className={
+        row
+          ? "absolute z-10 w-px bg-content/10 focus-visible:bg-accent focus-visible:outline-none"
+          : "absolute z-10 h-px bg-content/10 focus-visible:bg-accent focus-visible:outline-none"
+      }
       style={
         row
           ? {

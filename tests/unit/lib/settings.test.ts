@@ -2,14 +2,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   COMPOSER_RUNNER_DEFAULT,
   DIFF_VIEWER_DEFAULT,
+  FOLLOW_UP_BEHAVIOR_DEFAULT,
   LIVE_AGENTS_ENABLED_DEFAULT,
   loadComposerRunner,
   loadDiffViewer,
+  loadFollowUpBehavior,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   NOTES_ENABLED_DEFAULT,
   saveComposerRunner,
   saveDiffViewer,
+  saveFollowUpBehavior,
   saveLiveAgentsEnabled,
   saveNotesEnabled,
 } from "@/lib/settings";
@@ -18,6 +21,7 @@ const KEY = "wavex.composerRunner";
 const NOTES_KEY = "wavex.notesEnabled";
 const LIVE_AGENTS_KEY = "wavex.liveAgentsEnabled";
 const DIFF_VIEWER_KEY = "wavex.diffViewer";
+const FOLLOW_UP_BEHAVIOR_KEY = "wavex.followUpBehavior";
 
 function mockLocalStorage() {
   const data = new Map<string, string>();
@@ -125,5 +129,27 @@ describe("diff viewer setting", () => {
   it("ignores unknown stored values", () => {
     localStorage.setItem(DIFF_VIEWER_KEY, "split");
     expect(loadDiffViewer()).toBe("editor");
+  });
+});
+
+describe("follow-up behavior setting", () => {
+  beforeEach(mockLocalStorage);
+  afterEach(() => {
+    localStorage.removeItem(FOLLOW_UP_BEHAVIOR_KEY);
+  });
+
+  it("defaults to queue", () => {
+    expect(FOLLOW_UP_BEHAVIOR_DEFAULT).toBe("queue");
+    expect(loadFollowUpBehavior()).toBe("queue");
+  });
+
+  it("persists steer behavior", () => {
+    saveFollowUpBehavior("steer");
+    expect(loadFollowUpBehavior()).toBe("steer");
+  });
+
+  it("ignores unknown stored values", () => {
+    localStorage.setItem(FOLLOW_UP_BEHAVIOR_KEY, "interrupt");
+    expect(loadFollowUpBehavior()).toBe("queue");
   });
 });
