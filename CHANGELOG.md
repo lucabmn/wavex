@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-09-04
+
+- Queue follow-ups in a stacked card above the composer with edit, steer, and
+  remove per row. A Follow-up behavior setting (Queue by default, Steer
+  opt-in) controls it, and stopping pauses the queue until Resume continues
+  the turn first.
+- Drive dialogs, tabs, and resize handles from the keyboard: shared dialog
+  focus handling, arrow-key tab navigation, and visible focus states.
+- Scope the command palette with a prefix: `>` commands, `@` files, `#`
+  search, `?` every documented shortcut.
+- Meet first-run installs with a short, skippable setup wizard.
+- Confirm profile switches while agents are in flight, naming the sessions
+  that would pause.
+- Confirm chat and project deletes, retry failed loads and deletes, and keep
+  a chat visible when its deletion fails.
+- Filter the Activity view by All, Needs-you, Working, and Done.
+- Rename Work and Coding to Chat and Workspace across labels and shortcuts.
+
 ## [0.6.0] - 2026-09-04
 
 - Run any app command by name from a command palette on `Cmd+K`; Search moves
