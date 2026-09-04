@@ -11,6 +11,7 @@ import { MatchText } from "./MatchText";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { APP_COMMANDS, paletteEntries, type CommandId, type PaletteEntry } from "../lib/commands";
 import { LAYER } from "../lib/layers";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = {
   open: boolean;
@@ -22,8 +23,11 @@ type Props = {
 /** Run any app command by name, with the shortcut it also answers to. */
 export function CommandPalette({ open, handlers, onClose }: Props) {
   const search = useRef<HTMLInputElement>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose,
+    initialFocusRef: search,
+    enabled: open,
+  });
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
 
@@ -36,20 +40,6 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
     if (!open) return;
     setQuery("");
     setActive(0);
-    const focus = window.requestAnimationFrame(() => search.current?.focus());
-    return () => window.cancelAnimationFrame(focus);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      onCloseRef.current();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
   }, [open]);
 
   if (!open) return null;
@@ -86,7 +76,10 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
     <div className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
       <div className="absolute inset-0" onMouseDown={onClose} />
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
+        aria-modal="true"
         aria-label="Command Palette"
         data-command-palette
         onMouseDown={(event) => event.stopPropagation()}

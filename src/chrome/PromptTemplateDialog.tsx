@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { LAYER } from "../lib/layers";
 import { prettyCwd } from "../lib/paths";
@@ -10,6 +10,7 @@ import {
   type PromptTemplate,
   type PromptTemplateDraft,
 } from "../lib/project/promptTemplates";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = {
   draft: PromptTemplateDraft;
@@ -33,23 +34,11 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  useEffect(() => {
-    const field = draft.name ? bodyRef.current : nameRef.current;
-    field?.focus();
-    if (field === nameRef.current) nameRef.current?.select();
-  }, [draft.name]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  const dialogRef = useDialogFocus<HTMLFormElement>({
+    onClose,
+    initialFocusRef: draft.name ? bodyRef : nameRef,
+    escapeDisabled: busy,
+  });
 
   const slug = slugTemplateName(name);
   const valid = isValidTemplateName(slug) && body.trim().length > 0;
@@ -85,9 +74,16 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
 
   return createPortal(
     <div data-prompt-template-dialog className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
-      <div className="absolute inset-0 bg-black/30" onMouseDown={onClose} />
+      <div
+        className="absolute inset-0 bg-black/30"
+        onMouseDown={() => {
+          if (!busy) onClose();
+        }}
+      />
       <form
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-label={existing ? `Edit template ${existing.name}` : "New prompt template"}
         onMouseDown={(event) => event.stopPropagation()}

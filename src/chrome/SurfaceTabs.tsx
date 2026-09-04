@@ -16,6 +16,7 @@ import { terminalTabLabel } from "../lib/terminal/terminalTab";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useSortable } from "../hooks/useSortable";
 import { FileTypeIcon } from "./FileTypeIcon";
+import { nextTabIndex } from "../lib/tabNavigation";
 
 type Props = {
   files: FilePaneTab[];
@@ -127,6 +128,18 @@ export function SurfaceTabs({
         role="tablist"
         aria-label={label}
         className="scrollbar-none flex min-w-0 flex-1 overflow-x-auto overscroll-none"
+        onKeyDown={(event) => {
+          const current = (event.target as HTMLElement).closest<HTMLButtonElement>('[role="tab"]');
+          if (!current) return;
+          const buttons = [
+            ...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+          ];
+          const next = nextTabIndex(buttons.indexOf(current), buttons.length, event.key);
+          if (next == null) return;
+          event.preventDefault();
+          buttons[next]?.focus();
+          buttons[next]?.click();
+        }}
       >
         {onPaneDragStart ? (
           <div
@@ -196,12 +209,13 @@ export function SurfaceTabs({
                 type="button"
                 role="tab"
                 aria-selected={active}
+                tabIndex={active ? 0 : -1}
                 title={appendProblems(tooltip, errors)}
                 onClick={() => {
                   if (sortable.consumeClick()) return;
                   onSelectFile(file.id);
                 }}
-                className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12px] ${
+                className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                   canDrag ? "cursor-grab active:cursor-grabbing" : ""
                 } ${active ? "text-content" : "text-content/55 hover:text-content"}`}
               >
@@ -233,6 +247,7 @@ export function SurfaceTabs({
               </button>
               <button
                 type="button"
+                tabIndex={active ? 0 : -1}
                 title={`Close ${label}`}
                 aria-label={`Close ${label}`}
                 data-no-drag
@@ -242,7 +257,9 @@ export function SurfaceTabs({
                   onCloseFile(file.id);
                 }}
                 className={`absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 hover:bg-content/10 hover:text-content ${
-                  active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  active
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                 }`}
               >
                 <X className="size-3" strokeWidth={1.75} />
