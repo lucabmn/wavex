@@ -56,8 +56,12 @@ type Shared = {
     options?: { steer?: boolean },
   ) => void;
   queues?: PromptQueues;
+  queuePausedIds?: ReadonlySet<string>;
   onRemoveQueued?: (sessionId: string, promptId: string) => void;
-  onSendQueued?: (sessionId: string, promptId: string) => void;
+  onEditQueued?: (sessionId: string, promptId: string, text: string) => void;
+  onQueuedEditingChange?: (sessionId: string, promptId?: string) => void;
+  onSteerQueued?: (sessionId: string, promptId: string) => void;
+  onResumeQueue?: (sessionId: string) => void;
   onStop: (sessionId: string) => void;
   onInboxCardDismiss?: (sessionId: string) => void;
   onNoteCardDismiss?: (sessionId: string) => void;
@@ -111,8 +115,12 @@ function PaneTreeComponent({
   onRuntimeModeChange,
   onSubmit,
   queues = EMPTY_QUEUES,
+  queuePausedIds,
   onRemoveQueued,
-  onSendQueued,
+  onEditQueued,
+  onQueuedEditingChange,
+  onSteerQueued,
+  onResumeQueue,
   onStop,
   onInboxCardDismiss,
   onNoteCardDismiss,
@@ -290,8 +298,12 @@ function PaneTreeComponent({
                 onRuntimeModeChange={onRuntimeModeChange}
                 onSubmit={onSubmit}
                 queued={queuedFor(queues, session.id)}
+                queuePaused={queuePausedIds?.has(session.id) ?? false}
                 onRemoveQueued={onRemoveQueued}
-                onSendQueued={onSendQueued}
+                onEditQueued={onEditQueued}
+                onQueuedEditingChange={onQueuedEditingChange}
+                onSteerQueued={onSteerQueued}
+                onResumeQueue={onResumeQueue}
                 onStop={onStop}
                 onInboxCardDismiss={onInboxCardDismiss}
                 onNoteCardDismiss={onNoteCardDismiss}

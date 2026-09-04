@@ -40,9 +40,12 @@ import {
   canFlushQueue,
   EMPTY_QUEUES,
   enqueuePrompt,
+  isEditingQueuedHead,
   queuedFor,
+  queuedHead,
   removeQueuedPrompt,
   takeNextPrompt,
+  updateQueuedPrompt,
   type PromptQueues,
   type QueuedPrompt,
 } from "../promptQueue";
@@ -128,6 +131,7 @@ export function resetWorkChatStore(): void {
   queued.clear();
   turnGeneration.clear();
   stoppedChats.clear();
+  editingChats.clear();
   state = EMPTY;
   loaded = null;
   emit();
@@ -318,6 +322,7 @@ export async function deleteWorkChat(id: string): Promise<void> {
   bumpTurn(id);
   queued.delete(id);
   stoppedChats.delete(id);
+  editingChats.delete(id);
   const chats = state.chats.filter((row) => row.id !== id);
   const summaries = state.summaries.filter((row) => row.id !== id);
   const activeId =
@@ -557,12 +562,45 @@ export async function sendWorkChatTurn(
 /** Chats whose current turn the user stopped. Their queue waits for a real send. */
 const stoppedChats = new Set<string>();
 
+/** Open queue-row edits, per chat. Only the head row holds auto-dispatch. */
+const editingChats = new Map<string, string>();
+
+/** The queue waits for a deliberate resume after the user stopped the turn. */
+export function isWorkChatQueuePaused(id: string): boolean {
+  return stoppedChats.has(id);
+}
+
+export function setWorkChatQueuedEditing(id: string, promptId?: string): void {
+  if (promptId == null) editingChats.delete(id);
+  else editingChats.set(id, promptId);
+}
+
 export function workChatQueue(id: string | null): QueuedPrompt[] {
   return id ? queuedFor(state.queues, id) : [];
 }
 
 export function removeWorkChatQueuedPrompt(id: string, promptId: string): void {
   set({ queues: removeQueuedPrompt(state.queues, id, promptId) });
+}
+
+export function updateWorkChatQueuedPrompt(id: string, promptId: string, text: string): void {
+  set({ queues: updateQueuedPrompt(state.queues, id, promptId, text) });
+  editingChats.delete(id);
+}
+
+/**
+ * Resume a paused queue: the head goes out now, the rest follows turn by
+ * turn. A no-op when the chat is busy or nothing is left waiting.
+ */
+export function resumeWorkChatQueue(id: string): void {
+  const chat = findWorkChat(id);
+  if (!chat || chat.busy || !stoppedChats.has(id)) return;
+  if (queuedFor(state.queues, id).length === 0) {
+    stoppedChats.delete(id);
+    return;
+  }
+  stoppedChats.delete(id);
+  flushWorkChatQueue(id);
 }
 
 /**
@@ -581,14 +619,17 @@ export function sendWorkChatQueuedPrompt(id: string, promptId: string): void {
 function flushWorkChatQueue(id: string): void {
   const chat = findWorkChat(id);
   if (!chat) return;
+  // An edit two rows down must not block the head from going out.
+  if (isEditingQueuedHead(state.queues, id, editingChats.get(id))) return;
   const flushable = canFlushQueue({
     busy: !!chat.busy,
     needsInput: sessionNeedsInput(chat),
     stopped: stoppedChats.has(id),
   });
   if (!flushable) return;
+  const head = queuedHead(state.queues, id);
   const taken = takeNextPrompt(state.queues, id);
-  if (!taken.prompt) return;
+  if (!taken.prompt || !head || taken.prompt.id !== head.id) return;
   set({ queues: taken.queues });
   void sendWorkChatTurn(id, taken.prompt.text, taken.prompt.attachments, {
     image: taken.prompt.image === true,

@@ -49,8 +49,11 @@ import {
   deleteWorkChat,
   dropChatOnTarget,
   getWorkChatState,
+  isWorkChatQueuePaused,
   removeWorkChatQueuedPrompt,
+  resumeWorkChatQueue,
   sendWorkChatQueuedPrompt,
+  setWorkChatQueuedEditing,
   loadWorkChats,
   reloadWorkChats,
   regenerateWorkChatTurn,
@@ -69,6 +72,7 @@ import {
   setWorkChatPinned,
   stopWorkChat,
   subscribeWorkChats,
+  updateWorkChatQueuedPrompt,
 } from "../lib/sessions/workChatStore";
 import {
   buildWorkChatList,
@@ -518,8 +522,14 @@ export function WorkView({
                 void sendWorkChatTurn(active.id, text, attachments, options)
               }
               queued={queuedFor(state.queues, active.id)}
+              queuePaused={isWorkChatQueuePaused(active.id)}
               onRemoveQueued={(promptId) => removeWorkChatQueuedPrompt(active.id, promptId)}
+              onEditQueued={(promptId, text) =>
+                updateWorkChatQueuedPrompt(active.id, promptId, text)
+              }
+              onQueuedEditingChange={(promptId) => setWorkChatQueuedEditing(active.id, promptId)}
               onSendQueued={(promptId) => sendWorkChatQueuedPrompt(active.id, promptId)}
+              onResumeQueue={() => resumeWorkChatQueue(active.id)}
               onStop={() => void stopWorkChat(active.id)}
             />
           </>
