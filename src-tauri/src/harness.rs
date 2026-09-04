@@ -9,10 +9,11 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::dirs_home;
 use crate::fs::expand_home;
+use crate::host_events;
 use crate::passwd_identity;
 
 const STDOUT_EVENT: &str = "harness-stdout";
@@ -385,7 +386,8 @@ pub fn harness_spawn(
     thread::spawn(move || {
         for line in BufReader::new(stdout).lines() {
             let Ok(line) = line else { break };
-            let _ = stdout_app.emit(
+            host_events::publish(
+                &stdout_app,
                 STDOUT_EVENT,
                 HarnessLine {
                     session_id: stdout_id.clone(),
@@ -400,7 +402,8 @@ pub fn harness_spawn(
     thread::spawn(move || {
         for line in BufReader::new(stderr).lines() {
             let Ok(line) = line else { break };
-            let _ = stderr_app.emit(
+            host_events::publish(
+                &stderr_app,
                 STDERR_EVENT,
                 HarnessLine {
                     session_id: stderr_id.clone(),
@@ -420,7 +423,8 @@ pub fn harness_spawn(
                 host.stop_sse(&wait_id);
             }
         }
-        let _ = wait_app.emit(
+        host_events::publish(
+            &wait_app,
             EXIT_EVENT,
             HarnessExit {
                 session_id: wait_id,
@@ -585,7 +589,8 @@ fn read_sse<R: BufRead>(reader: R, app: &AppHandle, session_id: &str, stop: &Ato
                 continue;
             }
             let payload = std::mem::take(&mut data);
-            let _ = app.emit(
+            host_events::publish(
+                app,
                 SSE_EVENT,
                 HarnessSse {
                     session_id: session_id.to_string(),
@@ -605,7 +610,8 @@ fn read_sse<R: BufRead>(reader: R, app: &AppHandle, session_id: &str, stop: &Ato
 }
 
 fn emit_sse_end(app: &AppHandle, session_id: &str, error: Option<String>) {
-    let _ = app.emit(
+    host_events::publish(
+        app,
         SSE_END_EVENT,
         HarnessSseEnd {
             session_id: session_id.to_string(),

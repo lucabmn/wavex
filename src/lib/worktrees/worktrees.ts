@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../transport";
 import { basename } from "../fs";
 
 /** One checkout of a repository. The first entry git reports is `main`. */

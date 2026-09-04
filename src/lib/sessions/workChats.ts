@@ -7,7 +7,7 @@
  * nothing here resolves a checkout, a branch, or a diff.
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../transport";
 import { fuzzyMatch } from "../fuzzy";
 import {
   defaultSessionChoice,

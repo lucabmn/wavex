@@ -7,7 +7,7 @@
  * each answer for a short TTL across windows; `force` is the explicit refresh
  * and bypasses it.
  */
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../transport";
 import { fetchCodexRateLimits } from "../rateLimitsFetch";
 import {
   errorPlanLimits,

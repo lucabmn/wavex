@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../transport";
 import { persistableAttachment } from "../attachments";
 import type { ContextUsage } from "../contextUsage";
 import { normalizeProjectPath } from "../recents";

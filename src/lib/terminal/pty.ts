@@ -1,5 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { invoke, listen, type UnlistenFn } from "../transport";
 
 type DataPayload = { id: string; data: string };
 type ExitPayload = { id: string; code: number | null };

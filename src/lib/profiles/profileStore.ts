@@ -1,5 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { emit, invoke, listen, type UnlistenFn } from "../transport";
 import {
   addProfile,
   normalizeProfiles,

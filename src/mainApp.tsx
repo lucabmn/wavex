@@ -1,7 +1,6 @@
 import React, { useLayoutEffect } from "react";
 import ReactDOM from "react-dom/client";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { invoke, listen } from "./lib/transport";
 import App from "./App";
 import { handleQuitRequested, loadBootWorkspace } from "./lib/appLifecycle";
 import { bindActiveProfile, watchProfiles } from "./lib/profiles/profileStore";

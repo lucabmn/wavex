@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./transport";
 import { save } from "@tauri-apps/plugin-dialog";
 import { basename, pickFiles as pickFilePaths, readFileBase64, writeFileBase64 } from "./fs";
 import type { Attachment, AttachmentKind } from "./session";

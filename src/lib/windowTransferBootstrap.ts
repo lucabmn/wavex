@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./transport";
 import type { WindowTransferPayload } from "./windowTransfer";
 
 let transferPromise: Promise<WindowTransferPayload | null> | null = null;

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./transport";
 import { ask } from "@tauri-apps/plugin-dialog";
 import {
   bindHarnessSession,

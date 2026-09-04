@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@/lib/transport";
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (event: { payload: never }) => void>(),
@@ -7,8 +7,7 @@ const mocks = vi.hoisted(() => ({
   listen: vi.fn(),
 }));
 
-vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
-vi.mock("@tauri-apps/api/event", () => ({ listen: mocks.listen }));
+vi.mock("@/lib/transport", () => ({ invoke: mocks.invoke, listen: mocks.listen }));
 
 type Deferred<T> = {
   promise: Promise<T>;

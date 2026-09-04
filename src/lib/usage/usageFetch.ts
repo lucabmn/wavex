@@ -6,7 +6,7 @@
  * the LiteLLM rate table, which the backend refreshes at most daily and caches
  * to disk; it is fetched once per app run and held here.
  */
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../transport";
 import { EMPTY_RATE_TABLE, parseRateTable, type RateTable } from "./usagePricing";
 import type { ModelRatesFetch, ModelRatesStatus, UsageSummary } from "./usageTypes";
 import type { UsageWindow } from "./usageWindow";

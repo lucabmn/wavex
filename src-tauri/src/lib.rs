@@ -4,6 +4,7 @@ mod checkpoint;
 mod cursor_store;
 mod fs;
 mod harness;
+mod host_events;
 mod inbox_media;
 #[cfg(target_os = "macos")]
 mod macos;
@@ -164,6 +165,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(harness::HarnessHost::new())
+        .manage(host_events::HostEventJournal::new())
         .manage(pty::PtyHost::new())
         .manage(window_transfer::WindowTransferState::new())
         .setup(|app| {
@@ -274,6 +276,7 @@ pub fn run() {
             harness::harness_sse_open,
             harness::harness_sse_close,
             harness::harness_exec,
+            host_events::host_events_since,
             rate_limits::fetch_claude_usage,
             rate_limits::codex_usage_cache_read,
             rate_limits::codex_usage_cache_write,

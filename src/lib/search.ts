@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./transport";
 import { pathKey } from "./paths";
 
 export type ProjectSearchMatch = {
