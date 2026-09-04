@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LANGUAGE_SERVERS,
+  tsserverCandidates,
   languageIdForPath,
   serverForPath,
   serverKey,
@@ -97,5 +98,24 @@ describe("serverKey", () => {
     expect(serverKey("typescript", "C:/Users/me/app", "main")).toBe(
       serverKey("typescript", "c:/users/me/app", "main"),
     );
+  });
+});
+
+describe("tsserverCandidates", () => {
+  it("prefers the checkout's own TypeScript over a global one", () => {
+    expect(tsserverCandidates("/app", "/Users/me/.local/bin/typescript-language-server")).toEqual([
+      "/app/node_modules/typescript/lib/tsserver.js",
+      "/Users/me/.local/lib/node_modules/typescript/lib/tsserver.js",
+    ]);
+  });
+
+  it("finds the npm global layout beside the server", () => {
+    const [, global] = tsserverCandidates("/app", "/opt/homebrew/bin/typescript-language-server");
+    expect(global).toBe("/opt/homebrew/lib/node_modules/typescript/lib/tsserver.js");
+  });
+
+  it("does not double a trailing slash on the checkout", () => {
+    const [workspace] = tsserverCandidates("/app/", "/usr/local/bin/typescript-language-server");
+    expect(workspace).toBe("/app/node_modules/typescript/lib/tsserver.js");
   });
 });

@@ -10,6 +10,15 @@
 import { basename, statFiles } from "../fs";
 import { isEqualOrInside, normalizeProjectPath, parentPath, pathKey } from "../paths";
 
+/**
+ * What a server needs told about a checkout — or why it cannot run against one.
+ *
+ * A refusal is worth more than a failed start: the server would exit with its
+ * own idea of the problem, which is written for someone who already knows how
+ * it is put together.
+ */
+export type LanguageServerSetup = { ok: true; options: unknown } | { ok: false; reason: string };
+
 export type LanguageServerDefinition = {
   id: string;
   /** Shown in settings and in the "not installed" hint. */
@@ -27,10 +36,14 @@ export type LanguageServerDefinition = {
    */
   rootMarkers: string[];
   /**
-   * Options that depend on the checkout, resolved once when the server starts.
-   * Returning `null` means the server's own defaults.
+   * Options that depend on where the server and the checkout are, resolved once
+   * when the server starts. Returning `null` means the server's own defaults.
    */
-  initializationOptions?: (root: string) => Promise<unknown>;
+  initializationOptions?: (context: {
+    root: string;
+    /** The executable that was resolved, for options that sit beside it. */
+    binary: string;
+  }) => Promise<LanguageServerSetup>;
   /** How to install it, quoted verbatim in the UI. */
   installHint: string;
 };
@@ -91,20 +104,57 @@ export const LANGUAGE_SERVERS: LanguageServerDefinition[] = [
 ];
 
 /**
- * Point the TypeScript server at the checkout's own TypeScript.
+ * Where a `tsserver` for this checkout could be, best first.
  *
  * `typescript-language-server` is only a front end: it needs a `tsserver` to
- * drive, and it looks for one in the workspace. Without this a checkout whose
- * TypeScript is a dependency like any other — which is most of them — starts
- * the server only to have it exit with "Could not find a valid TypeScript
- * installation". Naming the path also pins the project's own version rather
- * than whatever happens to be installed globally, which is what decides
- * whether the errors it reports match the ones `tsc` reports.
+ * drive, and it looks for one in the workspace. Without one it starts and then
+ * exits with "Could not find a valid TypeScript installation".
+ *
+ * The checkout's own copy comes first — that pins the project's version, which
+ * is what decides whether the errors in the editor match the ones `tsc`
+ * reports. A global install beside the server is the fallback, because
+ * `npm install -g typescript-language-server typescript` is the line wavex
+ * quotes and it puts both in the same `lib/node_modules`.
  */
-async function typescriptOptions(root: string): Promise<unknown> {
-  const path = `${root}/node_modules/typescript/lib/tsserver.js`;
-  const [found] = await statFiles([path]).catch(() => []);
-  return found?.mtimeMs == null ? null : { tsserver: { path } };
+export function tsserverCandidates(root: string, binary: string): string[] {
+  const prefix = parentPath(parentPath(binary));
+  return [
+    `${normalizeProjectPath(root)}/node_modules/typescript/lib/tsserver.js`,
+    `${prefix}/lib/node_modules/typescript/lib/tsserver.js`,
+  ];
+}
+
+async function typescriptOptions({
+  root,
+  binary,
+}: {
+  root: string;
+  binary: string;
+}): Promise<LanguageServerSetup> {
+  const candidates = tsserverCandidates(root, binary);
+  const packages = candidates.map((path) => path.replace(/\/lib\/tsserver\.js$/, "/package.json"));
+  const found = await statFiles([...candidates, ...packages]).catch(() => []);
+  const exists = (path: string) => found.find((file) => file.path === path)?.mtimeMs != null;
+
+  const path = candidates.find(exists);
+  if (path) return { ok: true, options: { tsserver: { path } } };
+
+  // A TypeScript that is installed but has no `tsserver.js` is the confusing
+  // case — TypeScript 7 ships `tsc` and no tsserver — and it is worth saying so
+  // rather than reporting it as missing.
+  const installed = packages.findIndex(exists);
+  if (installed !== -1) {
+    return {
+      ok: false,
+      reason: `The TypeScript at ${packages[installed].replace(/\/package\.json$/, "")} has no tsserver.js, which typescript-language-server drives. Install TypeScript 5 in the project: \`npm install -D typescript@5\`.`,
+    };
+  }
+  return {
+    ok: false,
+    reason: `No TypeScript found for this project — typescript-language-server needs one to drive. Install it with \`npm install -D typescript\`. Looked in ${candidates
+      .map((candidate) => candidate.replace(/\/lib\/tsserver\.js$/, ""))
+      .join(" and ")}.`,
+  };
 }
 
 export function fileExtension(path: string): string {

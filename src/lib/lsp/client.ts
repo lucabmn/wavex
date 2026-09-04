@@ -314,6 +314,16 @@ export class LspClient {
         `${this.server.name} is not installed. Install it with \`${this.server.installHint}\`.`,
       );
     }
+    // Resolved before the child exists, not baked into the definition: what a
+    // server needs told about a checkout depends on the checkout, and a server
+    // that says up front it cannot run against this one is refused here — with
+    // its own reason — rather than spawned so it can exit with a worse one.
+    const setup = await this.server
+      .initializationOptions?.({ root: this.root, binary: binary.path })
+      .catch(() => null);
+    if (setup && !setup.ok) throw new Error(setup.reason);
+    this.initializationOptions = setup?.ok ? setup.options : null;
+
     this.events.onStatus({ state: "starting" });
 
     const connection = new LspConnection(
@@ -337,11 +347,6 @@ export class LspClient {
         },
       },
     );
-
-    // Resolved before `initialize` rather than baked into the definition: what
-    // a server needs told about a checkout depends on the checkout.
-    this.initializationOptions =
-      (await this.server.initializationOptions?.(this.root).catch(() => null)) ?? null;
 
     const result = await withTimeout(
       connection.request<{ capabilities?: LspServerCapabilities }>(
