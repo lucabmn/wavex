@@ -1,6 +1,7 @@
 import { invoke } from "../transport";
 import { fuzzyMatch } from "../fuzzy";
-import { normalizeProjectPath, pathKey } from "../paths";
+import { projectKey as projectKeyFor } from "../host";
+import { normalizeProjectPath } from "../paths";
 import { looksLikeProject } from "../recents";
 import {
   isValidSkillName,
@@ -61,7 +62,7 @@ export function templateProjectPath(cwd: string): string | null {
 /** Comparison key the store rows are filed under. */
 export function templateProjectKey(cwd: string): string | null {
   const path = templateProjectPath(cwd);
-  return path ? pathKey(path) : null;
+  return path ? projectKeyFor(path) : null;
 }
 
 export function peekPromptTemplates(projectKey: string | null): PromptTemplate[] | null {
@@ -132,7 +133,7 @@ export function newPromptTemplateDraft(
   if (!projectPath) return null;
   return {
     id: crypto.randomUUID(),
-    projectKey: pathKey(projectPath),
+    projectKey: projectKeyFor(projectPath),
     projectPath,
     name: slugTemplateName(name),
     description: "",

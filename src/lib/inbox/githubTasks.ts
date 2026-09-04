@@ -1,5 +1,5 @@
 import { invoke } from "../transport";
-import { pathKey } from "../paths";
+import { projectKey } from "../host";
 import {
   collectRailProjects,
   normalizeProjectPath,
@@ -453,7 +453,7 @@ async function fetchInboxItems(
 
 export function inboxProjectsForRail(recents: RecentProject[], cwd: string): RecentProject[] {
   const map = collectRailProjects(recents, cwd);
-  const current = cwd ? map.get(pathKey(cwd)) : undefined;
+  const current = cwd ? map.get(projectKey(cwd)) : undefined;
   const rest = [...map.values()].filter(
     (project) => !current || !sameProjectPath(project.path, current.path),
   );

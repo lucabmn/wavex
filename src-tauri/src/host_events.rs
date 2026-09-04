@@ -36,9 +36,13 @@ struct Journal {
 
 pub struct HostEventJournal {
     stream_id: String,
-    /// Nothing is retained until a client asks to follow the stream. A local
-    /// WebView reads its events straight off the Tauri emit, and PTY bytes and
-    /// harness lines run hot enough that a copy per chunk is not free.
+    /// Nothing is retained until a client asks for a replay. A local WebView
+    /// reads its events straight off the Tauri emit, and PTY bytes and harness
+    /// lines run hot enough that a copy per chunk is not free.
+    ///
+    /// This means the first replay a client asks for is empty and forces a
+    /// full resynchronise. Session-scoped journalling moves this to "a client
+    /// is attached", which is what makes the first reconnect cheap.
     following: AtomicBool,
     journal: Mutex<Journal>,
 }
@@ -150,7 +154,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn nothing_is_retained_until_a_client_follows_the_stream() {
+    fn retention_starts_at_the_first_replay_request_not_before() {
         let journal = HostEventJournal::new();
         assert!(!journal.is_following());
 
