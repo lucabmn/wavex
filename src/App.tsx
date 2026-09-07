@@ -15,6 +15,7 @@ import { ApprovalToasts } from "./chrome/ApprovalToasts";
 import { WhatsNewDialog } from "./chrome/WhatsNewDialog";
 import { HostProjectDialog } from "./chrome/HostProjectDialog";
 import { getConnectSnapshot, onHostResynced, refreshConnect } from "./lib/connect";
+import type { HostId } from "./lib/host";
 import { TitleBar } from "./chrome/TitleBar";
 import { MenuBar } from "./chrome/MenuBar";
 import { FilePicker } from "./chrome/FilePicker";
@@ -210,10 +211,19 @@ import type { LspWorkspaceEdit } from "./lib/lsp/types";
 import { planRename } from "./lib/lsp/rename";
 import {
   mergeModelSettings,
+  modelsFor,
   preferredModelSettings,
   resolveModel,
   saveLastModelSettings,
 } from "./lib/models";
+import {
+  assessQuota,
+  availableQuotaFallbacks,
+  confirmQuotaFallback,
+  quotaNeedsFallback,
+  type QuotaFallbackCandidate,
+} from "./lib/quotaRouting";
+import { fetchClaudePlanLimits, fetchCodexPlanLimits } from "./lib/usage/planLimitsFetch";
 import { planTitle } from "./lib/plan";
 import { displayPath, isEqualOrInside, pathKey, projectName, rebasePath } from "./lib/paths";
 import { removeProjectData } from "./lib/project/projectData";
@@ -237,6 +247,7 @@ import {
 import { runSessionRemoval } from "./lib/sessions/sessionRemoval";
 import {
   HARNESS_LABEL,
+  HARNESS_TITLE,
   canReplaceSessionTitle,
   findBlockDeep,
   formatSessionTitle,
@@ -402,6 +413,46 @@ import {
 /** Native sheet. `window.confirm` is swallowed when a macOS menu accelerator fires. */
 function confirmDiscardUnsaved(message: string): Promise<boolean> {
   return ask(message, { title: "wavex", kind: "warning" });
+}
+
+async function quotaFallbackForSession(
+  session: Session,
+  hostId: HostId,
+): Promise<{ risk: "warning" | "reached"; candidates: QuotaFallbackCandidate[] } | null> {
+  if (session.harness !== "claude" && session.harness !== "codex") return null;
+
+  const currentLimits =
+    session.harness === "claude"
+      ? await fetchClaudePlanLimits(false, hostId)
+      : await fetchCodexPlanLimits(false, hostId);
+  const risk = assessQuota(currentLimits);
+  if (!quotaNeedsFallback(risk)) return null;
+
+  // Availability is deliberately checked at the last responsible moment:
+  // installations and sign-ins can change while wavex is open.
+  const availability = await probeHarnessAvailability({ force: true, hostId });
+  const fallbackIds: HarnessId[] = session.harness === "claude" ? ["codex"] : ["claude"];
+  await refreshHarnessCatalogs(fallbackIds, hostId);
+
+  const candidates: QuotaFallbackCandidate[] = [];
+  for (const harness of fallbackIds) {
+    const plan =
+      harness === "claude"
+        ? await fetchClaudePlanLimits(false, hostId)
+        : await fetchCodexPlanLimits(false, hostId);
+    const fallbackRisk = assessQuota(plan);
+    const model = modelsFor(harness)[0];
+    candidates.push({
+      harness,
+      model: model?.id ?? "",
+      label: HARNESS_TITLE[harness],
+      cliAvailable: availability[harness],
+      authenticated: plan.status === "ok" && plan.windows.length > 0,
+      configured: model != null && fallbackRisk !== "unknown" && fallbackRisk !== "reached",
+    });
+  }
+
+  return { risk, candidates: availableQuotaFallbacks(session.harness, candidates) };
 }
 
 function filesInWorkspaceTabs(tabs: readonly WorkspaceTab[]): FilePaneTab[] {
@@ -3085,10 +3136,53 @@ export default function App({
         noteCard?: NoteComposerCard;
         handoffCard?: HandoffComposerCard;
         inboxCard?: InboxComposerCard;
+        /** Internal retry after the quota confirmation gate. */
+        quotaChecked?: boolean;
+        quotaFallback?: QuotaFallbackCandidate;
       },
     ) => {
       const current = sessionsRef.current.find((s) => s.id === sessionId);
       if (!current) return;
+      const quotaFallback = options?.quotaFallback;
+      if (
+        !options?.quotaChecked &&
+        !quotaFallback &&
+        !options?.steer &&
+        !current.busy &&
+        !current.pendingSwitch
+      ) {
+        void quotaFallbackForSession(current, sessionHostId(current))
+          .then(async (offer) => {
+            if (!offer || offer.candidates.length === 0) {
+              onSubmit(sessionId, text, attachments, { ...options, quotaChecked: true });
+              return;
+            }
+            const candidate = await confirmQuotaFallback({
+              providerLabel: HARNESS_TITLE[current.harness],
+              risk: offer.risk,
+              candidates: offer.candidates,
+              confirm: (prompt) =>
+                ask(prompt, {
+                  title: "Continue with another provider?",
+                  kind: "warning",
+                  okLabel: `Continue with ${offer.candidates[0].label}`,
+                  cancelLabel: "Stay with current provider",
+                }),
+            });
+            if (!candidate) return;
+            onSubmit(sessionId, text, attachments, {
+              ...options,
+              quotaChecked: true,
+              quotaFallback: candidate,
+            });
+          })
+          .catch(() => {
+            // Usage probes are advisory; an unexpected probe failure must not
+            // block an otherwise valid turn.
+            onSubmit(sessionId, text, attachments, { ...options, quotaChecked: true });
+          });
+        return;
+      }
       // A queued row stays queued until this submit actually starts a turn: a
       // preparing handoff, a re-queue, or a no-op must not swallow it.
       if (options?.queuedPromptId) {
@@ -3114,9 +3208,22 @@ export default function App({
       // the session, not from parsing the directory it happens to run in.
       const workHostId = sessionHostId(current);
       const harnessText = composeNoteMessage(noteCard, text);
+      const routedHarness = quotaFallback?.harness ?? current.harness;
+      const routedModel = quotaFallback?.model ?? current.model;
+      const routedSettings = quotaFallback
+        ? preferredModelSettings(resolveModel(routedHarness, routedModel), current.modelSettings)
+        : current.modelSettings;
 
-      const pendingSwitch =
-        current.pendingSwitch && current.pendingSwitch.from !== current.harness
+      const pendingSwitch = quotaFallback
+        ? {
+            from: current.harness,
+            fromModel: current.model,
+            fromSettings: current.modelSettings,
+            ...(current.providerSessionId
+              ? { fromProviderSessionId: current.providerSessionId }
+              : {}),
+          }
+        : current.pendingSwitch && current.pendingSwitch.from !== current.harness
           ? current.pendingSwitch
           : null;
 
@@ -3227,19 +3334,19 @@ export default function App({
       const isFirstTurn = current.blocks.length === 0;
       const placeholderTitle = canReplaceSessionTitle(
         current.title,
-        current.harness,
-        HARNESS_LABEL[current.harness],
+        routedHarness,
+        HARNESS_LABEL[routedHarness],
       );
       const titleSeed =
         isFirstTurn && !current.inboxCard && !current.noteCard && placeholderTitle
-          ? titleFromPrompt(text, current.harness, attachments)
+          ? titleFromPrompt(text, routedHarness, attachments)
           : current.title;
       const visible = displayAttachments(attachments);
       const card =
         options?.secondOpinion ?? (handoffCard ? handoffTurnCard(handoffCard) : undefined);
       const visibleText = card?.kind === "handoff" ? text : card ? SECOND_OPINION_TITLE : text;
       const cards = userTurnCards(noteCard, card);
-      const live = isLiveHarness(current.harness);
+      const live = isLiveHarness(routedHarness);
       const queuedHandoff = live && !pendingSwitch ? pendingHandoff(current) : null;
 
       if (pendingSwitch && current.busy) {
@@ -3251,7 +3358,9 @@ export default function App({
           if (s.id !== sessionId) return s;
           const titled = isFirstTurn ? titleSeed : s.title;
           const next = {
-            ...s,
+            ...(quotaFallback
+              ? withHarnessChoice(s, routedHarness, routedModel, routedSettings)
+              : s),
             inboxCard: undefined,
             noteCard: undefined,
             handoffCard: undefined,
@@ -3297,7 +3406,7 @@ export default function App({
       );
 
       if (isFirstTurn && live && placeholderTitle) {
-        void generateHarnessTitle(current.harness, {
+        void generateHarnessTitle(routedHarness, {
           sessionId,
           cwd: workCwd,
           hostId: workHostId,
@@ -3329,13 +3438,14 @@ export default function App({
         let wrap = handoffCard
           ? {
               from: handoffCard.from,
-              to: current.harness,
+              to: routedHarness,
               text: handoffCard.brief,
             }
           : queuedHandoff;
         if (pendingSwitch) {
           let agentText = "";
-          if (shouldAskOutgoingAgent(current) && isLiveHarness(pendingSwitch.from)) {
+          const outgoingSession = quotaFallback ? { ...current, pendingSwitch } : current;
+          if (shouldAskOutgoingAgent(outgoingSession) && isLiveHarness(pendingSwitch.from)) {
             try {
               agentText = await requestOutgoingHandoff({
                 harness: pendingSwitch.from,
@@ -3358,7 +3468,7 @@ export default function App({
           );
           await forgetHarnessSession(pendingSwitch.from, sessionId, workHostId);
           if (turnGen.current.get(sessionId) !== gen) return;
-          wrap = { from: pendingSwitch.from, to: current.harness, text: brief };
+          wrap = { from: pendingSwitch.from, to: routedHarness, text: brief };
         }
 
         const revealHandoff = (brief: string) => {
@@ -3375,18 +3485,18 @@ export default function App({
         try {
           const prepared = await prepareAttachments(attachments);
           const prompt = await preparePrompt(harnessText, {
-            harness: current.harness,
+            harness: routedHarness,
             cwd: workCwd,
             hostId: workHostId,
           });
           const earlier = queuedHandoff ? userMessagesAfterHandoff(current) : [];
           await sendHarnessTurn({
-            harness: current.harness,
+            harness: routedHarness,
             sessionId,
             hostId: workHostId,
             cwd: workCwd,
-            model: current.model,
-            modelSettings: current.modelSettings,
+            model: routedModel,
+            modelSettings: routedSettings,
             runtimeMode: current.runtimeMode,
             text: wrap
               ? wrapHandoffPrompt(wrap.text, wrap.from, prompt.trim() || CONTINUE_PROMPT, earlier)
@@ -3418,7 +3528,7 @@ export default function App({
         } catch (error: unknown) {
           if (turnGen.current.get(sessionId) !== gen) return;
           if (wrap) revealHandoff(wrap.text);
-          const message = harnessErrorMessage(error, current.harness);
+          const message = harnessErrorMessage(error, routedHarness);
           enqueueHarnessEvent(sessionId, {
             type: "session.error",
             message,

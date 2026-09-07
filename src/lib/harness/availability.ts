@@ -1,3 +1,4 @@
+import type { HostId } from "../host";
 import type { HarnessId } from "../session";
 import { HARNESSES } from "../session";
 import {
@@ -43,7 +44,7 @@ let availability: HarnessAvailability = {
   fx: false,
 };
 let version = 0;
-let inflight: Promise<void> | null = null;
+let inflight: Promise<HarnessAvailability> | null = null;
 let probedAt = 0;
 const listeners = new Set<() => void>();
 
@@ -85,17 +86,21 @@ export function harnessUnavailableHint(id: HarnessId): string {
   return `${name} not found${how}. Install it, or restart wavex if it is already installed.`;
 }
 
-export function probeHarnessAvailability(options?: { force?: boolean }): Promise<void> {
+export function probeHarnessAvailability(options?: {
+  force?: boolean;
+  hostId?: HostId;
+}): Promise<HarnessAvailability> {
   if (inflight) return inflight;
   if (!options?.force && probedAt > 0 && Date.now() - probedAt < PROBE_TTL_MS) {
-    return Promise.resolve();
+    return Promise.resolve(availability);
   }
+  const hostId = options?.hostId;
   inflight = Promise.all(
     HARNESSES.map(async (id) => {
       if (!isLiveHarness(id)) return [id, false] as const;
       if (id === "cursor") {
         try {
-          await resolveCursorBinary();
+          await resolveCursorBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -103,7 +108,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       }
       if (id === "claude") {
         try {
-          await resolveClaudeBinary();
+          await resolveClaudeBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -111,7 +116,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       }
       if (id === "codex") {
         try {
-          await resolveCodexBinary();
+          await resolveCodexBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -119,7 +124,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       }
       if (id === "opencode") {
         try {
-          await resolveOpenCodeBinary();
+          await resolveOpenCodeBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -127,7 +132,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       }
       if (id === "pi") {
         try {
-          await resolvePiBinary();
+          await resolvePiBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -135,7 +140,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       }
       if (id === "omp") {
         try {
-          await resolveOmpBinary();
+          await resolveOmpBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -143,7 +148,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       }
       if (id === "fx") {
         try {
-          await resolveFxBinary();
+          await resolveFxBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -151,7 +156,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       }
       if (id === "grok") {
         try {
-          await resolveGrokBinary();
+          await resolveGrokBinary(hostId);
           return [id, true] as const;
         } catch {
           return [id, false] as const;
@@ -165,6 +170,7 @@ export function probeHarnessAvailability(options?: { force?: boolean }): Promise
       for (const [id, ok] of entries) next[id] = ok;
       availability = next;
       emit();
+      return next;
     })
     .finally(() => {
       probedAt = Date.now();
