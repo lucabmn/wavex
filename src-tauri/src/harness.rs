@@ -346,9 +346,8 @@ pub fn harness_spawn(
         .stderr(Stdio::piped());
     prepare_child(&mut cmd, &command);
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| format!("Failed to start {command}: {e}"))?;
+    let mut child =
+        crate::process::spawn(&mut cmd).map_err(|e| format!("Failed to start {command}: {e}"))?;
     let pid = child.id();
 
     let stdin = child
@@ -695,9 +694,8 @@ fn exec_capture(command: &str, args: &[String], cwd: Option<&str>) -> Result<Str
         }
     }
 
-    let child = cmd
-        .spawn()
-        .map_err(|e| format!("Failed to run {command}: {e}"))?;
+    let child =
+        crate::process::spawn(&mut cmd).map_err(|e| format!("Failed to run {command}: {e}"))?;
     let pid = child.id();
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
@@ -1424,7 +1422,7 @@ fn help_mentions_rpc_mode(path: &Path) -> bool {
     // fails outright without a PATH that has node on it.
     apply_gui_env(&mut cmd);
     isolate_child(&mut cmd);
-    let Ok(child) = cmd.spawn() else {
+    let Ok(child) = crate::process::spawn(&mut cmd) else {
         return false;
     };
     let pid = child.id();
@@ -1515,7 +1513,7 @@ fn fx_help_mentions_acp(path: &Path) -> bool {
     // fails outright without a PATH that has node on it.
     apply_gui_env(&mut cmd);
     isolate_child(&mut cmd);
-    let Ok(child) = cmd.spawn() else {
+    let Ok(child) = crate::process::spawn(&mut cmd) else {
         return false;
     };
     let pid = child.id();
@@ -1576,7 +1574,7 @@ fn grok_help_mentions_agent(path: &Path) -> bool {
         .stderr(Stdio::piped());
     apply_gui_env(&mut cmd);
     isolate_child(&mut cmd);
-    let Ok(child) = cmd.spawn() else {
+    let Ok(child) = crate::process::spawn(&mut cmd) else {
         return false;
     };
     let pid = child.id();
@@ -1921,7 +1919,7 @@ fn load_login_shell_env() -> HashMap<String, String> {
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
     isolate_child(&mut cmd);
-    let Ok(child) = cmd.spawn() else {
+    let Ok(child) = crate::process::spawn(&mut cmd) else {
         return HashMap::new();
     };
     let pid = child.id();
