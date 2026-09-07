@@ -1,9 +1,11 @@
 use tauri::Manager;
 
 mod checkpoint;
+mod connect;
 mod cursor_store;
 mod fs;
 mod harness;
+pub mod headless;
 mod host_events;
 mod inbox_media;
 #[cfg(target_os = "macos")]
@@ -156,7 +158,14 @@ fn open_new_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run(launch: headless::Launch) {
+    let headless = launch.headless;
+    let mut context = tauri::generate_context!();
+    if headless {
+        // Not hidden, never created: a host under a desk has no display to
+        // draw one on, and a hidden window still needs the display.
+        context.config_mut().app.windows.clear();
+    }
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -168,12 +177,28 @@ pub fn run() {
         .manage(host_events::HostEventJournal::new())
         .manage(pty::PtyHost::new())
         .manage(window_transfer::WindowTransferState::new())
-        .setup(|app| {
+        .setup(move |app| {
             harness::reap_orphaned_harness_processes();
             // Profiles decide where every other store lives, so they bind first.
             profiles::init(app.handle())?;
             session_store::init(app.handle())?;
             checkpoint::init(app.handle())?;
+            connect::init(app.handle())?;
+            if headless {
+                // A menu, a Dock menu, a popover, and a global shortcut all
+                // belong to a person sitting in front of the machine. A host
+                // has nobody there, and macOS keeps it out of the Dock.
+                app.manage(headless::Headless);
+                #[cfg(target_os = "macos")]
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                if let Err(error) = headless::start(app.handle(), &launch) {
+                    // A host that cannot serve has nothing left to do, and a
+                    // command line deserves a sentence rather than a panic.
+                    eprintln!("wavex: {error}");
+                    std::process::exit(1);
+                }
+                return Ok(());
+            }
             menu::install(app.handle())?;
             quick_ask::install(app.handle());
             #[cfg(target_os = "macos")]
@@ -337,25 +362,43 @@ pub fn run() {
             profiles::profile_delete_data,
             project_logo::save_project_logo,
             project_logo::remove_project_logo,
+            connect::connect_host_status,
+            connect::connect_host_start,
+            connect::connect_host_stop,
+            connect::connect_host_set_name,
+            connect::connect_host_pairing_code,
+            connect::connect_host_rotate_token,
+            connect::connect_client_list,
+            connect::connect_client_add,
+            connect::connect_client_remove,
+            connect::connect_client_connection,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building wavex");
 
     app.run(|handle, event| match event {
         #[cfg(target_os = "macos")]
         tauri::RunEvent::Reopen { .. } => {
             // A visible menu-bar popover is not an app workspace. Dock clicks
-            // still need to reveal or create a normal wavex window.
-            let _ = window::show_hidden_or_open_new(handle);
+            // still need to reveal or create a normal wavex window — unless
+            // this process is a host, which has no window to go back to.
+            if handle.try_state::<headless::Headless>().is_none() {
+                let _ = window::show_hidden_or_open_new(handle);
+            }
         }
         tauri::RunEvent::Ready => {
-            #[cfg(target_os = "macos")]
-            {
-                macos::request_badge_authorization();
-                #[cfg(debug_assertions)]
-                macos::prefer_bundle_dock_icon();
+            // A host has no Dock tile to badge and nobody to notify, and
+            // asking for authorization outside an app bundle aborts the
+            // process. Both are the window's business, not the host's.
+            if handle.try_state::<headless::Headless>().is_none() {
+                #[cfg(target_os = "macos")]
+                {
+                    macos::request_badge_authorization();
+                    #[cfg(debug_assertions)]
+                    macos::prefer_bundle_dock_icon();
+                }
+                window::ensure_launch_window_visible(handle);
             }
-            window::ensure_launch_window_visible(handle);
         }
         tauri::RunEvent::WindowEvent {
             label,

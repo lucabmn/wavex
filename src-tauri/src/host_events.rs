@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{Condvar, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use serde_json::Value;
@@ -45,6 +45,9 @@ pub struct HostEventJournal {
     /// is attached", which is what makes the first reconnect cheap.
     following: AtomicBool,
     journal: Mutex<Journal>,
+    /// A remote client blocks on the journal instead of polling it, so a
+    /// harness line reaches the socket at the speed it was published.
+    published: Condvar,
 }
 
 impl HostEventJournal {
@@ -61,14 +64,19 @@ impl HostEventJournal {
                 bytes: 0,
                 events: VecDeque::new(),
             }),
+            published: Condvar::new(),
         }
+    }
+
+    pub fn stream_id(&self) -> &str {
+        &self.stream_id
     }
 
     fn is_following(&self) -> bool {
         self.following.load(Ordering::Relaxed)
     }
 
-    fn record(&self, event: &str, payload: Value) {
+    pub fn record(&self, event: &str, payload: Value) {
         let payload_bytes = serde_json::to_vec(&payload).map_or(0, |value| value.len());
         let size = event.len().saturating_add(payload_bytes);
         let mut journal = self
@@ -94,14 +102,50 @@ impl HostEventJournal {
                 journal.bytes = journal.bytes.saturating_sub(dropped);
             }
         }
+        drop(journal);
+        self.published.notify_all();
     }
 
-    fn replay(&self, after_sequence: u64) -> HostEventReplay {
+    pub fn replay(&self, after_sequence: u64) -> HostEventReplay {
         self.following.store(true, Ordering::Relaxed);
         let journal = self
             .journal
             .lock()
             .unwrap_or_else(|error| error.into_inner());
+        self.snapshot(&journal, after_sequence)
+    }
+
+    /// Block until the journal moves past `after_sequence`, then hand back the
+    /// backlog and the cursor that goes with it.
+    ///
+    /// The two are read under one lock acquisition on purpose: a `latest`
+    /// sampled after the copy would let a client acknowledge a sequence whose
+    /// event it never received, and every event after that would read as a gap.
+    pub fn wait_for(&self, after_sequence: u64, timeout: Duration) -> HostEventReplay {
+        self.following.store(true, Ordering::Relaxed);
+        let deadline = Instant::now() + timeout;
+        let mut journal = self
+            .journal
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        loop {
+            let replay = self.snapshot(&journal, after_sequence);
+            if replay.resync_required || !replay.events.is_empty() {
+                return replay;
+            }
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return replay;
+            }
+            journal = self
+                .published
+                .wait_timeout(journal, remaining)
+                .unwrap_or_else(|error| error.into_inner())
+                .0;
+        }
+    }
+
+    fn snapshot(&self, journal: &Journal, after_sequence: u64) -> HostEventReplay {
         let latest_sequence = journal.next_sequence.saturating_sub(1);
         let oldest_sequence = journal
             .events
@@ -189,5 +233,47 @@ mod tests {
         assert_eq!(replay.latest_sequence, 0);
         assert!(!replay.resync_required);
         assert!(replay.events.is_empty());
+    }
+
+    #[test]
+    fn waiting_returns_the_backlog_and_its_cursor_together() {
+        let journal = HostEventJournal::new();
+        journal.replay(0);
+        journal.record("one", serde_json::json!({ "value": 1 }));
+        journal.record("two", serde_json::json!({ "value": 2 }));
+
+        let replay = journal.wait_for(0, Duration::from_millis(10));
+        assert_eq!(replay.latest_sequence, 2);
+        assert_eq!(
+            replay.events.last().map(|event| event.sequence),
+            Some(replay.latest_sequence)
+        );
+    }
+
+    #[test]
+    fn waiting_wakes_on_the_next_published_event() {
+        use std::sync::Arc;
+
+        let journal = Arc::new(HostEventJournal::new());
+        journal.replay(0);
+        let writer = Arc::clone(&journal);
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(20));
+            writer.record("late", serde_json::json!({}));
+        });
+
+        let replay = journal.wait_for(0, Duration::from_secs(5));
+        assert_eq!(replay.events.len(), 1);
+        assert_eq!(replay.events[0].event, "late");
+    }
+
+    #[test]
+    fn waiting_gives_up_quietly_when_nothing_is_published() {
+        let journal = HostEventJournal::new();
+        journal.replay(0);
+
+        let replay = journal.wait_for(0, Duration::from_millis(5));
+        assert!(replay.events.is_empty());
+        assert!(!replay.resync_required);
     }
 }

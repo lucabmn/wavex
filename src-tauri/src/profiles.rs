@@ -45,6 +45,12 @@ impl ProfilePaths {
             .clone()
     }
 
+    /// Install-wide directory, above any one profile. A host identity names
+    /// the machine rather than an identity inside it, so it lives here.
+    pub fn app_data(&self) -> &Path {
+        &self.app_data
+    }
+
     /// Data directory of the active profile, created if it is missing.
     pub fn data_dir(&self) -> Result<PathBuf, String> {
         let dir = profile_data_dir(&self.app_data, &self.active());
@@ -109,6 +115,12 @@ pub fn init(app: &AppHandle) -> Result<(), String> {
     app.manage(paths);
     app.manage(ProfileSwitch::default());
     Ok(())
+}
+
+/// The profile the stores are open on. A headless host names it when it says
+/// what it is serving, because the profile was chosen on the command line.
+pub fn active_profile(app: &AppHandle) -> String {
+    app.state::<ProfilePaths>().active()
 }
 
 /// Points every profile-scoped store at `profile_id`. Cheap and idempotent, so
