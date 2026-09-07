@@ -10,6 +10,7 @@ import { setGrabbing, suppressTextSelection } from "../lib/drag";
 import { paneDropFromPoint, useExternalPaneDrop } from "../lib/workspace/paneDrop";
 import type { ApprovalDecision, UserQuestionReply } from "../lib/harness";
 import type { EditorNavigationTarget } from "../lib/search";
+import type { LspWorkspaceCommands } from "../lib/editor/editorLsp";
 import {
   layoutLeaves,
   layoutSashes,
@@ -70,6 +71,7 @@ type Shared = {
   onQuestionReply: (sessionId: string, requestId: number, reply: UserQuestionReply) => void;
   onOpenFile: (path: string) => void;
   editorNavigation?: EditorNavigationTarget | null;
+  lspCommands?: LspWorkspaceCommands;
   onOpenDiff: (path?: string) => void;
   onOpenPlan: (sessionId: string, blockId: string) => void;
   onOpenSubagent: (sessionId: string, blockId: string) => void;
@@ -130,6 +132,7 @@ function PaneTreeComponent({
   onQuestionReply,
   onOpenFile,
   editorNavigation,
+  lspCommands,
   onOpenDiff,
   onOpenPlan,
   onOpenSubagent,
@@ -279,6 +282,7 @@ function PaneTreeComponent({
                 onErrorCountChange={onFileErrorCountChange}
                 onOpenFile={onOpenFile}
                 editorNavigation={editorNavigation}
+                lspCommands={lspCommands}
                 onPaneDragStart={onPaneDragStart}
                 onTerminalMetaChange={onTerminalMetaChange}
               />

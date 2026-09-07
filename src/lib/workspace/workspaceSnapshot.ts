@@ -358,6 +358,9 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
   if (typeof value.id !== "string" || !value.id) return null;
   if (typeof value.path !== "string" || !value.path) return null;
   if (typeof value.cwd !== "string" || !value.cwd) return null;
+  // A references list describes the code as the server saw it. Restoring one
+  // would offer line numbers that have moved since, so the tab is dropped.
+  if ("references" in value) return null;
   const plan = sanitizePlan(value.plan);
   const hasSubagent = "subagent" in value;
   const subagent = sanitizeSubagent(value.subagent);
