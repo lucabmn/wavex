@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { LoaderCircle, RefreshCw } from "../chrome/icons";
 import { PlanLimitCards } from "../chrome/PlanLimitCards";
+import { Segmented } from "../chrome/Segmented";
 import { OverlayNav } from "../chrome/TitleBar";
 import { UsageChart, type UsageMetric } from "../chrome/UsageChart";
 import { WindowControls } from "../chrome/WindowControls";
@@ -210,42 +211,6 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
 }
 
 /* -------------------------------------------------------------------------- */
-
-function Segmented<T extends string | number>({
-  label,
-  value,
-  options,
-  onSelect,
-}: {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onSelect: (value: T) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label={label}
-      className="flex shrink-0 items-center gap-px rounded-md bg-content/[0.07] p-px"
-    >
-      {options.map((option) => (
-        <button
-          key={String(option.value)}
-          type="button"
-          aria-pressed={option.value === value}
-          onClick={() => onSelect(option.value)}
-          className={`rounded-[5px] px-2 py-[3px] text-[11px] leading-none ${
-            option.value === value
-              ? "bg-[var(--color-background-base)] text-content shadow-sm"
-              : "text-content/50 hover:text-content"
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function Card({
   title,

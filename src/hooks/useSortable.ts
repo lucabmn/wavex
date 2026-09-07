@@ -133,7 +133,9 @@ export function useSortable(
   const onItemPointerDown = useCallback(
     (id: string, event: ReactPointerEvent) => {
       if (event.button !== 0) return;
-      if (idsRef.current.length < 2) return;
+      // Reordering a lone item is meaningless, but a lone card still has to be
+      // able to travel to another column.
+      if (idsRef.current.length < 2 && !onDropOnColumnRef.current) return;
       if ((event.target as HTMLElement | null)?.closest("[data-no-drag]")) {
         return;
       }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LiveAgent } from "@/lib/liveAgents";
 import {
   activityBoardCards,
+  canMoveActivityCard,
   activityProjectKey,
   activitySessionKey,
   derivedActivityLane,
@@ -12,7 +13,12 @@ import {
 } from "@/lib/activityBoard";
 import type { SessionSummary } from "@/lib/sessions/sessionStore";
 
-const session = (id: string, hostId = "local", cwd = "C:/Work/App"): SessionSummary => ({
+const session = (
+  id: string,
+  hostId = "local",
+  cwd = "C:/Work/App",
+  updatedAt = 2,
+): SessionSummary => ({
   id,
   hostId,
   cwd,
@@ -21,7 +27,7 @@ const session = (id: string, hostId = "local", cwd = "C:/Work/App"): SessionSumm
   runtimeMode: "supervised",
   title: id,
   createdAt: 1,
-  updatedAt: 2,
+  updatedAt,
   scope: "coding",
 });
 
@@ -71,6 +77,31 @@ describe("activity board", () => {
       view: "board",
       lanes: { a: "done" },
     });
+  });
+
+  it("refuses a move a running turn owns, and a lane nobody can pick", () => {
+    const [running] = activityBoardCards([session("one")], [live("one")], {
+      view: "board",
+      lanes: {},
+    });
+    expect(canMoveActivityCard(running, "parked")).toBe(false);
+    expect(canMoveActivityCard(running, "done")).toBe(false);
+
+    const [idle] = activityBoardCards([session("one")], [], { view: "board", lanes: {} });
+    expect(canMoveActivityCard(idle, "parked")).toBe(true);
+    expect(canMoveActivityCard(idle, "working")).toBe(false);
+    expect(canMoveActivityCard(idle, "needs-you")).toBe(false);
+    // Already there: nothing to commit.
+    expect(canMoveActivityCard(idle, "done")).toBe(false);
+  });
+
+  it("orders cards newest first whatever order the sessions arrive in", () => {
+    const cards = activityBoardCards(
+      [session("old", "local", "C:/Work/App", 1), session("new", "local", "C:/Work/App", 9)],
+      [],
+      { view: "board", lanes: {} },
+    );
+    expect(cards.map((card) => card.session.id)).toEqual(["new", "old"]);
   });
 
   it("moves a card without changing other pins", () => {

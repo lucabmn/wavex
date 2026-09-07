@@ -2,7 +2,8 @@ import { invokeLocal as invoke, listenLocal as listen } from "../lib/transport";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityBoard } from "../chrome/ActivityBoard";
 import { HarnessIcon } from "../chrome/HarnessIcon";
-import { Board, CircleAlert, ListFilter, Square } from "../chrome/icons";
+import { Board, CircleAlert, ListView, Square } from "../chrome/icons";
+import { Segmented } from "../chrome/Segmented";
 import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -14,6 +15,7 @@ import {
   pruneActivityBoardState,
   saveActivityBoardState,
   type ActivityBoardState,
+  type ActivityViewMode,
 } from "../lib/activityBoard";
 import {
   focusMenuBarAgent,
@@ -150,6 +152,12 @@ export function ActivityView({
     [agents, board, boardSessions],
   );
 
+  const setView = (view: ActivityViewMode) => {
+    const next = { ...board, view };
+    setBoard(next);
+    saveActivityBoardState(next);
+  };
+
   const stop = (agent: LiveAgent) => {
     setError(null);
     void stopMenuBarAgent(agent.id).then((routed) => {
@@ -176,91 +184,67 @@ export function ActivityView({
           </span>
           <span className="min-w-0 truncate text-content">{status}</span>
         </div>
-        {counts.waiting > 0 ? (
-          <button
-            type="button"
-            onClick={() => {
-              const next = agents.find((agent) => agent.needsApproval);
-              if (next) focusMenuBarAgent(next.id);
-            }}
-            className="mr-2 hidden shrink-0 items-center gap-1.5 rounded-md bg-amber-400/12 px-2 py-1 text-[11.5px] font-medium text-amber-300 hover:bg-amber-400/18 sm:flex"
-          >
-            <CircleAlert className="size-3.5" strokeWidth={1.75} />
-            Review next
-          </button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1.5 pr-2" data-tauri-drag-region="false">
+          {counts.waiting > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                const next = agents.find((agent) => agent.needsApproval);
+                if (next) focusMenuBarAgent(next.id);
+              }}
+              className="hidden shrink-0 items-center gap-1.5 rounded-md bg-amber-400/12 px-2 py-1 text-[11.5px] font-medium text-amber-300 hover:bg-amber-400/18 sm:flex"
+            >
+              <CircleAlert className="size-3.5" strokeWidth={1.75} />
+              Review next
+            </button>
+          ) : null}
+          <Segmented
+            label="Activity view"
+            value={board.view}
+            options={[
+              { value: "list", label: "List", icon: ListView },
+              { value: "board", label: "Board", icon: Board },
+            ]}
+            onSelect={setView}
+          />
+        </div>
         {IS_MAC ? null : <WindowControls />}
       </div>
 
       <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
-        <div
-          role="group"
-          aria-label="Activity view and filters"
-          className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
-        >
-          {agents.length > 0 ? (
-            <div
-              role="group"
-              aria-label="Filter agent activity"
-              className="flex items-center gap-1"
-            >
-              <ActivityFilterButton
-                label="All"
-                count={agents.length}
-                active={filter === "all"}
-                onClick={() => setFilter("all")}
-              />
-              <ActivityFilterButton
-                label="Needs you"
-                count={counts.waiting}
-                active={filter === "waiting"}
-                tone="attention"
-                onClick={() => setFilter("waiting")}
-              />
-              <ActivityFilterButton
-                label="Working"
-                count={counts.working}
-                active={filter === "working"}
-                onClick={() => setFilter("working")}
-              />
-              <ActivityFilterButton
-                label="Done"
-                count={counts.done}
-                active={filter === "done"}
-                onClick={() => setFilter("done")}
-              />
-            </div>
-          ) : null}
-          {agents.length > 0 ? <span className="mx-1 h-4 w-px bg-content/10" aria-hidden /> : null}
-          <button
-            type="button"
-            aria-pressed={board.view === "list"}
-            aria-label="Show activity list"
-            title="List view"
-            onClick={() => {
-              const next = { ...board, view: "list" as const };
-              setBoard(next);
-              saveActivityBoardState(next);
-            }}
-            className={`grid size-7 place-items-center rounded-md ${board.view === "list" ? "bg-content/12 text-content" : "text-content/45 hover:bg-content/8 hover:text-content"}`}
+        {board.view === "list" && agents.length > 0 ? (
+          <div
+            role="group"
+            aria-label="Filter agent activity"
+            className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
           >
-            <ListFilter className="size-3.5" strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            aria-pressed={board.view === "board"}
-            aria-label="Show activity board"
-            title="Board view"
-            onClick={() => {
-              const next = { ...board, view: "board" as const };
-              setBoard(next);
-              saveActivityBoardState(next);
-            }}
-            className={`grid size-7 place-items-center rounded-md ${board.view === "board" ? "bg-content/12 text-content" : "text-content/45 hover:bg-content/8 hover:text-content"}`}
-          >
-            <Board className="size-3.5" strokeWidth={1.75} />
-          </button>
-        </div>
+            <ActivityFilterButton
+              label="All"
+              count={agents.length}
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+            />
+            <ActivityFilterButton
+              label="Needs you"
+              count={counts.waiting}
+              active={filter === "waiting"}
+              tone="attention"
+              onClick={() => setFilter("waiting")}
+            />
+            <ActivityFilterButton
+              label="Working"
+              count={counts.working}
+              active={filter === "working"}
+              onClick={() => setFilter("working")}
+            />
+            <ActivityFilterButton
+              label="Done"
+              count={counts.done}
+              active={filter === "done"}
+              onClick={() => setFilter("done")}
+            />
+          </div>
+        ) : null}
         {error ? (
           <p className="flex items-center gap-2 px-4 pt-3 text-[12px] text-amber-300">
             <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />

@@ -1,4 +1,4 @@
-import { sessionRefKey, type HostId } from "./host";
+import { sessionRefKey } from "./host";
 import { pathKey, projectName } from "./paths";
 import { profileStorage } from "./profiles/profileStorage";
 import type { LiveAgent } from "./liveAgents";
@@ -9,7 +9,7 @@ import {
   filterSessionsByTime,
   loadSessionSidebarFilters,
 } from "./sessions/sessionFilters";
-import { filterSessionsByArchive } from "./sessions/sessionHistory";
+import { compareSessionSummaries, filterSessionsByArchive } from "./sessions/sessionHistory";
 
 export type ActivityBoardLane = "needs-you" | "working" | "done" | "parked";
 export type ActivityViewMode = "list" | "board";
@@ -36,12 +36,26 @@ export const ACTIVITY_BOARD_LANES: readonly ActivityBoardLane[] = [
   "parked",
 ];
 
+/**
+ * The lanes a card can be dropped into. Needs you and Working are read off the
+ * live turn, so a user cannot put a session there — only the two idle lanes
+ * are a choice, and the board greys the rest out while a card is in hand.
+ */
+export const ACTIVITY_BOARD_DROP_LANES: readonly ActivityBoardLane[] = ["done", "parked"];
+
 export const ACTIVITY_BOARD_LANE_LABEL: Record<ActivityBoardLane, string> = {
   "needs-you": "Needs you",
   working: "Working",
   done: "Done",
   parked: "Parked",
 };
+
+/**
+ * How many cards one lane draws. Done holds every session this profile ever
+ * saved, and a triage board becomes unreadable long before it becomes slow.
+ * The rest stay one click away in the list.
+ */
+export const ACTIVITY_BOARD_LANE_LIMIT = 40;
 
 export const DEFAULT_ACTIVITY_BOARD_STATE: ActivityBoardState = {
   view: "list",
@@ -81,7 +95,8 @@ export function activityBoardCards(
   state: ActivityBoardState,
 ): ActivityBoardCard[] {
   const liveById = new Map(liveAgents.map((agent) => [agent.id, agent]));
-  return sessions.map((session) => {
+  // Newest first, so the slice a lane draws is the part worth triaging.
+  return [...sessions].sort(compareSessionSummaries).map((session) => {
     const key = activitySessionKey(session);
     const live = liveById.get(session.id);
     const derivedLane = derivedActivityLane(live);
@@ -95,6 +110,19 @@ export function activityBoardCards(
       ...(live ? { live } : {}),
     };
   });
+}
+
+/**
+ * Whether this card can be moved into that lane. A running turn owns its lane,
+ * so the move is refused rather than written and silently ignored.
+ */
+export function canMoveActivityCard(
+  card: Pick<ActivityBoardCard, "derivedLane" | "lane">,
+  lane: ActivityBoardLane,
+): boolean {
+  return (
+    card.derivedLane === "done" && card.lane !== lane && ACTIVITY_BOARD_DROP_LANES.includes(lane)
+  );
 }
 
 export function moveActivityCard(
@@ -171,15 +199,4 @@ export function filterActivitySessions(
 
 export function isActivityBoardLane(value: unknown): value is ActivityBoardLane {
   return ACTIVITY_BOARD_LANES.includes(value as ActivityBoardLane);
-}
-
-export function activityBoardLaneForKey(
-  state: ActivityBoardState,
-  session: Pick<SessionSummary, "id" | "hostId">,
-): ActivityBoardLane | undefined {
-  return state.lanes[activitySessionKey(session)];
-}
-
-export function hostSafeActivityKey(hostId: HostId, id: string): string {
-  return sessionRefKey(hostId, id);
 }
