@@ -1,4 +1,4 @@
-import { ChevronDown, GripVertical, X } from "../chrome/icons";
+import { ChevronDown, GripVertical, Users, X } from "../chrome/icons";
 import {
   memo,
   useCallback,
@@ -79,6 +79,9 @@ type Props = {
   onOpenSubagent: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
+  onRace?: (sessionId: string, draft: string) => void;
+  raceBadge?: string;
+  onViewRace?: (sessionId: string) => void;
   onNewTerminal: (sessionId: string) => void;
   onPaneDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
 };
@@ -118,6 +121,9 @@ export const SessionPane = memo(function SessionPane({
   onOpenSubagent,
   onSecondOpinion,
   onHandoff,
+  onRace,
+  raceBadge,
+  onViewRace,
   onNewTerminal,
   onPaneDragStart,
 }: Props) {
@@ -340,6 +346,31 @@ export const SessionPane = memo(function SessionPane({
           </>
         )}
       </div>
+      {onRace || raceBadge ? (
+        <div className="mx-auto flex w-full max-w-4xl shrink-0 items-center gap-2 px-1 pt-1">
+          {onRace ? (
+            <button
+              type="button"
+              title="Race prompt... — send the same prompt to 2–3 agents in parallel"
+              onClick={() => onRace(session.id, draftRef.current ?? "")}
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-[12px] text-content/45 hover:bg-content/8 hover:text-content"
+            >
+              <Users className="size-3.5" strokeWidth={1.75} />
+              Race prompt...
+            </button>
+          ) : null}
+          {raceBadge ? (
+            <button
+              type="button"
+              title="Open the race compare view"
+              onClick={() => onViewRace?.(session.id)}
+              className="min-w-0 flex-1 truncate rounded-md px-1.5 py-1 text-left font-mono text-[11px] text-content/45 hover:bg-content/8 hover:text-content"
+            >
+              {raceBadge} — view race
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {dockComposer ? <div className="mx-auto w-full max-w-4xl shrink-0">{composer}</div> : null}
     </div>
   );

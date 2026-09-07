@@ -77,6 +77,9 @@ type Shared = {
   onOpenSubagent: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
+  onRace?: (sessionId: string, draft: string) => void;
+  raceBadges?: Record<string, string>;
+  onViewRace?: (sessionId: string) => void;
   onMovePane: (fromId: string, toId: string, edge: PaneEdge) => void;
   onNewTerminal: (sessionId: string) => void;
   onTerminalMetaChange?: (fileId: string, patch: TerminalMetaPatch) => void;
@@ -138,6 +141,9 @@ function PaneTreeComponent({
   onOpenSubagent,
   onSecondOpinion,
   onHandoff,
+  onRace,
+  raceBadges,
+  onViewRace,
   onMovePane,
   onNewTerminal,
   onTerminalMetaChange,
@@ -322,6 +328,9 @@ function PaneTreeComponent({
                 onOpenSubagent={onOpenSubagent}
                 onSecondOpinion={onSecondOpinion}
                 onHandoff={onHandoff}
+                onRace={onRace}
+                raceBadge={raceBadges?.[session.id]}
+                onViewRace={onViewRace}
                 onNewTerminal={onNewTerminal}
                 onPaneDragStart={onPaneDragStart}
               />
