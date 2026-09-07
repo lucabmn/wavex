@@ -133,7 +133,7 @@ import {
   type FollowUpBehavior,
   type SettingsSectionId,
 } from "../lib/settings";
-import { loadSoundsEnabled, saveSoundsEnabled } from "../lib/sounds";
+import { loadSoundsEnabled, playCue, saveSoundsEnabled } from "../lib/sounds";
 import { canDeleteProfile, type Profile } from "../lib/profiles/profile";
 import { createProfile, deleteProfile, updateProfile } from "../lib/profiles/profileStore";
 import { useProfiles } from "../hooks/useProfiles";
