@@ -452,6 +452,234 @@
         font-weight: 600;
       }
 
+      /* ---------- download ---------- */
+
+      .dl-meta {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 12px;
+      }
+
+      .dl-meta span:not(:last-child)::after {
+        content: " \00b7";
+      }
+
+      details.verify {
+        max-width: 62ch;
+        margin: 0 0 18px;
+      }
+
+      details.verify summary {
+        width: fit-content;
+        cursor: pointer;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      details.verify summary:hover {
+        color: var(--content);
+      }
+
+      .verify-body {
+        margin-top: 12px;
+      }
+
+      .sum {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin: 0 0 10px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+
+      .sum-label {
+        flex: none;
+        color: var(--faint);
+      }
+
+      .sum code {
+        font-size: 12px;
+        color: color-mix(in srgb, var(--content) 82%, transparent);
+        word-break: break-all;
+      }
+
+      .downloads {
+        display: grid;
+        gap: 1px;
+        margin: 0 0 32px;
+        background: var(--line-soft);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .download {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        gap: 4px 16px;
+        padding: 14px 18px;
+        background: var(--bg);
+      }
+
+      .download-os {
+        grid-column: 1 / -1;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+
+      .download-name {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        word-break: break-all;
+      }
+
+      .download-size {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .download-sum {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--faint);
+      }
+
+      .download-sum code {
+        font-size: 11px;
+        word-break: break-all;
+      }
+
+      /* ---------- comparison ---------- */
+
+      .compare {
+        width: 100%;
+        margin-top: 28px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .compare th,
+      .compare td {
+        padding: 14px 18px 14px 0;
+        border-bottom: 1px solid var(--line-soft);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .compare thead th {
+        padding-top: 0;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+
+      .compare thead .self {
+        color: var(--accent);
+      }
+
+      .compare tbody th {
+        width: 20%;
+        color: var(--content);
+        font-weight: 600;
+      }
+
+      .compare td {
+        width: 26.6%;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .compare td.self {
+        color: color-mix(in srgb, var(--content) 88%, transparent);
+      }
+
+      @media (max-width: 760px) {
+        .compare,
+        .compare tbody,
+        .compare tr,
+        .compare th,
+        .compare td {
+          display: block;
+          width: auto;
+        }
+
+        .compare thead {
+          display: none;
+        }
+
+        .compare tr {
+          padding-bottom: 16px;
+          margin-bottom: 16px;
+          border-bottom: 1px solid var(--line-soft);
+        }
+
+        .compare tr:last-child {
+          padding-bottom: 0;
+          margin-bottom: 0;
+          border-bottom: 0;
+        }
+
+        .compare th,
+        .compare td {
+          padding: 0 0 10px;
+          border-bottom: 0;
+        }
+
+        .compare tbody th {
+          font-size: 15px;
+        }
+
+        .compare td::before {
+          content: attr(data-col);
+          display: block;
+          margin-bottom: 2px;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--faint);
+        }
+      }
+
+      /* ---------- faq ---------- */
+
+      .faq {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 28px 40px;
+        margin-top: 32px;
+      }
+
+      .faq-item {
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+
+      .faq-item p {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
       /* ---------- footer ---------- */
 
       footer {
@@ -489,6 +717,8 @@
         <nav>
           <a class="hide-sm" href="#providers">Providers</a>
           <a class="hide-sm" href="#window">The window</a>
+          <a class="hide-sm" href="#compare">Compare</a>
+          <a class="hide-sm" href="#faq">FAQ</a>
           <a class="hide-sm" href="#install">Install</a>
           <a href="https://github.com/lucabmn/wavex">GitHub</a>
           <a class="btn btn-primary" href="https://github.com/lucabmn/wavex/releases/latest"
@@ -510,11 +740,41 @@
           </p>
           <p class="note">wavex does not resell tokens and has no account of its own.</p>
           <div class="actions">
-            <a class="btn btn-primary" href="https://github.com/lucabmn/wavex/releases/latest"
-              >Download for macOS, Linux or Windows</a
+            <a
+              class="btn btn-primary"
+              data-dl-link
+              href="https://github.com/lucabmn/wavex/releases/download/v0.9.0/wavex_0.9.0_aarch64.dmg"
+              ><span data-dl-label>Download for macOS (Apple Silicon)</span>
+              <span data-dl-kind>.dmg</span></a
             >
+            <a class="btn" href="#install">All platforms</a>
             <a class="btn" href="https://github.com/lucabmn/wavex">Read the source</a>
           </div>
+          <p class="dl-meta">
+            <span>v<span data-dl-version>0.9.0</span></span
+            ><span data-dl-name>wavex_0.9.0_aarch64.dmg</span><span data-dl-size>11.4 MB</span>
+          </p>
+          <details class="verify">
+            <summary>Verify this download</summary>
+            <div class="verify-body">
+              <pre><span class="prompt" data-dl-prompt>$ </span><span data-dl-cmd>shasum -a 256 wavex_0.9.0_aarch64.dmg</span></pre>
+              <p class="sum">
+                <span class="sum-label">sha256</span>
+                <code data-dl-sum
+                  >629f2dc21ecf43e4ac1f3eec0e7d159fa74663e2b761fa4ddb25bde27f79a55f</code
+                >
+              </p>
+              <p class="note">
+                The installer and this checksum both come from GitHub Releases, so it catches a
+                truncated or corrupted download rather than a tampered one. Updates are the signed
+                path: every bundle listed in
+                <a href="https://github.com/lucabmn/wavex/releases/latest/download/latest.json"
+                  >latest.json</a
+                >
+                carries a signature wavex verifies before it installs anything.
+              </p>
+            </div>
+          </details>
           <p class="meta">
             <span>Tauri 2 · React 19 · Rust</span><span>MIT</span
             ><span>macOS builds are notarized</span>
@@ -793,16 +1053,309 @@
         </div>
       </section>
 
+      <section id="compare">
+        <div class="wrap">
+          <p class="eyebrow">03 — How it compares</p>
+          <h2>Your own subscriptions, in a window that knows about git.</h2>
+          <p class="lede">
+            Three ways to work with a coding agent. wavex is the middle column: the CLI you already
+            pay for, driven from a window that understands branches, worktrees and diffs.
+          </p>
+
+          <table class="compare">
+            <thead>
+              <tr>
+                <th scope="col">&nbsp;</th>
+                <th scope="col">Terminal only</th>
+                <th scope="col" class="self">wavex</th>
+                <th scope="col">Editor fork with a bundled plan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Bring your own subscription</th>
+                <td data-col="Terminal only">
+                  Your CLI login, with nothing between you and the provider.
+                </td>
+                <td class="self" data-col="wavex">
+                  The same login. wavex drives the CLI you installed and resells no tokens.
+                </td>
+                <td data-col="Editor fork with a bundled plan">
+                  Its own plan, billed by the editor. Some tiers take your API key instead.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Several agents at once</th>
+                <td data-col="Terminal only">
+                  One process per window. You tile them and remember which is which.
+                </td>
+                <td class="self" data-col="wavex">
+                  Tabs, splits and panes over one checkout. Hand a session to another agent
+                  mid-conversation, or send a single turn to a second one for another opinion.
+                </td>
+                <td data-col="Editor fork with a bundled plan">
+                  The editor's own agent, plus whatever background runs the vendor offers.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Git worktrees</th>
+                <td data-col="Terminal only">
+                  <code>git worktree add</code>, then a second shell and a second editor window.
+                </td>
+                <td class="self" data-col="wavex">
+                  Created, switched and removed in the window, and a session is bound to the
+                  checkout it belongs to.
+                </td>
+                <td data-col="Editor fork with a bundled plan">
+                  A second checkout means a second window.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Checkpoints</th>
+                <td data-col="Terminal only">Whatever the CLI keeps, undone by hand.</td>
+                <td class="self" data-col="wavex">
+                  Every turn that edits files is captured, so a bad turn rolls back without touching
+                  your own commits.
+                </td>
+                <td data-col="Editor fork with a bundled plan">
+                  The agent panel restores to an earlier point.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Remote host</th>
+                <td data-col="Terminal only">SSH, and a multiplexer to keep it alive.</td>
+                <td class="self" data-col="wavex">
+                  Drive another machine of your own through a tunnel, or open its window in a
+                  browser tab. No relay and no account in between.
+                </td>
+                <td data-col="Editor fork with a bundled plan">
+                  Remote SSH, and the cloud agents the vendor runs.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">No lock-in</th>
+                <td data-col="Terminal only">There is nothing to leave.</td>
+                <td class="self" data-col="wavex">
+                  MIT, and the CLIs stay yours. Uninstall wavex and every agent still works in your
+                  terminal exactly as before.
+                </td>
+                <td data-col="Editor fork with a bundled plan">
+                  A proprietary editor, and the agent history lives inside it.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="note" style="margin-top: 20px">
+            The third column describes a category — editors such as Cursor and Windsurf — rather
+            than any one product, and those feature sets move quickly. Check the current version
+            before you take this as a scorecard.
+          </p>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <p class="eyebrow">04 — Questions</p>
+          <h2>Before you download.</h2>
+
+          <div class="faq">
+            <div class="faq-item">
+              <h3>Do I need an account?</h3>
+              <p>
+                No. wavex has no sign-up, no account and no backend of its own. You sign in to the
+                agent CLIs you installed, exactly as you do in a terminal, and those credentials
+                stay with the CLI — wavex never sees them.
+              </p>
+            </div>
+            <div class="faq-item">
+              <h3>What does it cost?</h3>
+              <p>
+                wavex is free and MIT-licensed. What you pay for are the CLI subscriptions or API
+                keys you already hold. wavex drives them; it resells no tokens and adds no margin.
+              </p>
+            </div>
+            <div class="faq-item">
+              <h3>Does my code leave the machine?</h3>
+              <p>
+                Not through wavex. It is local-first: sessions, notes and settings are files on your
+                disk, and there is no server to send them to.
+              </p>
+              <p>
+                It is not airtight on its own, though, and the honest version matters here. The
+                agent CLI you installed sends the prompts and files you give it to its own provider,
+                exactly as it does in your terminal. wavex's own calls all go to GitHub: the update
+                check reads <code>latest.json</code>, and the Inbox reads the issues and pull
+                requests your GitHub account can already see. Nothing else is contacted.
+              </p>
+            </div>
+            <div class="faq-item">
+              <h3>Is there telemetry?</h3>
+              <p>
+                None. No analytics SDK, no crash reporter, no usage ping — there is nothing in the
+                app that reports back, and no switch to turn off. The Usage view reads the summaries
+                your provider CLI already wrote on your machine.
+              </p>
+            </div>
+            <div class="faq-item">
+              <h3>What happens to my checkout?</h3>
+              <p>
+                The agent works in your real repository, not a sandbox copy, so wavex treats it as
+                your data. Every file-editing turn is checkpointed, uncommitted work is preserved
+                rather than reset, and an agent can be put on its own git worktree to keep your
+                branch clear.
+              </p>
+            </div>
+            <div class="faq-item">
+              <h3>Which platforms?</h3>
+              <p>
+                macOS on Apple Silicon, Linux on x86-64 and Windows on x86-64. Every release builds
+                all three. There is no Intel Mac build.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="install">
         <div class="wrap">
-          <p class="eyebrow">03 — Install</p>
+          <p class="eyebrow">05 — Install</p>
+          <h2>Every file in this release.</h2>
+          <p class="note">
+            Version <span data-dl-version>0.9.0</span>, straight from
+            <a href="https://github.com/lucabmn/wavex/releases/latest">GitHub Releases</a>. The
+            updater feed for the same build is
+            <a href="https://github.com/lucabmn/wavex/releases/latest/download/latest.json"
+              >latest.json</a
+            >.
+          </p>
+
+          <div class="downloads">
+            <div
+              class="download"
+              data-asset
+              data-primary
+              data-os="macos"
+              data-match=".dmg"
+              data-kind=".dmg"
+              data-label="macOS (Apple Silicon)"
+            >
+              <div class="download-os">macOS · Apple Silicon</div>
+              <a
+                class="download-name"
+                data-name
+                href="https://github.com/lucabmn/wavex/releases/download/v0.9.0/wavex_0.9.0_aarch64.dmg"
+                >wavex_0.9.0_aarch64.dmg</a
+              >
+              <div class="download-size" data-size>11.4 MB</div>
+              <div class="download-sum">
+                <span class="sum-label">sha256</span>
+                <code data-sum
+                  >629f2dc21ecf43e4ac1f3eec0e7d159fa74663e2b761fa4ddb25bde27f79a55f</code
+                >
+              </div>
+            </div>
+            <div
+              class="download"
+              data-asset
+              data-primary
+              data-os="linux"
+              data-match=".AppImage"
+              data-kind=".AppImage"
+              data-label="Linux (x86-64)"
+            >
+              <div class="download-os">Linux · x86-64</div>
+              <a
+                class="download-name"
+                data-name
+                href="https://github.com/lucabmn/wavex/releases/download/v0.9.0/wavex_0.9.0_amd64.AppImage"
+                >wavex_0.9.0_amd64.AppImage</a
+              >
+              <div class="download-size" data-size>86.2 MB</div>
+              <div class="download-sum">
+                <span class="sum-label">sha256</span>
+                <code data-sum
+                  >dd504d589f0310c0bd5de34acaef33826e3f2f91786d58385250682e6bdc6056</code
+                >
+              </div>
+            </div>
+            <div
+              class="download"
+              data-asset
+              data-os="linux"
+              data-match=".deb"
+              data-kind=".deb"
+              data-label="Linux (x86-64)"
+            >
+              <div class="download-os">Linux · Debian and Ubuntu</div>
+              <a
+                class="download-name"
+                data-name
+                href="https://github.com/lucabmn/wavex/releases/download/v0.9.0/wavex_0.9.0_amd64.deb"
+                >wavex_0.9.0_amd64.deb</a
+              >
+              <div class="download-size" data-size>12.9 MB</div>
+              <div class="download-sum">
+                <span class="sum-label">sha256</span>
+                <code data-sum
+                  >ce64f3e9a35a9e715d5594b0af77fa49781baa42183f206f087e350ec64d55fc</code
+                >
+              </div>
+            </div>
+            <div
+              class="download"
+              data-asset
+              data-os="linux"
+              data-match=".rpm"
+              data-kind=".rpm"
+              data-label="Linux (x86-64)"
+            >
+              <div class="download-os">Linux · Fedora and openSUSE</div>
+              <a
+                class="download-name"
+                data-name
+                href="https://github.com/lucabmn/wavex/releases/download/v0.9.0/wavex-0.9.0-1.x86_64.rpm"
+                >wavex-0.9.0-1.x86_64.rpm</a
+              >
+              <div class="download-size" data-size>12.9 MB</div>
+              <div class="download-sum">
+                <span class="sum-label">sha256</span>
+                <code data-sum
+                  >32e181e8cc7ee322711a54bd6a6535b1ff5f4bdff2b30dce6bf5c888da070203</code
+                >
+              </div>
+            </div>
+            <div
+              class="download"
+              data-asset
+              data-primary
+              data-os="windows"
+              data-match="-setup.exe"
+              data-kind=".exe"
+              data-label="Windows (x86-64)"
+            >
+              <div class="download-os">Windows · x86-64</div>
+              <a
+                class="download-name"
+                data-name
+                href="https://github.com/lucabmn/wavex/releases/download/v0.9.0/wavex_0.9.0_x64-setup.exe"
+                >wavex_0.9.0_x64-setup.exe</a
+              >
+              <div class="download-size" data-size>9.0 MB</div>
+              <div class="download-sum">
+                <span class="sum-label">sha256</span>
+                <code data-sum
+                  >137f512264869b458e289abc11f89947c50485c554f2878ffe156b8cacbf4e46</code
+                >
+              </div>
+            </div>
+          </div>
+
           <div class="cols">
             <div>
               <h2>macOS, Linux and Windows.</h2>
               <p class="note">
-                Every release ships all three from
-                <a href="https://github.com/lucabmn/wavex/releases/latest">Releases</a>. Pick the
-                file for your machine, then sign in to at least one agent CLI.
+                Pick the file for your machine, then sign in to at least one agent CLI.
               </p>
               <ol class="steps">
                 <li>
@@ -864,5 +1417,133 @@
         </p>
       </div>
     </footer>
+    <script>
+      // The page is static HTML, so the release it ships with is written into the
+      // markup below and stays correct with scripting off or the API rate-limited
+      // (60 requests an hour, per IP). Everything here only refines that baseline:
+      // it points the button at the visitor's platform and, when GitHub answers,
+      // replaces the whole set with the current release.
+      (function () {
+        var rows = Array.prototype.slice.call(document.querySelectorAll("[data-asset]"));
+        if (rows.length === 0) return;
+
+        function classify(value) {
+          var hay = String(value).toLowerCase();
+          if (hay.indexOf("win") !== -1) return "windows";
+          if (/mac|iphone|ipad/.test(hay)) return "macos";
+          if (/linux|android|cros/.test(hay)) return "linux";
+          return "";
+        }
+
+        // The client hint is the answer where it exists; the user-agent string is
+        // the fallback for the browsers that do not send one. Reading the hint is
+        // guarded because a throw here would take the whole script with it and
+        // leave every visitor on the platform the markup happens to name.
+        function detect() {
+          var hinted = "";
+          try {
+            var data = navigator.userAgentData;
+            if (data && typeof data.platform === "string") hinted = data.platform;
+          } catch (error) {
+            hinted = "";
+          }
+          return (
+            classify(hinted) ||
+            classify((navigator.platform || "") + " " + (navigator.userAgent || "")) ||
+            "macos"
+          );
+        }
+
+        function text(selector, value) {
+          Array.prototype.forEach.call(document.querySelectorAll(selector), function (node) {
+            node.textContent = value;
+          });
+        }
+
+        // macOS ships Apple Silicon only and Linux ships three files, so the button
+        // names the exact artifact it hands over instead of implying detection got
+        // the architecture right. The full list stays one click away either way.
+        function apply(os) {
+          var row =
+            rows.filter(function (candidate) {
+              return candidate.dataset.os === os && candidate.hasAttribute("data-primary");
+            })[0] || rows[0];
+          var link = row.querySelector("[data-name]");
+          var name = link.textContent.trim();
+          var button = document.querySelector("[data-dl-link]");
+          if (button) button.setAttribute("href", link.getAttribute("href"));
+          text("[data-dl-label]", "Download for " + row.dataset.label);
+          text("[data-dl-kind]", row.dataset.kind);
+          text("[data-dl-name]", name);
+          text("[data-dl-size]", row.querySelector("[data-size]").textContent.trim());
+          text("[data-dl-sum]", row.querySelector("[data-sum]").textContent.trim());
+          text("[data-dl-prompt]", os === "windows" ? "> " : "$ ");
+          text(
+            "[data-dl-cmd]",
+            os === "windows" ? "certutil -hashfile " + name + " SHA256" : "shasum -a 256 " + name,
+          );
+        }
+
+        function refresh() {
+          fetch("https://api.github.com/repos/lucabmn/wavex/releases/latest", {
+            headers: { Accept: "application/vnd.github+json" },
+          })
+            .then(function (response) {
+              return response.ok ? response.json() : null;
+            })
+            .then(function (release) {
+              if (!release) return;
+              var version = String(release.tag_name || "").replace(/^v/, "");
+              if (!/^\d+\.\d+\.\d+$/.test(version)) return;
+              var assets = Array.isArray(release.assets) ? release.assets : [];
+
+              // A release is one set. Updating the rows the feed describes and
+              // leaving the rest would show one version's size beside another's
+              // checksum, so a single missing field abandons the whole refresh
+              // and the markup's own release stands.
+              var next = [];
+              for (var i = 0; i < rows.length; i += 1) {
+                var suffix = rows[i].dataset.match;
+                var asset = assets.filter(function (candidate) {
+                  return (
+                    typeof candidate.name === "string" &&
+                    candidate.name.slice(-suffix.length) === suffix
+                  );
+                })[0];
+                var digest = asset && typeof asset.digest === "string" ? asset.digest : "";
+                if (
+                  !asset ||
+                  typeof asset.size !== "number" ||
+                  !asset.browser_download_url ||
+                  digest.indexOf("sha256:") !== 0
+                ) {
+                  return;
+                }
+                next.push({
+                  row: rows[i],
+                  name: asset.name,
+                  url: asset.browser_download_url,
+                  size: (asset.size / 1048576).toFixed(1) + " MB",
+                  sum: digest.slice("sha256:".length),
+                });
+              }
+
+              next.forEach(function (item) {
+                var link = item.row.querySelector("[data-name]");
+                link.textContent = item.name;
+                link.setAttribute("href", item.url);
+                item.row.querySelector("[data-size]").textContent = item.size;
+                item.row.querySelector("[data-sum]").textContent = item.sum;
+              });
+              text("[data-dl-version]", version);
+              apply(detect());
+            })
+            .catch(function () {});
+        }
+
+        apply(detect());
+        refresh();
+      })();
+    </script>
   </body>
 </html>
