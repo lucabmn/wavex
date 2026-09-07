@@ -8,6 +8,7 @@ mod harness;
 pub mod headless;
 mod host_events;
 mod inbox_media;
+mod lsp;
 #[cfg(target_os = "macos")]
 mod macos;
 mod menu;
@@ -176,6 +177,7 @@ pub fn run(launch: headless::Launch) {
         .manage(harness::HarnessHost::new())
         .manage(host_events::HostEventJournal::new())
         .manage(pty::PtyHost::new())
+        .manage(lsp::LspHost::new())
         .manage(window_transfer::WindowTransferState::new())
         .setup(move |app| {
             harness::reap_orphaned_harness_processes();
@@ -302,6 +304,11 @@ pub fn run(launch: headless::Launch) {
             harness::harness_sse_close,
             harness::harness_exec,
             host_events::host_events_since,
+            lsp::lsp_resolve,
+            lsp::lsp_start,
+            lsp::lsp_send,
+            lsp::lsp_stop,
+            lsp::lsp_stop_all,
             rate_limits::fetch_claude_usage,
             rate_limits::codex_usage_cache_read,
             rate_limits::codex_usage_cache_write,
@@ -441,6 +448,9 @@ pub fn run(launch: headless::Launch) {
 fn reap_harness_children(handle: &tauri::AppHandle) {
     if let Some(host) = handle.try_state::<harness::HarnessHost>() {
         host.kill_all();
+    }
+    if let Some(host) = handle.try_state::<lsp::LspHost>() {
+        host.stop_all();
     }
     if let Some(host) = handle.try_state::<pty::PtyHost>() {
         host.kill_all();

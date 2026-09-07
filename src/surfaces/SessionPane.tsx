@@ -10,7 +10,12 @@ import {
 } from "react";
 import { Composer } from "../chrome/Composer";
 import { SessionReview } from "../chrome/SessionReview";
-import type { ApprovalDecision, UserQuestionReply } from "../lib/harness";
+import {
+  canSteerHarness,
+  isLiveHarness,
+  type ApprovalDecision,
+  type UserQuestionReply,
+} from "../lib/harness";
 import type { QueuedPrompt } from "../lib/promptQueue";
 import { looksLikeProject, type RecentProject } from "../lib/recents";
 import {
@@ -56,8 +61,12 @@ type Props = {
     options?: { steer?: boolean },
   ) => void;
   queued?: QueuedPrompt[];
+  queuePaused?: boolean;
   onRemoveQueued?: (sessionId: string, promptId: string) => void;
-  onSendQueued?: (sessionId: string, promptId: string) => void;
+  onEditQueued?: (sessionId: string, promptId: string, text: string) => void;
+  onQueuedEditingChange?: (sessionId: string, promptId?: string) => void;
+  onSteerQueued?: (sessionId: string, promptId: string) => void;
+  onResumeQueue?: (sessionId: string) => void;
   onStop: (sessionId: string) => void;
   onInboxCardDismiss?: (sessionId: string) => void;
   onNoteCardDismiss?: (sessionId: string) => void;
@@ -67,6 +76,7 @@ type Props = {
   onOpenFile: (path: string) => void;
   onOpenDiff: (path?: string) => void;
   onOpenPlan: (sessionId: string, blockId: string) => void;
+  onOpenSubagent: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onNewTerminal: (sessionId: string) => void;
@@ -90,8 +100,12 @@ export const SessionPane = memo(function SessionPane({
   onRuntimeModeChange,
   onSubmit,
   queued,
+  queuePaused = false,
   onRemoveQueued,
-  onSendQueued,
+  onEditQueued,
+  onQueuedEditingChange,
+  onSteerQueued,
+  onResumeQueue,
   onStop,
   onInboxCardDismiss,
   onNoteCardDismiss,
@@ -101,6 +115,7 @@ export const SessionPane = memo(function SessionPane({
   onOpenFile,
   onOpenDiff,
   onOpenPlan,
+  onOpenSubagent,
   onSecondOpinion,
   onHandoff,
   onNewTerminal,
@@ -118,6 +133,10 @@ export const SessionPane = memo(function SessionPane({
   const openPlan = useCallback(
     (blockId: string) => onOpenPlan(session.id, blockId),
     [onOpenPlan, session.id],
+  );
+  const openSubagent = useCallback(
+    (blockId: string) => onOpenSubagent(session.id, blockId),
+    [onOpenSubagent, session.id],
   );
   const jumpToBottomRef = useRef<(() => void) | null>(null);
   const quoteRequestId = useRef(0);
@@ -200,8 +219,13 @@ export const SessionPane = memo(function SessionPane({
       onRuntimeModeChange={(mode) => onRuntimeModeChange(session.id, mode)}
       onSubmit={(text, attachments, options) => onSubmit(session.id, text, attachments, options)}
       queued={queued}
+      queuePaused={queuePaused}
+      canSteerQueue={isLiveHarness(session.harness) && canSteerHarness(session.harness)}
       onRemoveQueued={(promptId) => onRemoveQueued?.(session.id, promptId)}
-      onSendQueued={(promptId) => onSendQueued?.(session.id, promptId)}
+      onEditQueued={(promptId, text) => onEditQueued?.(session.id, promptId, text)}
+      onQueuedEditingChange={(promptId) => onQueuedEditingChange?.(session.id, promptId)}
+      onSteerQueued={(promptId) => onSteerQueued?.(session.id, promptId)}
+      onResumeQueue={() => onResumeQueue?.(session.id)}
       onStop={() => onStop(session.id)}
       onOpenFile={onOpenFile}
       busy={!!session.busy}
@@ -280,6 +304,7 @@ export const SessionPane = memo(function SessionPane({
               onOpenFile={onOpenFile}
               onOpenDiff={onOpenDiff}
               onOpenPlan={openPlan}
+              onOpenSubagent={openSubagent}
               onSecondOpinion={
                 onSecondOpinion
                   ? (harness, turn, model) => onSecondOpinion(session.id, harness, turn, model)

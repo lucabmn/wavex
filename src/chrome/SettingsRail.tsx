@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Bot,
   Connection,
+  Code,
   Keyboard,
   Palette,
   SlidersHorizontal,
@@ -19,6 +20,7 @@ const SECTION_ICONS: Record<SettingsSectionId, IconComponent> = {
   keybindings: Keyboard,
   providers: Bot,
   connections: Connection,
+  "language-servers": Code,
   archive: Archive,
 };
 

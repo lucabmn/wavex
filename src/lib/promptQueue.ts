@@ -1,4 +1,8 @@
+import type { HandoffComposerCard } from "./handoff";
+import type { InboxComposerCard } from "./inbox/githubTasks";
+import type { NoteComposerCard } from "./notes";
 import type { Attachment } from "./session";
+import type { FollowUpBehavior } from "./settings";
 
 /** A prompt the user wrote while a turn was still running. */
 export type QueuedPrompt = {
@@ -11,6 +15,10 @@ export type QueuedPrompt = {
    * was written rather than the way the toggle happens to sit later.
    */
   image?: boolean;
+  /** Coding-session chips folded into the turn when this prompt goes out. */
+  noteCard?: NoteComposerCard;
+  handoffCard?: HandoffComposerCard;
+  inboxCard?: InboxComposerCard;
 };
 
 /** Queues per session. Never persisted: a queued prompt is not a session block. */
@@ -63,6 +71,40 @@ export function removeQueuedPrompt(
   );
 }
 
+/** Rewrite the text of one queued prompt, keeping its place in line. */
+export function updateQueuedPrompt(
+  queues: PromptQueues,
+  sessionId: string,
+  promptId: string,
+  text: string,
+): PromptQueues {
+  const list = queuedFor(queues, sessionId);
+  if (!list.some((prompt) => prompt.id === promptId)) return queues;
+  return setQueue(
+    queues,
+    sessionId,
+    list.map((prompt) => (prompt.id === promptId ? { ...prompt, text } : prompt)),
+  );
+}
+
+/** The oldest prompt: the one auto-dispatch sends first. */
+export function queuedHead(queues: PromptQueues, sessionId: string): QueuedPrompt | undefined {
+  return queuedFor(queues, sessionId)[0];
+}
+
+/**
+ * Hold auto-dispatch only while the item about to send is being edited. An
+ * edit two rows down must not block the head from going out.
+ */
+export function isEditingQueuedHead(
+  queues: PromptQueues,
+  sessionId: string,
+  editingPromptId?: string,
+): boolean {
+  if (!editingPromptId) return false;
+  return queuedHead(queues, sessionId)?.id === editingPromptId;
+}
+
 export function clearQueue(queues: PromptQueues, sessionId: string): PromptQueues {
   if (!queues.has(sessionId)) return queues;
   return setQueue(queues, sessionId, []);
@@ -98,20 +140,67 @@ export function canFlushQueue(state: {
 }
 
 /**
+ * True when an idle session may send its queued head as a new turn. A busy
+ * turn, a pending approval or question, a stop, a preparing handoff, and an
+ * open edit on the head row itself all wait.
+ */
+export function canDispatchQueuedHead(state: {
+  busy: boolean;
+  needsInput: boolean;
+  stopped: boolean;
+  resuming: boolean;
+  hasHead: boolean;
+  editingHead: boolean;
+  preparingHandoff: boolean;
+}): boolean {
+  if (state.busy) return false;
+  if (state.needsInput) return false;
+  if (state.stopped) return false;
+  if (state.resuming) return false;
+  if (!state.hasHead) return false;
+  if (state.editingHead) return false;
+  if (state.preparingHandoff) return false;
+  return true;
+}
+
+/**
+ * Resolve a queued prompt for sending. Auto-dispatch only ever takes the
+ * idle head; an explicit steer may target any remaining row, including while
+ * a turn is running or the queue is paused — the row stays queued until the
+ * steer actually starts, so a harness that cannot take it swallows nothing.
+ */
+export function queuedPromptForSubmit(
+  queues: PromptQueues,
+  sessionId: string,
+  promptId: string,
+  mode: "dispatch" | "steer",
+): QueuedPrompt | undefined {
+  const prompt = queuedFor(queues, sessionId).find((entry) => entry.id === promptId);
+  if (!prompt) return undefined;
+  if (mode === "steer") return prompt;
+  return queuedHead(queues, sessionId)?.id === promptId ? prompt : undefined;
+}
+
+/**
  * One rule for every composer: a prompt written while a turn runs waits in the
- * queue, where it stays visible and removable.
+ * queue, where it stays visible and removable — unless follow-ups steer.
  *
- * ⌥Enter is the escape hatch for harnesses that can take a follow-up mid-turn
- * — it steers the running turn instead. On a harness that cannot steer the
- * prompt is queued anyway, because the alternative was dropping it.
+ * Steer is the default: on a harness that can take a follow-up mid-turn the
+ * prompt joins the running turn instead of waiting behind it. ⌥Enter forces
+ * a steer attempt even when the setting says queue. Whenever steering is
+ * asked for but impossible the prompt is queued anyway, because the
+ * alternative was dropping it.
  */
 export function shouldQueuePrompt(state: {
   steerRequested: boolean;
   busy: boolean;
   canSteer: boolean;
+  followUpBehavior?: FollowUpBehavior;
 }): boolean {
   if (!state.busy) return false;
-  return !(state.steerRequested && state.canSteer);
+  if (state.steerRequested) return !state.canSteer;
+  if ((state.followUpBehavior ?? "queue") === "queue") return true;
+  return !state.canSteer;
 }
 
 export function queueSummary(count: number): string {

@@ -11,7 +11,10 @@
         "minHeight": 520,
         "decorations": false,
         "transparent": true,
-        "backgroundColor": "#171717",
+        "backgroundColor": "#00000000",
+        "windowEffects": {
+          "effects": ["acrylic"]
+        },
         "backgroundThrottling": "throttle",
         "shadow": true
       }
@@ -20,7 +23,9 @@
   "bundle": {
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "sidebarImage": "icons/windows-installer.bmp",
+        "installerIcon": "icons/icon.ico"
       }
     },
     "resources": null

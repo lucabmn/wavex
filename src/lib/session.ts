@@ -99,6 +99,21 @@ export type Attachment = {
   previewUrl?: string;
 };
 
+/**
+ * A subagent run nested under its parent Agent tool call. Single level deep:
+ * a subagent's own Agent calls render as plain rows inside its transcript.
+ */
+export type SubagentMeta = {
+  agentType?: string;
+  /** The brief the parent gave it. */
+  prompt?: string;
+  model?: string;
+  background?: boolean;
+  startedAt: number;
+  finishedAt?: number;
+  blocks: Block[];
+};
+
 export type Block = {
   id: string;
   role: BlockRole;
@@ -109,6 +124,8 @@ export type Block = {
   startedAt?: number;
   /** How long the agent worked on this user turn, in ms. */
   durationMs?: number;
+  /** Nested subagent transcript. Only set on Agent tool calls. */
+  subagent?: SubagentMeta;
   tool?: {
     callId?: string;
     title?: string;
@@ -342,6 +359,20 @@ export function canReplaceSessionTitle(current: string, harness: HarnessId, seed
 
 export function hasPendingApproval(blocks: Block[]): boolean {
   return blocks.some((block) => block.approval && !block.approval.decided);
+}
+
+/**
+ * Find a block by id, looking one nesting level deep. A subagent's own steps
+ * live inside their parent's `subagent.blocks`, which is where a pane opened
+ * from a nested row points.
+ */
+export function findBlockDeep(blocks: Block[], blockId: string): Block | undefined {
+  for (const block of blocks) {
+    if (block.id === blockId) return block;
+    const nested = block.subagent?.blocks.find((entry) => entry.id === blockId);
+    if (nested) return nested;
+  }
+  return undefined;
 }
 
 export function sessionNeedsInput(session: Session): boolean {

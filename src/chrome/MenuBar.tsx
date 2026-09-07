@@ -11,6 +11,7 @@ type Props = {
   onNewTerminal?: () => void;
   onToggleTerminal?: () => void;
   onGoToFile?: () => void;
+  onGoToSymbol?: () => void;
   onToggleSidebar: () => void;
   onShowSourceControl?: () => void;
   onCloseCurrentTab?: () => void;
@@ -28,6 +29,7 @@ export function MenuBar({
   onNewTerminal,
   onToggleTerminal,
   onGoToFile,
+  onGoToSymbol,
   onToggleSidebar,
   onShowSourceControl,
   onCloseCurrentTab,
@@ -131,6 +133,9 @@ export function MenuBar({
         case "go_to_file":
           onGoToFile?.();
           break;
+        case "go_to_symbol":
+          onGoToSymbol?.();
+          break;
         case "find_in_project":
           onFindInProject?.();
           break;
@@ -160,6 +165,7 @@ export function MenuBar({
       onCloseOtherTabs,
       onFindInProject,
       onGoToFile,
+      onGoToSymbol,
       onNew,
       onNewTerminal,
       onToggleTerminal,
@@ -190,6 +196,12 @@ export function MenuBar({
           },
           { kind: "item", id: "open_search", label: "Search…", shortcut: `${MOD}F` },
           { kind: "item", id: "go_to_file", label: "Go to File…", shortcut: `${MOD}P` },
+          {
+            kind: "item",
+            id: "go_to_symbol",
+            label: "Go to Symbol…",
+            shortcut: `${MOD}\u21e7O`,
+          },
           {
             kind: "item",
             id: "find_in_project",

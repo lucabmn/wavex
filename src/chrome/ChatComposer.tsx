@@ -39,8 +39,13 @@ type Props = {
   onSubmit: (text: string, attachments: Attachment[], options: { image: boolean }) => void;
   /** Prompts waiting for the running turn to end, oldest first. */
   queued?: QueuedPrompt[];
+  /** The queue waits for a deliberate resume after the user stopped the turn. */
+  queuePaused?: boolean;
   onRemoveQueued?: (promptId: string) => void;
+  onEditQueued?: (promptId: string, text: string) => void;
+  onQueuedEditingChange?: (promptId?: string) => void;
   onSendQueued?: (promptId: string) => void;
+  onResumeQueue?: () => void;
   onStop: () => void;
 };
 
@@ -66,8 +71,12 @@ export function ChatComposer({
   onModelSettingsChange,
   onSubmit,
   queued = NO_QUEUED,
+  queuePaused = false,
   onRemoveQueued,
+  onEditQueued,
+  onQueuedEditingChange,
   onSendQueued,
+  onResumeQueue,
   onStop,
 }: Props) {
   const field = useRef<HTMLTextAreaElement>(null);
@@ -151,7 +160,15 @@ export function ChatComposer({
       {question && onQuestionReply ? (
         <QuestionForm prompt={question} onReply={onQuestionReply} />
       ) : null}
-      <QueueStrip queued={queued} onRemove={onRemoveQueued} onSend={onSendQueued} />
+      <QueueStrip
+        queued={queued}
+        paused={queuePaused}
+        onRemove={onRemoveQueued}
+        onEdit={onEditQueued}
+        onEditingChange={onQueuedEditingChange}
+        onSend={onSendQueued}
+        onResume={onResumeQueue}
+      />
       <div
         className={`overflow-hidden rounded-xl border bg-background-base/60 backdrop-blur-md ${
           dragging ? "border-accent/60" : "border-content/10"

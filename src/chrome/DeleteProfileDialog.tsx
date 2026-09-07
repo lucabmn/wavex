@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { LAYER } from "../lib/layers";
 import type { Profile } from "../lib/profiles/profile";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = {
   profile: Profile;
@@ -16,27 +17,18 @@ type Props = {
  */
 export function DeleteProfileDialog({ profile, onCancel, onConfirm }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      onCancel();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onCancel]);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose: onCancel,
+    initialFocusRef: cancelRef,
+  });
 
   return createPortal(
     <div className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
       <div className="absolute inset-0 bg-black/30" onMouseDown={onCancel} />
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-label={`Delete ${profile.name}`}
         onMouseDown={(event) => event.stopPropagation()}

@@ -55,6 +55,22 @@ export function inFlightRefs(sessions: Session[], tabs: WorkspaceTab[]): InFligh
   return refs;
 }
 
+/**
+ * The live in-flight sessions behind `inFlightRefs`, in the same tab order.
+ * Drives the profile-switch confirmation so it can name what will pause
+ * instead of quoting a bare count.
+ */
+export function inFlightSessions(sessions: Session[], tabs: WorkspaceTab[]): Session[] {
+  const refs = inFlightRefs(sessions, tabs);
+  const byId = new Map(sessions.map((session) => [session.id, session]));
+  const ordered: Session[] = [];
+  for (const ref of refs) {
+    const session = byId.get(ref.sessionId);
+    if (session) ordered.push(session);
+  }
+  return ordered;
+}
+
 export function profileSwitchWhileBusyMessage(count: number): string {
   if (count === 1) {
     return "1 chat is still running in this profile. Switch anyway? It stops now and offers Continue when you switch back.";

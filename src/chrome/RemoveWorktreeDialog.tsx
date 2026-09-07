@@ -1,10 +1,11 @@
 import { Loader } from "./icons";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { notifyGitChanged } from "../lib/fs";
 import { LAYER } from "../lib/layers";
 import { prettyCwd } from "../lib/paths";
 import { forgetWorktree } from "../lib/worktrees/worktreeIndex";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 import {
   gitWorktreeRemove,
   worktreeHasLocalChanges,
@@ -32,21 +33,11 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
   const [dirty, setDirty] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const label = worktreeLabel(worktree);
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (!working) onCancel();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [working, onCancel]);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose: onCancel,
+    initialFocusRef: cancelRef,
+    escapeDisabled: working,
+  });
 
   const remove = async (force: boolean) => {
     if (working || busy) return;
@@ -76,7 +67,9 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
         }}
       />
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-busy={working}
         aria-label={`Remove worktree ${label}`}

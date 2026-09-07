@@ -123,6 +123,52 @@ export function finalResponseStart(blocks: Block[]): number {
   return index;
 }
 
+export type SubagentStatus = "running" | "completed" | "failed" | "stopped";
+
+/** Live state of the subagent behind an Agent call. Null when there is none. */
+export function subagentStatus(block: Block, busy = false): SubagentStatus | null {
+  if (!block.subagent) return null;
+  const state = toolCallState(block);
+  if (state === "rejected") return "failed";
+  if (state === "accepted" || block.subagent.finishedAt != null) return "completed";
+  const status = block.tool?.status?.toLowerCase() ?? "";
+  if (
+    block.streaming ||
+    busy ||
+    status === "in_progress" ||
+    status === "pending" ||
+    status === "running"
+  ) {
+    return "running";
+  }
+  return "stopped";
+}
+
+/** Newest thing the subagent did, for the parent row. */
+export function subagentLatestActivity(block: Block, cwd?: string): string | null {
+  const detail = block.tool?.detail?.trim();
+  if (detail) return detail;
+  const nested = block.subagent?.blocks;
+  if (!nested || nested.length === 0) return null;
+  for (let index = nested.length - 1; index >= 0; index -= 1) {
+    const entry = nested[index];
+    if (isHiddenTool(entry)) continue;
+    if (isThinkingBlock(entry) || isProseBlock(entry)) return proseSummary(entry.text);
+    if (isToolBlock(entry)) return toolCallLabel(entry, cwd);
+  }
+  return null;
+}
+
+/** Short clock for activity rows: 12s, 3m 4s. Null when there is nothing to show. */
+export function formatElapsed(elapsedMs: number | null): string | null {
+  if (elapsedMs == null) return null;
+  const totalSec = Math.max(1, Math.round(elapsedMs / 1000));
+  if (totalSec < 60) return `${totalSec}s`;
+  const minutes = Math.floor(totalSec / 60);
+  const seconds = totalSec % 60;
+  return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+}
+
 /** First paragraph of a folded prose block, stripped to one plain line. */
 export function proseSummary(text: string): string {
   const body = text.replace(/```[\s\S]*?(?:```|$)/g, " ");

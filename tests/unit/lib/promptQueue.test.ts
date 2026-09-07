@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  canDispatchQueuedHead,
   canFlushQueue,
   clearQueue,
   EMPTY_QUEUES,
   enqueuePrompt,
+  isEditingQueuedHead,
   pruneQueues,
   queueSummary,
   queuedFor,
+  queuedHead,
+  queuedPromptForSubmit,
   removeQueuedPrompt,
   shouldQueuePrompt,
   takeNextPrompt,
+  updateQueuedPrompt,
   type QueuedPrompt,
 } from "@/lib/promptQueue";
 
@@ -84,6 +89,17 @@ describe("shouldQueuePrompt", () => {
     expect(shouldQueuePrompt({ steerRequested: false, busy: true, canSteer: false })).toBe(true);
   });
 
+  it("falls back to queue when the behavior is omitted", () => {
+    expect(
+      shouldQueuePrompt({
+        steerRequested: false,
+        busy: true,
+        canSteer: true,
+        followUpBehavior: undefined,
+      }),
+    ).toBe(true);
+  });
+
   it("steers instead only when asked and the harness can", () => {
     expect(shouldQueuePrompt({ steerRequested: true, busy: true, canSteer: true })).toBe(false);
   });
@@ -91,11 +107,129 @@ describe("shouldQueuePrompt", () => {
   it("queues rather than dropping when steering was asked for but is impossible", () => {
     expect(shouldQueuePrompt({ steerRequested: true, busy: true, canSteer: false })).toBe(true);
   });
+
+  it("steers in steer mode when the harness can take a follow-up", () => {
+    expect(
+      shouldQueuePrompt({
+        steerRequested: false,
+        busy: true,
+        canSteer: true,
+        followUpBehavior: "steer",
+      }),
+    ).toBe(false);
+    expect(
+      shouldQueuePrompt({
+        steerRequested: false,
+        busy: true,
+        canSteer: true,
+        followUpBehavior: "queue",
+      }),
+    ).toBe(true);
+  });
+
+  it("queues in steer mode rather than dropping when the harness cannot steer", () => {
+    expect(
+      shouldQueuePrompt({
+        steerRequested: false,
+        busy: true,
+        canSteer: false,
+        followUpBehavior: "steer",
+      }),
+    ).toBe(true);
+  });
+
+  it("still steers on explicit request when the setting says queue", () => {
+    expect(
+      shouldQueuePrompt({
+        steerRequested: true,
+        busy: true,
+        canSteer: true,
+        followUpBehavior: "queue",
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("queueSummary", () => {
   it("counts in words the user reads", () => {
     expect(queueSummary(1)).toBe("1 queued prompt");
     expect(queueSummary(3)).toBe("3 queued prompts");
+  });
+});
+
+function twoDeep() {
+  let queues = enqueuePrompt(EMPTY_QUEUES, "a", prompt("1"));
+  return enqueuePrompt(queues, "a", prompt("2"));
+}
+
+describe("queuedHead", () => {
+  it("returns the oldest prompt", () => {
+    expect(queuedHead(twoDeep(), "a")?.id).toBe("1");
+    expect(queuedHead(EMPTY_QUEUES, "a")).toBeUndefined();
+  });
+});
+
+describe("updateQueuedPrompt", () => {
+  it("rewrites one row in place", () => {
+    const next = updateQueuedPrompt(twoDeep(), "a", "1", "edited");
+    expect(queuedFor(next, "a").map((entry) => entry.text)).toEqual(["edited", "2"]);
+  });
+
+  it("leaves unknown rows alone", () => {
+    const queues = twoDeep();
+    expect(updateQueuedPrompt(queues, "a", "missing", "edited")).toBe(queues);
+  });
+});
+
+describe("isEditingQueuedHead", () => {
+  it("holds only while the head row is the one being edited", () => {
+    const queues = twoDeep();
+    expect(isEditingQueuedHead(queues, "a")).toBe(false);
+    expect(isEditingQueuedHead(queues, "a", "1")).toBe(true);
+    expect(isEditingQueuedHead(queues, "a", "2")).toBe(false);
+  });
+});
+
+describe("canDispatchQueuedHead", () => {
+  const idle = {
+    busy: false,
+    needsInput: false,
+    stopped: false,
+    resuming: false,
+    hasHead: true,
+    editingHead: false,
+    preparingHandoff: false,
+  };
+
+  it("dispatches an idle session with a queued head", () => {
+    expect(canDispatchQueuedHead(idle)).toBe(true);
+  });
+
+  it("holds while busy, blocked, stopped, or resuming", () => {
+    expect(canDispatchQueuedHead({ ...idle, busy: true })).toBe(false);
+    expect(canDispatchQueuedHead({ ...idle, needsInput: true })).toBe(false);
+    expect(canDispatchQueuedHead({ ...idle, stopped: true })).toBe(false);
+    expect(canDispatchQueuedHead({ ...idle, resuming: true })).toBe(false);
+  });
+
+  it("holds while the head is edited or handed off, not for later rows", () => {
+    expect(canDispatchQueuedHead({ ...idle, editingHead: true })).toBe(false);
+    expect(canDispatchQueuedHead({ ...idle, preparingHandoff: true })).toBe(false);
+    expect(canDispatchQueuedHead({ ...idle, hasHead: false })).toBe(false);
+  });
+});
+
+describe("queuedPromptForSubmit", () => {
+  it("only auto-dispatches the head", () => {
+    const queues = twoDeep();
+    expect(queuedPromptForSubmit(queues, "a", "1", "dispatch")?.id).toBe("1");
+    expect(queuedPromptForSubmit(queues, "a", "2", "dispatch")).toBeUndefined();
+    expect(queuedPromptForSubmit(queues, "missing", "1", "dispatch")).toBeUndefined();
+  });
+
+  it("lets a steer target any remaining row", () => {
+    const queues = twoDeep();
+    expect(queuedPromptForSubmit(queues, "a", "2", "steer")?.id).toBe("2");
+    expect(queuedPromptForSubmit(queues, "a", "missing", "steer")).toBeUndefined();
   });
 });

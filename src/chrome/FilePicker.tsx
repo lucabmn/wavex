@@ -20,6 +20,7 @@ import { looksLikeProject } from "../lib/recents";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { FileTypeIcon } from "./FileTypeIcon";
 import { MatchText } from "./MatchText";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = {
   open: boolean;
@@ -31,8 +32,11 @@ type Props = {
 
 export function FilePicker({ open, cwd, openPaths = [], onOpenFile, onClose }: Props) {
   const search = useRef<HTMLInputElement>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose,
+    initialFocusRef: search,
+    enabled: open,
+  });
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [files, setFiles] = useState(() => peekProjectFiles(cwd) ?? []);
@@ -90,23 +94,6 @@ export function FilePicker({ open, cwd, openPaths = [], onOpenFile, onClose }: P
     setActive((index) => (results.length === 0 ? 0 : Math.min(index, results.length - 1)));
   }, [results.length]);
 
-  useEffect(() => {
-    if (!open) return;
-    search.current?.focus();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopPropagation();
-      onCloseRef.current();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [open]);
-
   if (!open) return null;
 
   const pick = (file: RankedFile) => {
@@ -149,7 +136,10 @@ export function FilePicker({ open, cwd, openPaths = [], onOpenFile, onClose }: P
     <div className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
       <div className="absolute inset-0" onMouseDown={onClose} />
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
+        aria-modal="true"
         aria-label="Go to File"
         data-file-picker
         onMouseDown={(e) => e.stopPropagation()}

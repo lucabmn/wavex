@@ -8,6 +8,7 @@ import {
   type FilePaneTab,
   type LayoutNode,
   type PlanTabSource,
+  type SubagentTabSource,
   type WorkspaceTab,
 } from "./layout";
 import type { ReleaseNotesTabSource } from "../updates/releaseNotes";
@@ -357,16 +358,23 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
   if (typeof value.id !== "string" || !value.id) return null;
   if (typeof value.path !== "string" || !value.path) return null;
   if (typeof value.cwd !== "string" || !value.cwd) return null;
+  // A references list describes the code as the server saw it. Restoring one
+  // would offer line numbers that have moved since, so the tab is dropped.
+  if ("references" in value) return null;
   const plan = sanitizePlan(value.plan);
+  const hasSubagent = "subagent" in value;
+  const subagent = sanitizeSubagent(value.subagent);
   const hasReleaseNotes = "releaseNotes" in value;
   const releaseNotes = sanitizeReleaseNotes(value.releaseNotes);
   const hasCommit = "commit" in value;
   const commit = sanitizeCommit(value.commit);
   if (hasReleaseNotes && !releaseNotes) return null;
   if (hasCommit && !commit) return null;
+  if (hasSubagent && !subagent) return null;
   if (
     releaseNotes &&
     (value.plan != null ||
+      subagent != null ||
       value.review === true ||
       value.changes === true ||
       value.terminal === true ||
@@ -377,6 +385,7 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
   if (
     commit &&
     (value.plan != null ||
+      subagent != null ||
       value.review === true ||
       value.changes === true ||
       value.terminal === true)
@@ -388,6 +397,7 @@ function sanitizeFile(raw: unknown): FilePaneTab | null {
     path: value.path,
     cwd: value.cwd,
     ...(plan ? { plan } : {}),
+    ...(subagent ? { subagent } : {}),
     ...(releaseNotes ? { releaseNotes } : {}),
     ...(commit ? { commit } : {}),
     ...(value.review === true ? { review: true } : {}),
@@ -440,6 +450,19 @@ function sanitizeProjectTerminal(raw: unknown): ProjectTerminalDock | null {
 }
 
 function sanitizePlan(raw: unknown): PlanTabSource | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.sessionId !== "string" || !value.sessionId) return undefined;
+  if (typeof value.blockId !== "string" || !value.blockId) return undefined;
+  if (typeof value.title !== "string") return undefined;
+  return {
+    sessionId: value.sessionId,
+    blockId: value.blockId,
+    title: value.title,
+  };
+}
+
+function sanitizeSubagent(raw: unknown): SubagentTabSource | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const value = raw as Record<string, unknown>;
   if (typeof value.sessionId !== "string" || !value.sessionId) return undefined;

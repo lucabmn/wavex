@@ -18,6 +18,7 @@ import { getConnectSnapshot, onHostResynced, refreshConnect } from "./lib/connec
 import { TitleBar } from "./chrome/TitleBar";
 import { MenuBar } from "./chrome/MenuBar";
 import { FilePicker } from "./chrome/FilePicker";
+import { SymbolPicker } from "./chrome/SymbolPicker";
 import { UsageFooter } from "./chrome/UsageFooter";
 import { useProjectBranches } from "./hooks/useProjectBranches";
 import {
@@ -33,7 +34,9 @@ import {
   basename,
   notifyGitChanged,
   pickFolder,
+  readTextFile,
   restoreSessionCheckout,
+  writeTextFile,
   type GitHistoryCommit,
 } from "./lib/fs";
 import {
@@ -77,6 +80,8 @@ import {
   neighborLeafId,
   newFileTab,
   newPlanTab,
+  newSubagentTab,
+  newReferencesTab,
   newTab,
   newTerminalFile,
   newTerminalWorkspaceTab,
@@ -170,6 +175,7 @@ import {
   shouldAskOutgoingAgent,
   userMessagesAfterHandoff,
   wrapHandoffPrompt,
+  type HandoffComposerCard,
 } from "./lib/handoff";
 import { requestOutgoingHandoff } from "./lib/handoffTurn";
 import {
@@ -181,13 +187,25 @@ import {
 import { nudgeWatchedFiles } from "./lib/files/fileWatch";
 import { type EditorNavigationTarget, type OpenFileFn } from "./lib/search";
 import {
+  codeNavigationBack,
+  codeNavigationForward,
+  EMPTY_CODE_NAVIGATION,
+  pruneCodeNavigation,
+  pushCodeLocation,
+  type CodeLocation,
+  type CodeNavigationHistory,
+} from "./lib/editor/codeNavigation";
+import type { LspWorkspaceCommands } from "./lib/editor/editorLsp";
+import type { LspWorkspaceEdit } from "./lib/lsp/types";
+import { planRename } from "./lib/lsp/rename";
+import {
   mergeModelSettings,
   preferredModelSettings,
   resolveModel,
   saveLastModelSettings,
 } from "./lib/models";
 import { planTitle } from "./lib/plan";
-import { displayPath, isEqualOrInside, projectName, rebasePath } from "./lib/paths";
+import { displayPath, isEqualOrInside, pathKey, projectName, rebasePath } from "./lib/paths";
 import { removeProjectData } from "./lib/project/projectData";
 import {
   archiveProject,
@@ -210,6 +228,7 @@ import {
 import {
   HARNESS_LABEL,
   canReplaceSessionTitle,
+  findBlockDeep,
   formatSessionTitle,
   sessionNeedsInput,
   newDefaultSession,
@@ -243,15 +262,18 @@ import { liveAgentsFromSessions } from "./lib/liveAgents";
 import { CommandPalette } from "./chrome/CommandPalette";
 import type { CommandId } from "./lib/commands";
 import {
-  canFlushQueue,
   EMPTY_QUEUES,
+  canDispatchQueuedHead,
   enqueuePrompt,
+  isEditingQueuedHead,
   pruneQueues,
   queuedFor,
+  queuedHead,
+  queuedPromptForSubmit,
   removeQueuedPrompt,
   shouldQueuePrompt,
-  takeNextPrompt,
   type PromptQueues,
+  updateQueuedPrompt,
 } from "./lib/promptQueue";
 import {
   ACTIVITY_STOP_SESSION,
@@ -297,12 +319,14 @@ import { ProjectTerminalDock } from "./surfaces/ProjectTerminalDock";
 import { SearchView } from "./surfaces/SearchView";
 import { SettingsView } from "./surfaces/SettingsView";
 import { ActivityView } from "./surfaces/ActivityView";
+import { OnboardingView } from "./surfaces/OnboardingView";
 import { UsageView } from "./surfaces/UsageView";
 import { InboxView } from "./surfaces/InboxView";
 import { NotesView } from "./surfaces/NotesView";
-import { inboxComposerCard, type InboxItem } from "./lib/inbox/githubTasks";
+import { inboxComposerCard, type InboxComposerCard, type InboxItem } from "./lib/inbox/githubTasks";
 import {
   loadDiffViewer,
+  loadFollowUpBehavior,
   loadLiveAgentsEnabled,
   loadNotesEnabled,
   loadSettingsSection,
@@ -324,12 +348,13 @@ import {
   CONTINUE_PROMPT,
   canAutoContinue,
   inFlightRefs,
+  inFlightSessions,
   inFlightSnapshotKey,
-  profileSwitchWhileBusyMessage,
   shouldWriteInFlightSnapshot,
 } from "./lib/inFlight";
 import { collectWorkspaceSnapshot, workspaceSnapshotKey } from "./lib/workspace/workspaceSnapshot";
 import { otherAppMode, type AppMode } from "./lib/workspace/appMode";
+import { isOnboarded, markOnboarded } from "./lib/onboarding";
 import { WorkView } from "./surfaces/WorkView";
 import { requestWorkChatCommand, type WorkChatCommand } from "./lib/sessions/workChats";
 import { getWorkChatState } from "./lib/sessions/workChatStore";
@@ -337,6 +362,7 @@ import type { InstalledUpdate } from "./lib/updates/updateNotice";
 import { listenProfileSwitch, loadProfiles, switchProfile } from "./lib/profiles/profileStore";
 import { findProfile, type Profile } from "./lib/profiles/profile";
 import { ProfileSwitchOverlay } from "./chrome/ProfileSwitchOverlay";
+import { ProfileSwitchConfirm } from "./chrome/ProfileSwitchConfirm";
 import {
   beginProfileSwitch,
   bindResumedSessions,
@@ -394,7 +420,7 @@ export default function App({
     () => windowTransfer?.projectTerminals ?? resumed?.projectTerminals ?? [],
   );
   const [projectTerminalFocused, setProjectTerminalFocused] = useState(false);
-  // Work vs Coding. The coding workspace stays mounted behind Work so live
+  // Chat vs Workspace. The workspace stays mounted behind Chat so live
   // terminals, editors, and streaming turns survive a mode switch.
   const [appMode, setAppMode] = useState<AppMode>(() => resumed?.mode ?? "coding");
   const [activeTabId, setActiveTabId] = useState(
@@ -443,9 +469,26 @@ export default function App({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   /** Set for every window from the moment a switch starts until the reload. */
   const [switchingToProfile, setSwitchingToProfile] = useState<Profile | null>(null);
+  const [profileSwitchConfirm, setProfileSwitchConfirm] = useState<string | null>(null);
+  /** First-run setup. Shown once per profile until completed or skipped. */
+  const [onboardingDone, setOnboardingDone] = useState(isOnboarded);
+
+  const onCompleteOnboarding = useCallback(() => {
+    markOnboarded();
+    setOnboardingDone(true);
+  }, []);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
   const editorNavigationToken = useRef(0);
+  /**
+   * Where code navigation has been. A ref rather than state: nothing renders
+   * from it, and a jump through a call graph should not repaint the workspace.
+   */
+  const codeNavRef = useRef<{ history: CodeNavigationHistory; current: CodeLocation | null }>({
+    history: EMPTY_CODE_NAVIGATION,
+    current: null,
+  });
   const [filePickerOpen, setFilePickerOpen] = useState(false);
+  const [symbolPickerOpen, setSymbolPickerOpen] = useState(false);
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(
     () => new Set(windowTransfer?.dirtyFileIds ?? []),
   );
@@ -494,9 +537,20 @@ export default function App({
   activityViewOpenRef.current = activityViewOpen;
   /**
    * Sessions whose current turn the user stopped. A queued prompt must not fire
-   * into that gap; the chips stay until the user sends them.
+   * into that gap; the queue stays paused until the user resumes it.
    */
   const stoppedSessions = useRef(new Set<string>());
+  /**
+   * Sessions with a resume in flight. The continued turn has not marked the
+   * session busy yet, so without this the queue would flush its head before
+   * the continuation starts.
+   */
+  const resumingSessions = useRef(new Set<string>());
+  const queueDispatchingRef = useRef(new Set<string>());
+  /** Open queue-row edits, per session. Only the head row holds dispatch. */
+  const [editingQueued, setEditingQueued] = useState<Record<string, string>>({});
+  const editingQueuedRef = useRef(editingQueued);
+  editingQueuedRef.current = editingQueued;
 
   useEffect(() => {
     if (!notesEnabled) setNotesViewOpen(false);
@@ -748,6 +802,14 @@ export default function App({
     const focused = activeTab ? focusedFileTab(activeTab) : undefined;
     return !!focused && ids.has(focused.id);
   }, [activeTab, currentProjectDock, runningTerminals]);
+
+  /** The file the editor is on, for commands that ask about the current file. */
+  const focusedEditorPath = useMemo(() => {
+    const focused = activeTab ? focusedFileTab(activeTab) : undefined;
+    return focused && isFilesystemTab(focused) ? focused.path : null;
+  }, [activeTab]);
+  const focusedEditorPathRef = useRef(focusedEditorPath);
+  focusedEditorPathRef.current = focusedEditorPath;
 
   const nextApprovalSessionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -2252,7 +2314,21 @@ export default function App({
       const summary = history.find((entry) => entry.id === sessionId) ?? open ?? null;
       const label = summary ? sessionDisplayTitle(summary.title, summary.harness) : "this session";
 
-      if (!window.confirm(`Delete “${label}”?`)) return;
+      const confirmed = await ask(`Delete “${label}”? This conversation cannot be recovered.`, {
+        title: "Delete conversation",
+        kind: "warning",
+      });
+      if (!confirmed) return;
+
+      try {
+        await deleteSession(sessionId);
+      } catch (error: unknown) {
+        await message(error instanceof Error ? error.message : "Could not delete the session.", {
+          title: "Couldn’t delete session",
+          kind: "error",
+        });
+        return;
+      }
 
       if (open?.busy) {
         turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
@@ -2269,8 +2345,8 @@ export default function App({
       } else {
         void forgetHarnessSession(harness, sessionId, summary ? sessionHostId(summary) : undefined);
       }
-      lastPersisted.current.delete(sessionId);
       await deleteSession(sessionId).catch(() => undefined);
+      lastPersisted.current.delete(sessionId);
 
       if (!tabsRef.current.some((tab) => leafIds(tab.layout).includes(sessionId))) {
         setSessions((prev) => prev.filter((session) => session.id !== sessionId));
@@ -2658,6 +2734,109 @@ export default function App({
     [activeTabId],
   );
 
+  /**
+   * Carry out a rename the server planned.
+   *
+   * The edits address the files as they are on disk. A file with unsaved
+   * changes would have those changes overwritten, so the rename stops instead
+   * of silently choosing one of the two versions.
+   */
+  const applyRenameEdit = useCallback(
+    async (symbol: string, edit: LspWorkspaceEdit): Promise<string | null> => {
+      const plan = await planRename(
+        symbol,
+        edit,
+        dirtyFilePaths(tabsRef.current, dirtyFilesRef.current),
+        (path) => readTextFile(path).catch(() => null),
+      );
+      if (!plan.ok) return plan.reason;
+      if (plan.files.length === 0) return null;
+
+      const failed: string[] = [];
+      for (const file of plan.files) {
+        await writeTextFile(file.path, file.text).catch(() => failed.push(basename(file.path)));
+      }
+      invalidateProjectFiles();
+      notifyGitChanged();
+      return failed.length > 0 ? `Couldn’t write ${failed.join(", ")}` : null;
+    },
+    [],
+  );
+
+  /**
+   * A language server result opens the way anything else does — in the focused
+   * editor pane, reusing the tab when the file is already open — and records
+   * where it came from so Go Back returns to the call site rather than to
+   * whatever tab happened to be behind it.
+   */
+  const lspCommands = useMemo<LspWorkspaceCommands>(
+    () => ({
+      goToTarget: (target, origin) => {
+        const destination: CodeLocation = {
+          path: target.path,
+          line: target.line,
+          column: target.column,
+        };
+        codeNavRef.current = {
+          history: pushCodeLocation(codeNavRef.current.history, origin, destination),
+          current: destination,
+        };
+        onOpenFile(target.path, { line: target.line, column: target.column });
+      },
+      showReferences: (symbol, targets) => {
+        const tab = tabsRef.current.find((entry) => entry.id === activeTabIdRef.current);
+        if (!tab) return;
+        const file = newReferencesTab(sidebarCwdRef.current, { symbol, targets });
+        setTabs((prev) =>
+          prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
+        );
+        setComposerFocused(false);
+      },
+      applyWorkspaceEdit: applyRenameEdit,
+    }),
+    [applyRenameEdit, onOpenFile],
+  );
+
+  /**
+   * Go Back spends the code navigation history first.
+   *
+   * A definition jump inside one file, or between two files that are both
+   * already open, never changes the workspace tab — so the tab history has
+   * nothing to unwind and Back would jump somewhere the user did not come from.
+   */
+  const codeNavigationStep = useCallback(
+    (direction: "back" | "forward") => {
+      const openPaths = openEditorPaths(tabsRef.current);
+      const history = pruneCodeNavigation(codeNavRef.current.history, openPaths);
+      // Only the location this history put the user at is worth remembering on
+      // the way past it. Once they have moved somewhere else themselves — a tab
+      // click, a search hit — the stored location is no longer where they are,
+      // and pushing it onto the forward stack would send Forward somewhere they
+      // have never been.
+      const current = codeNavRef.current.current;
+      const at =
+        current && pathKey(current.path) === pathKey(focusedEditorPathRef.current ?? "")
+          ? current
+          : null;
+      const step =
+        direction === "back" ? codeNavigationBack(history, at) : codeNavigationForward(history, at);
+      if (!step) {
+        codeNavRef.current = { ...codeNavRef.current, history };
+        return false;
+      }
+      codeNavRef.current = { history: step.history, current: step.location };
+      onOpenFile(step.location.path, {
+        line: step.location.line,
+        column: step.location.column,
+      });
+      return true;
+    },
+    [onOpenFile],
+  );
+
+  const codeNavigationStepRef = useRef(codeNavigationStep);
+  codeNavigationStepRef.current = codeNavigationStep;
+
   const onOpenPlan = useCallback(
     (sessionId: string, blockId: string) => {
       const tab = tabsRef.current.find((entry) => entry.id === activeTabId);
@@ -2665,6 +2844,27 @@ export default function App({
       const block = session?.blocks.find((entry) => entry.id === blockId);
       if (!tab || !session || !block) return;
       const file = newPlanTab(session.id, block.id, planTitle(block.text), session.cwd);
+      setTabs((prev) =>
+        prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
+      );
+      setComposerFocused(false);
+    },
+    [activeTabId],
+  );
+
+  const onOpenSubagent = useCallback(
+    (sessionId: string, blockId: string) => {
+      const tab = tabsRef.current.find((entry) => entry.id === activeTabId);
+      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+      // A subagent card may itself render inside a nested transcript.
+      const block = session ? findBlockDeep(session.blocks, blockId) : undefined;
+      if (!tab || !session || !block || !block.subagent) return;
+      const file = newSubagentTab(
+        session.id,
+        block.id,
+        block.text || block.tool?.title || "Subagent",
+        session.cwd,
+      );
       setTabs((prev) =>
         prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
       );
@@ -2765,16 +2965,37 @@ export default function App({
       sessionId: string,
       text: string,
       attachments: Attachment[] = [],
-      options?: { secondOpinion?: SecondOpinionMeta; steer?: boolean },
+      options?: {
+        secondOpinion?: SecondOpinionMeta;
+        steer?: boolean;
+        queuedPromptId?: string;
+        noteCard?: NoteComposerCard;
+        handoffCard?: HandoffComposerCard;
+        inboxCard?: InboxComposerCard;
+      },
     ) => {
       const current = sessionsRef.current.find((s) => s.id === sessionId);
       if (!current) return;
-      const noteCard = current.noteCard;
-      const handoffCard = current.handoffCard;
+      // A queued row stays queued until this submit actually starts a turn: a
+      // preparing handoff, a re-queue, or a no-op must not swallow it.
+      if (options?.queuedPromptId) {
+        const mode = options.steer ? "steer" : "dispatch";
+        if (!queuedPromptForSubmit(queuesRef.current, sessionId, options.queuedPromptId, mode)) {
+          return;
+        }
+      }
+      const noteCard = options && "noteCard" in options ? options.noteCard : current.noteCard;
+      const handoffCard =
+        options && "handoffCard" in options ? options.handoffCard : current.handoffCard;
+      const inboxCard = options && "inboxCard" in options ? options.inboxCard : current.inboxCard;
       if (!text.trim() && attachments.length === 0 && !noteCard && !handoffCard) {
+        resumingSessions.current.delete(sessionId);
         return;
       }
-      if (isPreparingHandoff(current)) return;
+      if (isPreparingHandoff(current)) {
+        resumingSessions.current.delete(sessionId);
+        return;
+      }
       const workCwd = sessionWorkCwd(current);
       // A worktree cwd is a bare child path, so the machine has to come from
       // the session, not from parsing the directory it happens to run in.
@@ -2787,29 +3008,52 @@ export default function App({
           : null;
 
       // A follow-up written mid-turn waits in the queue, where it stays visible
-      // and removable. ⌥Enter steers the running turn instead, where the
-      // harness supports it; fx, which cannot, used to drop the message.
+      // and removable — unless follow-ups steer. ⌥Enter always tries to steer
+      // the running turn instead, where the harness supports it. Steering that
+      // is asked for but impossible queues anyway, because the alternative
+      // was dropping the message.
       const canSteer = isLiveHarness(current.harness) && canSteerHarness(current.harness);
       if (
         !pendingSwitch &&
-        shouldQueuePrompt({ steerRequested: !!options?.steer, busy: !!current.busy, canSteer })
+        shouldQueuePrompt({
+          steerRequested: !!options?.steer,
+          busy: !!current.busy,
+          canSteer,
+          followUpBehavior: loadFollowUpBehavior(),
+        })
       ) {
+        // Already queued (a steer that landed back here, or a raced dispatch):
+        // keep the row where it is instead of duplicating it.
+        if (options?.queuedPromptId) return;
         setQueues((prev) =>
           enqueuePrompt(prev, sessionId, {
             id: crypto.randomUUID(),
             text,
             attachments,
             queuedAt: Date.now(),
+            noteCard,
+            handoffCard,
+            inboxCard,
           }),
+        );
+        // The chips moved into the queue; the composer must not send them twice.
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === sessionId
+              ? { ...s, inboxCard: undefined, noteCard: undefined, handoffCard: undefined }
+              : s,
+          ),
         );
         return;
       }
 
-      // A stop applies to everything queued behind it, so writing a fresh
-      // prompt does not release the queue. Only sending a chip does, and only
-      // once nothing is left waiting.
+      // A stop pauses everything queued behind it, so writing a fresh prompt
+      // does not release the queue. Only resuming does.
       if (queuedFor(queuesRef.current, sessionId).length === 0) {
         stoppedSessions.current.delete(sessionId);
+      }
+      if (options?.queuedPromptId) {
+        setQueues((prev) => removeQueuedPrompt(prev, sessionId, options.queuedPromptId as string));
       }
 
       if (current.busy && !pendingSwitch) {
@@ -3201,17 +3445,64 @@ export default function App({
     setQueues((prev) => removeQueuedPrompt(prev, sessionId, promptId));
   }, []);
 
+  const onEditQueued = useCallback((sessionId: string, promptId: string, text: string) => {
+    setQueues((prev) => updateQueuedPrompt(prev, sessionId, promptId, text));
+    setEditingQueued((prev) => {
+      if (prev[sessionId] == null) return prev;
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+  }, []);
+
+  const onQueuedEditingChange = useCallback((sessionId: string, promptId?: string) => {
+    setEditingQueued((prev) => {
+      if (promptId == null) {
+        if (prev[sessionId] == null) return prev;
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      }
+      return prev[sessionId] === promptId ? prev : { ...prev, [sessionId]: promptId };
+    });
+  }, []);
+
   /**
-   * Send one queued prompt now. This is the deliberate send a stopped turn
-   * waits for, so it also releases the rest of that session's queue.
+   * Steer one queued row into the running turn now. The row stays queued until
+   * the steer actually starts, so a harness that cannot take it swallows
+   * nothing. This is also the deliberate send a paused queue waits for.
    */
-  const onSendQueued = useCallback(
+  const onSteerQueued = useCallback(
     (sessionId: string, promptId: string) => {
-      const prompt = queuedFor(queuesRef.current, sessionId).find((entry) => entry.id === promptId);
+      const prompt = queuedPromptForSubmit(queuesRef.current, sessionId, promptId, "steer");
       if (!prompt) return;
       stoppedSessions.current.delete(sessionId);
-      setQueues((prev) => removeQueuedPrompt(prev, sessionId, promptId));
-      onSubmit(sessionId, prompt.text, prompt.attachments);
+      onSubmit(sessionId, prompt.text, prompt.attachments, {
+        steer: true,
+        queuedPromptId: prompt.id,
+        noteCard: prompt.noteCard,
+        handoffCard: prompt.handoffCard,
+        inboxCard: prompt.inboxCard,
+      });
+    },
+    [onSubmit],
+  );
+
+  const onResumeQueue = useCallback(
+    (sessionId: string) => {
+      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+      if (!session || session.busy || !stoppedSessions.current.has(sessionId)) {
+        return;
+      }
+      if (queuedFor(queuesRef.current, sessionId).length === 0) {
+        stoppedSessions.current.delete(sessionId);
+        return;
+      }
+      stoppedSessions.current.delete(sessionId);
+      // Hold auto-dispatch until the continued turn marks the session busy,
+      // so the head does not jump ahead of the continuation.
+      resumingSessions.current.add(sessionId);
+      onSubmit(sessionId, CONTINUE_PROMPT, [], { steer: true });
     },
     [onSubmit],
   );
@@ -3224,42 +3515,100 @@ export default function App({
     for (const id of stoppedSessions.current) {
       if (!live.has(id)) stoppedSessions.current.delete(id);
     }
+    for (const id of resumingSessions.current) {
+      if (!live.has(id)) resumingSessions.current.delete(id);
+    }
+    setEditingQueued((prev) => {
+      const next: Record<string, string> = {};
+      let changed = false;
+      for (const [id, promptId] of Object.entries(prev)) {
+        if (live.has(id)) next[id] = promptId;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [sessions]);
+
+  // The continued turn marks the session busy once it starts; until then the
+  // resume bridge holds auto-dispatch.
+  useEffect(() => {
+    for (const session of sessions) {
+      if (session.busy) resumingSessions.current.delete(session.id);
+    }
   }, [sessions]);
 
   /**
-   * One queued prompt per pass. Sending it changes the queues, which runs this
-   * again for the next one — in order, and never two turns at once.
+   * One queued head per pass, revalidated in a timer: the head must still be
+   * the head and the session still dispatchable when the submit actually
+   * runs, otherwise a follow-up could disappear or steer into the wrong turn.
+   * Sending it changes the queues, which runs this again for the next one —
+   * in order, and never two turns at once.
    */
-  const flushKey = [...queues.keys()]
-    .map((sessionId) => {
-      const session = sessions.find((entry) => entry.id === sessionId);
-      if (!session) return `${sessionId}:gone`;
-      return `${sessionId}:${session.busy ? 1 : 0}:${sessionNeedsInput(session) ? 1 : 0}`;
-    })
-    .join("\n");
-
   useEffect(() => {
-    for (const sessionId of queues.keys()) {
-      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
-      if (!session) continue;
-      const flushable = canFlushQueue({
-        busy: !!session.busy,
-        needsInput: sessionNeedsInput(session),
-        stopped: stoppedSessions.current.has(sessionId),
-      });
-      if (!flushable) continue;
-      const taken = takeNextPrompt(queues, sessionId);
-      if (!taken.prompt) continue;
-      setQueues(taken.queues);
-      onSubmit(sessionId, taken.prompt.text, taken.prompt.attachments);
-      return;
+    const timers: number[] = [];
+    const scheduled = new Set<string>();
+    for (const session of sessions) {
+      if (session.busy || queueDispatchingRef.current.has(session.id)) continue;
+      const head = queuedHead(queues, session.id);
+      if (!head) continue;
+      if (
+        !canDispatchQueuedHead({
+          busy: !!session.busy,
+          needsInput: sessionNeedsInput(session),
+          stopped: stoppedSessions.current.has(session.id),
+          resuming: resumingSessions.current.has(session.id),
+          hasHead: true,
+          editingHead: isEditingQueuedHead(queues, session.id, editingQueued[session.id]),
+          preparingHandoff: isPreparingHandoff(session),
+        })
+      ) {
+        continue;
+      }
+      queueDispatchingRef.current.add(session.id);
+      scheduled.add(session.id);
+      timers.push(
+        window.setTimeout(() => {
+          queueDispatchingRef.current.delete(session.id);
+          const latest = sessionsRef.current.find((entry) => entry.id === session.id);
+          const current = queuedHead(queuesRef.current, session.id);
+          if (!latest || !current || current.id !== head.id) return;
+          if (
+            !canDispatchQueuedHead({
+              busy: !!latest.busy,
+              needsInput: sessionNeedsInput(latest),
+              stopped: stoppedSessions.current.has(session.id),
+              resuming: resumingSessions.current.has(session.id),
+              hasHead: true,
+              editingHead: isEditingQueuedHead(
+                queuesRef.current,
+                session.id,
+                editingQueuedRef.current[session.id],
+              ),
+              preparingHandoff: isPreparingHandoff(latest),
+            })
+          ) {
+            return;
+          }
+          onSubmit(session.id, current.text, current.attachments, {
+            queuedPromptId: current.id,
+            noteCard: current.noteCard,
+            handoffCard: current.handoffCard,
+            inboxCard: current.inboxCard,
+          });
+        }, 0),
+      );
     }
-  }, [flushKey, onSubmit, queues]);
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer);
+      for (const id of scheduled) queueDispatchingRef.current.delete(id);
+    };
+  }, [onSubmit, sessions, queues, editingQueued]);
 
   const onStop = useCallback(
     (sessionId: string) => {
       // Stopping is the user rejecting this turn. Anything queued behind it
-      // waits for a deliberate send instead of firing into the gap.
+      // pauses instead of firing into the gap; resuming continues the turn
+      // first, then the queue.
       stoppedSessions.current.add(sessionId);
       const session = sessionsRef.current.find((s) => s.id === sessionId);
       turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
@@ -3443,6 +3792,15 @@ export default function App({
     setFilePickerOpen(true);
   }, []);
 
+  const onGoToSymbol = useCallback(() => {
+    setSearchViewOpen(false);
+    setInboxViewOpen(false);
+    setNotesViewOpen(false);
+    setUsageViewOpen(false);
+    setActivityViewOpen(false);
+    setSymbolPickerOpen(true);
+  }, []);
+
   const onFindInProject = useCallback(() => {
     setSearchViewOpen(false);
     setInboxViewOpen(false);
@@ -3565,33 +3923,50 @@ export default function App({
 
   /**
    * Swaps the whole app onto another profile. Every window persists first and
-   * the agents of the profile being left are stopped, so the confirmation says
-   * what running work is about to pause.
+   * the agents of the profile being left are stopped, so a confirmation names
+   * the running work that is about to pause instead of quoting a bare count.
    */
-  const onSwitchProfile = useCallback((profileId: string) => {
-    void (async () => {
-      const running = inFlightRefs(sessionsRef.current, tabsRef.current).length;
-      if (running > 0) {
-        const ok = await ask(profileSwitchWhileBusyMessage(running), {
-          title: "wavex",
-          kind: "warning",
-          okLabel: "Switch",
-        });
-        if (!ok) return;
-      }
-      await switchProfile(profileId).catch((error: unknown) => {
-        // Only a rejected id gets here, which Rust checks before it asks any
-        // window to prepare, so the shade is not up yet. Restoring both anyway
-        // costs nothing and keeps the window usable if that ever stops holding.
-        setSwitchingToProfile(null);
-        void invokeLocal("enable_window_glass").catch(() => undefined);
-        void message(error instanceof Error ? error.message : "Could not switch profile", {
-          title: "wavex",
-          kind: "error",
-        });
+  const runProfileSwitch = useCallback((profileId: string) => {
+    void switchProfile(profileId).catch((error: unknown) => {
+      // Only a rejected id gets here, which Rust checks before it asks any
+      // window to prepare, so the shade is not up yet. Restoring both anyway
+      // costs nothing and keeps the window usable if that ever stops holding.
+      setSwitchingToProfile(null);
+      void invokeLocal("enable_window_glass").catch(() => undefined);
+      void message(error instanceof Error ? error.message : "Could not switch profile", {
+        title: "wavex",
+        kind: "error",
       });
-    })();
+    });
   }, []);
+
+  const onSwitchProfile = useCallback(
+    (profileId: string) => {
+      // Unknown id: let the switch fail through to the error toast below.
+      if (!findProfile(loadProfiles(), profileId)) {
+        runProfileSwitch(profileId);
+        return;
+      }
+      const running = inFlightSessions(sessionsRef.current, tabsRef.current);
+      const terminals = projectTerminalsRef.current.reduce(
+        (count, dock) => count + dock.pane.files.length,
+        0,
+      );
+      if (running.length === 0 && terminals === 0) {
+        runProfileSwitch(profileId);
+        return;
+      }
+      setProfileSwitchConfirm(profileId);
+    },
+    [runProfileSwitch],
+  );
+
+  const onConfirmProfileSwitch = useCallback(() => {
+    if (profileSwitchConfirm === null) return;
+    const target = profileSwitchConfirm;
+    setProfileSwitchConfirm(null);
+    runProfileSwitch(target);
+  }, [profileSwitchConfirm, runProfileSwitch]);
 
   const onOpenArchivedSession = useCallback(
     (sessionId: string) => {
@@ -3626,6 +4001,7 @@ export default function App({
       setActivityViewOpen(false);
       return;
     }
+    if (codeNavigationStepRef.current("back")) return;
     onVisitBack();
   }, [
     onVisitBack,
@@ -3644,6 +4020,7 @@ export default function App({
     setNotesViewOpen(false);
     setUsageViewOpen(false);
     setActivityViewOpen(false);
+    if (codeNavigationStepRef.current("forward")) return;
     onVisitForward();
   }, [onVisitForward]);
 
@@ -3687,6 +4064,7 @@ export default function App({
     onFocusDir,
     onToggleSidebar,
     onGoToFile,
+    onGoToSymbol,
     onFindInProject,
     onOpenSearch,
     onOpenInbox,
@@ -3716,6 +4094,7 @@ export default function App({
     onFocusDir,
     onToggleSidebar,
     onGoToFile,
+    onGoToSymbol,
     onFindInProject,
     onOpenSearch,
     onOpenInbox,
@@ -3743,7 +4122,7 @@ export default function App({
 
   /**
    * A menu item that opens something — a project, a file, Search, Inbox. The
-   * user asked for a coding surface, so bring it forward rather than running
+   * user asked for a workspace surface, so bring it forward rather than running
    * the action behind the chat.
    */
   const runInCoding = useCallback(
@@ -3792,6 +4171,7 @@ export default function App({
     () => ({
       "app.search": () => runInCoding("open_search", actions.current.onOpenSearch),
       "app.goToFile": () => runInCoding("go_to_file", actions.current.onGoToFile),
+      "app.goToSymbol": () => runInCoding("go_to_symbol", actions.current.onGoToSymbol),
       "app.findInFiles": () => runInCoding("find_in_project", actions.current.onFindInProject),
       "app.openProject": () =>
         runInCoding("open_project", () => {
@@ -3836,9 +4216,9 @@ export default function App({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Work owns its own bindings. Every shortcut below acts on the project
+      // Chat owns its own bindings. Every shortcut below acts on the project
       // workspace — tabs, panes, the file picker — which is hidden behind the
-      // chat surface, so none of them may fire while Work is in front. The
+      // chat surface, so none of them may fire while Chat is in front. The
       // mode toggle itself is bound outside this handler.
       if (appModeRef.current === "work") return;
       const cmd = tabCommand(e);
@@ -3904,6 +4284,12 @@ export default function App({
         e.preventDefault();
         e.stopPropagation();
         run("go_to_file", actions.current.onGoToFile);
+        return;
+      }
+      if (mod && !e.altKey && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        e.stopPropagation();
+        run("go_to_symbol", actions.current.onGoToSymbol);
         return;
       }
       if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "f") {
@@ -4021,6 +4407,9 @@ export default function App({
         }),
       ),
       listen("go_to_file", () => runInCoding("onGoToFile", () => actions.current.onGoToFile())),
+      listen("go_to_symbol", () =>
+        runInCoding("onGoToSymbol", () => actions.current.onGoToSymbol()),
+      ),
       listen("open_search", () =>
         runInCoding("onOpenSearch", () => actions.current.onOpenSearch()),
       ),
@@ -4109,9 +4498,19 @@ export default function App({
     );
   }, [currentProjectDock, dockVisible]);
 
-  // Settings renders inside the coding shell, so Work steps aside for it
+  // Settings renders inside the workspace shell, so Chat steps aside for it
   // rather than hiding the surface that is supposed to show it.
   const workMode = appMode === "work" && !settingsOpen;
+
+  /**
+   * First-run setup: no stored projects, no resumed work, nothing written yet.
+   * Existing installs (recents, history, a non-blank session) never see it.
+   */
+  const showOnboarding =
+    !onboardingDone &&
+    !windowTransfer &&
+    recents.length === 0 &&
+    sessions.every((session) => isBlankSession(session));
 
   return (
     <div
@@ -4138,6 +4537,7 @@ export default function App({
         activeSessionId={active?.id}
         status={historyFailed ? "error" : "idle"}
         pending={historyPending}
+        onRetrySessions={() => void refreshHistory(sidebarCwd)}
         onSelectSession={onSelectHistorySession}
         onPlaceSessionOnPane={onPlaceSessionOnPane}
         onRenameSession={onRenameHistorySession}
@@ -4206,7 +4606,7 @@ export default function App({
         onDismissUpdate={() => setUpdateNotice(null)}
       />
 
-      {/* Coding stays mounted while Work is in front — terminals, editors, and
+      {/* Workspace stays mounted while Chat is in front — terminals, editors, and
           streaming turns must not be torn down by a mode switch — but it is
           display:none and inert, not merely covered by a translucent panel. */}
       <div
@@ -4248,6 +4648,7 @@ export default function App({
               onNewTerminal={onNewTerminal}
               onToggleTerminal={onToggleProjectTerminal}
               onGoToFile={onGoToFile}
+              onGoToSymbol={onGoToSymbol}
               onToggleSidebar={onToggleSidebar}
               onShowSourceControl={onToggleChanges}
               onCloseCurrentTab={activeTabId ? () => onCloseTab(activeTabId) : undefined}
@@ -4356,8 +4757,12 @@ export default function App({
                           onRuntimeModeChange={onRuntimeModeChange}
                           onSubmit={onSubmit}
                           queues={queues}
+                          queuePausedIds={stoppedSessions.current}
                           onRemoveQueued={onRemoveQueued}
-                          onSendQueued={onSendQueued}
+                          onEditQueued={onEditQueued}
+                          onQueuedEditingChange={onQueuedEditingChange}
+                          onSteerQueued={onSteerQueued}
+                          onResumeQueue={onResumeQueue}
                           onStop={onStop}
                           onInboxCardDismiss={onInboxCardDismiss}
                           onNoteCardDismiss={onNoteCardDismiss}
@@ -4366,8 +4771,10 @@ export default function App({
                           onQuestionReply={onQuestionReply}
                           onOpenFile={onOpenFile}
                           editorNavigation={editorNavigation}
+                          lspCommands={lspCommands}
                           onOpenDiff={onOpenDiff}
                           onOpenPlan={onOpenPlan}
+                          onOpenSubagent={onOpenSubagent}
                           onSecondOpinion={onSecondOpinion}
                           onHandoff={onHandoff}
                           onMovePane={onMovePane}
@@ -4494,6 +4901,16 @@ export default function App({
         />
       ) : null}
 
+      {symbolPickerOpen ? (
+        <SymbolPicker
+          open
+          cwd={gitCwd}
+          path={focusedEditorPath}
+          onOpenFile={onOpenFile}
+          onClose={() => setSymbolPickerOpen(false)}
+        />
+      ) : null}
+
       <ApprovalToasts
         notices={hiddenApprovalToasts}
         onFocusSession={onOpenApprovalSession}
@@ -4513,8 +4930,53 @@ export default function App({
         />
       ) : null}
       {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
+      {profileSwitchConfirm !== null ? (
+        <ProfileSwitchConfirm
+          target={findProfile(loadProfiles(), profileSwitchConfirm) ?? null}
+          running={inFlightSessions(sessions, tabs)}
+          terminalCount={projectTerminals.reduce(
+            (count, dock) => count + dock.pane.files.length,
+            0,
+          )}
+          onCancel={() => setProfileSwitchConfirm(null)}
+          onConfirm={onConfirmProfileSwitch}
+        />
+      ) : null}
+      {showOnboarding ? (
+        <OnboardingView
+          cwd={projectCwd}
+          onPickProject={() => void pickProject()}
+          onComplete={onCompleteOnboarding}
+        />
+      ) : null}
     </div>
   );
+}
+
+/** Every file path open in an editor pane, across every tab. */
+function openEditorPaths(tabs: WorkspaceTab[]): string[] {
+  const paths: string[] = [];
+  for (const tab of tabs) {
+    for (const pane of tab.editorPanes) {
+      for (const file of pane.files) {
+        if (isFilesystemTab(file)) paths.push(file.path);
+      }
+    }
+  }
+  return paths;
+}
+
+/** `pathKey` of every open file with unsaved changes, across every tab. */
+function dirtyFilePaths(tabs: WorkspaceTab[], dirtyFileIds: ReadonlySet<string>): Set<string> {
+  const paths = new Set<string>();
+  for (const tab of tabs) {
+    for (const pane of tab.editorPanes) {
+      for (const file of pane.files) {
+        if (isFilesystemTab(file) && dirtyFileIds.has(file.id)) paths.add(pathKey(file.path));
+      }
+    }
+  }
+  return paths;
 }
 
 function selectedChangePath(tab: WorkspaceTab, gitCwd?: string): string | undefined {

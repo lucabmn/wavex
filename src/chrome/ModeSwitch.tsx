@@ -1,6 +1,11 @@
 import { useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { MOD, SHIFT } from "../lib/platform";
-import { APP_MODE_LABEL, otherAppMode, type AppMode } from "../lib/workspace/appMode";
+import {
+  APP_MODE_DESCRIPTION,
+  APP_MODE_LABEL,
+  otherAppMode,
+  type AppMode,
+} from "../lib/workspace/appMode";
 
 const ORDER: AppMode[] = ["work", "coding"];
 
@@ -50,7 +55,8 @@ export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
             aria-selected={selected}
             // Roving tabindex: one stop for the pair, arrows move within it.
             tabIndex={selected ? 0 : -1}
-            title={`${APP_MODE_LABEL[value]} (${MOD}${SHIFT}M)`}
+            title={`${APP_MODE_LABEL[value]} — ${APP_MODE_DESCRIPTION[value]} (${MOD}${SHIFT}M)`}
+            aria-label={`${APP_MODE_LABEL[value]}: ${APP_MODE_DESCRIPTION[value]}`}
             className={`rounded py-0.5 text-[11.5px] font-medium transition-colors ${
               stretch ? "flex-1 text-center" : "px-2.5"
             } ${

@@ -15,6 +15,8 @@ describe("ModalPanel", () => {
     );
 
     expect(markup).toContain('role="dialog"');
+    expect(markup).toContain('aria-modal="true"');
+    expect(markup).toContain('tabindex="-1"');
     expect(markup).toContain("modal-panel");
     expect(markup).toContain("Example");
     expect(markup).toContain("A reusable shell");

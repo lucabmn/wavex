@@ -1,8 +1,9 @@
 import { X } from "./icons";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { LAYER } from "../lib/layers";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 export type ModalSize = "sm" | "md";
 
@@ -23,6 +24,10 @@ type Props = {
   size?: ModalSize;
   /** Extra classes on the panel (fixed height, etc). */
   className?: string;
+  /** Preferred first control. Defaults to the close action. */
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Keep the modal present while an irreversible action is in flight. */
+  closeDisabled?: boolean;
   children: ReactNode;
 };
 
@@ -32,6 +37,8 @@ export function ModalPanel({
   description,
   size = "md",
   className,
+  initialFocusRef,
+  closeDisabled = false,
   children,
 }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -39,26 +46,18 @@ export function ModalPanel({
   const uid = useId();
   const titleId = `${uid}-title`;
   const descriptionId = description ? `${uid}-desc` : undefined;
-
-  useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose,
+    initialFocusRef: initialFocusRef ?? closeRef,
+    escapeDisabled: closeDisabled,
+  });
 
   return (
     <div className={`absolute left-1/2 ${TOP[size]} ${WIDTH[size]} -translate-x-1/2`}>
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
@@ -83,8 +82,9 @@ export function ModalPanel({
             ref={closeRef}
             type="button"
             aria-label="Close"
+            disabled={closeDisabled}
             onClick={onClose}
-            className="grid size-7 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <X className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -100,7 +100,12 @@ export function ModalPanel({
 export function Modal(props: Props) {
   return createPortal(
     <div className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
-      <div className="modal-backdrop absolute inset-0 bg-black/40" onMouseDown={props.onClose} />
+      <div
+        className="modal-backdrop absolute inset-0 bg-black/40"
+        onMouseDown={() => {
+          if (!props.closeDisabled) props.onClose();
+        }}
+      />
       <ModalPanel {...props} />
     </div>,
     document.body,

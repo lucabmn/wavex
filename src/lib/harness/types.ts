@@ -56,6 +56,21 @@ export type HarnessEvent =
       decision: "answered" | "skipped" | "cancelled";
     }
   | { type: "plan"; text: string }
+  /** Metadata about the subagent behind an Agent tool call. */
+  | {
+      type: "subagent.updated";
+      callId: string;
+      agentType?: string;
+      prompt?: string;
+      model?: string;
+      background?: boolean;
+    }
+  /** An event for the subagent behind an Agent tool call, in parent terms. */
+  | {
+      type: "subagent.event";
+      callId: string;
+      event: HarnessEvent;
+    }
   /**
    * An image the turn produced. Adapters that can write the bytes to disk
    * should send `path`; `data` alone renders for this session but is not kept

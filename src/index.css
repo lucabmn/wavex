@@ -1100,3 +1100,8 @@ header[data-tauri-drag-region] button {
 .git-history-item.is-head.is-selected svg circle:last-child {
   fill: color-mix(in srgb, var(--color-content) 10%, var(--color-background-base));
 }
+
+[data-session-review-shell] + [data-message-queue] [data-message-queue-card] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}

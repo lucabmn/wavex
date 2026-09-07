@@ -6,6 +6,7 @@ import {
   FilePlusCorner,
   Minus,
   Bot,
+  PanelRight,
   PenLine,
   RefreshCw,
   Search,
@@ -27,7 +28,14 @@ import { SecondOpinionCard } from "../chrome/SecondOpinionCard";
 import { NoteMiniCard } from "../chrome/NoteMiniCard";
 import { TerminalSpinner } from "../chrome/TerminalSpinner";
 import type { ApprovalDecision } from "../lib/harness";
-import { isEditTool, isReadTool, isSearchTool, stubFilePreview } from "../lib/harness/preview";
+import {
+  formatAgentType,
+  isAgentTool,
+  isEditTool,
+  isReadTool,
+  isSearchTool,
+  stubFilePreview,
+} from "../lib/harness/preview";
 import { copyText } from "../lib/clipboard";
 import { playCue } from "../lib/sounds";
 import { displayPath, resolveWorkspacePath } from "../lib/paths";
@@ -55,6 +63,7 @@ import {
   activityStillRunning,
   buildActivityPhases,
   editVerb,
+  formatElapsed,
   groupTurnItems,
   groupTurns,
   hasRunningSubagent,
@@ -65,6 +74,9 @@ import {
   needsApproval,
   nestedScrollAbsorbsWheel,
   proseSummary,
+  subagentLatestActivity,
+  subagentStatus,
+  type SubagentStatus,
   toolCallLabel,
   toolCallState,
   turnCopyText,
@@ -90,6 +102,8 @@ type Props = {
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
   onOpenPlan?: (blockId: string) => void;
+  /** Open the selected Agent call's subagent transcript in an editor pane. */
+  onOpenSubagent?: (blockId: string) => void;
   onSecondOpinion?: (harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (harness: HarnessId, turn: Block[], model: string) => void;
   /** Rewrite a user turn and send it again. Enables the pencil on that turn. */
@@ -115,6 +129,7 @@ export function AgentTranscript({
   onOpenFile,
   onOpenDiff,
   onOpenPlan,
+  onOpenSubagent,
   onSecondOpinion,
   onHandoff,
   onEditTurn,
@@ -342,9 +357,11 @@ export function AgentTranscript({
                     blocks={item.blocks}
                     cwd={cwd}
                     done={settled || (answering && !workStillRunning)}
+                    busy={busy}
                     onApproval={onApproval}
                     onOpenFile={onOpenFile}
                     onOpenDiff={onOpenDiff}
+                    onOpenSubagent={onOpenSubagent}
                   />
                 ) : (
                   <TranscriptBlock
@@ -359,8 +376,10 @@ export function AgentTranscript({
                     onOpenFile={onOpenFile}
                     onOpenDiff={onOpenDiff}
                     onOpenPlan={onOpenPlan}
+                    onOpenSubagent={onOpenSubagent}
                     onEditTurn={onEditTurn}
                     cwd={cwd}
+                    busy={busy}
                   />
                 ),
               )}
@@ -640,10 +659,12 @@ const TranscriptBlock = memo(function TranscriptBlock({
   stickyIndex,
   compactTop = false,
   cwd,
+  busy,
   onApproval,
   onOpenFile,
   onOpenDiff,
   onOpenPlan,
+  onOpenSubagent,
   onEditTurn,
 }: {
   block: Block;
@@ -651,10 +672,12 @@ const TranscriptBlock = memo(function TranscriptBlock({
   stickyIndex: number;
   compactTop?: boolean;
   cwd?: string;
+  busy?: boolean;
   onApproval?: (requestId: number, decision: ApprovalDecision) => void;
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
   onOpenPlan?: (blockId: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
   onEditTurn?: (blockId: string, text: string) => void;
 }) {
   if (block.role === "user") {
@@ -673,9 +696,11 @@ const TranscriptBlock = memo(function TranscriptBlock({
       <ToolCall
         block={block}
         cwd={cwd}
+        busy={busy}
         onApproval={onApproval}
         onOpenFile={onOpenFile}
         onOpenDiff={onOpenDiff}
+        onOpenSubagent={onOpenSubagent}
       />
     );
   }
@@ -701,9 +726,11 @@ const TranscriptBlock = memo(function TranscriptBlock({
       <ToolCall
         block={block}
         cwd={cwd}
+        busy={busy}
         onApproval={onApproval}
         onOpenFile={onOpenFile}
         onOpenDiff={onOpenDiff}
+        onOpenSubagent={onOpenSubagent}
       />
     );
   }
@@ -834,6 +861,7 @@ function UserMessageBlock({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
+  const [singleLine, setSingleLine] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(block.text);
   const textRef = useRef<HTMLPreElement>(null);
@@ -841,16 +869,30 @@ function UserMessageBlock({
   const note = block.noteCard;
   const text = card && card.kind !== "handoff" ? "" : block.text;
   const chat = layout === "chat";
+  const textOnly = Boolean(text) && !block.attachments?.length && !card && !note;
 
   useLayoutEffect(() => {
     const el = textRef.current;
     if (!el || !text) {
       setOverflows(false);
+      setSingleLine(false);
       return;
     }
-    if (expanded) return;
-    setOverflows(el.scrollHeight > el.clientHeight + 1);
-  }, [text, expanded]);
+
+    const measure = () => {
+      if (!expanded) {
+        setOverflows(el.scrollHeight > el.clientHeight + 1);
+      }
+
+      const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight);
+      setSingleLine(textOnly && Number.isFinite(lineHeight) && el.scrollHeight <= lineHeight + 1);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, textOnly, expanded]);
 
   const toggle = () => {
     if (overflows) setExpanded((value) => !value);
@@ -934,7 +976,9 @@ function UserMessageBlock({
       ) : null}
       <div
         className={`min-w-0 bg-content/10 px-3 py-2 font-sans text-content ${
-          chat ? "w-fit max-w-xl rounded-xl" : "rounded-lg border border-content/10"
+          chat
+            ? `w-fit max-w-xl ${singleLine ? "rounded-full" : "rounded-xl"}`
+            : "rounded-lg border border-content/10"
         }`}
         style={{ zIndex: stickyIndex }}
         onClick={overflows ? toggle : undefined}
@@ -959,7 +1003,7 @@ function UserMessageBlock({
         {text ? (
           <pre
             ref={textRef}
-            className={`min-w-0 whitespace-pre-wrap break-words font-sans text-sm ${expanded ? "" : "line-clamp-4"}`}
+            className={`min-w-0 whitespace-pre-wrap wrap-break-word font-sans text-sm ${expanded ? "" : "line-clamp-4"}`}
           >
             {text}
           </pre>
@@ -981,16 +1025,20 @@ function ActivityPhases({
   blocks,
   cwd,
   done,
+  busy,
   onApproval,
   onOpenFile,
   onOpenDiff,
+  onOpenSubagent,
 }: {
   blocks: Block[];
   cwd?: string;
   done?: boolean;
+  busy?: boolean;
   onApproval?: (requestId: number, decision: ApprovalDecision) => void;
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
 }) {
   const phases = useMemo(() => buildActivityPhases(blocks), [blocks]);
 
@@ -1002,9 +1050,11 @@ function ActivityPhases({
           phase={phase}
           cwd={cwd}
           active={!done && index === phases.length - 1}
+          busy={busy}
           onApproval={onApproval}
           onOpenFile={onOpenFile}
           onOpenDiff={onOpenDiff}
+          onOpenSubagent={onOpenSubagent}
         />
       ))}
     </div>
@@ -1074,16 +1124,20 @@ function ActivityPhaseGroup({
   phase,
   cwd,
   active,
+  busy,
   onApproval,
   onOpenFile,
   onOpenDiff,
+  onOpenSubagent,
 }: {
   phase: ActivityPhase;
   cwd?: string;
   active: boolean;
+  busy?: boolean;
   onApproval?: (requestId: number, decision: ApprovalDecision) => void;
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
 }) {
   const [override, setOverride] = useState<boolean | null>(null);
   const waiting = phase.steps.some(needsApproval);
@@ -1111,9 +1165,11 @@ function ActivityPhaseGroup({
             block={phase.steps[0]}
             cwd={cwd}
             live={active}
+            busy={busy}
             onApproval={onApproval}
             onOpenFile={onOpenFile}
             onOpenDiff={onOpenDiff}
+            onOpenSubagent={onOpenSubagent}
           />
         </div>
       </div>
@@ -1185,9 +1241,11 @@ function ActivityPhaseGroup({
                   block={block}
                   cwd={cwd}
                   live={active}
+                  busy={busy}
                   onApproval={onApproval}
                   onOpenFile={onOpenFile}
                   onOpenDiff={onOpenDiff}
+                  onOpenSubagent={onOpenSubagent}
                 />
               </div>
             ))}
@@ -1234,16 +1292,20 @@ function ActivityRow({
   block,
   cwd,
   live = false,
+  busy,
   onApproval,
   onOpenFile,
   onOpenDiff,
+  onOpenSubagent,
 }: {
   block: Block;
   cwd?: string;
   live?: boolean;
+  busy?: boolean;
   onApproval?: (requestId: number, decision: ApprovalDecision) => void;
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
 }) {
   if (isThinkingBlock(block)) {
     return <ActivityThinkingRow block={block} cwd={cwd} expandable bare onOpenFile={onOpenFile} />;
@@ -1256,10 +1318,12 @@ function ActivityRow({
       block={block}
       cwd={cwd}
       live={live}
+      busy={busy}
       bare
       onApproval={onApproval}
       onOpenFile={onOpenFile}
       onOpenDiff={onOpenDiff}
+      onOpenSubagent={onOpenSubagent}
     />
   );
 }
@@ -1398,19 +1462,37 @@ function ActivityToolRow({
   block,
   cwd,
   live = false,
+  busy,
   bare = false,
   onApproval,
   onOpenFile,
   onOpenDiff,
+  onOpenSubagent,
 }: {
   block: Block;
   cwd?: string;
   live?: boolean;
+  busy?: boolean;
   bare?: boolean;
   onApproval?: (requestId: number, decision: ApprovalDecision) => void;
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
 }) {
+  if (block.subagent && isAgentTool(block.tool?.kind, block.text || block.tool?.title)) {
+    return (
+      <SubagentCard
+        block={block}
+        cwd={cwd}
+        live={live}
+        busy={busy}
+        onApproval={onApproval}
+        onOpenFile={onOpenFile}
+        onOpenDiff={onOpenDiff}
+        onOpenSubagent={onOpenSubagent}
+      />
+    );
+  }
   const label = toolCallLabel(block, cwd);
   const state = toolCallState(block);
   const pending = needsApproval(block);
@@ -1439,6 +1521,150 @@ function ActivityToolRow({
       {pending ? <ApprovalControls block={block} onApproval={onApproval} /> : null}
     </div>
   );
+}
+
+/**
+ * An Agent call with its subagent's transcript attached. The header reads like
+ * any other activity row — brief, type, clock, step count, latest activity —
+ * and unfolds into the subagent's own folded phases; the pane action opens the
+ * full transcript for reading.
+ */
+function SubagentCard({
+  block,
+  cwd,
+  live = false,
+  busy,
+  onApproval,
+  onOpenFile,
+  onOpenDiff,
+  onOpenSubagent,
+}: {
+  block: Block;
+  cwd?: string;
+  live?: boolean;
+  busy?: boolean;
+  onApproval?: (requestId: number, decision: ApprovalDecision) => void;
+  onOpenFile?: (path: string) => void;
+  onOpenDiff?: (path: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
+}) {
+  const meta = block.subagent;
+  const [open, setOpen] = useState(false);
+  const status = subagentStatus(block, busy) ?? "stopped";
+  const running = status === "running";
+  const ticking = useElapsedFrom(meta?.startedAt, !running);
+  if (!meta) return null;
+
+  const title = toolCallLabel(block, cwd);
+  const elapsed =
+    meta.finishedAt != null
+      ? formatElapsed(Math.max(0, meta.finishedAt - meta.startedAt))
+      : formatElapsed(ticking);
+  const steps = meta.blocks.length;
+  const metaLine = [
+    meta.agentType ? formatAgentType(meta.agentType) : null,
+    meta.model?.trim() || null,
+    elapsed,
+    steps > 0 ? `${steps} ${steps === 1 ? "step" : "steps"}` : running ? "starting" : null,
+    meta.background ? "background" : null,
+    subagentStatusText(status),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const latest = subagentLatestActivity(block, cwd);
+  const showLatest = latest && latest !== title;
+
+  return (
+    <div className="flex min-w-0 flex-col rounded-lg border border-content/10 bg-content/[0.02]">
+      <div className="flex min-w-0 items-center gap-1 px-2 py-1.5">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={`${title}, subagent ${subagentStatusText(status).toLowerCase()}${metaLine ? `, ${metaLine}` : ""}`}
+          onClick={() => setOpen((value) => !value)}
+          className="group flex min-w-0 flex-1 items-center gap-1.5 text-left"
+        >
+          <SubagentStatusIcon status={status} live={live} />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-sans text-sm text-content/80 transition-colors duration-200 group-hover:text-content">
+              {title}
+            </span>
+            {metaLine ? (
+              <span className="truncate font-sans text-xs text-content/45">{metaLine}</span>
+            ) : null}
+          </span>
+          <ChevronRight
+            className={`size-3.5 shrink-0 text-content/35 transition-transform ${open ? "rotate-90" : ""}`}
+            strokeWidth={1.75}
+          />
+        </button>
+        {onOpenSubagent ? (
+          <button
+            type="button"
+            title="Open subagent transcript"
+            aria-label={`Open subagent transcript: ${title}`}
+            onClick={() => onOpenSubagent(block.id)}
+            className="grid size-6 shrink-0 place-items-center rounded text-content/45 hover:bg-content/10 hover:text-content"
+          >
+            <PanelRight className="size-3.5" strokeWidth={1.75} />
+          </button>
+        ) : null}
+      </div>
+      {showLatest ? (
+        <div className="truncate px-2 pb-1.5 pl-[30px] font-sans text-xs text-content/50">
+          {latest}
+        </div>
+      ) : null}
+      {open ? (
+        <div className="min-w-0 border-t border-content/10 py-1">
+          {meta.prompt?.trim() ? (
+            <div className="px-4 py-1">
+              <div className="font-sans text-xs text-content/45">Brief</div>
+              <AgentMarkdown text={meta.prompt} cwd={cwd} onOpenFile={onOpenFile} />
+            </div>
+          ) : null}
+          {steps > 0 ? (
+            <ActivityPhases
+              blocks={meta.blocks}
+              cwd={cwd}
+              done={!running}
+              busy={running}
+              onApproval={onApproval}
+              onOpenFile={onOpenFile}
+              onOpenDiff={onOpenDiff}
+              onOpenSubagent={onOpenSubagent}
+            />
+          ) : (
+            <div className="px-4 py-1 font-sans text-xs text-content/45">
+              {running ? "Waiting for the subagent's first step…" : "The subagent left no steps."}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function subagentStatusText(status: SubagentStatus): string {
+  if (status === "running") return "Running";
+  if (status === "completed") return "Done";
+  if (status === "failed") return "Failed";
+  return "Stopped";
+}
+
+function SubagentStatusIcon({ status, live = false }: { status: SubagentStatus; live?: boolean }) {
+  if (status === "failed") {
+    return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
+  }
+  if (status === "running") {
+    return (
+      <CircleDashed
+        className={`size-3.5 shrink-0 text-content/40 ${live ? "zen-tool-spin" : ""}`}
+        strokeWidth={1.75}
+      />
+    );
+  }
+  return <Bot className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />;
 }
 
 function ActivityToolIcon({ state, live = false }: { state: ToolCallState; live?: boolean }) {
@@ -1519,31 +1745,42 @@ function workingVerb(done: boolean, subagent: boolean, capitalized: boolean): st
   return capitalized ? "Working" : "working";
 }
 
-function formatElapsed(elapsedMs: number | null): string | null {
-  if (elapsedMs == null) return null;
-  const totalSec = Math.max(1, Math.round(elapsedMs / 1000));
-  if (totalSec < 60) return `${totalSec}s`;
-  const minutes = Math.floor(totalSec / 60);
-  const seconds = totalSec % 60;
-  return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
-}
-
 function ToolCall({
   block,
   cwd,
+  busy,
   onApproval,
   onOpenFile,
   onOpenDiff,
+  onOpenSubagent,
   embedded,
 }: {
   block: Block;
   cwd?: string;
+  busy?: boolean;
   onApproval?: (requestId: number, decision: ApprovalDecision) => void;
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
   embedded?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  if (block.subagent && isAgentTool(block.tool?.kind, block.text || block.tool?.title)) {
+    return (
+      <div className={embedded ? "py-0.5" : "px-4 py-1"}>
+        <SubagentCard
+          block={block}
+          cwd={cwd}
+          live={busy}
+          busy={busy}
+          onApproval={onApproval}
+          onOpenFile={onOpenFile}
+          onOpenDiff={onOpenDiff}
+          onOpenSubagent={onOpenSubagent}
+        />
+      </div>
+    );
+  }
   const preview = block.tool?.preview;
   const label = toolCallLabel(block, cwd);
   const detail = block.tool?.detail?.trim();

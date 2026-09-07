@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { generateCommitMessage } from "../lib/harness";
 import { LAYER } from "../lib/layers";
 import { MOD } from "../lib/platform";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Busy = "stash" | "commit" | null;
 
@@ -33,10 +34,11 @@ export function SwitchBranchDialog({
   const messageRef = useRef<HTMLTextAreaElement>(null);
   const trimmed = message.trim();
   const canCommit = trimmed.length > 0 && !busy && !generating;
-
-  useEffect(() => {
-    messageRef.current?.focus();
-  }, []);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onClose: onCancel,
+    initialFocusRef: messageRef,
+    escapeDisabled: Boolean(busy) || generating,
+  });
 
   useEffect(() => {
     const el = messageRef.current;
@@ -44,17 +46,6 @@ export function SwitchBranchDialog({
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [message]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (!busy && !generating) onCancel();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [busy, generating, onCancel]);
 
   const generate = async () => {
     if (busy || generating) return;
@@ -78,7 +69,9 @@ export function SwitchBranchDialog({
         }}
       />
       <div
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-busy={Boolean(busy) || generating}
         aria-label={creating ? `Create ${branch}` : `Switch to ${branch}`}

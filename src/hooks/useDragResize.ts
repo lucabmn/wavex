@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { suppressTextSelection } from "../lib/drag";
@@ -16,7 +17,32 @@ type Options = {
 };
 
 function clampTo(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, Math.round(value)));
+  const upper = Math.max(min, max);
+  return Math.min(upper, Math.max(min, Math.round(value)));
+}
+
+export function resizeWidthForKey({
+  current,
+  min,
+  max,
+  defaultWidth,
+  key,
+  shiftKey = false,
+}: {
+  current: number;
+  min: number;
+  max: number;
+  defaultWidth: number;
+  key: string;
+  shiftKey?: boolean;
+}): number | null {
+  const step = shiftKey ? 24 : 8;
+  if (key === "ArrowLeft") return clampTo(current - step, min, max);
+  if (key === "ArrowRight") return clampTo(current + step, min, max);
+  if (key === "Home") return min;
+  if (key === "End") return Math.max(min, max);
+  if (key === "Enter") return clampTo(defaultWidth, min, max);
+  return null;
 }
 
 /** Drag a pane's width by writing the DOM directly so React re-renders can't fight the cursor. */
@@ -35,6 +61,7 @@ export function useDragResize({ min, max, defaultWidth, initial, onCommit }: Opt
   }, []);
 
   const [width, setWidth] = useState(() => clamp(initial));
+  const [maxWidth, setMaxWidth] = useState(() => Math.max(min, max()));
   const [dragging, setDragging] = useState(false);
   const paneRef = useRef<HTMLElement | null>(null);
   const widthRef = useRef(width);
@@ -109,15 +136,58 @@ export function useDragResize({ min, max, defaultWidth, initial, onCommit }: Opt
 
   useEffect(() => () => stopDrag.current?.(), []);
 
+  useEffect(() => {
+    const limit = Math.max(minRef.current, maxRef.current());
+    setMaxWidth((current) => (current === limit ? current : limit));
+    const next = clamp(widthRef.current);
+    if (next !== widthRef.current) commit(next);
+  }, [clamp, max]);
+
+  useEffect(() => {
+    let frame: number | null = null;
+    const onResize = () => {
+      if (frame != null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        const limit = Math.max(minRef.current, maxRef.current());
+        setMaxWidth((current) => (current === limit ? current : limit));
+        const next = clamp(widthRef.current);
+        if (next !== widthRef.current) commit(next);
+      });
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (frame != null) window.cancelAnimationFrame(frame);
+    };
+  }, [clamp]);
+
   const onDoubleClick = () => {
     commit(defaultRef.current);
   };
 
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    const next = resizeWidthForKey({
+      current: widthRef.current,
+      min: minRef.current,
+      max: maxRef.current(),
+      defaultWidth: defaultRef.current,
+      key: event.key,
+      shiftKey: event.shiftKey,
+    });
+    if (next == null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    commit(next);
+  };
+
   return {
     width,
+    maxWidth,
     dragging,
     setPaneRef,
     onPointerDown,
     onDoubleClick,
+    onKeyDown,
   };
 }

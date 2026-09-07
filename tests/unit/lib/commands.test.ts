@@ -45,6 +45,59 @@ describe("paletteEntries", () => {
     const entries = paletteEntries(APP_COMMANDS, ALL, "   ");
     expect(entries[0].command.id).toBe("app.commandPalette");
   });
+
+  it("treats a bare mode prefix as an empty needle in that mode", () => {
+    const entries = paletteEntries(APP_COMMANDS, ALL, "@");
+    expect(entries.map((entry) => entry.command.id)).toEqual(["app.goToFile", "app.openProject"]);
+  });
+});
+
+describe("parsePaletteQuery", () => {
+  it("defaults to commands without a prefix", () => {
+    expect(parsePaletteQuery("split")).toEqual({ mode: "commands", rest: "split" });
+    expect(parsePaletteQuery(">split")).toEqual({ mode: "commands", rest: "split" });
+    expect(parsePaletteQuery("")).toEqual({ mode: "commands", rest: "" });
+  });
+
+  it("splits the mode prefix from the needle", () => {
+    expect(parsePaletteQuery("@main")).toEqual({ mode: "files", rest: "main" });
+    expect(parsePaletteQuery("#bug")).toEqual({ mode: "search", rest: "bug" });
+    expect(parsePaletteQuery("?split")).toEqual({ mode: "help", rest: "split" });
+    expect(parsePaletteQuery("@  spaced")).toEqual({ mode: "files", rest: "spaced" });
+  });
+});
+
+describe("paletteEntries modes", () => {
+  it("narrows @ to file commands", () => {
+    const entries = paletteEntries(APP_COMMANDS, ALL, "@file");
+    const ids = entries.map((entry) => entry.command.id);
+    expect(ids).toContain("app.goToFile");
+    expect(ids).not.toContain("app.search");
+    expect(ids).not.toContain("tab.new");
+  });
+
+  it("narrows # to search commands", () => {
+    const scoped = paletteEntries(APP_COMMANDS, ALL, "#");
+    expect(scoped.map((entry) => entry.command.id)).toEqual([
+      "app.search",
+      "app.goToFile",
+      "app.findInFiles",
+    ]);
+    const entries = paletteEntries(APP_COMMANDS, ALL, "#find");
+    const ids = entries.map((entry) => entry.command.id);
+    expect(ids).toContain("app.findInFiles");
+    expect(ids).not.toContain("tab.new");
+  });
+
+  it("lists list-only shortcuts in ? mode", () => {
+    const entries = paletteEntries(APP_COMMANDS, ALL, "?activate");
+    expect(entries.map((entry) => entry.command.id)).toContain("tab.activate");
+  });
+
+  it("keeps plain queries on the full command scope", () => {
+    const entries = paletteEntries(APP_COMMANDS, ALL, "split right");
+    expect(entries[0].command.id).toBe("pane.splitRight");
+  });
 });
 
 describe("commandsForClient", () => {

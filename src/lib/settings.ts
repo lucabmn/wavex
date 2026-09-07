@@ -11,6 +11,7 @@ export type SettingsSectionId =
   | "keybindings"
   | "providers"
   | "connections"
+  | "language-servers"
   | "archive";
 
 export const SETTINGS_SECTIONS: {
@@ -50,6 +51,11 @@ export const SETTINGS_SECTIONS: {
       "Serve this machine to another wavex, and reach the machines you have paired with.",
   },
   {
+    id: "language-servers",
+    label: "Language servers",
+    description: "Language servers wavex can drive in the coding view, and where each one is.",
+  },
+  {
     id: "archive",
     label: "Archive",
     description: "Projects and conversations you have archived.",
@@ -82,6 +88,34 @@ export function loadSettingsSection(): SettingsSectionId {
 export function saveSettingsSection(id: SettingsSectionId) {
   try {
     profileStorage.setItem(SECTION_KEY, id);
+  } catch {
+    // private mode / quota
+  }
+}
+
+const FOLLOW_UP_BEHAVIOR_KEY = "wavex.followUpBehavior";
+
+export type FollowUpBehavior = "steer" | "queue";
+
+export const FOLLOW_UP_BEHAVIOR_DEFAULT: FollowUpBehavior = "queue";
+
+function isFollowUpBehavior(value: unknown): value is FollowUpBehavior {
+  return value === "queue" || value === "steer";
+}
+
+export function loadFollowUpBehavior(): FollowUpBehavior {
+  try {
+    const raw = profileStorage.getItem(FOLLOW_UP_BEHAVIOR_KEY);
+    return isFollowUpBehavior(raw) ? raw : FOLLOW_UP_BEHAVIOR_DEFAULT;
+  } catch {
+    return FOLLOW_UP_BEHAVIOR_DEFAULT;
+  }
+}
+
+export function saveFollowUpBehavior(value: FollowUpBehavior) {
+  const next = isFollowUpBehavior(value) ? value : FOLLOW_UP_BEHAVIOR_DEFAULT;
+  try {
+    profileStorage.setItem(FOLLOW_UP_BEHAVIOR_KEY, next);
   } catch {
     // private mode / quota
   }
