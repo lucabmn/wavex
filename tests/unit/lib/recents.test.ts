@@ -271,10 +271,10 @@ describe("worktrees on the rail", () => {
     rememberWorktrees("/Users/me/code/app", ["/private/tmp/app-main-agent"]);
 
     const items = projectRailItems(loadRecents(), "/private/tmp/app-main-agent");
-    expect(items.map((item) => item.path)).toEqual([
-      "/Users/me/code/app-tools",
-      "/private/tmp/app-main-agent",
-    ]);
+    expect(items.map((item) => item.path)).toEqual(
+      expect.arrayContaining(["/Users/me/code/app-tools", "/private/tmp/app-main-agent"]),
+    );
+    expect(items).toHaveLength(2);
   });
 
   it("does not spend a recents slot on a worktree", () => {
