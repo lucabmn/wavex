@@ -1,4 +1,5 @@
-import { invoke } from "../transport";
+import { getDefaultHostId, invokeOn } from "../transport";
+import { type HostId } from "../host";
 
 export type StoredCursorToolCall = {
   toolCallId: string;
@@ -9,8 +10,9 @@ export type StoredCursorToolCall = {
 export function readStoredCursorToolCalls(
   sessionId: string,
   toolCallIds: string[],
+  hostId: HostId = getDefaultHostId(),
 ): Promise<StoredCursorToolCall[]> {
-  return invoke<StoredCursorToolCall[]>("cursor_tool_calls", {
+  return invokeOn<StoredCursorToolCall[]>(hostId, "cursor_tool_calls", {
     sessionId,
     toolCallIds,
   });

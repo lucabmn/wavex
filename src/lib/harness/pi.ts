@@ -9,6 +9,7 @@ import {
   stopSession,
 } from "./piFamily";
 import { PI_FLAVOR } from "./piFlavor";
+import type { HostId } from "../host";
 import type { ApprovalDecision, SendTurnInput, SteerTurnInput } from "./types";
 
 /**
@@ -36,19 +37,24 @@ export function cancelPiTurn(sessionId: string): Promise<void> {
   return cancelTurn(PI_FLAVOR, sessionId);
 }
 
-export function stopPiSession(sessionId: string): Promise<void> {
-  return stopSession(PI_FLAVOR, sessionId);
+export function stopPiSession(sessionId: string, hostId?: HostId): Promise<void> {
+  return stopSession(PI_FLAVOR, sessionId, hostId);
 }
 
-export function forgetPiSession(sessionId: string): Promise<void> {
-  return forgetSession(PI_FLAVOR, sessionId);
+export function forgetPiSession(sessionId: string, hostId?: HostId): Promise<void> {
+  return forgetSession(PI_FLAVOR, sessionId, hostId);
 }
 
-export function bindPiSession(threadId: string, providerSessionId: string, cwd: string): void {
-  bindSession(PI_FLAVOR, threadId, providerSessionId, cwd);
+export function bindPiSession(
+  threadId: string,
+  providerSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
+  bindSession(PI_FLAVOR, threadId, providerSessionId, cwd, hostId);
 }
 
 /** Test seam. */
-export function setPiBinaryResolver(fn: () => Promise<{ path: string }>): void {
+export function setPiBinaryResolver(fn: (hostId?: HostId) => Promise<{ path: string }>): void {
   setFlavorBinaryResolver(PI_FLAVOR, fn);
 }

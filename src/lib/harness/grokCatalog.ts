@@ -1,8 +1,10 @@
 import { homeDir } from "../fs";
+import { type HostId } from "../host";
 import { setHarnessModels } from "../models";
 import { AcpClient } from "./acp";
 import {
   execChild,
+  harnessHostId,
   killChild,
   resolveGrokBinary,
   spawnChild,
@@ -27,11 +29,14 @@ const CLIENT_CAPABILITIES = {
   terminal: false,
 };
 
-let inflight: Promise<void> | null = null;
+/** One probe in flight per host: two hosts run two installs of the CLI. */
+const inflight = new Map<HostId, Promise<void>>();
 
-export function refreshGrokCatalog(): Promise<void> {
-  if (inflight) return inflight;
-  inflight = discoverGrokModels()
+export function refreshGrokCatalog(hostIdArg?: HostId): Promise<void> {
+  const hostId = harnessHostId("", hostIdArg);
+  const running = inflight.get(hostId);
+  if (running) return running;
+  const run = discoverGrokModels(hostId)
     .then((models) => {
       if (models.length > 0) setHarnessModels("grok", models);
     })
@@ -39,18 +44,19 @@ export function refreshGrokCatalog(): Promise<void> {
       console.debug("[wavex] grok catalog", error);
     })
     .finally(() => {
-      inflight = null;
+      inflight.delete(hostId);
     });
-  return inflight;
+  inflight.set(hostId, run);
+  return run;
 }
 
-async function discoverGrokModels() {
-  const fromAcp = await discoverViaAcp().catch((error: unknown) => {
+async function discoverGrokModels(hostId: HostId) {
+  const fromAcp = await discoverViaAcp(hostId).catch((error: unknown) => {
     console.debug("[wavex] grok ACP catalog failed", error);
     return [];
   });
   if (fromAcp.length > 0) return fromAcp;
-  const fromCli = await discoverViaCli().catch((error: unknown) => {
+  const fromCli = await discoverViaCli(hostId).catch((error: unknown) => {
     console.debug("[wavex] grok CLI catalog failed", error);
     return [];
   });
@@ -58,29 +64,35 @@ async function discoverGrokModels() {
   return fallbackGrokModels();
 }
 
-async function discoverViaAcp() {
-  const { path } = await resolveGrokBinary();
-  const cwd = await homeDir();
-  const acp = new AcpClient(PROBE_ID, {
-    onRequest: (id) => {
-      void acp.respond(id, {}).catch(() => undefined);
+async function discoverViaAcp(hostId: HostId) {
+  const { path } = await resolveGrokBinary(hostId);
+  const cwd = await homeDir(hostId);
+  const acp = new AcpClient(
+    PROBE_ID,
+    {
+      onRequest: (id) => {
+        void acp.respond(id, {}).catch(() => undefined);
+      },
     },
-  });
+    hostId,
+  );
 
   const stop = async () => {
     acp.close();
-    unwatchChild(PROBE_ID);
-    await killChild(PROBE_ID).catch(() => undefined);
+    unwatchChild(PROBE_ID, hostId);
+    await killChild(PROBE_ID, hostId).catch(() => undefined);
   };
 
   watchChild(
     PROBE_ID,
     (line) => acp.pushLine(line),
     () => acp.close(new Error("Grok Build probe exited")),
+    undefined,
+    hostId,
   );
 
   try {
-    await spawnChild(PROBE_ID, path, grokSpawnArgs({ model: "" }), cwd);
+    await spawnChild(PROBE_ID, path, grokSpawnArgs({ model: "" }), cwd, hostId);
     return await withTimeout(
       DISCOVERY_TIMEOUT_MS,
       async () => {
@@ -118,10 +130,10 @@ async function discoverViaAcp() {
   }
 }
 
-async function discoverViaCli() {
-  const { path } = await resolveGrokBinary();
-  const cwd = await homeDir();
-  const stdout = await execChild(path, ["models"], cwd);
+async function discoverViaCli(hostId: HostId) {
+  const { path } = await resolveGrokBinary(hostId);
+  const cwd = await homeDir(hostId);
+  const stdout = await execChild(path, ["models"], cwd, hostId);
   return modelsFromGrokModelsOutput(stdout);
 }
 

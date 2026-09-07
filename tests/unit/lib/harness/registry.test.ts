@@ -109,6 +109,8 @@ describe("harness registry", () => {
     await vi.advanceTimersByTimeAsync(HARNESS_IDLE_PARK_MS - 1);
     expect(stopSession).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
-    expect(stopSession).toHaveBeenCalledWith("s1");
+    // No host: the timer fires with no caller, so the adapter's own record of
+    // where it spawned the child is the only thing that can route the kill.
+    expect(stopSession).toHaveBeenCalledWith("s1", undefined);
   });
 });

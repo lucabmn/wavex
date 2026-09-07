@@ -1,8 +1,10 @@
+import { projectKey, type HostId } from "../host";
 import { modelContextWindow, nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import {
   execChild,
   freeHarnessPort,
+  harnessTarget,
   killChild,
   resolveOpenCodeBinary,
   spawnChild,
@@ -60,6 +62,8 @@ type Live = {
   client: OpenCodeClient;
   openCodeSessionId: string;
   cwd: string;
+  /** The machine running the server; its loopback port is local to it. */
+  hostId: HostId;
   runtimeMode: RuntimeMode;
   onEvent: (event: HarnessEvent) => void;
   approvals: Map<number, PendingApproval>;
@@ -80,6 +84,7 @@ type Live = {
 type Resume = {
   sessionId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 const SERVER_TIMEOUT_MS = 30_000;
@@ -87,10 +92,16 @@ const liveByThread = new Map<string, Live>();
 const resumeByThread = new Map<string, Resume>();
 const cancelledThreads = new Set<string>();
 
-let resolveOpenCodeBinaryImpl: () => Promise<{ path: string }> = resolveOpenCodeBinary;
+let resolveOpenCodeBinaryImpl: (hostId?: HostId) => Promise<{ path: string }> =
+  resolveOpenCodeBinary;
 
-/** Test seam. */
-export function setOpenCodeBinaryResolver(fn: () => Promise<{ path: string }>): void {
+/**
+ * Test seam. Stays a function of the host: two hosts run two installs of the
+ * CLI, so a path cached here would be the wrong machine's binary.
+ */
+export function setOpenCodeBinaryResolver(
+  fn: (hostId?: HostId) => Promise<{ path: string }>,
+): void {
   resolveOpenCodeBinaryImpl = fn;
 }
 
@@ -185,9 +196,15 @@ export async function cancelOpenCodeTurn(sessionId: string): Promise<void> {
   finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
-export async function stopOpenCodeSession(sessionId: string): Promise<void> {
+export async function stopOpenCodeSession(
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // Only the machine that spawned the server can reap it; sending
+  // `harness_kill` to this device instead would leave the real one running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) {
     live.muteUpdates = true;
@@ -202,45 +219,63 @@ export async function stopOpenCodeSession(sessionId: string): Promise<void> {
     await live.client.abortSession(live.openCodeSessionId);
     await live.client.closeEvents(sessionId);
   }
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
-export async function forgetOpenCodeSession(sessionId: string): Promise<void> {
+export async function forgetOpenCodeSession(
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
   resumeByThread.delete(sessionId);
-  await stopOpenCodeSession(sessionId);
+  await stopOpenCodeSession(sessionId, resumeHostId ?? fallbackHostId);
 }
 
 export function bindOpenCodeSession(
   threadId: string,
   providerSessionId: string,
   cwd: string,
+  hostId?: HostId,
 ): void {
   const sessionId = providerSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
-  resumeByThread.set(threadId, { sessionId, cwd });
+  resumeByThread.set(threadId, { sessionId, cwd, hostId: harnessTarget(cwd, hostId).hostId });
+}
+
+/**
+ * A server is reusable only if it is the same checkout on the same machine:
+ * two hosts can hold the same path, and reusing across them would prompt the
+ * wrong process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(input: SendTurnInput): Promise<Live> {
+  const resolved = harnessTarget(input.cwd, input.hostId);
+  const hostId = resolved.hostId;
+  const target = { cwd: input.cwd, hostId };
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd) {
+  if (existing && sameWork(existing, target)) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
   }
   if (existing) {
     resumeByThread.delete(input.sessionId);
-    await stopOpenCodeSession(input.sessionId);
+    await stopOpenCodeSession(input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canResume = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canResume = resume != null && sameWork(resume, target);
+  if (resume && !canResume) {
     resumeByThread.delete(input.sessionId);
   }
 
-  const { path } = await resolveOpenCodeBinaryImpl();
-  await assertOpenCodeVersion(path, input.cwd);
+  const { path } = await resolveOpenCodeBinaryImpl(hostId);
+  await assertOpenCodeVersion(path, resolved.path, hostId);
 
   const liveRef: { current: Live | null } = { current: null };
   let serverUrl = "";
@@ -267,14 +302,16 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       const parsed = parseServerUrlFromOutput(line);
       if (parsed) serverUrl = parsed;
     },
+    hostId,
   );
 
-  const port = await freeHarnessPort();
+  const port = await freeHarnessPort(hostId);
   await spawnChild(
     input.sessionId,
     path,
     ["serve", `--hostname=127.0.0.1`, `--port=${port}`],
     input.cwd,
+    hostId,
   );
 
   try {
@@ -283,17 +320,18 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       () => serverExited,
       SERVER_TIMEOUT_MS,
     );
-    const client = new OpenCodeClient(url, input.cwd);
+    const client = new OpenCodeClient(url, resolved.path, hostId);
     const openCodeSession = await resolveSession(client, {
       resume: canResume ? resume : undefined,
       runtimeMode: input.runtimeMode,
-      cwd: input.cwd,
+      cwd: resolved.path,
     });
 
     const live: Live = {
       client,
       openCodeSessionId: openCodeSession.id,
       cwd: input.cwd,
+      hostId,
       runtimeMode: input.runtimeMode,
       onEvent: input.onEvent,
       approvals: new Map(),
@@ -315,6 +353,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     resumeByThread.set(input.sessionId, {
       sessionId: openCodeSession.id,
       cwd: input.cwd,
+      hostId,
     });
 
     await client.subscribeEvents(
@@ -516,6 +555,11 @@ function handleEvent(live: Live, event: Record<string, unknown>): void {
           preview,
         });
       }
+      // Started before the event is announced: `waitApproval` registers the
+      // pending entry synchronously, and a policy that answers the moment it
+      // sees the event would otherwise find nothing to resolve — leaving the
+      // turn waiting on a decision that has already been made.
+      const answering = waitApproval(live, uiId, id);
       live.onEvent({
         type: "approval.requested",
         requestId: uiId,
@@ -524,7 +568,7 @@ function handleEvent(live: Live, event: Record<string, unknown>): void {
         callId,
         preview,
       });
-      void waitApproval(live, uiId, id);
+      void answering;
       break;
     }
     case "question.asked": {
@@ -532,13 +576,15 @@ function handleEvent(live: Live, event: Record<string, unknown>): void {
       if (!id) break;
       const questions = questionsFromUnknown(properties);
       const uiId = live.nextApprovalUiId++;
+      // Registered before it is announced, for the same reason as an approval.
+      const replying = waitQuestion(live, uiId, id, questions);
       live.onEvent({
         type: "question.asked",
         requestId: uiId,
         title: questionPromptTitle(questions) || "OpenCode question",
         questions,
       });
-      void waitQuestion(live, uiId, id, questions);
+      void replying;
       break;
     }
     case "session.status": {
@@ -722,8 +768,8 @@ function isHttpNotFound(error: unknown): boolean {
   return error instanceof OpenCodeHttpError && error.status === 404;
 }
 
-async function assertOpenCodeVersion(path: string, cwd: string): Promise<void> {
-  const output = await execChild(path, ["--version"], cwd).catch(() => "");
+async function assertOpenCodeVersion(path: string, cwd: string, hostId: HostId): Promise<void> {
+  const output = await execChild(path, ["--version"], cwd, hostId).catch(() => "");
   const version = parseOpenCodeVersion(output);
   if (!version) {
     throw new Error(

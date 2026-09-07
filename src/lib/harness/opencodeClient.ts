@@ -1,3 +1,4 @@
+import { type HostId } from "../host";
 import { closeHarnessSse, harnessHttp, openHarnessSse, watchSse } from "./child";
 import { asRecord } from "./opencodeProtocol";
 
@@ -26,7 +27,10 @@ export type OpenCodePromptPart =
 export class OpenCodeClient {
   constructor(
     readonly baseUrl: string,
+    /** Bare path on `hostId`: the CLI has never heard of a host reference. */
     readonly directory: string,
+    /** The machine the OpenCode server listens on; its loopback is local to it. */
+    readonly hostId?: HostId,
   ) {}
 
   async getSession(sessionID: string): Promise<OpenCodeSession> {
@@ -129,12 +133,13 @@ export class OpenCodeClient {
         if (rec) onEvent(rec);
       },
       onEnd,
+      this.hostId,
     );
-    await openHarnessSse(sessionId, url, this.headers());
+    await openHarnessSse(sessionId, url, this.headers(), this.hostId);
   }
 
   async closeEvents(sessionId: string): Promise<void> {
-    await closeHarnessSse(sessionId).catch(() => undefined);
+    await closeHarnessSse(sessionId, this.hostId).catch(() => undefined);
   }
 
   private async request<T>(
@@ -148,13 +153,16 @@ export class OpenCodeClient {
   ): Promise<T> {
     const url = this.url(path, opts?.query);
     const hasBody = opts?.body !== undefined;
-    const response = await harnessHttp({
-      url,
-      method,
-      headers: this.headers(hasBody),
-      body: hasBody ? JSON.stringify(opts?.body ?? {}) : undefined,
-      timeoutMs: opts?.timeoutMs,
-    });
+    const response = await harnessHttp(
+      {
+        url,
+        method,
+        headers: this.headers(hasBody),
+        body: hasBody ? JSON.stringify(opts?.body ?? {}) : undefined,
+        timeoutMs: opts?.timeoutMs,
+      },
+      this.hostId,
+    );
     if (response.status === 204 || response.body.trim() === "") {
       if (response.status >= 400) {
         throw new OpenCodeHttpError(

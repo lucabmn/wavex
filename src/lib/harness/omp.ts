@@ -9,6 +9,7 @@ import {
   stopSession,
 } from "./piFamily";
 import { OMP_FLAVOR } from "./piFlavor";
+import type { HostId } from "../host";
 import type { ApprovalDecision, SendTurnInput, SteerTurnInput } from "./types";
 
 /**
@@ -37,19 +38,24 @@ export function cancelOmpTurn(sessionId: string): Promise<void> {
   return cancelTurn(OMP_FLAVOR, sessionId);
 }
 
-export function stopOmpSession(sessionId: string): Promise<void> {
-  return stopSession(OMP_FLAVOR, sessionId);
+export function stopOmpSession(sessionId: string, hostId?: HostId): Promise<void> {
+  return stopSession(OMP_FLAVOR, sessionId, hostId);
 }
 
-export function forgetOmpSession(sessionId: string): Promise<void> {
-  return forgetSession(OMP_FLAVOR, sessionId);
+export function forgetOmpSession(sessionId: string, hostId?: HostId): Promise<void> {
+  return forgetSession(OMP_FLAVOR, sessionId, hostId);
 }
 
-export function bindOmpSession(threadId: string, providerSessionId: string, cwd: string): void {
-  bindSession(OMP_FLAVOR, threadId, providerSessionId, cwd);
+export function bindOmpSession(
+  threadId: string,
+  providerSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
+  bindSession(OMP_FLAVOR, threadId, providerSessionId, cwd, hostId);
 }
 
 /** Test seam. */
-export function setOmpBinaryResolver(fn: () => Promise<{ path: string }>): void {
+export function setOmpBinaryResolver(fn: (hostId?: HostId) => Promise<{ path: string }>): void {
   setFlavorBinaryResolver(OMP_FLAVOR, fn);
 }

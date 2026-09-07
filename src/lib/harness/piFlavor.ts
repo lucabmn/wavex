@@ -1,3 +1,4 @@
+import { type HostId } from "../host";
 import type { HarnessId } from "../session";
 import { resolveOmpBinary, resolvePiBinary } from "./child";
 
@@ -11,7 +12,7 @@ export type PiFlavor = {
   /** Name used in error messages and debug logs. */
   label: string;
   /** Resolve the CLI binary. Swappable so tests can avoid Tauri. */
-  resolveBinary: () => Promise<{ path: string }>;
+  resolveBinary: (hostId?: HostId) => Promise<{ path: string }>;
   /** Flag that resumes a stored session by id. */
   resumeFlag: string;
   /** Flags that strip tools, skills, and project context for one-shot jobs. */

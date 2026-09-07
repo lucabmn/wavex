@@ -1,6 +1,14 @@
+import { projectKey, type HostId } from "../host";
 import { nativeModelId } from "../models";
 import type { Attachment, RuntimeMode } from "../session";
-import { killChild, resolveCodexBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import {
+  harnessTarget,
+  killChild,
+  resolveCodexBinary,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+} from "./child";
 import {
   asRecord,
   buildThreadStartParams,
@@ -26,6 +34,8 @@ type Live = {
   rpc: JsonRpcClient;
   threadId: string;
   cwd: string;
+  /** The machine running this child. Only it can steer, abort, or kill it. */
+  hostId: HostId;
   runtimeMode: RuntimeMode;
   onEvent: (event: HarnessEvent) => void;
   approvals: Map<number, PendingApproval>;
@@ -46,16 +56,20 @@ type Live = {
 type Resume = {
   threadId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 const liveByThread = new Map<string, Live>();
 const resumeByThread = new Map<string, Resume>();
 const cancelledThreads = new Set<string>();
 
-let resolveCodexBinaryImpl: () => Promise<{ path: string }> = resolveCodexBinary;
+let resolveCodexBinaryImpl: (hostId?: HostId) => Promise<{ path: string }> = resolveCodexBinary;
 
-/** Test seam. */
-export function setCodexBinaryResolver(fn: () => Promise<{ path: string }>): void {
+/**
+ * Test seam. Stays a function of the host: two hosts run two installs of the
+ * CLI, so a path cached here would be the wrong machine's binary.
+ */
+export function setCodexBinaryResolver(fn: (hostId?: HostId) => Promise<{ path: string }>): void {
   resolveCodexBinaryImpl = fn;
 }
 
@@ -141,9 +155,12 @@ export async function cancelCodexTurn(sessionId: string): Promise<void> {
   finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
-export async function stopCodexSession(sessionId: string): Promise<void> {
+export async function stopCodexSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // Only the machine that spawned the child can reap it; sending
+  // `harness_kill` to this device instead would leave the real one running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) {
     live.muteUpdates = true;
@@ -152,40 +169,66 @@ export async function stopCodexSession(sessionId: string): Promise<void> {
     live.turnFailed = null;
     live.rpc.close();
   }
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
-export async function forgetCodexSession(sessionId: string): Promise<void> {
+export async function forgetCodexSession(
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
   resumeByThread.delete(sessionId);
-  await stopCodexSession(sessionId);
+  await stopCodexSession(sessionId, resumeHostId ?? fallbackHostId);
 }
 
-export function bindCodexSession(threadId: string, providerSessionId: string, cwd: string): void {
+export function bindCodexSession(
+  threadId: string,
+  providerSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
   const providerThreadId = providerSessionId.trim();
   if (!threadId || !providerThreadId || !cwd.trim()) return;
-  resumeByThread.set(threadId, { threadId: providerThreadId, cwd });
+  resumeByThread.set(threadId, {
+    threadId: providerThreadId,
+    cwd,
+    hostId: harnessTarget(cwd, hostId).hostId,
+  });
+}
+
+/**
+ * A child is reusable only if it is the same checkout on the same machine: two
+ * hosts can hold the same path, and reusing across them would steer the wrong
+ * process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(input: SendTurnInput): Promise<Live> {
+  const resolved = harnessTarget(input.cwd, input.hostId);
+  const target = { cwd: input.cwd, hostId: resolved.hostId };
+  const hostId = resolved.hostId;
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd) {
+  if (existing && sameWork(existing, target)) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
   }
   if (existing) {
     resumeByThread.delete(input.sessionId);
-    await stopCodexSession(input.sessionId);
+    await stopCodexSession(input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canResume = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canResume = resume != null && sameWork(resume, target);
+  if (resume && !canResume) {
     resumeByThread.delete(input.sessionId);
   }
 
-  const { path } = await resolveCodexBinaryImpl();
+  const { path } = await resolveCodexBinaryImpl(hostId);
   const liveRef: { current: Live | null } = { current: null };
 
   const rpc = new JsonRpcClient(
@@ -202,7 +245,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         void handleServerRequest(live, id, method, params);
       },
     },
-    { includeJsonrpc: false, label: "codex" },
+    { includeJsonrpc: false, label: "codex", hostId },
   );
 
   watchChild(
@@ -219,9 +262,11 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         live.turnFailed = null;
       }
     },
+    undefined,
+    hostId,
   );
 
-  await spawnChild(input.sessionId, path, ["app-server"], input.cwd);
+  await spawnChild(input.sessionId, path, ["app-server"], input.cwd, hostId);
 
   try {
     await rpc.request("initialize", {
@@ -248,7 +293,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         const opened = await rpc.request<{ thread?: { id?: string } }>("thread/resume", {
           threadId: resume.threadId,
           ...buildThreadStartParams({
-            cwd: input.cwd,
+            cwd: resolved.path,
             runtimeMode: input.runtimeMode,
             model,
             serviceTier,
@@ -266,7 +311,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       const opened = await rpc.request<{ thread?: { id?: string } }>(
         "thread/start",
         buildThreadStartParams({
-          cwd: input.cwd,
+          cwd: resolved.path,
           runtimeMode: input.runtimeMode,
           model,
           serviceTier,
@@ -284,6 +329,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       rpc,
       threadId,
       cwd: input.cwd,
+      hostId,
       runtimeMode: input.runtimeMode,
       onEvent: input.onEvent,
       approvals: new Map(),
@@ -303,6 +349,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     resumeByThread.set(input.sessionId, {
       threadId,
       cwd: input.cwd,
+      hostId,
     });
     live.onEvent({
       type: "session.providerBound",
@@ -312,7 +359,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     return live;
   } catch (error) {
     rpc.close(error instanceof Error ? error : new Error(String(error)));
-    await stopCodexSession(input.sessionId);
+    await stopCodexSession(input.sessionId, hostId);
     throw error;
   }
 }
@@ -480,8 +527,13 @@ async function handleServerRequest(
       return;
     }
     if (live.runtimeMode === "supervised") {
+      // Registered before it is announced. A policy that answers the moment it
+      // sees the event answers synchronously, and a pending entry created
+      // afterwards would find nothing to resolve — leaving the turn waiting on a
+      // decision that has already been made.
+      const decided = waitApproval(live, uiId, id, mapped.kind);
       live.onEvent(mapped.event);
-      const decision = await waitApproval(live, uiId, id, mapped.kind);
+      const decision = await decided;
       live.onEvent({
         type: "approval.resolved",
         requestId: uiId,
@@ -515,8 +567,13 @@ async function handleServerRequest(
     return;
   }
 
+  // Registered before it is announced. A policy that answers the moment it
+  // sees the event answers synchronously, and a pending entry created
+  // afterwards would find nothing to resolve — leaving the turn waiting on a
+  // decision that has already been made.
+  const decided = waitApproval(live, uiId, id, mapped.kind);
   live.onEvent(mapped.event);
-  const decision = await waitApproval(live, uiId, id, mapped.kind);
+  const decision = await decided;
   live.onEvent({
     type: "approval.resolved",
     requestId: uiId,

@@ -1,11 +1,12 @@
 import { homeDir } from "../fs";
+import { type HostId } from "../host";
 import {
   setHarnessModels,
   type AgentModel,
   type ModelSetting,
   type ModelSettingChoice,
 } from "../models";
-import { execChild, resolveOpenCodeBinary } from "./child";
+import { execChild, harnessHostId, resolveOpenCodeBinary } from "./child";
 import {
   compareSemver,
   inferDefaultAgent,
@@ -38,11 +39,14 @@ export type OpenCodeAgent = {
   hidden: boolean;
 };
 
-let inflight: Promise<void> | null = null;
+/** One probe in flight per host: two hosts run two installs of the CLI. */
+const inflight = new Map<HostId, Promise<void>>();
 
-export function refreshOpenCodeCatalog(): Promise<void> {
-  if (inflight) return inflight;
-  inflight = discoverOpenCodeModels()
+export function refreshOpenCodeCatalog(hostIdArg?: HostId): Promise<void> {
+  const hostId = harnessHostId("", hostIdArg);
+  const running = inflight.get(hostId);
+  if (running) return running;
+  const run = discoverOpenCodeModels(hostId)
     .then((models) => {
       if (models.length > 0) setHarnessModels("opencode", models);
     })
@@ -50,15 +54,16 @@ export function refreshOpenCodeCatalog(): Promise<void> {
       console.debug("[wavex] opencode catalog", error);
     })
     .finally(() => {
-      inflight = null;
+      inflight.delete(hostId);
     });
-  return inflight;
+  inflight.set(hostId, run);
+  return run;
 }
 
-async function discoverOpenCodeModels(): Promise<AgentModel[]> {
-  const { path } = await resolveOpenCodeBinary();
-  const cwd = await homeDir();
-  const versionOut = await execChild(path, ["--version"], cwd);
+async function discoverOpenCodeModels(hostId: HostId): Promise<AgentModel[]> {
+  const { path } = await resolveOpenCodeBinary(hostId);
+  const cwd = await homeDir(hostId);
+  const versionOut = await execChild(path, ["--version"], cwd, hostId);
   const version = parseOpenCodeVersion(versionOut);
   if (!version) {
     throw new Error(
@@ -71,11 +76,11 @@ async function discoverOpenCodeModels(): Promise<AgentModel[]> {
     );
   }
 
-  const modelsOut = await execChild(path, ["models", "--verbose"], cwd);
+  const modelsOut = await execChild(path, ["models", "--verbose"], cwd, hostId);
   const parsed = parseModelsCliOutput(modelsOut);
   let agents: OpenCodeAgent[] = [];
   try {
-    const agentsOut = await execChild(path, ["agent", "list"], cwd);
+    const agentsOut = await execChild(path, ["agent", "list"], cwd, hostId);
     agents = parseAgentListCliOutput(agentsOut);
   } catch (error) {
     console.debug("[wavex] opencode agents", error);

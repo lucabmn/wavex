@@ -1,3 +1,4 @@
+import type { HostId } from "../host";
 import type { Attachment, RuntimeMode, ToolPreview } from "../session";
 import type { UserQuestion } from "../userQuestion";
 
@@ -74,6 +75,12 @@ export type ApprovalDecision = "allow" | "deny";
 
 export type SendTurnInput = {
   sessionId: string;
+  /**
+   * The machine that runs the agent. Passed rather than read off `cwd`: a
+   * session working in a worktree sends that worktree's bare child path, which
+   * names no host at all.
+   */
+  hostId?: HostId;
   cwd: string;
   model: string;
   modelSettings?: Record<string, string>;
@@ -85,6 +92,7 @@ export type SendTurnInput = {
 
 export type SteerTurnInput = {
   sessionId: string;
+  hostId?: HostId;
   cwd: string;
   model: string;
   modelSettings?: Record<string, string>;

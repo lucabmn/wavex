@@ -1,7 +1,9 @@
+import { projectKey, type HostId } from "../host";
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { loadClaudeHooks } from "../settings";
 import {
+  harnessHostId,
   killChild,
   resolveClaudeBinary,
   spawnChild,
@@ -97,6 +99,8 @@ type LiveAgentTask = {
 
 type Live = {
   cwd: string;
+  /** The machine running this child. Only it can steer, interrupt, or kill it. */
+  hostId: HostId;
   claudeSessionId: string;
   runtimeMode: RuntimeMode;
   settingsKey: string;
@@ -147,6 +151,7 @@ function withStderr(live: Live, what: string): string {
 type Resume = {
   sessionId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 const INIT_TIMEOUT_MS = 8_000;
@@ -155,10 +160,13 @@ const liveByThread = new Map<string, Live>();
 const resumeByThread = new Map<string, Resume>();
 const cancelledThreads = new Set<string>();
 
-let resolveClaudeBinaryImpl: () => Promise<{ path: string }> = resolveClaudeBinary;
+let resolveClaudeBinaryImpl: (hostId?: HostId) => Promise<{ path: string }> = resolveClaudeBinary;
 
-/** Test seam. */
-export function setClaudeBinaryResolver(fn: () => Promise<{ path: string }>): void {
+/**
+ * Test seam. Stays a function of the host: two hosts run two installs of the
+ * CLI, so a path cached here would be the wrong machine's binary.
+ */
+export function setClaudeBinaryResolver(fn: (hostId?: HostId) => Promise<{ path: string }>): void {
   resolveClaudeBinaryImpl = fn;
 }
 
@@ -201,7 +209,7 @@ export async function steerClaudeTurn(input: SteerTurnInput): Promise<void> {
   const content = (message.message as { content: unknown[] }).content;
   if (content.length === 0) return;
 
-  await writeJson(input.sessionId, message);
+  await writeJson(input.sessionId, message, live.hostId);
 }
 
 export function respondClaudeApproval(
@@ -241,13 +249,17 @@ export async function cancelClaudeTurn(sessionId: string): Promise<void> {
   await writeJson(
     sessionId,
     buildControlRequest(nextControlId(live), { subtype: "interrupt" }),
+    live.hostId,
   ).catch(() => undefined);
   finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
-export async function stopClaudeSession(sessionId: string): Promise<void> {
+export async function stopClaudeSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // Only the machine that spawned the child can reap it; sending
+  // `harness_kill` to this device instead would leave the real one running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) {
     live.muteUpdates = true;
@@ -262,47 +274,69 @@ export async function stopClaudeSession(sessionId: string): Promise<void> {
     live.initDone?.();
     live.initDone = null;
   }
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
-export async function forgetClaudeSession(sessionId: string): Promise<void> {
+export async function forgetClaudeSession(
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
   resumeByThread.delete(sessionId);
-  await stopClaudeSession(sessionId);
+  await stopClaudeSession(sessionId, resumeHostId ?? fallbackHostId);
 }
 
-export function bindClaudeSession(threadId: string, providerSessionId: string, cwd: string): void {
+export function bindClaudeSession(
+  threadId: string,
+  providerSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
   const sessionId = providerSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
-  resumeByThread.set(threadId, { sessionId, cwd });
+  resumeByThread.set(threadId, { sessionId, cwd, hostId: harnessHostId(cwd, hostId) });
+}
+
+/**
+ * A child is reusable only if it is the same checkout on the same machine: two
+ * hosts can hold the same path, and reusing across them would steer the wrong
+ * process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(input: SendTurnInput): Promise<Live> {
   const settingsKey = settingsKeyFor(input);
+  const target = { cwd: input.cwd, hostId: harnessHostId(input.cwd, input.hostId) };
+  const hostId = target.hostId;
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd && existing.settingsKey === settingsKey) {
+  if (existing && sameWork(existing, target) && existing.settingsKey === settingsKey) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
   }
   if (existing) {
     resumeByThread.delete(input.sessionId);
-    await stopClaudeSession(input.sessionId);
+    await stopClaudeSession(input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canResume = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canResume = resume != null && sameWork(resume, target);
+  if (resume && !canResume) {
     resumeByThread.delete(input.sessionId);
   }
 
-  const { path } = await resolveClaudeBinaryImpl();
+  const { path } = await resolveClaudeBinaryImpl(hostId);
   const liveRef: { current: Live | null } = { current: null };
   const claudeSessionId = canResume && resume ? resume.sessionId : crypto.randomUUID();
   const launch = launchOptions(input, canResume ? resume?.sessionId : undefined, claudeSessionId);
 
   const live: Live = {
     cwd: input.cwd,
+    hostId,
     claudeSessionId,
     runtimeMode: input.runtimeMode,
     settingsKey,
@@ -350,20 +384,23 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       }
     },
     (line) => noteStderr(live, line),
+    hostId,
   );
 
-  await spawnChild(input.sessionId, path, buildClaudeSpawnArgs(launch), input.cwd);
+  await spawnChild(input.sessionId, path, buildClaudeSpawnArgs(launch), input.cwd, hostId);
 
   liveByThread.set(input.sessionId, live);
   resumeByThread.set(input.sessionId, {
     sessionId: claudeSessionId,
     cwd: input.cwd,
+    hostId,
   });
 
   try {
     await writeJson(
       input.sessionId,
       buildControlRequest(nextControlId(live), { subtype: "initialize" }),
+      hostId,
     );
     await waitForInit(live, INIT_TIMEOUT_MS);
     live.onEvent({
@@ -406,7 +443,7 @@ async function runTurn(live: Live, input: SendTurnInput): Promise<void> {
   settlePendingTurn(live);
 
   try {
-    await writeJson(input.sessionId, message);
+    await writeJson(input.sessionId, message, live.hostId);
     settlePendingTurn(live);
     await turnPromise;
   } catch (error) {
@@ -460,6 +497,7 @@ function handleLine(sessionId: string, live: Live, line: string): void {
     resumeByThread.set(sessionId, {
       sessionId: sessionIdFromLine,
       cwd: live.cwd,
+      hostId: live.hostId,
     });
     live.onEvent({
       type: "session.providerBound",
@@ -655,7 +693,9 @@ async function handleControlRequest(
   control: ClaudeControlRequest,
 ): Promise<void> {
   if (control.subtype !== "can_use_tool" && control.subtype !== "permission") {
-    await writeJson(sessionId, buildControlResponse(control.requestId, {})).catch(() => undefined);
+    await writeJson(sessionId, buildControlResponse(control.requestId, {}), live.hostId).catch(
+      () => undefined,
+    );
     return;
   }
 
@@ -666,6 +706,7 @@ async function handleControlRequest(
     await writeJson(
       sessionId,
       buildControlResponse(control.requestId, toClaudePermissionResult("deny", input)),
+      live.hostId,
     ).catch(() => undefined);
     return;
   }
@@ -673,6 +714,8 @@ async function handleControlRequest(
   if (toolName === "AskUserQuestion") {
     const questions = questionsFromUnknown(input);
     const uiId = live.nextApprovalUiId++;
+    // Registered before it is announced, for the same reason as an approval.
+    const answered = waitQuestion(live, uiId, control.requestId);
     live.onEvent({
       type: "question.asked",
       requestId: uiId,
@@ -680,7 +723,7 @@ async function handleControlRequest(
       questions,
       callId: control.toolUseId,
     });
-    const outcome = await waitQuestion(live, uiId, control.requestId);
+    const outcome = await answered;
     const decision =
       outcome === "cancelled" ? "cancelled" : outcome.kind === "answered" ? "answered" : "skipped";
     live.onEvent({ type: "question.resolved", requestId: uiId, decision });
@@ -692,9 +735,11 @@ async function handleControlRequest(
             behavior: "deny",
             message: "User cancelled tool execution.",
           };
-    await writeJson(sessionId, buildControlResponse(control.requestId, response)).catch(
-      () => undefined,
-    );
+    await writeJson(
+      sessionId,
+      buildControlResponse(control.requestId, response),
+      live.hostId,
+    ).catch(() => undefined);
     return;
   }
 
@@ -708,6 +753,7 @@ async function handleControlRequest(
         message:
           "The client captured your proposed plan. Stop here and wait for the user's feedback or implementation request in a later turn.",
       }),
+      live.hostId,
     ).catch(() => undefined);
     return;
   }
@@ -718,11 +764,17 @@ async function handleControlRequest(
     await writeJson(
       sessionId,
       buildControlResponse(control.requestId, toClaudePermissionResult("allow", input)),
+      live.hostId,
     ).catch(() => undefined);
     return;
   }
 
   const uiId = live.nextApprovalUiId++;
+  // Registered before it is announced. A policy that answers the moment it
+  // sees the event answers synchronously, and a pending entry created
+  // afterwards would find nothing to resolve — leaving the turn waiting on a
+  // decision that has already been made.
+  const decided = waitApproval(live, uiId, control.requestId, input);
   live.onEvent({
     type: "approval.requested",
     requestId: uiId,
@@ -731,12 +783,13 @@ async function handleControlRequest(
     callId: control.toolUseId,
     preview: previewFromTool(toolName, input),
   });
-  const decision = await waitApproval(live, uiId, control.requestId, input);
+  const decision = await decided;
   live.onEvent({ type: "approval.resolved", requestId: uiId, decision });
   if (decision === "cancelled") return;
   await writeJson(
     sessionId,
     buildControlResponse(control.requestId, toClaudePermissionResult(decision, input)),
+    live.hostId,
   ).catch(() => undefined);
 }
 
@@ -1025,8 +1078,12 @@ function nextControlId(live: Live): string {
   return `wavex_${live.nextControlId}`;
 }
 
-function writeJson(sessionId: string, payload: Record<string, unknown>): Promise<void> {
-  return writeChild(sessionId, JSON.stringify(payload));
+function writeJson(
+  sessionId: string,
+  payload: Record<string, unknown>,
+  hostId: HostId,
+): Promise<void> {
+  return writeChild(sessionId, JSON.stringify(payload), hostId);
 }
 
 function settingsKeyFor(input: SendTurnInput): string {
