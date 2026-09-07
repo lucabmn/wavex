@@ -1,3 +1,4 @@
+import type { CodeLocation } from "../editor/codeNavigation";
 import type { ReleaseNotesTabSource } from "../updates/releaseNotes";
 import {
   applyTerminalMeta,
@@ -41,6 +42,18 @@ export type CommitTabSource = {
   subject: string;
 };
 
+/**
+ * A `find references` or multi-result `go to definition` answer.
+ *
+ * Live only. The list is a snapshot of what the server said about the code as
+ * it was, so it is deliberately not persisted: a workspace restored a day later
+ * would offer line numbers that have since moved.
+ */
+export type ReferencesTabSource = {
+  symbol: string;
+  targets: CodeLocation[];
+};
+
 export type FilePaneTab = {
   id: string;
   path: string;
@@ -53,6 +66,8 @@ export type FilePaneTab = {
   /** Historical commit review (unified diff, read-only). */
   commit?: CommitTabSource;
   terminal?: boolean;
+  /** Language server result list. Live only — not persisted. */
+  references?: ReferencesTabSource;
   /** Foreground command when it isn't the shell. Live only — not persisted. */
   foreground?: string;
 };
@@ -120,6 +135,15 @@ export function newCommitTab(cwd: string, commit: CommitTabSource): FilePaneTab 
     path: `commit:${commit.sha}`,
     cwd,
     commit,
+  };
+}
+
+export function newReferencesTab(cwd: string, references: ReferencesTabSource): FilePaneTab {
+  return {
+    id: crypto.randomUUID(),
+    path: `references:${references.symbol}`,
+    cwd,
+    references,
   };
 }
 
@@ -251,12 +275,18 @@ export function isCommitTab(file: FilePaneTab): file is FilePaneTab & { commit: 
   return !!file.commit;
 }
 
+export function isReferencesTab(
+  file: FilePaneTab,
+): file is FilePaneTab & { references: ReferencesTabSource } {
+  return !!file.references;
+}
+
 export function isTerminalTab(file: FilePaneTab): boolean {
   return !!file.terminal;
 }
 
 export function isVirtualDocumentTab(file: FilePaneTab): boolean {
-  return isPlanTab(file) || isReleaseNotesTab(file) || isCommitTab(file);
+  return isPlanTab(file) || isReleaseNotesTab(file) || isCommitTab(file) || isReferencesTab(file);
 }
 
 export function isFilesystemTab(file: FilePaneTab): boolean {
@@ -328,6 +358,9 @@ export function editorTabKey(file: FilePaneTab): string {
   if (file.plan) return `plan:${file.plan.blockId}`;
   if (file.releaseNotes) return `release-notes:${file.releaseNotes.version}`;
   if (file.commit) return `commit:${file.cwd}:${file.commit.sha}`;
+  // Keyed on the symbol, so asking again about the same one replaces the list
+  // rather than stacking a second tab beside it.
+  if (file.references) return `references:${file.cwd}:${file.references.symbol}`;
   if (file.changes) return `changes:${file.cwd}`;
   return file.review ? `review:${file.path}` : `file:${file.path}`;
 }

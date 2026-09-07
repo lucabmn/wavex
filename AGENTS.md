@@ -44,7 +44,9 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/sessions/`: session collections, history, filters, and persistence
 - `src/lib/workspace/`: tabs, panes, splits, groups, and snapshots
 - `src/lib/terminal/`: PTY plumbing and terminal dock state
-- `src/lib/editor/`: editor documents, git gutter, lint, and search
+- `src/lib/editor/`: editor documents, git gutter, diagnostics, search, and
+  the CodeMirror side of language server support
+- `src/lib/lsp/`: the language server protocol, its clients, and their lifecycle
 - `src/lib/files/`: file index, tree, mentions, and watching
 - `src/lib/inbox/`: GitHub issues and pull requests
 - `src/lib/updates/`: updater and release notes
@@ -79,6 +81,46 @@ The Rust harness host supervises processes and transports. It must not acquire
 provider-specific product behavior that belongs in a TypeScript adapter. Preserve
 session bind, stop, forget, cancel, and idle-park semantics when changing a
 provider lifecycle.
+
+### Language servers
+
+The coding view drives installed language servers. `src-tauri/src/lsp.rs`
+supervises the child processes and moves whole `Content-Length` frames across
+the boundary; everything above that — the handshake, capabilities, document
+sync, and every request — lives in `src/lib/lsp/`. It is a separate host from
+`harness.rs` on purpose: that one reads newline-delimited JSON and carries
+agent-session semantics a language server does not have.
+
+A server is rooted **per worktree checkout**, never at the shared repository. A
+worktree holds a different branch's files, and a server rooted above it would
+index — and report diagnostics against — text that is not in the file being
+edited. Inside a checkout the outermost root marker wins, so a monorepo or a
+Cargo workspace runs one server rather than one per package. The cost is one
+server per open checkout, bounded by refcounting documents and stopping a
+server that has had nothing open for a while.
+
+A definition may pick its own executable per checkout through `resolve`, because
+one language can have more than one engine. TypeScript is the case that forces
+it: version 7 is a native binary that speaks the protocol itself, while version
+5 ships `tsserver.js`, which is not a server but the back end
+`typescript-language-server` drives and has to be told the path of. The
+checkout's own TypeScript is preferred over a global one either way, so the
+errors in the editor are the ones `tsc` would report.
+
+Diagnostics arrive both ways and land in one store. Most servers push
+`publishDiagnostics`; a server advertising `diagnosticProvider` is asked with
+`textDocument/diagnostic` instead, debounced after a change and cancelled when
+the next one supersedes it. TypeScript 7 needs this — it answers pulls with the
+type errors and pushes only project-level ones, keyed to `tsconfig.json`.
+
+wavex never downloads a server, and never starts one on its own: it uses what
+the user has installed and quotes the install line for what it does not find.
+A server is a long-lived process that indexes a whole checkout, so opening a
+file is not consent to run one. The editor offers it once, on the first file
+that language covers; the answer is remembered per profile and lives in
+Settings. Nothing about the editor changes until the answer is yes. Servers stop on profile switch,
+window close, and quit, like agents and terminals. A missing, crashed, or
+still-starting server leaves the editor exactly as it behaves without one.
 
 ### Profiles
 

@@ -148,8 +148,8 @@ pub fn profile_switch_ready(window: WebviewWindow, state: State<'_, ProfileSwitc
 
 /// Swaps the whole app onto another profile.
 ///
-/// Windows persist first, then every agent process and terminal of the profile
-/// being left is stopped. Their chats are already marked interrupted, so
+/// Windows persist first, then every agent process, terminal, and language
+/// server of the profile being left is stopped. Their chats are already marked interrupted, so
 /// switching back offers Continue exactly as relaunching wavex does. Leaving
 /// them running would strand processes editing a checkout with no UI to stop
 /// them.
@@ -165,6 +165,10 @@ pub async fn profile_switch(app: AppHandle, profile_id: String) -> Result<(), St
         await_windows_persisted(&handle, &target);
         let _ = crate::harness::harness_kill_all(handle.state());
         let _ = crate::pty::pty_kill_all(handle.state());
+        // Language servers are long-lived children of the profile being left.
+        // Left running they would index another profile's checkouts with no UI
+        // able to stop them.
+        let _ = crate::lsp::lsp_stop_all(handle.state());
         // Windows reload on this event whether or not the swap landed. A failed
         // bind with no event would leave them alive with their agents stopped
         // and no way back short of relaunching.

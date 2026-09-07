@@ -1697,7 +1697,7 @@ fn first_binary_matching(
 
 /// Compare a program's name without its extension. `grok.cmd` is still grok, and
 /// Windows filenames do not carry case.
-fn binary_name_eq(path: &Path, expected: &str) -> bool {
+pub(crate) fn binary_name_eq(path: &Path, expected: &str) -> bool {
     path.file_stem()
         .and_then(|name| name.to_str())
         .is_some_and(|name| {
