@@ -224,6 +224,32 @@ describe("groupTurns", () => {
 });
 
 describe("buildActivityPhases", () => {
+  it("does not repeatedly inspect earlier calls as a long tool run grows", () => {
+    const toolReads = (count: number) => {
+      let reads = 0;
+      const blocks = Array.from({ length: count }, (_, index) => {
+        const block = read(`r${index}`);
+        const tool = block.tool;
+        Object.defineProperty(block, "tool", {
+          get: () => {
+            reads += 1;
+            return tool;
+          },
+        });
+        return block;
+      });
+      const phases = buildActivityPhases(blocks);
+      const inspected = reads;
+      expect(phases).toHaveLength(1);
+      expect(phases[0].kind).toBe("research");
+      expect(phases[0].steps).toEqual(blocks);
+      return inspected;
+    };
+
+    // Count input accesses instead of timing the test on a particular CPU.
+    expect(toolReads(400)).toBeLessThan(toolReads(200) * 2.5);
+  });
+
   it("groups a run of calls under the line that introduced it", () => {
     const phases = buildActivityPhases([
       note("n1", "Now I need to find the theme provider."),

@@ -112,11 +112,11 @@ type Props = {
   onRegenerateTurn?: (userBlockId: string) => void;
   onJumpToBottomChange?: (show: boolean) => void;
   onJumpToBottomReady?: (jump: () => void) => void;
-  /** False while another tab is in front. Hidden tabs stay laid out. */
+  /** False while another tab is in front; local transcript state is retained. */
   visible?: boolean;
 };
 
-export function AgentTranscript({
+function AgentTranscriptComponent({
   blocks,
   busy,
   cwd,
@@ -212,7 +212,7 @@ export function AgentTranscript({
   }, [jumpToBottom, onJumpToBottomReady]);
 
   useEffect(() => {
-    if (!scrollerEl) return;
+    if (!visible || !scrollerEl) return;
     syncPinned(scrollerEl);
     const onScroll = () => syncPinned(scrollerEl);
     const onWheel = (e: WheelEvent) => {
@@ -227,7 +227,7 @@ export function AgentTranscript({
       scrollerEl.removeEventListener("scroll", onScroll);
       scrollerEl.removeEventListener("wheel", onWheel);
     };
-  }, [scrollerEl, setShowJump, syncPinned]);
+  }, [scrollerEl, setShowJump, syncPinned, visible]);
 
   useLayoutEffect(() => {
     stickToBottom.current = true;
@@ -254,16 +254,16 @@ export function AgentTranscript({
   }, [visible, setShowJump]);
 
   useLayoutEffect(() => {
-    if (!stickToBottom.current) return;
+    if (!visible || !stickToBottom.current) return;
     const el = scroller.current;
     syncTranscriptViewport(el);
     pinToBottom(el);
-  }, [blocks, busy]);
+  }, [blocks, busy, visible]);
 
   useLayoutEffect(() => {
     const el = scrollerEl;
     const inner = el?.firstElementChild;
-    if (!el || !inner) return;
+    if (!visible || !el || !inner) return;
     const onResize = () => {
       syncTranscriptViewport(el);
       const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
@@ -280,7 +280,7 @@ export function AgentTranscript({
     observer.observe(el);
     onResize();
     return () => observer.disconnect();
-  }, [scrollerEl, setShowJump]);
+  }, [scrollerEl, setShowJump, visible]);
 
   const turns = groupTurns(blocks);
   const firstVisibleTurn = Math.max(0, turns.length - visibleTurnCount);
@@ -356,7 +356,7 @@ export function AgentTranscript({
                     key={item.blocks[0].id}
                     blocks={item.blocks}
                     cwd={cwd}
-                    done={settled || (answering && !workStillRunning)}
+                    done={!visible || settled || (answering && !workStillRunning)}
                     busy={busy}
                     onApproval={onApproval}
                     onOpenFile={onOpenFile}
@@ -430,6 +430,12 @@ export function AgentTranscript({
     </div>
   );
 }
+
+// Keep hidden panes' local state, and catch up with current props on activation.
+export const AgentTranscript = memo(
+  AgentTranscriptComponent,
+  (previous, next) => previous.visible === false && next.visible === false,
+);
 
 function LiveWorking({
   startedAt,
@@ -1223,34 +1229,36 @@ function ActivityPhaseGroup({
         {label}
       </button>
       <div className="zen-phase-body" data-open={open}>
-        <div ref={setLiveScroller} className={active || !open ? "zen-phase-live" : undefined}>
-          <div className="flex min-w-0 flex-col">
-            {headline ? (
-              <div className="zen-phase-step py-1">
-                <AgentMarkdown
-                  className={headline.role === "reasoning" ? "agent-reasoning" : undefined}
-                  text={headline.text}
-                  cwd={cwd}
-                  onOpenFile={onOpenFile}
-                />
-              </div>
-            ) : null}
-            {phase.steps.map((block) => (
-              <div key={block.id} className={`zen-phase-step${active ? " zen-step-in" : ""}`}>
-                <ActivityRow
-                  block={block}
-                  cwd={cwd}
-                  live={active}
-                  busy={busy}
-                  onApproval={onApproval}
-                  onOpenFile={onOpenFile}
-                  onOpenDiff={onOpenDiff}
-                  onOpenSubagent={onOpenSubagent}
-                />
-              </div>
-            ))}
+        {open ? (
+          <div ref={setLiveScroller} className={active || !open ? "zen-phase-live" : undefined}>
+            <div className="flex min-w-0 flex-col">
+              {headline ? (
+                <div className="zen-phase-step py-1">
+                  <AgentMarkdown
+                    className={headline.role === "reasoning" ? "agent-reasoning" : undefined}
+                    text={headline.text}
+                    cwd={cwd}
+                    onOpenFile={onOpenFile}
+                  />
+                </div>
+              ) : null}
+              {phase.steps.map((block) => (
+                <div key={block.id} className={`zen-phase-step${active ? " zen-step-in" : ""}`}>
+                  <ActivityRow
+                    block={block}
+                    cwd={cwd}
+                    live={active}
+                    busy={busy}
+                    onApproval={onApproval}
+                    onOpenFile={onOpenFile}
+                    onOpenDiff={onOpenDiff}
+                    onOpenSubagent={onOpenSubagent}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
