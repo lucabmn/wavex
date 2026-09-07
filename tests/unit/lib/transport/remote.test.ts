@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { RemoteHostTransport } from "@/lib/transport";
+import { RemoteHostTransport, RESYNC_REQUIRED_EVENT } from "@/lib/transport";
 
 class FakeSocket {
   readyState = WebSocket.OPEN;
@@ -42,7 +42,7 @@ function setup() {
     "host-1",
     {
       endpoint: "wss://dev.example.com/api/v1/connect",
-      token: "long-lived-secret",
+      auth: { kind: "bearer", token: "long-lived-secret" },
       name: "Dev box",
     },
     {
@@ -209,7 +209,7 @@ describe("RemoteHostTransport", () => {
   it("keeps failing a refused connection instead of hanging a later call", async () => {
     const transport = new RemoteHostTransport(
       "host-1",
-      { endpoint: "wss://dev.example.com/api/v1/connect", token: "bad" },
+      { endpoint: "wss://dev.example.com/api/v1/connect", auth: { kind: "bearer", token: "bad" } },
       { fetch: async () => response({}, 401), socket: vi.fn() },
     );
 
@@ -247,7 +247,7 @@ describe("RemoteHostTransport", () => {
     const socket = vi.fn();
     const transport = new RemoteHostTransport(
       "host-1",
-      { endpoint: "wss://dev.example.com/api/v1/connect", token: "bad" },
+      { endpoint: "wss://dev.example.com/api/v1/connect", auth: { kind: "bearer", token: "bad" } },
       {
         fetch: async () => response({}, 401),
         socket,
@@ -257,5 +257,117 @@ describe("RemoteHostTransport", () => {
     await expect(transport.connect()).rejects.toThrow("Authentication failed");
     expect(socket).not.toHaveBeenCalled();
     expect(transport.getSnapshot().phase).toBe("offline");
+  });
+
+  it("calls the window's own fetch rather than one bound to the transport", async () => {
+    // WebKit throws "Can only call Window.fetch on instances of Window" when
+    // the global fetch is stored on an object and then called as its method.
+    const original = globalThis.fetch;
+    const receivers: unknown[] = [];
+    globalThis.fetch = function fakeFetch(this: unknown) {
+      receivers.push(this);
+      return Promise.resolve(response({ ticket: "a_secure_one_time_ticket" }));
+    } as typeof fetch;
+
+    try {
+      const transport = new RemoteHostTransport(
+        "host-1",
+        {
+          endpoint: "wss://dev.example.com/api/v1/connect",
+          auth: { kind: "bearer", token: "long-lived-secret" },
+        },
+        { socket: () => new FakeSocket() as unknown as WebSocket },
+      );
+      void transport.connect().catch(() => undefined);
+      await vi.waitFor(() => expect(receivers).toHaveLength(1));
+      expect(receivers[0]).not.toBe(transport);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("resumes the stream the previous connection left off at", async () => {
+    const socket = new FakeSocket();
+    const transport = new RemoteHostTransport(
+      "host-1",
+      {
+        endpoint: "wss://dev.example.com/api/v1/connect",
+        auth: { kind: "bearer", token: "long-lived-secret" },
+      },
+      {
+        fetch: async () => response({ ticket: "a_secure_one_time_ticket" }),
+        socket: (_url, protocols) => {
+          socket.protocols = protocols;
+          return socket as unknown as WebSocket;
+        },
+        resume: { streamId: "stream-a", sequence: 8 },
+      },
+    );
+
+    void transport.connect().catch(() => undefined);
+    await vi.waitFor(() => expect(socket.protocols).toHaveLength(2));
+    socket.message({
+      type: "ready",
+      host: { id: "host-1", name: "Desk workstation", platform: "linux" },
+      stream: { id: "stream-a", oldestSequence: 4, latestSequence: 12 },
+    });
+
+    expect(socket.sent.map((value) => JSON.parse(value))).toEqual([
+      { type: "subscribe", streamId: "stream-a", afterSequence: 8 },
+    ]);
+  });
+
+  it("opens one socket when a listener arrives during the ticket exchange", async () => {
+    const socket = new FakeSocket();
+    const opened = vi.fn(() => socket as unknown as WebSocket);
+    const transport = new RemoteHostTransport(
+      "host-1",
+      {
+        endpoint: "wss://dev.example.com/api/v1/connect",
+        auth: { kind: "bearer", token: "long-lived-secret" },
+      },
+      { fetch: async () => response({ ticket: "a_secure_one_time_ticket" }), socket: opened },
+    );
+
+    void transport.connect().catch(() => undefined);
+    await transport.listen("harness-stdout", () => undefined);
+    await vi.waitFor(() => expect(opened).toHaveBeenCalledTimes(1));
+  });
+
+  it("announces a raised resync barrier to the listener that arrives next", async () => {
+    const socket = new FakeSocket();
+    const transport = new RemoteHostTransport(
+      "host-1",
+      {
+        endpoint: "wss://dev.example.com/api/v1/connect",
+        auth: { kind: "bearer", token: "long-lived-secret" },
+      },
+      {
+        fetch: async () => response({ ticket: "a_secure_one_time_ticket" }),
+        socket: (_url, protocols) => {
+          socket.protocols = protocols;
+          return socket as unknown as WebSocket;
+        },
+        // Older than anything the host still holds.
+        resume: { streamId: "stream-a", sequence: 1 },
+      },
+    );
+
+    const connected = transport.connect();
+    await vi.waitFor(() => expect(socket.protocols).toHaveLength(2));
+    socket.message({
+      type: "ready",
+      host: { id: "host-1", name: "Desk workstation", platform: "linux" },
+      stream: { id: "stream-a", oldestSequence: 40, latestSequence: 60 },
+    });
+
+    // The caller waiting to connect is released: refetching host state is what
+    // lifts the barrier, and it travels over this very connection.
+    await connected;
+    expect(transport.getSnapshot().phase).toBe("resynchronizing");
+
+    const seen: unknown[] = [];
+    await transport.listen(RESYNC_REQUIRED_EVENT, (event) => seen.push(event.payload));
+    expect(seen).toEqual([{ hostId: "host-1", streamId: "stream-a" }]);
   });
 });

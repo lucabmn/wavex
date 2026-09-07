@@ -1,5 +1,6 @@
-import { invoke } from "./transport";
-import { open } from "@tauri-apps/plugin-dialog";
+import { getDefaultHostId, invokeOn } from "./transport";
+import { hostPathArgs, isRemoteHostId, type HostId } from "./host";
+import { openDialog as open } from "./native";
 import { slash } from "./paths";
 
 export type FsEntry = {
@@ -16,8 +17,9 @@ export type ProjectFile = {
   isDir?: boolean;
 };
 
-export function listDir(path: string): Promise<FsEntry[]> {
-  return invoke<FsEntry[]>("list_dir", { path });
+export function listDir(path: string, hostId?: HostId): Promise<FsEntry[]> {
+  const target = hostPathArgs(path, hostId, getDefaultHostId());
+  return invokeOn<FsEntry[]>(target.hostId, "list_dir", { path: target.path });
 }
 
 export type DiscoveredSkill = {
@@ -38,12 +40,14 @@ export type DiscoveredSkill = {
     | "wavex";
 };
 
-export function listSkills(cwd: string): Promise<DiscoveredSkill[]> {
-  return invoke<DiscoveredSkill[]>("list_skills", { cwd });
+export function listSkills(cwd: string, hostId?: HostId): Promise<DiscoveredSkill[]> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<DiscoveredSkill[]>(target.hostId, "list_skills", { cwd: target.path });
 }
 
-export function listProjectFiles(cwd: string): Promise<ProjectFile[]> {
-  return invoke<ProjectFile[]>("list_project_files", { cwd });
+export function listProjectFiles(cwd: string, hostId?: HostId): Promise<ProjectFile[]> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<ProjectFile[]>(target.hostId, "list_project_files", { cwd: target.path });
 }
 
 export type GitDiffStats = {
@@ -52,8 +56,9 @@ export type GitDiffStats = {
   deletions: number;
 };
 
-export function gitDiffStats(cwd: string): Promise<GitDiffStats> {
-  return invoke<GitDiffStats>("git_diff_stats", { cwd });
+export function gitDiffStats(cwd: string, hostId?: HostId): Promise<GitDiffStats> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitDiffStats>(target.hostId, "git_diff_stats", { cwd: target.path });
 }
 
 export type GitChangedFile = {
@@ -79,8 +84,9 @@ export type GitDiffIndex = {
   aheadOfDefault: number;
 };
 
-export function gitDiffIndex(cwd: string): Promise<GitDiffIndex> {
-  return invoke<GitDiffIndex>("git_diff_index", { cwd });
+export function gitDiffIndex(cwd: string, hostId?: HostId): Promise<GitDiffIndex> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitDiffIndex>(target.hostId, "git_diff_index", { cwd: target.path });
 }
 
 export type GitFileDiff = {
@@ -93,8 +99,9 @@ export type GitFileDiff = {
   tooLarge: boolean;
 };
 
-export function gitFileDiff(cwd: string, relative: string): Promise<GitFileDiff> {
-  return invoke<GitFileDiff>("git_file_diff", { cwd, relative });
+export function gitFileDiff(cwd: string, relative: string, hostId?: HostId): Promise<GitFileDiff> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitFileDiff>(target.hostId, "git_file_diff", { cwd: target.path, relative });
 }
 
 export type GitHistoryRef = {
@@ -118,52 +125,81 @@ export type GitHistory = {
   commits: GitHistoryCommit[];
 };
 
-export function gitHistory(cwd: string, limit = 200): Promise<GitHistory> {
-  return invoke<GitHistory>("git_history", { cwd, limit });
+export function gitHistory(cwd: string, limit = 200, hostId?: HostId): Promise<GitHistory> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitHistory>(target.hostId, "git_history", { cwd: target.path, limit });
 }
 
-export function gitCommitFiles(cwd: string, sha: string): Promise<GitChangedFile[]> {
-  return invoke<GitChangedFile[]>("git_commit_files", { cwd, sha });
+export function gitCommitFiles(
+  cwd: string,
+  sha: string,
+  hostId?: HostId,
+): Promise<GitChangedFile[]> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitChangedFile[]>(target.hostId, "git_commit_files", { cwd: target.path, sha });
 }
 
 export function gitCommitFileDiff(
   cwd: string,
   sha: string,
   relative: string,
+  hostId?: HostId,
 ): Promise<GitFileDiff> {
-  return invoke<GitFileDiff>("git_commit_file_diff", { cwd, sha, relative });
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitFileDiff>(target.hostId, "git_commit_file_diff", {
+    cwd: target.path,
+    sha,
+    relative,
+  });
 }
 
-export function gitStageContents(cwd: string, relative: string, contents: string): Promise<void> {
-  return invoke<void>("git_stage_contents", { cwd, relative, contents });
+export function gitStageContents(
+  cwd: string,
+  relative: string,
+  contents: string,
+  hostId?: HostId,
+): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_stage_contents", {
+    cwd: target.path,
+    relative,
+    contents,
+  });
 }
 
-export function gitStageFile(cwd: string, relative: string): Promise<void> {
-  return invoke<void>("git_stage_file", { cwd, relative });
+export function gitStageFile(cwd: string, relative: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_stage_file", { cwd: target.path, relative });
 }
 
-export function gitUnstageFile(cwd: string, relative: string): Promise<void> {
-  return invoke<void>("git_unstage_file", { cwd, relative });
+export function gitUnstageFile(cwd: string, relative: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_unstage_file", { cwd: target.path, relative });
 }
 
-export function gitDiscardFile(cwd: string, relative: string): Promise<void> {
-  return invoke<void>("git_discard_file", { cwd, relative });
+export function gitDiscardFile(cwd: string, relative: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_discard_file", { cwd: target.path, relative });
 }
 
-export function gitDiscardAll(cwd: string): Promise<void> {
-  return invoke<void>("git_discard_all", { cwd });
+export function gitDiscardAll(cwd: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_discard_all", { cwd: target.path });
 }
 
-export function gitStageAll(cwd: string): Promise<void> {
-  return invoke<void>("git_stage_all", { cwd });
+export function gitStageAll(cwd: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_stage_all", { cwd: target.path });
 }
 
-export function gitUnstageAll(cwd: string): Promise<void> {
-  return invoke<void>("git_unstage_all", { cwd });
+export function gitUnstageAll(cwd: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_unstage_all", { cwd: target.path });
 }
 
-export function gitCommit(cwd: string, message: string): Promise<void> {
-  return invoke<void>("git_commit", { cwd, message });
+export function gitCommit(cwd: string, message: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_commit", { cwd: target.path, message });
 }
 
 export type GitStagedContext = {
@@ -172,20 +208,24 @@ export type GitStagedContext = {
   patch: string;
 };
 
-export function gitStagedContext(cwd: string): Promise<GitStagedContext> {
-  return invoke<GitStagedContext>("git_staged_context", { cwd });
+export function gitStagedContext(cwd: string, hostId?: HostId): Promise<GitStagedContext> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitStagedContext>(target.hostId, "git_staged_context", { cwd: target.path });
 }
 
-export function gitPush(cwd: string): Promise<void> {
-  return invoke<void>("git_push", { cwd });
+export function gitPush(cwd: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_push", { cwd: target.path });
 }
 
-export function gitPull(cwd: string): Promise<void> {
-  return invoke<void>("git_pull", { cwd });
+export function gitPull(cwd: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_pull", { cwd: target.path });
 }
 
-export function gitSync(cwd: string): Promise<void> {
-  return invoke<void>("git_sync", { cwd });
+export function gitSync(cwd: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_sync", { cwd: target.path });
 }
 
 export type GitRangeContext = {
@@ -196,8 +236,9 @@ export type GitRangeContext = {
   diffPatch: string;
 };
 
-export function gitRangeContext(cwd: string): Promise<GitRangeContext> {
-  return invoke<GitRangeContext>("git_range_context", { cwd });
+export function gitRangeContext(cwd: string, hostId?: HostId): Promise<GitRangeContext> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitRangeContext>(target.hostId, "git_range_context", { cwd: target.path });
 }
 
 export type GitPr = {
@@ -207,8 +248,9 @@ export type GitPr = {
   state: string;
 };
 
-export function gitPrStatus(cwd: string): Promise<GitPr | null> {
-  return invoke<GitPr | null>("git_pr_status", { cwd });
+export function gitPrStatus(cwd: string, hostId?: HostId): Promise<GitPr | null> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitPr | null>(target.hostId, "git_pr_status", { cwd: target.path });
 }
 
 export function gitPrCreate(
@@ -217,8 +259,16 @@ export function gitPrCreate(
   body: string,
   base: string,
   head: string,
+  hostId?: HostId,
 ): Promise<string> {
-  return invoke<string>("git_pr_create", { cwd, title, body, base, head });
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<string>(target.hostId, "git_pr_create", {
+    cwd: target.path,
+    title,
+    body,
+    base,
+    head,
+  });
 }
 
 export type GitBranchInfo = {
@@ -233,20 +283,33 @@ export type GitBranches = {
   branches: GitBranchInfo[];
 };
 
-export function gitBranches(cwd: string): Promise<GitBranches> {
-  return invoke<GitBranches>("git_branches", { cwd });
+export function gitBranches(cwd: string, hostId?: HostId): Promise<GitBranches> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<GitBranches>(target.hostId, "git_branches", { cwd: target.path });
 }
 
-export function gitCheckout(cwd: string, name: string, remote?: string | null): Promise<string> {
-  return invoke<string>("git_checkout", { cwd, name, remote: remote ?? null });
+export function gitCheckout(
+  cwd: string,
+  name: string,
+  remote?: string | null,
+  hostId?: HostId,
+): Promise<string> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<string>(target.hostId, "git_checkout", {
+    cwd: target.path,
+    name,
+    remote: remote ?? null,
+  });
 }
 
-export function gitCreateBranch(cwd: string, name: string): Promise<string> {
-  return invoke<string>("git_create_branch", { cwd, name });
+export function gitCreateBranch(cwd: string, name: string, hostId?: HostId): Promise<string> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<string>(target.hostId, "git_create_branch", { cwd: target.path, name });
 }
 
-export function gitStash(cwd: string, message?: string): Promise<void> {
-  return invoke<void>("git_stash", { cwd, message: message ?? null });
+export function gitStash(cwd: string, message?: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_stash", { cwd: target.path, message: message ?? null });
 }
 
 /** Git refused a checkout because the working tree would be overwritten. */
@@ -284,32 +347,49 @@ export function subscribeGitChanged(listener: () => void): () => void {
   return () => window.removeEventListener(GIT_CHANGED, listener);
 }
 
-export function createPath(parent: string, name: string, isDir: boolean): Promise<string> {
-  return invoke<string>("create_path", { parent, name, isDir });
+export function createPath(
+  parent: string,
+  name: string,
+  isDir: boolean,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string> {
+  return invokeOn<string>(hostId, "create_path", { parent, name, isDir });
 }
 
-export function renamePath(path: string, name: string): Promise<string> {
-  return invoke<string>("rename_path", { path, name });
+export function renamePath(
+  path: string,
+  name: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string> {
+  return invokeOn<string>(hostId, "rename_path", { path, name });
 }
 
-export function deletePath(path: string): Promise<void> {
-  return invoke<void>("delete_path", { path });
+export function deletePath(path: string, hostId: HostId = getDefaultHostId()): Promise<void> {
+  return invokeOn<void>(hostId, "delete_path", { path });
 }
 
-export function copyPath(from: string, destParent: string): Promise<string> {
-  return invoke<string>("copy_path", { from, destParent });
+export function copyPath(
+  from: string,
+  destParent: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string> {
+  return invokeOn<string>(hostId, "copy_path", { from, destParent });
 }
 
-export function movePath(from: string, destParent: string): Promise<string> {
-  return invoke<string>("move_path", { from, destParent });
+export function movePath(
+  from: string,
+  destParent: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string> {
+  return invokeOn<string>(hostId, "move_path", { from, destParent });
 }
 
-export function revealPath(path: string): Promise<void> {
-  return invoke<void>("reveal_path", { path });
+export function revealPath(path: string, hostId: HostId = getDefaultHostId()): Promise<void> {
+  return invokeOn<void>(hostId, "reveal_path", { path });
 }
 
-export function homeDir(): Promise<string> {
-  return invoke<string>("home_dir");
+export function homeDir(hostId: HostId = getDefaultHostId()): Promise<string> {
+  return invokeOn<string>(hostId, "home_dir");
 }
 
 export async function pickFolder(title = "Open project"): Promise<string | null> {
@@ -322,16 +402,24 @@ export async function pickFolder(title = "Open project"): Promise<string | null>
 }
 
 /** Store an image a turn generated, and return where it landed. */
-export function writeGeneratedImage(name: string, data: string): Promise<string> {
-  return invoke("write_generated_image", { name, data });
+export function writeGeneratedImage(
+  name: string,
+  data: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string> {
+  return invokeOn(hostId, "write_generated_image", { name, data });
 }
 
-export function readFileBase64(path: string): Promise<string> {
-  return invoke("read_file_base64", { path });
+export function readFileBase64(path: string, hostId: HostId = getDefaultHostId()): Promise<string> {
+  return invokeOn(hostId, "read_file_base64", { path });
 }
 
-export function writeFileBase64(path: string, data: string): Promise<void> {
-  return invoke("write_file_base64", { path, data });
+export function writeFileBase64(
+  path: string,
+  data: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  return invokeOn(hostId, "write_file_base64", { path, data });
 }
 
 export async function pickFiles(title = "Attach files"): Promise<string[] | null> {
@@ -348,12 +436,21 @@ export async function pickFiles(title = "Attach files"): Promise<string[] | null
   return null;
 }
 
-export function cloneRepo(url: string, parent: string): Promise<string> {
-  return invoke<string>("clone_repo", { url, parent });
+export function cloneRepo(
+  url: string,
+  parent: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string> {
+  return invokeOn<string>(hostId, "clone_repo", { url, parent });
 }
 
-export function readFilePreview(path: string, maxLines = 6, startLine?: number): Promise<string[]> {
-  return invoke<string[]>("read_file_preview", {
+export function readFilePreview(
+  path: string,
+  maxLines = 6,
+  startLine?: number,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string[]> {
+  return invokeOn<string[]>(hostId, "read_file_preview", {
     path,
     maxLines,
     startLine,
@@ -365,23 +462,50 @@ export type FileMtime = {
   mtimeMs: number | null;
 };
 
-export function statFiles(paths: string[]): Promise<FileMtime[]> {
+export function statFiles(
+  paths: string[],
+  hostId: HostId = getDefaultHostId(),
+): Promise<FileMtime[]> {
   if (paths.length === 0) return Promise.resolve([]);
-  return invoke<FileMtime[]>("stat_files", { paths });
+  return invokeOn<FileMtime[]>(hostId, "stat_files", { paths });
 }
 
-export function readTextFile(path: string): Promise<string> {
-  return invoke<string>("read_text_file", { path });
+export function readTextFile(path: string, hostId: HostId = getDefaultHostId()): Promise<string> {
+  return invokeOn<string>(hostId, "read_text_file", { path });
 }
 
-/** Raw bytes for the image viewer. Arrives as an ArrayBuffer, not base64. */
-export async function readBinaryFile(path: string): Promise<Uint8Array> {
-  const buffer = await invoke<ArrayBuffer>("read_binary_file", { path });
+/**
+ * Raw bytes for the image viewer.
+ *
+ * `read_binary_file` answers in raw bytes rather than JSON, so it is not on
+ * the connection allowlist and never will be: the wire carries JSON frames.
+ * A remote host therefore goes through `read_file_base64`, which is already
+ * allowed, and pays a third more bytes plus a decode. That is the deliberate
+ * trade — a bounded cost on the one command that reads a whole file — rather
+ * than a second binary channel for image previews alone.
+ */
+export async function readBinaryFile(
+  path: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<Uint8Array> {
+  if (isRemoteHostId(hostId)) return decodeBase64(await readFileBase64(path, hostId));
+  const buffer = await invokeOn<ArrayBuffer>(hostId, "read_binary_file", { path });
   return new Uint8Array(buffer);
 }
 
-export function writeTextFile(path: string, content: string): Promise<void> {
-  return invoke<void>("write_text_file", { path, content });
+function decodeBase64(data: string): Uint8Array {
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+export function writeTextFile(
+  path: string,
+  content: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  return invokeOn<void>(hostId, "write_text_file", { path, content });
 }
 
 /** Last path segment, or `/` for the filesystem root. */

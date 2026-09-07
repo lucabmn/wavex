@@ -9,6 +9,14 @@ describe("normalizeRemoteEndpoint", () => {
     );
   });
 
+  it("leaves the address a paired host hands out untouched", () => {
+    // What `connect_host_pairing_code` emits. A rewrite here would fail only
+    // at connect time, where nothing else is watching.
+    expect(normalizeRemoteEndpoint("ws://127.0.0.1:8787/api/v1/connect")).toBe(
+      "ws://127.0.0.1:8787/api/v1/connect",
+    );
+  });
+
   it("keeps an explicit websocket path", () => {
     expect(normalizeRemoteEndpoint("wss://dev.example.com/wavex")).toBe(
       "wss://dev.example.com/wavex",

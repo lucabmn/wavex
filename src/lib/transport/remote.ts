@@ -33,10 +33,18 @@ type EventMessage = {
   payload: unknown;
 };
 
+/** A run of events in sequence order, which is how a busy host sends them. */
+type EventBatchMessage = {
+  type: "events";
+  streamId: string;
+  events: Array<{ sequence: number; event: string; payload: unknown }>;
+};
+
 type ServerMessage =
   | ReadyMessage
   | ResultMessage
   | EventMessage
+  | EventBatchMessage
   | { type: "sync_complete"; streamId: string; throughSequence: number }
   | { type: "resync_required"; streamId: string; latestSequence: number; reason?: string };
 
@@ -48,10 +56,18 @@ type PendingCall = {
 type SocketFactory = (url: string, protocols: string[]) => WebSocket;
 type Fetch = typeof fetch;
 
+export type StreamPosition = { streamId: string; sequence: number };
+
 export type RemoteTransportOptions = {
   fetch?: Fetch;
   socket?: SocketFactory;
   onChange?: () => void;
+  /**
+   * Where this client stopped reading the host's stream. A reconnect that
+   * carries it is handed the events it missed; one that does not silently
+   * starts at the host's latest, which is a transcript with a hole in it.
+   */
+  resume?: StreamPosition;
 };
 
 export class RemoteHostTransport implements HostTransport {
@@ -62,6 +78,8 @@ export class RemoteHostTransport implements HostTransport {
   private connectionResolve: (() => void) | null = null;
   private connectionReject: ((error: Error) => void) | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  /** A ticket is being spent right now; the socket it buys is not here yet. */
+  private opening = false;
   private retryAttempt = 0;
   private nextId = 1;
   private streamId: string | null = null;
@@ -81,9 +99,16 @@ export class RemoteHostTransport implements HostTransport {
     private readonly connection: RemoteConnection,
     options: RemoteTransportOptions = {},
   ) {
-    this.fetcher = options.fetch ?? fetch;
+    // WebKit rejects a bare `fetch` reference called with any other receiver
+    // ("Can only call Window.fetch on instances of Window"), so the global one
+    // stays bound to the window it belongs to.
+    this.fetcher = options.fetch ?? ((input, init) => fetch(input, init));
     this.socketFactory = options.socket ?? ((url, protocols) => new WebSocket(url, protocols));
     this.onChange = options.onChange ?? (() => undefined);
+    if (options.resume) {
+      this.streamId = options.resume.streamId;
+      this.sequence = options.resume.sequence;
+    }
     this.snapshot = {
       phase: "connecting",
       hostId,
@@ -97,6 +122,11 @@ export class RemoteHostTransport implements HostTransport {
     return this.snapshot;
   }
 
+  /** What a later connection to this host resumes from. */
+  streamPosition(): StreamPosition | null {
+    return this.streamId ? { streamId: this.streamId, sequence: this.sequence } : null;
+  }
+
   private canSend(): boolean {
     return this.handshaken && this.socket?.readyState === WebSocket.OPEN;
   }
@@ -106,7 +136,7 @@ export class RemoteHostTransport implements HostTransport {
     if (this.snapshot.phase === "connected") return Promise.resolve();
     if (this.snapshot.phase === "resynchronizing" && this.canSend()) return Promise.resolve();
     const promise = this.connectionPromise ?? this.makeConnectionPromise();
-    if (!this.socket && !this.retryTimer) void this.open();
+    if (!this.socket && !this.retryTimer && !this.opening) void this.open();
     return promise;
   }
 
@@ -150,6 +180,18 @@ export class RemoteHostTransport implements HostTransport {
     const handlers = this.listeners.get(event) ?? new Set<EventHandler<unknown>>();
     handlers.add(handler as EventHandler<unknown>);
     this.listeners.set(event, handlers);
+    // A barrier that is already up has to be announced to whoever arrives
+    // next: the resync was raised during the connect this caller awaited, so
+    // the one announcement it would otherwise get was made to nobody, and the
+    // barrier would never come down.
+    if (event === RESYNC_REQUIRED_EVENT && this.pendingResync) {
+      const pending = this.pendingResync;
+      (handler as EventHandler<unknown>)({
+        event,
+        id: pending.latestSequence,
+        payload: { hostId: this.hostId, streamId: pending.streamId },
+      });
+    }
     void this.connect().catch(() => undefined);
     return () => {
       handlers.delete(handler as EventHandler<unknown>);
@@ -180,6 +222,20 @@ export class RemoteHostTransport implements HostTransport {
   }
 
   private async open(): Promise<void> {
+    if (this.closed || this.opening) return;
+    // A caller that connects and a listener that arrives during the ticket
+    // exchange both find no socket yet. Without this the second one buys a
+    // second ticket and opens a second connection, and whichever loses the
+    // race reports the host as unreachable while it is answering the other.
+    this.opening = true;
+    try {
+      await this.openSocket();
+    } finally {
+      this.opening = false;
+    }
+  }
+
+  private async openSocket(): Promise<void> {
     if (this.closed) return;
     this.setSnapshot({
       ...this.snapshot,
@@ -227,15 +283,24 @@ export class RemoteHostTransport implements HostTransport {
   }
 
   private async acquireTicket(): Promise<string> {
+    const auth = this.connection.auth;
+    // A bearer is a header, so it never depends on the browser deciding to
+    // attach anything; a cookie session is the opposite and is only ever sent
+    // same-origin, which is also the only place the host will honour it.
     const response = await this.fetcher(ticketEndpoint(this.connection.endpoint), {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.connection.token}`,
-        "X-Wavex-Protocol": PROTOCOL,
-      },
+      headers:
+        auth.kind === "bearer"
+          ? { Authorization: `Bearer ${auth.token}`, "X-Wavex-Protocol": PROTOCOL }
+          : { "X-Wavex-Protocol": PROTOCOL },
+      credentials: auth.kind === "cookie" ? "same-origin" : "omit",
     });
     if (response.status === 401 || response.status === 403) {
-      throw new Error("Authentication failed. Replace the host token and try again.");
+      throw new Error(
+        auth.kind === "cookie"
+          ? "This host no longer recognises this browser. Paste its connection code again."
+          : "Authentication failed. Replace the host token and try again.",
+      );
     }
     if (!response.ok) throw new Error(`The host returned HTTP ${response.status} while pairing`);
 
@@ -282,6 +347,18 @@ export class RemoteHostTransport implements HostTransport {
         error: undefined,
       });
       this.resolveConnection();
+      return;
+    }
+    if (message.type === "events") {
+      for (const event of message.events) {
+        this.onEvent({
+          type: "event",
+          streamId: message.streamId,
+          sequence: event.sequence,
+          event: event.event,
+          payload: event.payload,
+        });
+      }
       return;
     }
     this.onEvent(message);
@@ -345,6 +422,11 @@ export class RemoteHostTransport implements HostTransport {
 
   private requireResync(streamId: string, latestSequence: number, reason?: string): void {
     this.pendingResync = { streamId, latestSequence };
+    // Commands already travel — `invoke` waits on the handshake, not on the
+    // phase — so the caller that is waiting to connect is not blocked by the
+    // barrier. Leaving its promise pending would strand the very code that
+    // has to refetch host state before the barrier can come down.
+    this.resolveConnection();
     this.setSnapshot({
       ...this.snapshot,
       phase: "resynchronizing",

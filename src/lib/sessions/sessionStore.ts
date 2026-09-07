@@ -1,5 +1,6 @@
 import { getDefaultHostId, invokeOn } from "../transport";
-import { sessionRefKey, type HostId } from "../host";
+import { formatProjectRef, hostPathArgs, sessionRefKey, type HostId } from "../host";
+import { stripHostRef } from "../paths";
 import { persistableAttachment } from "../attachments";
 import type { ContextUsage } from "../contextUsage";
 import { normalizeProjectPath } from "../recents";
@@ -87,10 +88,15 @@ export function isPersistableId(value: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(value);
 }
 
+/**
+ * The host stores a path on itself and compares `session_list_by_project`
+ * against it, so the reference form a remote project carries in the workspace
+ * is stripped back to the bare path before it goes over the wire.
+ */
 function persistableMeta(session: Session): Omit<SessionUpsertPayload, "blocks"> {
   return {
     id: session.id,
-    cwd: normalizeProjectPath(session.cwd),
+    cwd: normalizeProjectPath(stripHostRef(session.cwd)),
     harness: session.harness,
     model: session.model,
     modelSettings: session.modelSettings,
@@ -124,8 +130,9 @@ const upsertQueues = new Map<string, Promise<unknown>>();
 
 export async function upsertSession(
   session: Session,
-  hostId: HostId = getDefaultHostId(),
+  hostIdArg?: HostId,
 ): Promise<SessionSummary | null> {
+  const hostId = hostPathArgs(session.cwd, hostIdArg, getDefaultHostId()).hostId;
   if (!shouldPersistSession(session)) return null;
   const payload = sanitizeSessionForPersist(session);
   const queueKey = sessionRefKey(hostId, session.id);
@@ -165,13 +172,14 @@ export function persistFingerprint(session: Session): string {
 
 export async function listSessionsByProject(
   cwd: string,
-  hostId: HostId = getDefaultHostId(),
+  hostIdArg?: HostId,
 ): Promise<SessionSummary[]> {
   if (!cwd || cwd === "~") return [];
-  const rows = await invokeOn<SessionSummary[]>(hostId, "session_list_by_project", {
-    cwd: normalizeProjectPath(cwd),
+  const target = hostPathArgs(cwd, hostIdArg, getDefaultHostId());
+  const rows = await invokeOn<SessionSummary[]>(target.hostId, "session_list_by_project", {
+    cwd: normalizeProjectPath(target.path),
   });
-  return rows.map((row) => normalizeSummary(row, hostId));
+  return rows.map((row) => normalizeSummary(row, target.hostId));
 }
 
 /** Work chats have no project, so they list by scope instead of by cwd. */
@@ -234,7 +242,7 @@ export async function getSession(
     sessionId,
   });
   if (!record) return null;
-  return recordToSession(record);
+  return recordToSession(record, hostId);
 }
 
 export async function deleteSession(
@@ -357,10 +365,16 @@ function sanitizeBlock(block: Block): Block | null {
   return next;
 }
 
+/**
+ * A host answers with a path on itself. A project root is carried through the
+ * workspace as a reference, so it is qualified again on the way back in — the
+ * one reply shape that needs it, because it is the one that is a project root.
+ */
 function normalizeSummary(summary: SessionSummary, hostId: HostId): SessionSummary {
   return {
     ...summary,
     hostId,
+    cwd: formatProjectRef({ hostId, path: summary.cwd }),
     harness: asHarness(summary.harness),
     runtimeMode: asRuntimeMode(summary.runtimeMode),
     ...(summary.providerSessionId ? { providerSessionId: summary.providerSessionId } : {}),
@@ -374,13 +388,14 @@ function normalizeSummary(summary: SessionSummary, hostId: HostId): SessionSumma
   };
 }
 
-function recordToSession(record: SessionRecord): Session {
+function recordToSession(record: SessionRecord, hostId: HostId): Session {
   const blocks = Array.isArray(record.blocks)
     ? record.blocks.map(sanitizeBlock).filter((block): block is Block => block != null)
     : [];
   return {
     id: record.id,
-    cwd: record.cwd,
+    hostId,
+    cwd: formatProjectRef({ hostId, path: record.cwd }),
     harness: asHarness(record.harness),
     model: record.model,
     modelSettings:

@@ -1,4 +1,5 @@
-import { invoke } from "./transport";
+import { getDefaultHostId, invokeOn } from "./transport";
+import { type HostId } from "./host";
 import { homeDir } from "./fs";
 import {
   errorRateLimits,
@@ -34,7 +35,7 @@ type CodexProbe = { limits: ProviderRateLimits; raw: unknown };
  * which is exactly that case. The slot is cleared only after the probe's own
  * cleanup has run, so a follow-up can never spawn into a pending teardown.
  */
-let inflightProbe: Promise<CodexProbe> | null = null;
+const inflightProbes = new Map<HostId, Promise<CodexProbe>>();
 let probeCount = 0;
 const probeInstance =
   typeof globalThis.crypto?.randomUUID === "function"
@@ -54,9 +55,12 @@ type ClaudeUsageFetch = {
   error?: string | null;
 };
 
-export async function fetchClaudeRateLimits(force = false): Promise<ProviderRateLimits> {
+export async function fetchClaudeRateLimits(
+  force = false,
+  hostId: HostId = getDefaultHostId(),
+): Promise<ProviderRateLimits> {
   try {
-    const result = await invoke<ClaudeUsageFetch>("fetch_claude_usage", { force });
+    const result = await invokeOn<ClaudeUsageFetch>(hostId, "fetch_claude_usage", { force });
     if (result.status === "ok" && result.body) {
       const parsed = parseClaudeOAuthUsage(result.body);
       if (parsed.session || parsed.weekly) return parsed;
@@ -91,31 +95,34 @@ export async function fetchClaudeRateLimits(force = false): Promise<ProviderRate
 export async function fetchCodexRateLimits(
   onRaw?: (result: unknown) => void,
   force = false,
+  hostId: HostId = getDefaultHostId(),
 ): Promise<ProviderRateLimits> {
   if (!force) {
-    const cached = await readCachedCodexPayload();
+    const cached = await readCachedCodexPayload(hostId);
     if (cached !== undefined) {
       onRaw?.(cached);
       return parseCodexRateLimits(cached);
     }
   }
-  if (!inflightProbe) {
-    const probe = probeCodexRateLimits();
-    inflightProbe = probe;
+  let inflight = inflightProbes.get(hostId);
+  if (!inflight) {
+    const probe = probeCodexRateLimits(hostId);
+    inflightProbes.set(hostId, probe);
+    inflight = probe;
     void probe
       .catch(() => undefined)
       .finally(() => {
-        if (inflightProbe === probe) inflightProbe = null;
+        if (inflightProbes.get(hostId) === probe) inflightProbes.delete(hostId);
       });
   }
-  const { limits, raw } = await inflightProbe;
+  const { limits, raw } = await inflight;
   if (raw !== undefined) onRaw?.(raw);
   return limits;
 }
 
-async function readCachedCodexPayload(): Promise<unknown> {
+async function readCachedCodexPayload(hostId: HostId): Promise<unknown> {
   try {
-    const raw = await invoke<string | null>("codex_usage_cache_read");
+    const raw = await invokeOn<string | null>(hostId, "codex_usage_cache_read");
     if (!raw) return undefined;
     return JSON.parse(raw) as unknown;
   } catch {
@@ -123,15 +130,17 @@ async function readCachedCodexPayload(): Promise<unknown> {
   }
 }
 
-function cacheCodexPayload(raw: unknown) {
+function cacheCodexPayload(raw: unknown, hostId: HostId) {
   try {
-    void invoke("codex_usage_cache_write", { raw: JSON.stringify(raw) }).catch(() => undefined);
+    void invokeOn(hostId, "codex_usage_cache_write", { raw: JSON.stringify(raw) }).catch(
+      () => undefined,
+    );
   } catch {
     // A payload that will not serialize simply stays uncached.
   }
 }
 
-async function probeCodexRateLimits(): Promise<CodexProbe> {
+async function probeCodexRateLimits(hostId: HostId): Promise<CodexProbe> {
   // A private child id per probe: cleanup can then only ever kill its own
   // process, even against a second window whose module state is separate.
   const childId = codexUsageChildId(probeInstance, (probeCount += 1));
@@ -139,14 +148,14 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
   const done = (limits: ProviderRateLimits): CodexProbe => ({ limits, raw });
   let path: string;
   try {
-    path = (await resolveCodexBinary()).path;
+    path = (await resolveCodexBinary(hostId)).path;
   } catch {
     return done(unavailableRateLimits("codex", "Codex CLI not found"));
   }
 
   let cwd: string;
   try {
-    cwd = await homeDir();
+    cwd = await homeDir(hostId);
   } catch (error) {
     return done(errorRateLimits("codex", error instanceof Error ? error.message : String(error)));
   }
@@ -156,7 +165,7 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
   // `initialize` timed out. The probe now owns a bridge lease of its own.
   let releaseBridge: () => void;
   try {
-    releaseBridge = await acquireHarnessBridge();
+    releaseBridge = await acquireHarnessBridge(hostId);
   } catch (error) {
     return done(errorRateLimits("codex", error instanceof Error ? error.message : String(error)));
   }
@@ -168,7 +177,7 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
         void rpc.respond(id, {}).catch(() => undefined);
       },
     },
-    { includeJsonrpc: false, label: "codex-usage" },
+    { includeJsonrpc: false, label: "codex-usage", hostId },
   );
 
   // A timeout runs cleanup from both the race and the `finally`, and the
@@ -179,8 +188,8 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
     if (stopped) return;
     stopped = true;
     rpc.close();
-    unwatchChild(childId);
-    await killChild(childId).catch(() => undefined);
+    unwatchChild(childId, hostId);
+    await killChild(childId, hostId).catch(() => undefined);
     releaseBridge();
   };
 
@@ -188,10 +197,12 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
     childId,
     (line) => rpc.pushLine(line),
     () => rpc.close(new Error("Codex usage probe exited")),
+    undefined,
+    hostId,
   );
 
   try {
-    await spawnChild(childId, path, ["app-server"], cwd);
+    await spawnChild(childId, path, ["app-server"], cwd, hostId);
     return await withTimeout(
       DISCOVERY_TIMEOUT_MS,
       async () => {
@@ -219,7 +230,7 @@ async function probeCodexRateLimits(): Promise<CodexProbe> {
         // Only a payload that actually carried windows is worth holding; the
         // cached read reparses it and must reach the same answer.
         if (parsed.session || parsed.weekly) {
-          cacheCodexPayload(result);
+          cacheCodexPayload(result, hostId);
           return done(parsed);
         }
         const rec = asRecord(result);

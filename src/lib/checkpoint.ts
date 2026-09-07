@@ -1,4 +1,5 @@
-import { invoke } from "./transport";
+import { getDefaultHostId, invokeOn } from "./transport";
+import { hostPathArgs, type HostId } from "./host";
 
 export type CheckpointFile = {
   path: string;
@@ -26,14 +27,26 @@ export function subscribeReviewChanged(listener: (sessionId: string) => void): (
   return () => window.removeEventListener(REVIEW_CHANGED, handler);
 }
 
-export function ensureSessionCheckpoint(sessionId: string, cwd: string): Promise<void> {
-  return invoke<void>("session_checkpoint_ensure", { sessionId, cwd });
+export function ensureSessionCheckpoint(
+  sessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "session_checkpoint_ensure", {
+    sessionId,
+    cwd: target.path,
+  });
 }
 
 /** Snapshot the worktree before a live turn so Keep/Undo can target this session. */
-export async function beginSessionTurn(sessionId: string, cwd: string): Promise<void> {
+export async function beginSessionTurn(
+  sessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): Promise<void> {
   if (!cwd || cwd === "~") return;
-  await ensureSessionCheckpoint(sessionId, cwd);
+  await ensureSessionCheckpoint(sessionId, cwd, hostId);
   notifyReviewChanged(sessionId);
 }
 
@@ -41,24 +54,39 @@ export function captureSessionCheckpoint(
   sessionId: string,
   cwd: string,
   paths: string[],
+  hostId?: HostId,
 ): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
   if (paths.length === 0) return Promise.resolve();
-  return invoke<void>("session_checkpoint_capture", {
+  return invokeOn<void>(target.hostId, "session_checkpoint_capture", {
     sessionId,
-    cwd,
+    cwd: target.path,
     paths,
   });
 }
 
-export function syncSessionCheckpoint(sessionId: string, cwd: string): Promise<void> {
-  if (!cwd || cwd === "~") return Promise.resolve();
-  return invoke<void>("session_checkpoint_sync", { sessionId, cwd });
+export function syncSessionCheckpoint(
+  sessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  if (!target.path || target.path === "~") return Promise.resolve();
+  return invokeOn<void>(target.hostId, "session_checkpoint_sync", {
+    sessionId,
+    cwd: target.path,
+  });
 }
 
-export function sessionCheckpointStatus(sessionId: string, cwd: string): Promise<CheckpointStatus> {
-  return invoke<CheckpointStatus>("session_checkpoint_status", {
+export function sessionCheckpointStatus(
+  sessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): Promise<CheckpointStatus> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<CheckpointStatus>(target.hostId, "session_checkpoint_status", {
     sessionId,
-    cwd,
+    cwd: target.path,
   });
 }
 
@@ -66,10 +94,12 @@ export function undoSessionChanges(
   sessionId: string,
   cwd: string,
   relative?: string,
+  hostId?: HostId,
 ): Promise<CheckpointStatus> {
-  return invoke<CheckpointStatus>("session_checkpoint_undo", {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<CheckpointStatus>(target.hostId, "session_checkpoint_undo", {
     sessionId,
-    cwd,
+    cwd: target.path,
     relative: relative ?? null,
   });
 }
@@ -78,10 +108,12 @@ export function keepSessionChanges(
   sessionId: string,
   cwd: string,
   relative?: string,
+  hostId?: HostId,
 ): Promise<CheckpointStatus> {
-  return invoke<CheckpointStatus>("session_checkpoint_keep", {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<CheckpointStatus>(target.hostId, "session_checkpoint_keep", {
     sessionId,
-    cwd,
+    cwd: target.path,
     relative: relative ?? null,
   });
 }

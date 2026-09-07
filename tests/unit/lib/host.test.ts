@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { displayPath, prettyCwd, projectName, stripHostRef } from "@/lib/paths";
+import { looksLikeProject, sameProjectPath } from "@/lib/recents";
 import {
   LOCAL_HOST_ID,
   formatProjectRef,
+  hostPathArgs,
+  hostPathKey,
   isLocalHostId,
   isRemoteHostId,
   localProject,
@@ -12,6 +16,7 @@ import {
   projectRefKey,
   sameProjectRef,
   sessionRefKey,
+  setUnqualifiedHost,
 } from "@/lib/host";
 
 describe("normalizeHostId", () => {
@@ -116,5 +121,99 @@ describe("host-scoped identities", () => {
   it("qualifies a remote host so two hosts cannot share a slot", () => {
     expect(sessionRefKey("dev-box", "abc123")).not.toBe(sessionRefKey("cloud-vm", "abc123"));
     expect(sessionRefKey("dev-box", "abc123")).not.toBe("abc123");
+  });
+});
+
+describe("hostPathArgs", () => {
+  it("routes a bare path to this client's default host", () => {
+    expect(hostPathArgs("/home/me/app", undefined, LOCAL_HOST_ID)).toEqual({
+      hostId: LOCAL_HOST_ID,
+      path: "/home/me/app",
+    });
+  });
+
+  it("routes a reference to the host it names, with no host passed", () => {
+    expect(hostPathArgs("wavex-host://dev-box//home/me/app", undefined, LOCAL_HOST_ID)).toEqual({
+      hostId: "dev-box",
+      path: "/home/me/app",
+    });
+  });
+
+  it("sends the bare path over the wire, never the reference", () => {
+    expect(hostPathArgs("wavex-host://dev-box//srv/app", undefined, LOCAL_HOST_ID).path).toBe(
+      "/srv/app",
+    );
+  });
+
+  it("lets an explicitly passed host win over the reference", () => {
+    expect(hostPathArgs("wavex-host://dev-box//srv/app", "cloud-vm", LOCAL_HOST_ID)).toEqual({
+      hostId: "cloud-vm",
+      path: "/srv/app",
+    });
+  });
+
+  it("resolves a bare path against a browser client whose default is remote", () => {
+    expect(hostPathArgs("/srv/app", undefined, "dev-box").hostId).toBe("dev-box");
+  });
+});
+
+describe("hostPathKey", () => {
+  it("puts a project root and the paths under it in one namespace", () => {
+    const root = hostPathKey("dev-box", "wavex-host://dev-box//srv/app");
+    expect(hostPathKey("dev-box", "/srv/app/src").startsWith(`${root}/`)).toBe(true);
+  });
+
+  it("keeps the same path on two hosts apart", () => {
+    expect(hostPathKey("dev-box", "/srv/app")).not.toBe(hostPathKey("cloud-vm", "/srv/app"));
+    expect(hostPathKey(LOCAL_HOST_ID, "/srv/app")).not.toBe(hostPathKey("dev-box", "/srv/app"));
+  });
+});
+
+describe("a remote project reference through the workspace", () => {
+  const ref = formatProjectRef(projectRef("dev-box", "/home/me/app"));
+
+  it("is a project the rail will accept", () => {
+    expect(looksLikeProject(ref)).toBe(true);
+  });
+
+  it("matches itself between the rail, a tab, and a pin", () => {
+    expect(sameProjectPath(ref, "wavex-host://dev-box//home/me/app/")).toBe(true);
+    expect(sameProjectPath(ref, "/home/me/app")).toBe(false);
+  });
+
+  it("reads as a path, not as a URL, everywhere it is drawn", () => {
+    expect(stripHostRef(ref)).toBe("/home/me/app");
+    expect(prettyCwd(ref)).toBe("~/app");
+    expect(projectName(ref)).toBe("app");
+    expect(displayPath("/home/me/app/src/main.rs", ref)).toBe("src/main.rs");
+  });
+
+  it("keys apart from the same path on this device", () => {
+    expect(projectKey(ref)).not.toBe(projectKey("/home/me/app"));
+  });
+});
+
+describe("the machine an unqualified name belongs to", () => {
+  afterEach(() => {
+    setUnqualifiedHost("local");
+  });
+
+  it("keeps a bare path unprefixed on the desktop", () => {
+    expect(projectKey("/Users/me/app")).toBe(projectKey("/Users/me/app"));
+    expect(projectKey("/Users/me/app")).toBe("/Users/me/app");
+  });
+
+  it("collapses a bare path and a reference to the same checkout in a browser", () => {
+    // The recents list stores a project bare and the rail order stores it as a
+    // reference. On the desktop those are two machines; in a tab, which has no
+    // machine of its own, they are one project — and two keys would split it
+    // into two rail entries, two tabs, and a pin that never matches.
+    setUnqualifiedHost("host-dev-box");
+    expect(projectKey("/srv/app")).toBe(projectKey("wavex-host://host-dev-box//srv/app"));
+  });
+
+  it("still tells two hosts with the same checkout path apart", () => {
+    setUnqualifiedHost("host-dev-box");
+    expect(projectKey("/srv/app")).not.toBe(projectKey("wavex-host://other-box//srv/app"));
   });
 });

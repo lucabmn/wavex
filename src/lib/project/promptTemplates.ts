@@ -1,4 +1,5 @@
-import { invoke } from "../transport";
+import { getDefaultHostId, invokeOn } from "../transport";
+import { type HostId } from "../host";
 import { fuzzyMatch } from "../fuzzy";
 import { projectKey as projectKeyFor } from "../host";
 import { normalizeProjectPath } from "../paths";
@@ -80,6 +81,7 @@ export function invalidatePromptTemplates(projectKey?: string) {
 export async function loadPromptTemplates(
   projectKey: string | null,
   refresh = false,
+  hostId: HostId = getDefaultHostId(),
 ): Promise<PromptTemplate[]> {
   if (!projectKey) return [];
   if (!refresh) {
@@ -89,7 +91,7 @@ export async function loadPromptTemplates(
     if (pending) return pending;
   }
 
-  const promise = invoke<PromptTemplate[]>("prompt_templates_list", { projectKey })
+  const promise = invokeOn<PromptTemplate[]>(hostId, "prompt_templates_list", { projectKey })
     .then((templates) => {
       cache.set(projectKey, templates);
       return templates;
@@ -101,14 +103,22 @@ export async function loadPromptTemplates(
   return promise;
 }
 
-export async function savePromptTemplate(draft: PromptTemplateDraft): Promise<PromptTemplate> {
-  const saved = await invoke<PromptTemplate>("prompt_templates_upsert", { template: draft });
+export async function savePromptTemplate(
+  draft: PromptTemplateDraft,
+  hostId: HostId = getDefaultHostId(),
+): Promise<PromptTemplate> {
+  const saved = await invokeOn<PromptTemplate>(hostId, "prompt_templates_upsert", {
+    template: draft,
+  });
   invalidatePromptTemplates(draft.projectKey);
   return saved;
 }
 
-export async function deletePromptTemplate(template: PromptTemplate): Promise<void> {
-  await invoke("prompt_templates_delete", { id: template.id });
+export async function deletePromptTemplate(
+  template: PromptTemplate,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  await invokeOn(hostId, "prompt_templates_delete", { id: template.id });
   invalidatePromptTemplates(template.projectKey);
 }
 
@@ -119,10 +129,13 @@ export async function projectPromptTemplateCount(cwd: string): Promise<number> {
 }
 
 /** Called when a project is removed from the rail, alongside its saved chats. */
-export async function deleteProjectPromptTemplates(cwd: string): Promise<void> {
+export async function deleteProjectPromptTemplates(
+  cwd: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
   const projectKey = templateProjectKey(cwd);
   if (!projectKey) return;
-  await invoke("prompt_templates_delete_project", { projectKey });
+  await invokeOn(hostId, "prompt_templates_delete_project", { projectKey });
   invalidatePromptTemplates(projectKey);
 }
 

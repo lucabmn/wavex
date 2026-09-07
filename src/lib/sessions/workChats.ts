@@ -7,7 +7,8 @@
  * nothing here resolves a checkout, a branch, or a diff.
  */
 
-import { invoke } from "../transport";
+import { getDefaultHostId, invokeOn } from "../transport";
+import { type HostId } from "../host";
 import { fuzzyMatch } from "../fuzzy";
 import {
   defaultSessionChoice,
@@ -31,8 +32,8 @@ const MAX_TITLE = 72;
  */
 let workChatDirPromise: Promise<string> | null = null;
 
-export function workChatDir(): Promise<string> {
-  workChatDirPromise ??= invoke<string>("work_chat_dir");
+export function workChatDir(hostId: HostId = getDefaultHostId()): Promise<string> {
+  workChatDirPromise ??= invokeOn<string>(hostId, "work_chat_dir");
   return workChatDirPromise;
 }
 

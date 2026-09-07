@@ -1,4 +1,11 @@
 import type { ContextUsage } from "./contextUsage";
+import {
+  hostPathArgs,
+  isRemoteHostId,
+  parseProjectRef,
+  unqualifiedHost,
+  type HostId,
+} from "./host";
 import type { UserQuestionPrompt } from "./userQuestion";
 import type { HandoffComposerCard } from "./handoff";
 import type { InboxComposerCard } from "./inbox/githubTasks";
@@ -163,6 +170,12 @@ export const RUNTIME_MODE_HINT: Record<RuntimeMode, string> = {
 
 export type Session = {
   id: string;
+  /**
+   * The machine that minted this id and runs its agent. Absent means this
+   * device, exactly as a bare path means a project on this device, so nothing
+   * written before wavex Link needs a migration.
+   */
+  hostId?: HostId;
   /** Absent means a coding session. */
   scope?: SessionScope;
   harness: HarnessId;
@@ -240,6 +253,27 @@ export function harnessSupportsAttachments(id: HarnessId): boolean {
   return id !== "fx" && id !== "grok";
 }
 
+/**
+ * The machine a session's agent, transcript, and checkout live on.
+ *
+ * Reads the session's own identity first and falls back to the host named by
+ * its project reference, so a session restored from a store that predates the
+ * field still resolves to the right machine.
+ */
+/**
+ * The machine a session's work happens on.
+ *
+ * A bare path names no host, so it means whichever host this client counts as
+ * unqualified: on the desktop that is this device, and in a browser tab — which
+ * has no device of its own — it is the host that served the page. Answering
+ * with the constant instead would send a browser client's turn to a machine
+ * that is not there.
+ */
+export function sessionHostId(session: Pick<Session, "hostId" | "cwd">): HostId {
+  if (session.hostId) return session.hostId;
+  return hostPathArgs(session.cwd, undefined, unqualifiedHost()).hostId;
+}
+
 export function newSession(
   harness: HarnessId = "claude",
   cwd = "~",
@@ -248,8 +282,10 @@ export function newSession(
   modelSettings?: Record<string, string>,
 ): Session {
   const resolved = resolveModel(harness, model ?? preferredModelId(harness));
+  const ref = parseProjectRef(cwd);
   return {
     id: crypto.randomUUID(),
+    ...(ref && isRemoteHostId(ref.hostId) ? { hostId: ref.hostId } : {}),
     harness,
     model: resolved.id,
     modelSettings: preferredModelSettings(resolved, modelSettings),

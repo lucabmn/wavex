@@ -46,8 +46,18 @@ export type ConnectionSnapshot = {
   error?: string;
 };
 
+/**
+ * How a client proves it may open a connection. The desktop holds a token in
+ * Rust and sends it as a bearer; a browser client, which has no Rust to hold
+ * one, spends its code once for an HttpOnly cookie the host set and that its
+ * own scripts cannot read. Naming the two explicitly keeps a desktop path that
+ * lost its token from quietly degrading into a cookie request that a remote
+ * host would answer for whoever else is using that browser.
+ */
+export type HostAuth = { kind: "bearer"; token: string } | { kind: "cookie" };
+
 export type RemoteConnection = {
   endpoint: string;
-  token: string;
+  auth: HostAuth;
   name?: string;
 };

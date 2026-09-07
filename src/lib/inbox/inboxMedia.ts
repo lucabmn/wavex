@@ -1,4 +1,8 @@
-import { invoke } from "../transport";
+// `fetch_inbox_media` answers in raw bytes rather than JSON, so it is not on
+// the connection allowlist. It does not need to be: the bytes behind a GitHub
+// or Linear attachment URL are the same on any machine, and the command only
+// exists to keep the fetch out of the WebView. It stays on this device.
+import { invokeLocal as invoke } from "../transport";
 import { sniffImageMime } from "../files/filePreview";
 
 /**
