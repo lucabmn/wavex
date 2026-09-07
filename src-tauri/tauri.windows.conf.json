@@ -11,7 +11,10 @@
         "minHeight": 520,
         "decorations": false,
         "transparent": true,
-        "backgroundColor": "#171717",
+        "backgroundColor": "#00000000",
+        "windowEffects": {
+          "effects": ["acrylic"]
+        },
         "backgroundThrottling": "throttle",
         "shadow": true
       }
