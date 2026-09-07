@@ -5238,9 +5238,11 @@ export default function App({
         ) : null}
         {activityViewOpen ? (
           <ActivityView
+            sessions={history}
             besideRail={projectRailOpen}
             onClose={onLeaveActivity}
             onToggleSidebar={onToggleSidebar}
+            onOpenSession={onSelectHistorySession}
           />
         ) : null}
         {notesViewOpen ? (
