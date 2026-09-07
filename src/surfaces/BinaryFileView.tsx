@@ -5,6 +5,8 @@ import { copyText } from "../lib/clipboard";
 import { formatFileSize, sniffImageMime } from "../lib/files/filePreview";
 import { watchFile } from "../lib/files/fileWatch";
 import { basename, readBinaryFile, revealPath } from "../lib/fs";
+import { canRevealPath } from "../lib/platform";
+import { hostIdForProject } from "../lib/transport";
 import { displayPath } from "../lib/paths";
 
 const MIN_ZOOM = 0.1;
@@ -25,13 +27,15 @@ type LoadState =
 export function BinaryFileView({ path, cwd }: Props) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
+  // The bytes are on the machine that owns the project, not on this one.
+  const hostId = hostIdForProject(cwd);
 
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
     setState({ status: "loading" });
 
-    readBinaryFile(path).then(
+    readBinaryFile(path, hostId).then(
       (bytes) => {
         if (cancelled) return;
         // The blob's MIME comes from the bytes, never the extension, so a file
@@ -62,21 +66,25 @@ export function BinaryFileView({ path, cwd }: Props) {
       cancelled = true;
       if (created) URL.revokeObjectURL(created);
     };
-  }, [path, reloadKey]);
+  }, [path, reloadKey, hostId]);
 
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
 
   useEffect(() => {
     let timer = 0;
-    const stop = watchFile(path, () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(reload, 50);
-    });
+    const stop = watchFile(
+      path,
+      () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(reload, 50);
+      },
+      hostId,
+    );
     return () => {
       window.clearTimeout(timer);
       stop();
     };
-  }, [path, reload]);
+  }, [path, reload, hostId]);
 
   if (state.status === "loading") {
     return (
@@ -239,10 +247,14 @@ function FileCard({
               Retry
             </CardButton>
           ) : null}
-          <CardButton onClick={() => void revealPath(path).catch(() => {})}>
-            <Folder className="size-3" strokeWidth={1.75} />
-            Reveal
-          </CardButton>
+          {canRevealPath(hostIdForProject(cwd)) ? (
+            <CardButton
+              onClick={() => void revealPath(path, hostIdForProject(cwd)).catch(() => {})}
+            >
+              <Folder className="size-3" strokeWidth={1.75} />
+              Reveal
+            </CardButton>
+          ) : null}
           <CardButton onClick={() => void copyText(path).catch(() => {})}>Copy path</CardButton>
         </div>
       </div>

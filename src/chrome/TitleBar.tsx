@@ -29,7 +29,7 @@ import { useSortable } from "../hooks/useSortable";
 import { FileTypeIcon } from "./FileTypeIcon";
 import type { TitleTab } from "../lib/workspace/titleTab";
 import { HarnessIcon } from "./HarnessIcon";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { nativeWindow } from "../lib/native";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { WindowControls } from "./WindowControls";
 import { ModeSwitch } from "./ModeSwitch";
@@ -549,7 +549,7 @@ function TitleBarComponent({
   useEffect(() => {
     document.title = systemTitle;
     try {
-      void getCurrentWindow().setTitle(systemTitle);
+      void nativeWindow()?.setTitle(systemTitle);
     } catch {}
   }, [systemTitle]);
 

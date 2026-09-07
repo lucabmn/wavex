@@ -8,7 +8,7 @@ import {
   Undo2,
   UnfoldVertical,
 } from "../chrome/icons";
-import { ask } from "@tauri-apps/plugin-dialog";
+import { ask } from "../lib/native";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FileTypeIcon } from "../chrome/FileTypeIcon";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";

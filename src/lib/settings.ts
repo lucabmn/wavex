@@ -10,6 +10,7 @@ export type SettingsSectionId =
   | "appearance"
   | "keybindings"
   | "providers"
+  | "connections"
   | "archive";
 
 export const SETTINGS_SECTIONS: {
@@ -41,6 +42,12 @@ export const SETTINGS_SECTIONS: {
     id: "providers",
     label: "Providers",
     description: "Agent CLIs wavex can drive, and the model new sessions start with.",
+  },
+  {
+    id: "connections",
+    label: "Connections",
+    description:
+      "Serve this machine to another wavex, and reach the machines you have paired with.",
   },
   {
     id: "archive",

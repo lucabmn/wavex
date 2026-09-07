@@ -8,6 +8,8 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { ConnectionsPage } from "./ConnectionsPage";
+import { Heading, Row, Toggle } from "../chrome/SettingsRow";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { DeleteProfileDialog } from "../chrome/DeleteProfileDialog";
 import { ProfileAvatar } from "../chrome/ProfileAvatar";
@@ -109,7 +111,7 @@ import {
   type DiffViewer,
   type SettingsSectionId,
 } from "../lib/settings";
-import { loadSoundsEnabled, playCue, saveSoundsEnabled } from "../lib/sounds";
+import { loadSoundsEnabled, saveSoundsEnabled } from "../lib/sounds";
 import { canDeleteProfile, type Profile } from "../lib/profiles/profile";
 import { createProfile, deleteProfile, updateProfile } from "../lib/profiles/profileStore";
 import { useProfiles } from "../hooks/useProfiles";
@@ -117,6 +119,7 @@ import {
   installPendingUpdate,
   readAppVersion,
   runUpdateFlow,
+  UPDATES_SUPPORTED,
   type UpdaterSnapshot,
 } from "../lib/updates/updater";
 
@@ -209,6 +212,7 @@ export function SettingsView({
           {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
           {section === "keybindings" ? <KeybindingsPage /> : null}
           {section === "providers" ? <ProvidersPage /> : null}
+          {section === "connections" ? <ConnectionsPage /> : null}
           {section === "archive" ? (
             <ArchivePage
               cwd={cwd}
@@ -399,7 +403,9 @@ function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => vo
             ? "You're on the latest version."
             : snapshot.phase === "error"
               ? (snapshot.error ?? "Update check failed.")
-              : "wavex updates itself from the release feed.";
+              : UPDATES_SUPPORTED
+                ? "wavex updates itself from the release feed."
+                : "This host updates itself; a browser client follows whatever it runs.";
 
   return (
     <Row
@@ -418,16 +424,18 @@ function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => vo
         >
           What's new
         </SecondaryButton>
-        <SecondaryButton onClick={() => void onClick()} disabled={busy}>
-          {busy ? (
-            <Loader className="size-3.5 animate-spin" aria-hidden />
-          ) : hasUpdate ? (
-            <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
-          ) : (
-            <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
-          )}
-          {hasUpdate ? "Download" : "Check for updates"}
-        </SecondaryButton>
+        {UPDATES_SUPPORTED ? (
+          <SecondaryButton onClick={() => void onClick()} disabled={busy}>
+            {busy ? (
+              <Loader className="size-3.5 animate-spin" aria-hidden />
+            ) : hasUpdate ? (
+              <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
+            ) : (
+              <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
+            )}
+            {hasUpdate ? "Download" : "Check for updates"}
+          </SecondaryButton>
+        ) : null}
       </div>
     </Row>
   );
@@ -1073,36 +1081,6 @@ function PageHeader({ title, description }: { title: string; description: string
   );
 }
 
-function Heading({ title, first = false }: { title: string; first?: boolean }) {
-  return (
-    <h2 className={`pb-1 text-[15px] font-semibold text-content ${first ? "" : "pt-8"}`}>
-      {title}
-    </h2>
-  );
-}
-
-function Row({
-  label,
-  description,
-  children,
-}: {
-  label: ReactNode;
-  description?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-6 border-b border-content/5 py-4 last:border-b-0">
-      <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-medium text-content">{label}</div>
-        {description ? (
-          <p className="mt-1 text-[12px] leading-relaxed text-content/45">{description}</p>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>
-    </div>
-  );
-}
-
 function Segmented<T extends string>({
   label,
   value,
@@ -1173,38 +1151,6 @@ function Slider({
         {display}
       </span>
     </div>
-  );
-}
-
-function Toggle({
-  label,
-  on,
-  onChange,
-}: {
-  label: string;
-  on: boolean;
-  onChange: (on: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-label={label}
-      aria-checked={on}
-      onClick={() => {
-        playCue("switch");
-        onChange(!on);
-      }}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-        on ? "bg-accent" : "bg-content/20"
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 size-4 rounded-full bg-white transition-[left] ${
-          on ? "left-4.5" : "left-0.5"
-        }`}
-      />
-    </button>
   );
 }
 

@@ -12,7 +12,7 @@ function dismissBootSplash() {
   if (!splash || splash.dataset.dismissed === "1") return;
   splash.dataset.dismissed = "1";
   const fade = () => {
-    void invoke("enable_window_glass");
+    void invoke("enable_window_glass").catch(() => undefined);
     splash.classList.add("boot-splash-out");
     window.setTimeout(() => splash.remove(), 180);
   };

@@ -5,6 +5,7 @@ import {
   probeForUpdate,
   readAppVersion,
   runUpdateFlow,
+  UPDATES_SUPPORTED,
   type UpdaterSnapshot,
 } from "../lib/updates/updater";
 import type { InstalledUpdate } from "../lib/updates/updateNotice";
@@ -24,7 +25,12 @@ export function SidebarUpdateFooter({
       {update && onOpenWhatsNew && onDismissUpdate ? (
         <UpdateRailCard update={update} onOpen={onOpenWhatsNew} onDismiss={onDismissUpdate} />
       ) : null}
-      <SidebarUpdate />
+      {/*
+        Updating replaces the wavex on the machine drawing this window. A
+        browser tab has none to replace, so the control is absent rather than
+        offering a check that would only ever report a version it invented.
+      */}
+      {UPDATES_SUPPORTED ? <SidebarUpdate /> : null}
     </div>
   );
 }
