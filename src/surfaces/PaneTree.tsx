@@ -23,6 +23,7 @@ import {
 import { EMPTY_QUEUES, queuedFor, type PromptQueues } from "../lib/promptQueue";
 import type { RecentProject } from "../lib/recents";
 import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
+import type { RaceRunnerChoice } from "../lib/race/race";
 import type { Attachment, Block, HarnessId, RuntimeMode, Session } from "../lib/session";
 import { FilePane } from "./FilePane";
 import { SessionPane } from "./SessionPane";
@@ -77,8 +78,14 @@ type Shared = {
   onOpenSubagent: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
-  onRace?: (sessionId: string, draft: string) => void;
-  raceBadges?: Record<string, string>;
+  onStartRace?: (
+    sessionId: string,
+    text: string,
+    attachments: Attachment[],
+    runners: RaceRunnerChoice[],
+  ) => void;
+  /** "2/3 done" per session touched by a live race. */
+  raceProgress?: Record<string, string>;
   onViewRace?: (sessionId: string) => void;
   onMovePane: (fromId: string, toId: string, edge: PaneEdge) => void;
   onNewTerminal: (sessionId: string) => void;
@@ -141,8 +148,8 @@ function PaneTreeComponent({
   onOpenSubagent,
   onSecondOpinion,
   onHandoff,
-  onRace,
-  raceBadges,
+  onStartRace,
+  raceProgress,
   onViewRace,
   onMovePane,
   onNewTerminal,
@@ -328,8 +335,8 @@ function PaneTreeComponent({
                 onOpenSubagent={onOpenSubagent}
                 onSecondOpinion={onSecondOpinion}
                 onHandoff={onHandoff}
-                onRace={onRace}
-                raceBadge={raceBadges?.[session.id]}
+                onStartRace={onStartRace}
+                raceProgress={raceProgress?.[session.id]}
                 onViewRace={onViewRace}
                 onNewTerminal={onNewTerminal}
                 onPaneDragStart={onPaneDragStart}

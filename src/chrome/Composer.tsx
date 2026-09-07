@@ -63,6 +63,8 @@ import {
   type PromptTemplateDraft,
 } from "../lib/project/promptTemplates";
 import { AccessPicker } from "./AccessPicker";
+import { RaceButton } from "./RaceButton";
+import type { RaceRunnerChoice } from "../lib/race/race";
 import { ComposerRunner } from "./ComposerRunner";
 import { ContextMeter } from "./ContextMeter";
 import { AttachmentChip } from "./AttachmentChip";
@@ -101,6 +103,14 @@ import { resolveTabGroupLogo } from "../lib/workspace/tabGroups";
 import { useComposerSkills } from "./useComposerSkills";
 import { usePromptTemplates } from "./usePromptTemplates";
 
+/** What the composer needs to offer a race, supplied only by a real session. */
+export type ComposerRace = {
+  /** "2/3 done" when this session already belongs to a race. */
+  progress?: string;
+  onView: () => void;
+  onStart: (text: string, attachments: Attachment[], runners: RaceRunnerChoice[]) => void;
+};
+
 type Props = {
   enabled?: boolean;
   focused: boolean;
@@ -136,6 +146,8 @@ type Props = {
   onHandoffCardDismiss?: () => void;
   onQuestionReply?: (requestId: number, reply: UserQuestionReply) => void;
   onSubmit: (text: string, attachments: Attachment[], options?: { steer?: boolean }) => void;
+  /** Race the draft across several agents. Absent where a race makes no sense. */
+  race?: ComposerRace;
   /** Prompts waiting for the running turn to end, oldest first. */
   queued?: QueuedPrompt[];
   /** The queue waits for a deliberate resume after the user stopped the turn. */
@@ -221,6 +233,7 @@ export function Composer({
   onHandoffCardDismiss,
   onQuestionReply,
   onSubmit,
+  race,
   queued = NO_QUEUED,
   queuePaused = false,
   canSteerQueue = false,
@@ -709,6 +722,23 @@ export function Composer({
     syncHasValue("", []);
   };
 
+  /**
+   * A race is a send that fans out, so it clears the composer the way a send
+   * does. The runners get the draft as written: nothing is appended to it.
+   */
+  const startRace = (runners: RaceRunnerChoice[]) => {
+    const text = (ref.current?.value ?? "").trim();
+    if (!race || !text) return;
+    race.onStart(text, attachments, runners);
+    if (!ref.current) return;
+    ref.current.value = "";
+    ref.current.style.height = "auto";
+    setDraft("");
+    onDraftChange?.("");
+    setAttachments([]);
+    syncHasValue("", []);
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (creatingSkill) return;
 
@@ -1042,6 +1072,15 @@ export function Composer({
             >
               <Plus className="size-3.5" strokeWidth={1.5} />
             </ToolButton>
+            {race ? (
+              <RaceButton
+                progress={race.progress}
+                disabled={!enabled || busy || !hasValue}
+                onView={race.onView}
+                onStart={startRace}
+                onClose={() => ref.current?.focus()}
+              />
+            ) : null}
             <div
               className="composer-toolbar flex min-w-0 flex-1 items-center"
               onWheel={(e) => {

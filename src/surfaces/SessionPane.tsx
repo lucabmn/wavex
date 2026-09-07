@@ -1,14 +1,15 @@
-import { ChevronDown, GripVertical, Users, X } from "../chrome/icons";
+import { ChevronDown, GripVertical, X } from "../chrome/icons";
 import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Composer } from "../chrome/Composer";
+import { Composer, type ComposerRace } from "../chrome/Composer";
 import { SessionReview } from "../chrome/SessionReview";
 import {
   canSteerHarness,
@@ -17,6 +18,7 @@ import {
   type UserQuestionReply,
 } from "../lib/harness";
 import type { QueuedPrompt } from "../lib/promptQueue";
+import type { RaceRunnerChoice } from "../lib/race/race";
 import { looksLikeProject, type RecentProject } from "../lib/recents";
 import {
   sessionDisplayTitle,
@@ -79,8 +81,14 @@ type Props = {
   onOpenSubagent: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
-  onRace?: (sessionId: string, draft: string) => void;
-  raceBadge?: string;
+  onStartRace?: (
+    sessionId: string,
+    text: string,
+    attachments: Attachment[],
+    runners: RaceRunnerChoice[],
+  ) => void;
+  /** "2/3 done" when this session belongs to a live race. */
+  raceProgress?: string;
   onViewRace?: (sessionId: string) => void;
   onNewTerminal: (sessionId: string) => void;
   onPaneDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
@@ -121,8 +129,8 @@ export const SessionPane = memo(function SessionPane({
   onOpenSubagent,
   onSecondOpinion,
   onHandoff,
-  onRace,
-  raceBadge,
+  onStartRace,
+  raceProgress,
   onViewRace,
   onNewTerminal,
   onPaneDragStart,
@@ -200,6 +208,14 @@ export const SessionPane = memo(function SessionPane({
   const showDeckProjectPicker = isEmpty && !looksLikeProject(session.cwd);
   const dockComposer = !isEmpty || inSplit;
   const draftRef = useRef<string | undefined>(undefined);
+  const race = useMemo<ComposerRace | undefined>(() => {
+    if (!onStartRace) return undefined;
+    return {
+      progress: raceProgress,
+      onView: () => onViewRace?.(session.id),
+      onStart: (text, attachments, runners) => onStartRace(session.id, text, attachments, runners),
+    };
+  }, [onStartRace, onViewRace, raceProgress, session.id]);
   const composer = (
     <Composer
       enabled={visible}
@@ -242,6 +258,7 @@ export const SessionPane = memo(function SessionPane({
       onModelSettingsChange={(settings) => onModelSettingsChange(session.id, settings)}
       onRuntimeModeChange={(mode) => onRuntimeModeChange(session.id, mode)}
       onSubmit={(text, attachments, options) => onSubmit(session.id, text, attachments, options)}
+      race={race}
       queued={queued}
       queuePaused={queuePaused}
       canSteerQueue={isLiveHarness(session.harness) && canSteerHarness(session.harness)}
@@ -351,31 +368,6 @@ export const SessionPane = memo(function SessionPane({
           </>
         )}
       </div>
-      {onRace || raceBadge ? (
-        <div className="mx-auto flex w-full max-w-4xl shrink-0 items-center gap-2 px-1 pt-1">
-          {onRace ? (
-            <button
-              type="button"
-              title="Race prompt... — send the same prompt to 2–3 agents in parallel"
-              onClick={() => onRace(session.id, draftRef.current ?? "")}
-              className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-[12px] text-content/45 hover:bg-content/8 hover:text-content"
-            >
-              <Users className="size-3.5" strokeWidth={1.75} />
-              Race prompt...
-            </button>
-          ) : null}
-          {raceBadge ? (
-            <button
-              type="button"
-              title="Open the race compare view"
-              onClick={() => onViewRace?.(session.id)}
-              className="min-w-0 flex-1 truncate rounded-md px-1.5 py-1 text-left font-mono text-[11px] text-content/45 hover:bg-content/8 hover:text-content"
-            >
-              {raceBadge} — view race
-            </button>
-          ) : null}
-        </div>
-      ) : null}
       {dockComposer ? <div className="mx-auto w-full max-w-4xl shrink-0">{composer}</div> : null}
     </div>
   );

@@ -336,17 +336,22 @@ import {
   turnUserRequest,
 } from "./lib/secondOpinion";
 import { PaneTree } from "./surfaces/PaneTree";
-import { RaceDialog } from "./chrome/RaceDialog";
 import { RaceCompare } from "./surfaces/RaceCompare";
 import {
-  buildRacePrompt,
   newRaceGroup,
-  raceOfSession,
-  raceRunnerStatus,
-  removeRaceSessions,
-  type RaceGroup,
+  raceProgressLabels,
+  raceSessionTitle,
   type RaceRunnerChoice,
-} from "./lib/race";
+} from "./lib/race/race";
+import {
+  closeRaceView,
+  getRaceViewSnapshot,
+  getRacesSnapshot,
+  pruneRaces,
+  startRaceGroup,
+  subscribeRaces,
+  viewRaceOfSession,
+} from "./lib/race/raceStore";
 import { ProjectTerminalDock } from "./surfaces/ProjectTerminalDock";
 import { SearchView } from "./surfaces/SearchView";
 import { SettingsView } from "./surfaces/SettingsView";
@@ -542,11 +547,8 @@ export default function App({
     setActivityViewOpen(false);
   }, []);
   /** Live race groups. Never persisted: runners are ordinary sessions. */
-  const [races, setRaces] = useState<RaceGroup[]>([]);
-  const racesRef = useRef(races);
-  racesRef.current = races;
-  const [raceDialog, setRaceDialog] = useState<{ sourceId: string; draft: string } | null>(null);
-  const [raceViewId, setRaceViewId] = useState<string | null>(null);
+  const races = useSyncExternalStore(subscribeRaces, getRacesSnapshot, getRacesSnapshot);
+  const raceViewId = useSyncExternalStore(subscribeRaces, getRaceViewSnapshot, getRaceViewSnapshot);
   const [paletteOpen, setPaletteOpen] = useState(false);
   /** Prompts waiting on a running turn, per session. Never persisted. */
   const [queues, setQueues] = useState<PromptQueues>(EMPTY_QUEUES);
@@ -3653,36 +3655,22 @@ export default function App({
     [openSessionBeside],
   );
 
-  const onRacePrompt = useCallback((sourceId: string, draft: string) => {
-    setRaceDialog({ sourceId, draft });
-  }, []);
-
   /**
-   * Race-Mode: one new session per runner in a chained split, same prompt to
-   * all of them. Reuses the normal submit path, so session bind, stop,
-   * forget, cancel, and idle-park semantics are the harness defaults — no
-   * second lifecycle. The source session is never touched.
+   * Race: one new session per runner in a chained split, the composer's draft
+   * sent to all of them unchanged. Reuses the normal submit path, so session
+   * bind, stop, forget, cancel, and idle-park semantics are the harness
+   * defaults — no second lifecycle. The source session is never touched.
    */
-  const startRace = useCallback(
-    (sourceId: string, prompt: string, runners: RaceRunnerChoice[]) => {
+  const onStartRace = useCallback(
+    (sourceId: string, text: string, attachments: Attachment[], runners: RaceRunnerChoice[]) => {
       const source = sessionsRef.current.find((session) => session.id === sourceId);
       if (!source || runners.length === 0) return;
       const cwd = sessionWorkCwd(source);
-      const text = buildRacePrompt(prompt, runners.length);
+      const title = raceSessionTitle(text);
       const created: Session[] = runners.map((runner) => ({
         ...newSession(runner.harness, cwd, runner.model, source.runtimeMode),
-        title: formatSessionTitle(
-          runner.harness,
-          `Race · ${prompt.trim().split(/\r?\n/)[0]?.slice(0, 48) ?? "prompt"}`,
-        ),
+        title: formatSessionTitle(runner.harness, title),
       }));
-      const race = newRaceGroup({
-        sourceId: source.id,
-        cwd,
-        prompt: prompt.trim(),
-        runners,
-        runnerIds: created.map((session) => session.id),
-      });
 
       const nextSessions = [...sessionsRef.current, ...created];
       sessionsRef.current = nextSessions;
@@ -3706,69 +3694,35 @@ export default function App({
         setTabs(nextTabs);
         if (tab.id !== activeTabIdRef.current) setActiveTabId(tab.id);
       } else {
-        for (const session of created) {
-          const nextTab = newTab(session.id);
-          appendTab(nextTab, cwd);
-        }
+        for (const session of created) appendTab(newTab(session.id), cwd);
         const last = tabsRef.current[tabsRef.current.length - 1];
         if (last) setActiveTabId(last.id);
       }
 
-      setRaces((prev) => [...prev, race]);
-      setRaceDialog(null);
-      setRaceViewId(race.id);
+      startRaceGroup(
+        newRaceGroup({
+          sourceId: source.id,
+          cwd,
+          prompt: text,
+          runners,
+          runnerIds: created.map((session) => session.id),
+        }),
+      );
       setProjectTerminalFocused(false);
-      for (const session of created) {
-        onSubmit(session.id, text, []);
-      }
+      for (const session of created) onSubmit(session.id, text, attachments);
     },
     [appendTab, onSubmit],
   );
 
-  const onViewRace = useCallback((sessionId: string) => {
-    const race = raceOfSession(racesRef.current, sessionId);
-    if (race) setRaceViewId(race.id);
-  }, []);
+  const onViewRace = useCallback((sessionId: string) => viewRaceOfSession(sessionId), []);
 
-  // Drop closed runner sessions; forget races with no runners left.
   useEffect(() => {
-    const live = new Set(sessions.map((session) => session.id));
-    setRaces((prev) => {
-      const gone = new Set<string>();
-      for (const race of prev) {
-        for (const id of race.runnerIds) {
-          if (!live.has(id)) gone.add(id);
-        }
-      }
-      if (gone.size === 0) return prev;
-      return removeRaceSessions(prev, gone);
-    });
-    setRaceViewId((current) => {
-      if (!current) return current;
-      const race = racesRef.current.find((entry) => entry.id === current);
-      if (!race) return current;
-      return race.runnerIds.some((id) => live.has(id)) ? current : null;
-    });
+    pruneRaces(sessions);
   }, [sessions]);
 
-  const raceBadges = useMemo(() => {
-    const badges: Record<string, string> = {};
-    const byId = new Map(sessions.map((session) => [session.id, session]));
-    for (const race of races) {
-      const total = race.runnerIds.length;
-      const done = race.runnerIds.filter((id) => raceRunnerStatus(byId.get(id)) === "done").length;
-      const label = `Race · ${done}/${total} done`;
-      for (const id of [...race.runnerIds, race.sourceId]) {
-        badges[id] = label;
-      }
-    }
-    return badges;
-  }, [races, sessions]);
+  const raceProgress = useMemo(() => raceProgressLabels(races, sessions), [races, sessions]);
 
   const raceView = races.find((race) => race.id === raceViewId) ?? null;
-  const raceDialogCwd = raceDialog
-    ? sessionWorkCwd(sessions.find((session) => session.id === raceDialog.sourceId) ?? { cwd: "~" })
-    : "~";
 
   const autoContinueKey = sessions
     .filter((session) => canAutoContinue(session) && isLiveHarness(session.harness))
@@ -3994,12 +3948,8 @@ export default function App({
   );
 
   const stopRaceAll = useCallback(
-    (raceId: string) => {
-      const race = racesRef.current.find((entry) => entry.id === raceId);
-      if (!race) return;
-      for (const runnerId of race.runnerIds) {
-        onStop(runnerId);
-      }
+    (runnerIds: string[]) => {
+      for (const runnerId of runnerIds) onStop(runnerId);
     },
     [onStop],
   );
@@ -5164,8 +5114,8 @@ export default function App({
                           onOpenSubagent={onOpenSubagent}
                           onSecondOpinion={onSecondOpinion}
                           onHandoff={onHandoff}
-                          onRace={onRacePrompt}
-                          raceBadges={raceBadges}
+                          onStartRace={onStartRace}
+                          raceProgress={raceProgress}
                           onViewRace={onViewRace}
                           onMovePane={onMovePane}
                           onNewTerminal={onNewTerminalInSession}
@@ -5243,21 +5193,13 @@ export default function App({
             onOpenWhatsNew={onOpenWhatsNew}
           />
         ) : null}
-        {raceDialog ? (
-          <RaceDialog
-            cwd={raceDialogCwd}
-            initialPrompt={raceDialog.draft}
-            onClose={() => setRaceDialog(null)}
-            onStart={(prompt, runners) => startRace(raceDialog.sourceId, prompt, runners)}
-          />
-        ) : null}
         {raceView ? (
           <RaceCompare
             race={raceView}
             sessions={sessions}
             onStopOne={onStop}
-            onStopAll={() => stopRaceAll(raceView.id)}
-            onClose={() => setRaceViewId(null)}
+            onStopAll={() => stopRaceAll(raceView.runnerIds)}
+            onClose={closeRaceView}
           />
         ) : null}
         {searchViewOpen ||
