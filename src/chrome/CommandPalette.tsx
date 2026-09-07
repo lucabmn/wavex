@@ -9,7 +9,14 @@ import { createPortal } from "react-dom";
 import { Search } from "./icons";
 import { MatchText } from "./MatchText";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
-import { APP_COMMANDS, paletteEntries, type CommandId, type PaletteEntry } from "../lib/commands";
+import {
+  APP_COMMANDS,
+  commandsForClient,
+  paletteEntries,
+  type CommandId,
+  type PaletteEntry,
+} from "../lib/commands";
+import { IS_BROWSER_CLIENT } from "../lib/clientRuntime";
 import { LAYER } from "../lib/layers";
 
 type Props = {
@@ -30,7 +37,10 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
   // The handler object is rebuilt every render; only its key set matters here.
   const runnableKey = Object.keys(handlers).sort().join(" ");
   const runnable = useMemo(() => new Set(runnableKey.split(" ") as CommandId[]), [runnableKey]);
-  const entries = useMemo(() => paletteEntries(APP_COMMANDS, runnable, query), [query, runnable]);
+  const entries = useMemo(
+    () => paletteEntries(commandsForClient(APP_COMMANDS, IS_BROWSER_CLIENT), runnable, query),
+    [query, runnable],
+  );
 
   useEffect(() => {
     if (!open) return;

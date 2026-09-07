@@ -1,4 +1,5 @@
-import { APP_COMMANDS } from "./commands";
+import { APP_COMMANDS, commandsForClient } from "./commands";
+import { IS_BROWSER_CLIENT } from "./clientRuntime";
 import { profileStorage } from "./profiles/profileStorage";
 
 const SECTION_KEY = "wavex.settingsSection";
@@ -247,9 +248,13 @@ export type KeybindingRow = {
  * The shortcut half of the command catalog. Commands with no key never reach
  * this page; they are still reachable by name from the command palette.
  */
-export const KEYBINDINGS: KeybindingRow[] = APP_COMMANDS.filter((command) => !!command.keys).map(
-  (command) => ({ command: command.label, keys: command.keys as string, when: command.when }),
-);
+export const KEYBINDINGS: KeybindingRow[] = commandsForClient(APP_COMMANDS, IS_BROWSER_CLIENT)
+  .filter((command) => !!command.keys)
+  .map((command) => ({
+    command: command.label,
+    keys: command.keys as string,
+    when: command.when,
+  }));
 
 export function filterKeybindings(rows: KeybindingRow[], query: string): KeybindingRow[] {
   const needle = query.trim().toLowerCase();
