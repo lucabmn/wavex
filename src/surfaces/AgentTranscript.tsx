@@ -834,6 +834,7 @@ function UserMessageBlock({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
+  const [singleLine, setSingleLine] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(block.text);
   const textRef = useRef<HTMLPreElement>(null);
@@ -841,16 +842,30 @@ function UserMessageBlock({
   const note = block.noteCard;
   const text = card && card.kind !== "handoff" ? "" : block.text;
   const chat = layout === "chat";
+  const textOnly = Boolean(text) && !block.attachments?.length && !card && !note;
 
   useLayoutEffect(() => {
     const el = textRef.current;
     if (!el || !text) {
       setOverflows(false);
+      setSingleLine(false);
       return;
     }
-    if (expanded) return;
-    setOverflows(el.scrollHeight > el.clientHeight + 1);
-  }, [text, expanded]);
+
+    const measure = () => {
+      if (!expanded) {
+        setOverflows(el.scrollHeight > el.clientHeight + 1);
+      }
+
+      const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight);
+      setSingleLine(textOnly && Number.isFinite(lineHeight) && el.scrollHeight <= lineHeight + 1);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, textOnly, expanded]);
 
   const toggle = () => {
     if (overflows) setExpanded((value) => !value);
@@ -934,7 +949,9 @@ function UserMessageBlock({
       ) : null}
       <div
         className={`min-w-0 bg-content/10 px-3 py-2 font-sans text-content ${
-          chat ? "w-fit max-w-xl rounded-xl" : "rounded-lg border border-content/10"
+          chat
+            ? `w-fit max-w-xl ${singleLine ? "rounded-full" : "rounded-xl"}`
+            : "rounded-lg border border-content/10"
         }`}
         style={{ zIndex: stickyIndex }}
         onClick={overflows ? toggle : undefined}
