@@ -883,13 +883,13 @@ function SidebarComponent({
             if (sortable.consumeClick()) return;
             onTabPick(itemId);
           }}
-          className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md px-2 text-[12px] leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+          className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center overflow-hidden rounded-md px-2 text-[12px] leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             active
               ? "bg-content/10 text-content"
               : "text-content/50 hover:bg-content/5 hover:text-content"
           } ${canDragTabs ? "cursor-grab active:cursor-grabbing" : ""}`}
         >
-          {isChangesTab && hasChangeStats ? (
+          {isChangesTab && hasUncommitted ? (
             <DiffStat additions={changeAdditions} deletions={changeDeletions} files={changeFiles} />
           ) : isChangesTab ? (
             <span className="flex min-w-0 items-center gap-1">
@@ -2103,11 +2103,11 @@ function DiffStat({
   return (
     <span
       title={`${label} uncommitted`}
-      className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums"
+      className="flex min-w-0 items-center gap-1.5 overflow-hidden font-mono text-[11px] font-semibold tabular-nums"
     >
-      {files > 0 ? <span className="text-content/60">{files} changed</span> : null}
-      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
+      {files > 0 ? <span className="truncate text-content/60">{files} changed</span> : null}
+      {additions > 0 ? <span className="shrink-0 text-emerald-400">+{additions}</span> : null}
+      {deletions > 0 ? <span className="shrink-0 text-red-400">-{deletions}</span> : null}
     </span>
   );
 }
