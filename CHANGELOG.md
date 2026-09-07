@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-09-07
+
+- Connect to a wavex host on another machine through an authenticated loopback
+  host or browser client, with remote projects, sessions, and host-owned agents.
+- Show subagent transcripts inline or in a dedicated pane.
+- Add language-server support for diagnostics, navigation, completion, hover,
+  formatting, rename, and references in the coding view.
+- Improve cross-platform host routing, browser command behavior, and workspace
+  state handling.
+
 ## [0.7.0] - 2026-09-04
 
 - Queue follow-ups in a stacked card above the composer with edit, steer, and
