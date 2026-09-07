@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.1] - 2026-09-08
+
+- Start a race from the composer's send control instead of a separate dialog.
+- Rebuild the activity board: one set of lanes across projects, the view switch
+  in the header, and a card that can only be parked once its turn has finished.
+- Stop drawing a second set of window buttons over the activity page on macOS.
+- Keep one full-window page open at a time, so opening Usage no longer leaves
+  Activity splitting the window with it.
+
 ## [0.11.0] - 2026-09-07
 
 - Add a kanban activity board for tracking project work across sessions.
