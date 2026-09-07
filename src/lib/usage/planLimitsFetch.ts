@@ -49,11 +49,18 @@ export async function fetchClaudePlanLimits(
  * lives in `rateLimitsFetch` and hands back its untouched payload, so the
  * status-bar chip and this view share one spawn.
  */
-export async function fetchCodexPlanLimits(force = false): Promise<PlanLimits> {
+export async function fetchCodexPlanLimits(
+  force = false,
+  hostId: HostId = getDefaultHostId(),
+): Promise<PlanLimits> {
   let raw: unknown;
-  const chip = await fetchCodexRateLimits((result) => {
-    raw = result;
-  }, force);
+  const chip = await fetchCodexRateLimits(
+    (result) => {
+      raw = result;
+    },
+    force,
+    hostId,
+  );
   if (raw !== undefined) return parseCodexPlanLimits(raw);
   if (chip.status === "unavailable") {
     return unavailablePlanLimits("codex", chip.error?.trim() || "Codex is not signed in");
