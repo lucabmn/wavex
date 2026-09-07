@@ -1,10 +1,9 @@
-import { ArrowDownCircle, Loader, RefreshCw } from "./icons";
+import { ArrowDownCircle, Loader } from "./icons";
 import { useCallback, useEffect, useState } from "react";
 import {
   installPendingUpdate,
   probeForUpdate,
   readAppVersion,
-  runUpdateFlow,
   UPDATES_SUPPORTED,
   type UpdaterSnapshot,
 } from "../lib/updates/updater";
@@ -79,40 +78,34 @@ export function SidebarUpdate() {
 
     if (snapshot.phase === "available") {
       await installPendingUpdate(setSnapshot);
-      return;
     }
-
-    await runUpdateFlow(true, setSnapshot);
   }, [snapshot.phase]);
 
-  const busy = snapshot.phase === "checking" || snapshot.phase === "downloading";
-  const hasUpdate = snapshot.phase === "available";
-  const label = hasUpdate
-    ? `Update to ${snapshot.availableVersion}`
-    : busy
-      ? snapshot.phase === "downloading"
-        ? `Downloading${snapshot.progress != null ? ` ${snapshot.progress}%` : "…"}`
-        : "Checking…"
-      : "Check for updates";
+  const isDownloading = snapshot.phase === "downloading";
+  const hasUpdate = snapshot.phase === "available" || isDownloading;
+  // The sidebar stays quiet unless there is something to install: idle,
+  // checking, up-to-date, and error states render nothing.
+  if (!hasUpdate) {
+    return null;
+  }
+
+  const label =
+    snapshot.phase === "available" && snapshot.availableVersion
+      ? `Update to ${snapshot.availableVersion}`
+      : `Downloading${snapshot.progress != null ? ` ${snapshot.progress}%` : "…"}`;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={busy}
-      className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors ${
-        hasUpdate
-          ? "bg-accent/15 text-content hover:bg-accent/20"
-          : "bg-content/5 text-content/75 hover:bg-content/10 hover:text-content"
-      } disabled:cursor-default disabled:opacity-70`}
+      disabled={isDownloading}
+      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors bg-accent/15 text-content hover:bg-accent/20 disabled:cursor-default disabled:opacity-70"
     >
-      <span className="grid size-[18px] shrink-0 place-items-center">
-        {busy ? (
+      <span className="grid size-4.5 shrink-0 place-items-center">
+        {isDownloading ? (
           <Loader className="size-4 animate-spin opacity-70" aria-hidden />
-        ) : hasUpdate ? (
-          <ArrowDownCircle className="size-4 text-accent" aria-hidden />
         ) : (
-          <RefreshCw className="size-4 opacity-70" strokeWidth={1.75} aria-hidden />
+          <ArrowDownCircle className="size-4 text-accent" aria-hidden />
         )}
       </span>
       <span className="min-w-0 flex-1 flex items-center">
