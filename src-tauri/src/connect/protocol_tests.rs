@@ -5,7 +5,7 @@
 //! gap. Both are invisible to a host that merely compiles, so they are checked
 //! here against a socket rather than against a mock.
 
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, ErrorKind, Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
@@ -151,19 +151,39 @@ impl Client {
     }
 }
 
+/// Read a response until the host closes the connection.
+///
+/// A host that has answered and hung up can reach the client as a reset rather
+/// than an end of file — that is the ordinary shape of a closed socket on
+/// Windows — so a reset ends this read the way an end of file does, and what
+/// arrived before it is still the response.
+fn read_to_close(socket: &TcpStream) -> String {
+    let mut raw = Vec::new();
+    let mut buffer = [0u8; 1024];
+    let mut reader = socket;
+    loop {
+        match reader.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(read) => raw.extend_from_slice(&buffer[..read]),
+            Err(error) if error.kind() == ErrorKind::ConnectionReset => break,
+            Err(error) => panic!("reading the response: {error}"),
+        }
+    }
+    String::from_utf8_lossy(&raw).into_owned()
+}
+
 fn ticket(port: u16, token: &str) -> Result<String, u16> {
     let mut socket = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let request = format!(
         "POST /api/v1/tickets HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer {token}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
     );
     socket.write_all(request.as_bytes()).unwrap();
-    let mut raw = String::new();
-    socket.read_to_string(&mut raw).unwrap();
+    let raw = read_to_close(&socket);
     let status: u16 = raw
         .split_whitespace()
         .nth(1)
         .and_then(|code| code.parse().ok())
-        .unwrap();
+        .unwrap_or_else(|| panic!("a status line, got {raw:?}"));
     if status != 200 {
         return Err(status);
     }
@@ -306,12 +326,7 @@ fn refuses_a_bad_bearer_and_a_replayed_ticket() {
         "GET /api/v1/connect HTTP/1.1\r\nHost: 127.0.0.1\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Protocol: {PROTOCOL}, wavex-ticket.{ticket}\r\n\r\n"
     );
     writer.write_all(request.as_bytes()).unwrap();
-    let mut raw = String::new();
-    socket
-        .try_clone()
-        .unwrap()
-        .read_to_string(&mut raw)
-        .unwrap();
+    let raw = read_to_close(&socket);
     assert!(raw.starts_with("HTTP/1.1 401"), "{raw}");
 }
 
@@ -320,13 +335,12 @@ fn refuses_a_bad_bearer_and_a_replayed_ticket() {
 fn http_request(port: u16, request: &str) -> (u16, String, String) {
     let mut socket = TcpStream::connect(("127.0.0.1", port)).unwrap();
     socket.write_all(request.as_bytes()).unwrap();
-    let mut raw = String::new();
-    socket.read_to_string(&mut raw).unwrap();
+    let raw = read_to_close(&socket);
     let status: u16 = raw
         .split_whitespace()
         .nth(1)
         .and_then(|code| code.parse().ok())
-        .unwrap();
+        .unwrap_or_else(|| panic!("a status line, got {raw:?}"));
     let (head, body) = raw.split_once("\r\n\r\n").unwrap_or((raw.as_str(), ""));
     (status, head.to_string(), body.to_string())
 }

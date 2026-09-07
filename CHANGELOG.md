@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Stop drawing a second set of window buttons over the activity page on macOS.
 - Keep one full-window page open at a time, so opening Usage no longer leaves
   Activity splitting the window with it.
+- End a host's HTTP answer with a close Windows survives, so a browser client
+  reads the reply instead of a reset connection.
 
 ## [0.11.0] - 2026-09-07
 

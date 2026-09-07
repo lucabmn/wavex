@@ -393,12 +393,35 @@ fn accept_loop(
     }
 }
 
+/// Whether this connection ended as a finished response or became a socket
+/// the connection loop now owns.
+enum Served {
+    Response,
+    Upgraded,
+}
+
 fn serve(
     host: &ConnectHost,
     services: Arc<dyn HostServices>,
     stream: TcpStream,
     stopping: &AtomicBool,
 ) -> Result<(), String> {
+    let closing = stream.try_clone().map_err(|error| error.to_string())?;
+    let served = serve_request(host, services, stream, stopping);
+    // An upgraded socket has already been closed by the connection that owned
+    // it. Everything else is one answer this side has to end politely.
+    if !matches!(served, Ok(Served::Upgraded)) {
+        http::close_after_response(&closing);
+    }
+    served.map(|_| ())
+}
+
+fn serve_request(
+    host: &ConnectHost,
+    services: Arc<dyn HostServices>,
+    stream: TcpStream,
+    stopping: &AtomicBool,
+) -> Result<Served, String> {
     stream
         .set_nodelay(true)
         .map_err(|error| error.to_string())?;
@@ -408,7 +431,7 @@ fn serve(
 
     if request.method.eq_ignore_ascii_case("OPTIONS") {
         http::write_json(&mut response_stream, 204, "No Content", "");
-        return Ok(());
+        return Ok(Served::Response);
     }
 
     // Everything below is reachable from a page the user did not write, so the
@@ -420,7 +443,7 @@ fn serve(
             "Bad Request",
             "This host answers to 127.0.0.1 only",
         );
-        return Ok(());
+        return Ok(Served::Response);
     }
 
     let path = request
@@ -440,7 +463,7 @@ fn serve(
                     "Unauthorized",
                     "That host token is not valid",
                 );
-                return Ok(());
+                return Ok(Served::Response);
             }
             let ticket = host.issue_ticket();
             http::write_json(
@@ -449,12 +472,12 @@ fn serve(
                 "OK",
                 &json!({ "ticket": ticket }).to_string(),
             );
-            Ok(())
+            Ok(Served::Response)
         }
         ("POST", "/api/v1/session") => {
             let body = http::read_body(&mut reader, &request)?;
             open_browser_session(host, &request, &body, &mut response_stream);
-            Ok(())
+            Ok(Served::Response)
         }
         ("GET", "/api/v1/session") => {
             if session_of(host, &request, read_is_ours(&request)).is_none() {
@@ -464,10 +487,10 @@ fn serve(
                     "Unauthorized",
                     "This browser is not paired with this host",
                 );
-                return Ok(());
+                return Ok(Served::Response);
             }
             http::write_json(&mut response_stream, 200, "OK", &host_summary(host));
-            Ok(())
+            Ok(Served::Response)
         }
         ("DELETE", "/api/v1/session") => {
             if let Some(session) = session_of(host, &request, page_is_ours(&request)) {
@@ -480,18 +503,18 @@ fn serve(
                 &json!({ "ok": true }).to_string(),
                 &format!("{SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"),
             );
-            Ok(())
+            Ok(Served::Response)
         }
         ("GET", "/api/v1/connect") => {
             serve_connect(host, services, request, stream, reader, stopping)
         }
         ("GET", _) | ("HEAD", _) => {
             serve_asset(services.as_ref(), &path, &mut response_stream);
-            Ok(())
+            Ok(Served::Response)
         }
         _ => {
             http::write_error(&mut response_stream, 404, "Not Found", "No such endpoint");
-            Ok(())
+            Ok(Served::Response)
         }
     }
 }
@@ -651,7 +674,7 @@ fn serve_connect(
     stream: TcpStream,
     reader: BufReader<TcpStream>,
     stopping: &AtomicBool,
-) -> Result<(), String> {
+) -> Result<Served, String> {
     let mut response_stream = stream.try_clone().map_err(|error| error.to_string())?;
     if stopping.load(Ordering::SeqCst) {
         http::write_error(
@@ -660,7 +683,7 @@ fn serve_connect(
             "Service Unavailable",
             "This host is shutting down",
         );
-        return Ok(());
+        return Ok(Served::Response);
     }
     upgrade(host, services, request, stream, reader)
 }
@@ -671,7 +694,7 @@ fn upgrade(
     request: http::Request,
     stream: TcpStream,
     reader: BufReader<TcpStream>,
-) -> Result<(), String> {
+) -> Result<Served, String> {
     let mut response_stream = stream.try_clone().map_err(|error| error.to_string())?;
     let protocols = request.subprotocols();
     let key = request
@@ -686,7 +709,7 @@ fn upgrade(
             "Bad Request",
             "That is not a websocket upgrade",
         );
-        return Ok(());
+        return Ok(Served::Response);
     }
     if !protocols.iter().any(|item| item == PROTOCOL) {
         http::write_error(
@@ -695,7 +718,7 @@ fn upgrade(
             "Bad Request",
             "This host speaks a different protocol version",
         );
-        return Ok(());
+        return Ok(Served::Response);
     }
     let ticket = protocols
         .iter()
@@ -709,7 +732,7 @@ fn upgrade(
             "Unauthorized",
             "That connection ticket is spent, expired, or invalid",
         );
-        return Ok(());
+        return Ok(Served::Response);
     }
     if host.connection_count() >= MAX_CONNECTIONS {
         http::write_error(
@@ -718,11 +741,11 @@ fn upgrade(
             "Service Unavailable",
             "This host already has as many clients as it serves",
         );
-        return Ok(());
+        return Ok(Served::Response);
     }
 
     http::write_upgrade(&mut response_stream, &key, PROTOCOL).map_err(|error| error.to_string())?;
-    Connection::run(host, services, stream, reader)
+    Connection::run(host, services, stream, reader).map(|()| Served::Upgraded)
 }
 
 /// Guards both the cursor and the act of queueing stream frames, so a

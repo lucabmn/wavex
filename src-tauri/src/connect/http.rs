@@ -7,7 +7,8 @@
 //! short-lived even if a proxy writes the URL and its headers to a log.
 
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::TcpStream;
+use std::net::{Shutdown, TcpStream};
+use std::time::Duration;
 
 use base64::Engine as _;
 use sha1::{Digest, Sha1};
@@ -16,6 +17,8 @@ use sha1::{Digest, Sha1};
 const MAX_HEAD_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 64 * 1024;
 const WS_GUID: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+/// How long a finished response waits for the client's own close.
+const CLOSE_DRAIN: Duration = Duration::from_millis(250);
 
 pub struct Request {
     pub method: String,
@@ -193,6 +196,21 @@ fn cors_headers() -> String {
      Access-Control-Allow-Headers: authorization, content-type, x-wavex-protocol\r\n\
      Access-Control-Max-Age: 600\r\n"
         .into()
+}
+
+/// End a plain HTTP connection: our close first, then the client's.
+///
+/// Windows resets a socket that is closed while bytes are still queued on its
+/// receiving side, and a reset throws away the answer the client has not read
+/// yet — so the client sees `ConnectionReset` instead of the 401 it was told.
+/// A FIN and a drain is the close both ends survive. Never call this on an
+/// upgraded socket: that one is a live WebSocket, not a finished response.
+pub fn close_after_response(stream: &TcpStream) {
+    let _ = stream.shutdown(Shutdown::Write);
+    let _ = stream.set_read_timeout(Some(CLOSE_DRAIN));
+    let mut sink = [0u8; 512];
+    let mut reader = stream;
+    while matches!(reader.read(&mut sink), Ok(read) if read > 0) {}
 }
 
 pub fn write_response(
