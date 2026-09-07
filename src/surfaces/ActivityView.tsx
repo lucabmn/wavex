@@ -189,7 +189,7 @@ export function ActivityView({
             Review next
           </button>
         ) : null}
-        <WindowControls />
+        {IS_MAC ? null : <WindowControls />}
       </div>
 
       <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
