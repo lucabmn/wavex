@@ -1,4 +1,5 @@
 import { listProjectFiles, type ProjectFile } from "../fs";
+import { subscribeDirsChanged } from "./fileTree";
 import { scorePath, type FuzzyHit } from "../fuzzy";
 import { hostIdForProject } from "../transport";
 import { hostPathKey, type HostId } from "../host";
@@ -8,15 +9,23 @@ import { normalizeEditorPath } from "../search";
 
 const MAX_RECENTS = 30;
 const MAX_RESULTS = 80;
+const REFRESH_MS = 150;
 
 type Cache = {
   key: string;
   files: ProjectFile[];
 };
 
+type Listener = () => void;
+
 let cache: Cache | null = null;
 let inflight: { key: string; promise: Promise<ProjectFile[]> } | null = null;
+let lastRef: { cwd: string; hostId?: HostId } | null = null;
 let epoch = 0;
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+let refreshing = false;
+let refreshAgain = false;
+const listeners = new Set<Listener>();
 const recentsByCwd = new Map<string, string[]>();
 
 /** A project index belongs to one host's checkout, never to a path alone. */
@@ -34,8 +43,64 @@ export function peekProjectFiles(cwd: string, hostId?: HostId): ProjectFile[] | 
   return cache?.key === normCwd(cwd, hostId) ? cache.files : null;
 }
 
+function notifyProjectFilesChanged() {
+  for (const listener of listeners) listener();
+}
+
+export function subscribeProjectFiles(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 export function invalidateProjectFiles(cwd?: string, hostId?: HostId) {
-  if (!cwd || cache?.key === normCwd(cwd, hostId)) cache = null;
+  const key = cwd ? normCwd(cwd, hostId) : null;
+  if (key && cache?.key !== key && inflight?.key !== key) return;
+  if (!key || cache?.key === key) cache = null;
+  if (!key || inflight?.key === key) {
+    inflight = null;
+    epoch += 1;
+  }
+  if (!key) {
+    lastRef = null;
+    if (refreshTimer != null) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+  }
+  notifyProjectFilesChanged();
+}
+
+function scheduleIndexRefresh() {
+  if (!lastRef) return;
+  if (typeof document !== "undefined" && document.hidden) return;
+  if (refreshTimer != null) return;
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+    void runIndexRefresh();
+  }, REFRESH_MS);
+}
+
+async function runIndexRefresh() {
+  if (refreshing) {
+    refreshAgain = true;
+    return;
+  }
+  const ref = lastRef;
+  if (!ref) return;
+  refreshing = true;
+  try {
+    await loadProjectFiles(ref.cwd, true, ref.hostId);
+  } catch {
+    /* next focus / dir change will retry */
+  } finally {
+    refreshing = false;
+    if (refreshAgain) {
+      refreshAgain = false;
+      scheduleIndexRefresh();
+    }
+  }
 }
 
 export function rememberOpenedFile(cwd: string, path: string, hostId?: HostId) {
@@ -60,18 +125,21 @@ export function loadProjectFiles(
   hostId?: HostId,
 ): Promise<ProjectFile[]> {
   if (!looksLikeProject(cwd)) return Promise.resolve([]);
+  lastRef = { cwd, hostId };
   const key = normCwd(cwd, hostId);
   if (!refresh && cache?.key === key) return Promise.resolve(cache.files);
-  if (inflight?.key === key) return inflight.promise;
+  if (!refresh && inflight?.key === key) return inflight.promise;
 
   const id = ++epoch;
   const promise = listProjectFiles(cwd, hostId)
     .then((files) => {
-      if (id === epoch) cache = { key, files };
+      if (id !== epoch) return files;
+      cache = { key, files };
+      notifyProjectFilesChanged();
       return files;
     })
     .finally(() => {
-      if (inflight?.key === key) inflight = null;
+      if (inflight?.promise === promise) inflight = null;
     });
   inflight = { key, promise };
   return promise;
@@ -197,4 +265,15 @@ function pickOpenableFile(candidates: ProjectFile[], cwd: string, relHint: strin
   }
 
   return candidates.sort((a, b) => a.relative.length - b.relative.length)[0];
+}
+
+subscribeDirsChanged(scheduleIndexRefresh);
+
+if (typeof document !== "undefined") {
+  window.addEventListener("focus", () => {
+    if (!document.hidden) scheduleIndexRefresh();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) scheduleIndexRefresh();
+  });
 }

@@ -1,6 +1,7 @@
 import { invokeLocal as invoke } from "./transport";
 import { HAS_NATIVE_GLASS, IS_MAC } from "./platform";
 import { profileStorage } from "./profiles/profileStorage";
+import { applyUiScale, loadUiScale } from "./uiScale";
 
 const THEME_HUE_KEY = "wavex.themeHue";
 const THEME_SATURATION_KEY = "wavex.themeSaturation";
@@ -144,6 +145,7 @@ export function initAppearance() {
   applySidebarOpacity(loadSidebarOpacity());
   applySidebarBlur(loadSidebarBlur());
   applyBodyGlass(loadBodyGlass());
+  void applyUiScale(loadUiScale());
 }
 
 function isThemePreference(value: unknown): value is ThemePreference {

@@ -430,6 +430,12 @@ function dominantWorkKind(steps: Block[]): ActivityWorkKind | undefined {
     const kind = toolCategory(block);
     counts.set(kind, (counts.get(kind) ?? 0) + 1);
   }
+  return dominantCountedWorkKind(counts);
+}
+
+function dominantCountedWorkKind(
+  counts: ReadonlyMap<ActivityWorkKind, number>,
+): ActivityWorkKind | undefined {
   let best: ActivityWorkKind | undefined;
   for (const kind of WORK_KIND_ORDER) {
     const count = counts.get(kind) ?? 0;

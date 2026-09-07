@@ -126,26 +126,40 @@ export function sanitizeSessionForPersist(session: Session): SessionUpsertPayloa
  * overwrite a newer one. Chain them per session; different sessions still
  * write concurrently.
  */
-const upsertQueues = new Map<string, Promise<unknown>>();
+const sessionWriteQueues = new Map<string, Promise<unknown>>();
+const deletedSessionRefs = new Set<string>();
+
+function enqueueSessionWrite<T>(queueKey: string, operation: () => Promise<T>): Promise<T> {
+  const previous = sessionWriteQueues.get(queueKey) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(operation);
+  const tail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  sessionWriteQueues.set(queueKey, tail);
+  void tail.then(() => {
+    if (sessionWriteQueues.get(queueKey) === tail) {
+      sessionWriteQueues.delete(queueKey);
+    }
+  });
+  return run;
+}
 
 export async function upsertSession(
   session: Session,
   hostIdArg?: HostId,
 ): Promise<SessionSummary | null> {
   const hostId = hostPathArgs(session.cwd, hostIdArg, getDefaultHostId()).hostId;
-  if (!shouldPersistSession(session)) return null;
-  const payload = sanitizeSessionForPersist(session);
   const queueKey = sessionRefKey(hostId, session.id);
-  const previous = upsertQueues.get(queueKey) ?? Promise.resolve();
-  const run = previous
-    .catch(() => undefined)
-    .then(() => invokeOn<SessionSummary>(hostId, "session_upsert", { session: payload }));
-  upsertQueues.set(queueKey, run);
-  try {
-    return normalizeSummary(await run, hostId);
-  } finally {
-    if (upsertQueues.get(queueKey) === run) upsertQueues.delete(queueKey);
+  if (!shouldPersistSession(session) || deletedSessionRefs.has(queueKey)) {
+    return null;
   }
+  const payload = sanitizeSessionForPersist(session);
+  const summary = await enqueueSessionWrite(queueKey, async () => {
+    if (deletedSessionRefs.has(queueKey)) return null;
+    return invokeOn<SessionSummary>(hostId, "session_upsert", { session: payload });
+  });
+  return summary ? normalizeSummary(summary, hostId) : null;
 }
 
 /**
@@ -249,7 +263,16 @@ export async function deleteSession(
   sessionId: string,
   hostId: HostId = getDefaultHostId(),
 ): Promise<void> {
-  await invokeOn<void>(hostId, "session_delete", { sessionId });
+  const queueKey = sessionRefKey(hostId, sessionId);
+  deletedSessionRefs.add(queueKey);
+  try {
+    await enqueueSessionWrite(queueKey, () =>
+      invokeOn<void>(hostId, "session_delete", { sessionId }),
+    );
+  } catch (error) {
+    deletedSessionRefs.delete(queueKey);
+    throw error;
+  }
 }
 
 export async function setSessionArchived(
@@ -257,7 +280,9 @@ export async function setSessionArchived(
   archived: boolean,
   hostId: HostId = getDefaultHostId(),
 ): Promise<void> {
-  await invokeOn<void>(hostId, "session_set_archived", { sessionId, archived });
+  await enqueueSessionWrite(sessionRefKey(hostId, sessionId), () =>
+    invokeOn<void>(hostId, "session_set_archived", { sessionId, archived }),
+  );
 }
 
 export async function setSessionPinned(

@@ -21,6 +21,7 @@ import { FilePicker } from "./chrome/FilePicker";
 import { SymbolPicker } from "./chrome/SymbolPicker";
 import { UsageFooter } from "./chrome/UsageFooter";
 import { useProjectBranches } from "./hooks/useProjectBranches";
+import { useProjectDiffStats } from "./hooks/useProjectDiffStats";
 import {
   loadProjectRailOpen,
   loadSidebarTabOrder,
@@ -28,6 +29,15 @@ import {
   type SidebarTabId,
 } from "./lib/appearance";
 import { HAS_NATIVE_GLASS, IS_MAC } from "./lib/platform";
+import {
+  applyUiScale,
+  loadUiScale,
+  saveUiScale,
+  UI_SCALE_DEFAULT,
+  uiScaleCommand,
+  zoomInUiScale,
+  zoomOutUiScale,
+} from "./lib/uiScale";
 import { runUpdateFlow } from "./lib/updates/updater";
 import { displayAttachments, prepareAttachments } from "./lib/attachments";
 import {
@@ -218,13 +228,13 @@ import {
   sameProjectPath,
 } from "./lib/recents";
 import {
-  applyDeletedSessionToWorkspace,
   applyPlaceSessionOnPane,
   filterTabsForProject,
   findTabForProject,
   planWorkspaceTabClose,
   workspaceTabCwd,
 } from "./lib/workspace/workspaceTabGroups";
+import { runSessionRemoval } from "./lib/sessions/sessionRemoval";
 import {
   HARNESS_LABEL,
   canReplaceSessionTitle,
@@ -381,6 +391,13 @@ import {
 /** Native sheet. `window.confirm` is swallowed when a macOS menu accelerator fires. */
 function confirmDiscardUnsaved(message: string): Promise<boolean> {
   return ask(message, { title: "wavex", kind: "warning" });
+}
+
+function filesInWorkspaceTabs(tabs: readonly WorkspaceTab[]): FilePaneTab[] {
+  return tabs.flatMap((tab) => [
+    ...tab.editorPanes.flatMap((pane) => pane.files),
+    ...(tab.terminalPanes ?? []).flatMap((pane) => pane.files),
+  ]);
 }
 
 export default function App({
@@ -577,6 +594,7 @@ export default function App({
   const workspaceSyncKey = useRef<string | null>(null);
   const observedSessions = useRef(new Map<string, Session>());
   const pendingPersist = useRef(new Map<string, Session>());
+  const removingSessionIds = useRef(new Set<string>());
   // Tokens arrive many times per frame; apply them once so React/markdown aren't
   // recomputed for every delta.
   const harnessQueued = useRef(new Map<string, HarnessEvent[]>());
@@ -616,6 +634,24 @@ export default function App({
     syncDockBadge(next);
     setSessions(next);
   }, []);
+
+  const stopSessionForRemoval = useCallback(
+    async (sessionId: string): Promise<Session | undefined> => {
+      const open = sessionsRef.current.find((session) => session.id === sessionId);
+      if (!open?.busy) return open;
+
+      turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
+      flushHarnessEvents();
+      await Promise.all(
+        sessionChildHarnesses(open).map((harness) =>
+          cancelHarnessTurn(harness, sessionId).catch(() => undefined),
+        ),
+      );
+      flushHarnessEvents();
+      return sessionsRef.current.find((session) => session.id === sessionId);
+    },
+    [flushHarnessEvents],
+  );
 
   const applyApprovalEvent = useCallback((sessionId: string, event: HarnessEvent) => {
     const queued = harnessQueued.current.get(sessionId) ?? [];
@@ -756,6 +792,14 @@ export default function App({
   const gitCwdRef = useRef(gitCwd);
   gitCwdRef.current = gitCwd;
   const projectBranches = useProjectBranches(sidebarCwd, Boolean(sidebarCwd) && sidebarCwd !== "~");
+  // One shared subscription: the tab strip and the sidebar both render this
+  // project's uncommitted state, and the hook caches per cwd.
+  const projectDiff = useProjectDiffStats(projectCwd, Boolean(projectCwd) && projectCwd !== "~");
+  const totalCheckErrors = useMemo(() => {
+    let total = 0;
+    for (const count of fileErrorCounts.values()) total += count;
+    return total;
+  }, [fileErrorCounts]);
 
   const nextBusySessionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -1000,7 +1044,8 @@ export default function App({
   );
 
   const persistSession = useCallback((session: Session | undefined) => {
-    if (!session || !shouldPersistSession(session)) return;
+    if (!session || !shouldPersistSession(session) || removingSessionIds.current.has(session.id))
+      return;
     const fingerprint = persistFingerprint(session);
     void upsertSession(session)
       .then((summary) => {
@@ -1017,6 +1062,7 @@ export default function App({
     const liveIds = new Set(sessions.map((session) => session.id));
     const visibleIds = openSessionIds(tabsRef.current);
     for (const session of sessions) {
+      if (removingSessionIds.current.has(session.id)) continue;
       if (observedSessions.current.get(session.id) === session) continue;
       observedSessions.current.set(session.id, session);
       const parked = !visibleIds.has(session.id);
@@ -1061,6 +1107,7 @@ export default function App({
       pendingPersist.current.clear();
       void Promise.all(
         dirty.map(async (session) => {
+          if (removingSessionIds.current.has(session.id)) return;
           const fingerprint = persistFingerprint(session);
           if (lastPersisted.current.get(session.id) === fingerprint) return;
           const summary = await upsertSession(session).catch(() => null);
@@ -2270,24 +2317,150 @@ export default function App({
     [persistSession, refreshHistory, sidebarCwd],
   );
 
-  const onArchiveHistorySession = useCallback(async (sessionId: string, archived: boolean) => {
-    const open = sessionsRef.current.find((session) => session.id === sessionId);
-    if (open && shouldPersistSession(open)) {
-      await upsertSession(open).catch(() => undefined);
-    }
-    await setSessionArchived(sessionId, archived).catch(() => undefined);
-    setHistory((current) => {
-      const existing = current.find((entry) => entry.id === sessionId);
-      if (existing) {
-        return current.map((entry) => (entry.id === sessionId ? { ...entry, archived } : entry));
+  const onRemoveHistorySession = useCallback(
+    async (sessionId: string, mode: "archive" | "delete") => {
+      if (removingSessionIds.current.has(sessionId)) return;
+      const open = sessionsRef.current.find((session) => session.id === sessionId);
+      const summary = history.find((entry) => entry.id === sessionId);
+      const seed = open ?? summary;
+      const label = seed ? sessionDisplayTitle(seed.title, seed.harness) : "this session";
+      if (mode === "delete") {
+        const confirmed = await ask(`Delete “${label}”? This conversation cannot be recovered.`, {
+          title: "Delete conversation",
+          kind: "warning",
+        });
+        if (!confirmed) return;
       }
-      if (!open) return current;
-      return mergeHistorySummary(current, {
-        ...summaryFromSession(open),
-        archived,
-      });
-    });
-  }, []);
+
+      removingSessionIds.current.add(sessionId);
+      pendingPersist.current.delete(sessionId);
+      let savedSummary: SessionSummary | undefined;
+      try {
+        await runSessionRemoval({
+          sessionId,
+          scope: tabCloseScope,
+          readWorkspace: () => ({
+            tabs: tabsRef.current,
+            sessions: sessionsRef.current,
+            activeTabId: activeTabIdRef.current,
+            dirtyFiles: dirtyFilesRef.current,
+          }),
+          createReplacement: (latest) =>
+            newSession(
+              latest?.harness ?? seed?.harness ?? "cursor",
+              latest?.cwd ?? seed?.cwd ?? sidebarCwd,
+              latest?.model ?? seed?.model,
+              latest?.runtimeMode ?? seed?.runtimeMode,
+              latest?.modelSettings ?? open?.modelSettings,
+            ),
+          confirmClose: async (closedTabs) => {
+            const files = filesInWorkspaceTabs(closedTabs);
+            const unsaved = files.some(
+              (file) => isFilesystemTab(file) && dirtyFilesRef.current.has(file.id),
+            );
+            if (
+              unsaved &&
+              !(await confirmDiscardUnsaved(
+                `${mode === "archive" ? "Archive" : "Delete"} this conversation with unsaved files?`,
+              ))
+            )
+              return false;
+            const terminals = files.filter((file) => file.terminal);
+            return terminals.length === 0 || (await confirmCloseTerminals(terminals));
+          },
+          stop: async () => {
+            await stopSessionForRemoval(sessionId);
+          },
+          updateSession: (stopped) => {
+            const next = sessionsRef.current.map((session) =>
+              session.id === sessionId ? stopped : session,
+            );
+            sessionsRef.current = next;
+            setSessions(next);
+          },
+          persist: async (latest) => {
+            if (mode === "delete") {
+              await deleteSession(sessionId);
+              return;
+            }
+            if (latest && shouldPersistSession(latest)) {
+              const saved = await upsertSession(latest);
+              if (!saved) throw new Error("The conversation could not be saved.");
+              savedSummary = saved;
+            }
+            await setSessionArchived(sessionId, true);
+          },
+          commit: (removal) => {
+            const latest = sessionsRef.current.find((session) => session.id === sessionId);
+            const harnesses: HarnessId[] = latest
+              ? sessionChildHarnesses(latest)
+              : [seed?.harness ?? "cursor"];
+            for (const harness of harnesses) {
+              void forgetHarnessSession(harness, sessionId);
+            }
+            lastPersisted.current.delete(sessionId);
+            pendingPersist.current.delete(sessionId);
+            const closingFiles = filesInWorkspaceTabs(removal.closedTabs);
+            setDirtyFiles((current) => {
+              const next = new Set(current);
+              for (const file of closingFiles) next.delete(file.id);
+              return next;
+            });
+            sessionsRef.current = removal.sessions;
+            tabsRef.current = removal.tabs;
+            setSessions(removal.sessions);
+            setTabs(removal.tabs);
+            if (removal.activeTabId !== activeTabIdRef.current) {
+              activateTab(removal.activeTabId);
+            }
+            const activeTab = removal.tabs.find((tab) => tab.id === removal.activeTabId);
+            setComposerFocused(
+              removal.sessions.some((session) => session.id === activeTab?.focusedId),
+            );
+            if (mode === "archive") {
+              const archived = savedSummary ?? summary ?? (latest && summaryFromSession(latest));
+              if (archived) {
+                setHistory((current) =>
+                  mergeHistorySummary(current, { ...archived, archived: true }),
+                );
+              }
+            } else {
+              setHistory((current) => current.filter((entry) => entry.id !== sessionId));
+              void refreshHistory(sidebarCwd);
+            }
+          },
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        void message(`Could not ${mode} this conversation.\n\n${detail}`, {
+          title: "wavex",
+          kind: "error",
+        });
+      } finally {
+        removingSessionIds.current.delete(sessionId);
+      }
+    },
+    [activateTab, history, refreshHistory, sidebarCwd, stopSessionForRemoval, tabCloseScope],
+  );
+
+  const onArchiveHistorySession = useCallback(
+    async (sessionId: string, archived: boolean) => {
+      if (archived) return onRemoveHistorySession(sessionId, "archive");
+      if (removingSessionIds.current.has(sessionId)) return;
+      try {
+        await setSessionArchived(sessionId, false);
+        setHistory((current) =>
+          current.map((entry) => (entry.id === sessionId ? { ...entry, archived: false } : entry)),
+        );
+      } catch (error) {
+        void message(`Could not unarchive this conversation.\n\n${String(error)}`, {
+          title: "wavex",
+          kind: "error",
+        });
+      }
+    },
+    [onRemoveHistorySession],
+  );
 
   const onPinHistorySession = useCallback(async (sessionId: string, pinned: boolean) => {
     const open = sessionsRef.current.find((session) => session.id === sessionId);
@@ -2309,85 +2482,8 @@ export default function App({
   }, []);
 
   const onDeleteHistorySession = useCallback(
-    async (sessionId: string) => {
-      const open = sessionsRef.current.find((session) => session.id === sessionId);
-      const summary = history.find((entry) => entry.id === sessionId) ?? open ?? null;
-      const label = summary ? sessionDisplayTitle(summary.title, summary.harness) : "this session";
-
-      const confirmed = await ask(`Delete “${label}”? This conversation cannot be recovered.`, {
-        title: "Delete conversation",
-        kind: "warning",
-      });
-      if (!confirmed) return;
-
-      try {
-        await deleteSession(sessionId);
-      } catch (error: unknown) {
-        await message(error instanceof Error ? error.message : "Could not delete the session.", {
-          title: "Couldn’t delete session",
-          kind: "error",
-        });
-        return;
-      }
-
-      if (open?.busy) {
-        turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
-        for (const id of sessionChildHarnesses(open)) {
-          void cancelHarnessTurn(id, sessionId);
-        }
-      }
-
-      const harness = open?.harness ?? summary?.harness ?? "cursor";
-      if (open) {
-        for (const id of sessionChildHarnesses(open)) {
-          void forgetHarnessSession(id, sessionId, sessionHostId(open));
-        }
-      } else {
-        void forgetHarnessSession(harness, sessionId, summary ? sessionHostId(summary) : undefined);
-      }
-      await deleteSession(sessionId).catch(() => undefined);
-      lastPersisted.current.delete(sessionId);
-
-      if (!tabsRef.current.some((tab) => leafIds(tab.layout).includes(sessionId))) {
-        setSessions((prev) => prev.filter((session) => session.id !== sessionId));
-        void refreshHistory(sidebarCwd);
-        return;
-      }
-
-      const {
-        tabs: nextTabs,
-        sessions: nextSessions,
-        activeTabId: nextActiveTabId,
-      } = applyDeletedSessionToWorkspace({
-        tabs: tabsRef.current,
-        sessions: sessionsRef.current,
-        sessionId,
-        activeTabId: activeTabIdRef.current,
-        scope: tabCloseScope,
-        createReplacement: (seed) =>
-          newSession(
-            seed?.harness ?? harness,
-            seed?.cwd ?? summary?.cwd ?? sidebarCwd,
-            seed?.model ?? summary?.model,
-            seed?.runtimeMode ?? summary?.runtimeMode,
-            seed?.modelSettings,
-          ),
-      });
-
-      setSessions(nextSessions);
-      setTabs(nextTabs);
-      if (nextActiveTabId !== activeTabIdRef.current) {
-        activateTab(nextActiveTabId);
-      }
-      setComposerFocused(
-        nextSessions.some((session) => {
-          const tab = nextTabs.find((entry) => entry.id === nextActiveTabId);
-          return !!tab && session.id === tab.focusedId;
-        }),
-      );
-      void refreshHistory(sidebarCwd);
-    },
-    [activateTab, history, refreshHistory, sidebarCwd, tabCloseScope],
+    (sessionId: string) => onRemoveHistorySession(sessionId, "delete"),
+    [onRemoveHistorySession],
   );
 
   const onFocusDir = useCallback(
@@ -3730,7 +3826,20 @@ export default function App({
   );
 
   const nextTitleTabs: TitleTab[] = deckProjectTabs.map((tab) =>
-    toTitleTab(tab, sessions, dirtyFiles),
+    toTitleTab(tab, sessions, dirtyFiles, {
+      unreadIds: unseenFinishedIds,
+      fileErrorCounts,
+      git: {
+        ...(projectBranches?.current ? { branch: projectBranches.current } : {}),
+        ...(projectDiff
+          ? {
+              files: projectDiff.files,
+              additions: projectDiff.additions,
+              deletions: projectDiff.deletions,
+            }
+          : {}),
+      },
+    }),
   );
   tabProjectsRef.current = new Map(nextTitleTabs.map((tab) => [tab.id, tab.project]));
   const titleTabsRef = useRef(nextTitleTabs);
@@ -4216,6 +4325,26 @@ export default function App({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Browser-standard UI zoom. Runs before tabCommand and always applies —
+      // even in inputs and the terminal — so Ctrl/Cmd + - 0 behave like a browser.
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.isComposing) {
+        const zoom = uiScaleCommand(e);
+        if (zoom) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (zoom === "zoom-in") {
+            const next = saveUiScale(zoomInUiScale(loadUiScale()));
+            void applyUiScale(next);
+          } else if (zoom === "zoom-out") {
+            const next = saveUiScale(zoomOutUiScale(loadUiScale()));
+            void applyUiScale(next);
+          } else {
+            saveUiScale(UI_SCALE_DEFAULT);
+            void applyUiScale(UI_SCALE_DEFAULT);
+          }
+          return;
+        }
+      }
       // Chat owns its own bindings. Every shortcut below acts on the project
       // workspace — tabs, panes, the file picker — which is hidden behind the
       // chat surface, so none of them may fire while Chat is in front. The
@@ -4440,6 +4569,20 @@ export default function App({
       listen("check_for_updates", () => {
         void runUpdateFlow(true);
       }),
+      listen("zoom_in", () => {
+        const next = zoomInUiScale(loadUiScale());
+        saveUiScale(next);
+        void applyUiScale(next);
+      }),
+      listen("zoom_out", () => {
+        const next = zoomOutUiScale(loadUiScale());
+        saveUiScale(next);
+        void applyUiScale(next);
+      }),
+      listen("zoom_reset", () => {
+        saveUiScale(UI_SCALE_DEFAULT);
+        void applyUiScale(UI_SCALE_DEFAULT);
+      }),
       listen("sidebar_opacity", () => {
         actions.current.openSettings("appearance");
       }),
@@ -4535,6 +4678,7 @@ export default function App({
         busySessionIds={busySessionIds}
         approvalSessionIds={approvalSessionIds}
         activeSessionId={active?.id}
+        checkErrors={totalCheckErrors}
         status={historyFailed ? "error" : "idle"}
         pending={historyPending}
         onRetrySessions={() => void refreshHistory(sidebarCwd)}
@@ -4659,6 +4803,18 @@ export default function App({
               onCommandPalette={() => setPaletteOpen((open) => !open)}
               onOpenInbox={onOpenInbox}
               onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+              onZoomIn={() => {
+                const next = saveUiScale(zoomInUiScale(loadUiScale()));
+                void applyUiScale(next);
+              }}
+              onZoomOut={() => {
+                const next = saveUiScale(zoomOutUiScale(loadUiScale()));
+                void applyUiScale(next);
+              }}
+              onZoomReset={() => {
+                saveUiScale(UI_SCALE_DEFAULT);
+                void applyUiScale(UI_SCALE_DEFAULT);
+              }}
             />
           ) : null}
           <TitleBar
