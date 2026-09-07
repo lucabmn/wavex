@@ -6,7 +6,7 @@ const THRESHOLD = 5;
 const DROP_ON_INSET = 0.25;
 
 export type SortableDropTarget = {
-  kind: "tab" | "group";
+  kind: "tab" | "group" | "column";
   id: string;
   /** False when the drop is refused — the target is flagged, not acted on. */
   allowed: boolean;
@@ -18,7 +18,8 @@ export type SortableOptions = {
   onActivate?: (id: string) => void;
   onDropOnItem?: (draggedId: string, targetId: string) => void;
   onDropOnGroup?: (draggedId: string, groupId: string) => void;
-  canDropOn?: (draggedId: string, kind: "tab" | "group", targetId: string) => boolean;
+  onDropOnColumn?: (draggedId: string, columnId: string) => void;
+  canDropOn?: (draggedId: string, kind: "tab" | "group" | "column", targetId: string) => boolean;
 };
 
 type DragState = {
@@ -52,6 +53,8 @@ export function useSortable(
   onDropOnItemRef.current = options.onDropOnItem;
   const onDropOnGroupRef = useRef(options.onDropOnGroup);
   onDropOnGroupRef.current = options.onDropOnGroup;
+  const onDropOnColumnRef = useRef(options.onDropOnColumn);
+  onDropOnColumnRef.current = options.onDropOnColumn;
   const onActivateRef = useRef(options.onActivate);
   onActivateRef.current = options.onActivate;
   const canDropOnRef = useRef(options.canDropOn);
@@ -96,7 +99,7 @@ export function useSortable(
 
   const dropTargetAt = useCallback(
     (draggedId: string, x: number, y: number): SortableDropTarget | null => {
-      const target = (kind: "tab" | "group", id: string): SortableDropTarget => ({
+      const target = (kind: "tab" | "group" | "column", id: string): SortableDropTarget => ({
         kind,
         id,
         allowed: canDropOnRef.current?.(draggedId, kind, id) ?? true,
@@ -104,7 +107,7 @@ export function useSortable(
       for (const [groupId, el] of groupNodes.current) {
         const rect = el.getBoundingClientRect();
         if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-          return target("group", groupId);
+          return target(onDropOnColumnRef.current ? "column" : "group", groupId);
         }
       }
       if (!onDropOnItemRef.current) return null;
@@ -214,8 +217,10 @@ export function useSortable(
           if (!current.dropTarget.allowed) return;
           if (current.dropTarget.kind === "tab") {
             onDropOnItemRef.current?.(current.id, current.dropTarget.id);
-          } else {
+          } else if (current.dropTarget.kind === "group") {
             onDropOnGroupRef.current?.(current.id, current.dropTarget.id);
+          } else {
+            onDropOnColumnRef.current?.(current.id, current.dropTarget.id);
           }
           return;
         }

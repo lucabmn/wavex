@@ -1,11 +1,20 @@
 import { invokeLocal as invoke, listenLocal as listen } from "../lib/transport";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityBoard } from "../chrome/ActivityBoard";
 import { HarnessIcon } from "../chrome/HarnessIcon";
-import { CircleAlert, Square } from "../chrome/icons";
+import { Board, CircleAlert, ListFilter, Square } from "../chrome/icons";
 import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { formatLiveElapsed, type LiveAgent } from "../lib/liveAgents";
+import {
+  activityBoardCards,
+  filterActivitySessions,
+  loadActivityBoardState,
+  pruneActivityBoardState,
+  saveActivityBoardState,
+  type ActivityBoardState,
+} from "../lib/activityBoard";
 import {
   focusMenuBarAgent,
   MENU_BAR_AGENTS_CHANGED,
@@ -15,13 +24,16 @@ import {
 import { displayPath, projectName } from "../lib/paths";
 import { IS_MAC } from "../lib/platform";
 import { HARNESS_LABEL } from "../lib/session";
+import type { SessionSummary } from "../lib/sessions/sessionStore";
 
 type ActivityFilter = "all" | "waiting" | "working" | "done";
 
 type Props = {
+  sessions: SessionSummary[];
   besideRail?: boolean;
   onClose: () => void;
   onToggleSidebar?: () => void;
+  onOpenSession: (sessionId: string) => void;
 };
 
 /**
@@ -29,7 +41,13 @@ type Props = {
  * the same native store the menu bar reads, so twenty worktrees in five windows
  * are one list with one truth.
  */
-export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: Props) {
+export function ActivityView({
+  sessions,
+  besideRail = false,
+  onClose,
+  onToggleSidebar,
+  onOpenSession,
+}: Props) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -37,6 +55,7 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ActivityFilter>("all");
+  const [board, setBoard] = useState<ActivityBoardState>(loadActivityBoardState);
 
   useEffect(() => {
     let live = true;
@@ -57,6 +76,14 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
       stop?.();
     };
   }, []);
+
+  useEffect(() => {
+    const next = pruneActivityBoardState(board, sessions);
+    if (Object.keys(next.lanes).length !== Object.keys(board.lanes).length) {
+      setBoard(next);
+      saveActivityBoardState(next);
+    }
+  }, [board, sessions]);
 
   // One timer for the whole list: elapsed is the only thing ticking here.
   useEffect(() => {
@@ -105,6 +132,24 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
     return [...groups.entries()];
   }, [filteredAgents]);
 
+  const boardSessions = useMemo(
+    () =>
+      filterActivitySessions(
+        sessions,
+        new Set(
+          agents.filter((agent) => !agent.done && !agent.needsApproval).map((agent) => agent.id),
+        ),
+        new Set(agents.filter((agent) => agent.needsApproval).map((agent) => agent.id)),
+        new Set(agents.filter((agent) => agent.done).map((agent) => agent.id)),
+        now,
+      ),
+    [agents, now, sessions],
+  );
+  const boardCards = useMemo(
+    () => activityBoardCards(boardSessions, agents, board),
+    [agents, board, boardSessions],
+  );
+
   const stop = (agent: LiveAgent) => {
     setError(null);
     void stopMenuBarAgent(agent.id).then((routed) => {
@@ -148,46 +193,96 @@ export function ActivityView({ besideRail = false, onClose, onToggleSidebar }: P
       </div>
 
       <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
-        {agents.length > 0 ? (
-          <div
-            role="group"
-            aria-label="Filter agent activity"
-            className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
+        <div
+          role="group"
+          aria-label="Activity view and filters"
+          className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
+        >
+          {agents.length > 0 ? (
+            <div
+              role="group"
+              aria-label="Filter agent activity"
+              className="flex items-center gap-1"
+            >
+              <ActivityFilterButton
+                label="All"
+                count={agents.length}
+                active={filter === "all"}
+                onClick={() => setFilter("all")}
+              />
+              <ActivityFilterButton
+                label="Needs you"
+                count={counts.waiting}
+                active={filter === "waiting"}
+                tone="attention"
+                onClick={() => setFilter("waiting")}
+              />
+              <ActivityFilterButton
+                label="Working"
+                count={counts.working}
+                active={filter === "working"}
+                onClick={() => setFilter("working")}
+              />
+              <ActivityFilterButton
+                label="Done"
+                count={counts.done}
+                active={filter === "done"}
+                onClick={() => setFilter("done")}
+              />
+            </div>
+          ) : null}
+          {agents.length > 0 ? <span className="mx-1 h-4 w-px bg-content/10" aria-hidden /> : null}
+          <button
+            type="button"
+            aria-pressed={board.view === "list"}
+            aria-label="Show activity list"
+            title="List view"
+            onClick={() => {
+              const next = { ...board, view: "list" as const };
+              setBoard(next);
+              saveActivityBoardState(next);
+            }}
+            className={`grid size-7 place-items-center rounded-md ${board.view === "list" ? "bg-content/12 text-content" : "text-content/45 hover:bg-content/8 hover:text-content"}`}
           >
-            <ActivityFilterButton
-              label="All"
-              count={agents.length}
-              active={filter === "all"}
-              onClick={() => setFilter("all")}
-            />
-            <ActivityFilterButton
-              label="Needs you"
-              count={counts.waiting}
-              active={filter === "waiting"}
-              tone="attention"
-              onClick={() => setFilter("waiting")}
-            />
-            <ActivityFilterButton
-              label="Working"
-              count={counts.working}
-              active={filter === "working"}
-              onClick={() => setFilter("working")}
-            />
-            <ActivityFilterButton
-              label="Done"
-              count={counts.done}
-              active={filter === "done"}
-              onClick={() => setFilter("done")}
-            />
-          </div>
-        ) : null}
+            <ListFilter className="size-3.5" strokeWidth={1.75} />
+          </button>
+          <button
+            type="button"
+            aria-pressed={board.view === "board"}
+            aria-label="Show activity board"
+            title="Board view"
+            onClick={() => {
+              const next = { ...board, view: "board" as const };
+              setBoard(next);
+              saveActivityBoardState(next);
+            }}
+            className={`grid size-7 place-items-center rounded-md ${board.view === "board" ? "bg-content/12 text-content" : "text-content/45 hover:bg-content/8 hover:text-content"}`}
+          >
+            <Board className="size-3.5" strokeWidth={1.75} />
+          </button>
+        </div>
         {error ? (
           <p className="flex items-center gap-2 px-4 pt-3 text-[12px] text-amber-300">
             <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
             {error}
           </p>
         ) : null}
-        {agents.length === 0 ? (
+        {board.view === "board" ? (
+          <ActivityBoard
+            cards={boardCards}
+            state={board}
+            now={now}
+            onChange={(next) => {
+              setBoard(next);
+              saveActivityBoardState(next);
+            }}
+            onOpen={(card) => {
+              if (card.live) focusMenuBarAgent(card.live.id);
+              else onOpenSession(card.session.id);
+            }}
+            onStop={(card) => card.live && stop(card.live)}
+          />
+        ) : agents.length === 0 ? (
           <p className="px-4 py-6 text-[13px] text-content/45">
             No agent is working right now. Turns from every window show up here while they run.
           </p>
