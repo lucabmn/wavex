@@ -6,6 +6,7 @@ import {
   extractSkillName,
   extractToolPreview,
   isWeakToolTitle,
+  subagentMetaFromInput,
   titleFromToolInput,
 } from "@/lib/harness/preview";
 
@@ -211,5 +212,22 @@ describe("agent titles", () => {
     expect(composeToolTitle({ kind: "agent", title: "Explore the auth module" })).toBe(
       "Explore the auth module",
     );
+  });
+
+  it("reads subagent metadata from an Agent tool input", () => {
+    expect(
+      subagentMetaFromInput({
+        description: "Explore",
+        subagent_type: "explore",
+        prompt: "Find the token refresh path",
+        run_in_background: true,
+      }),
+    ).toEqual({
+      agentType: "explore",
+      prompt: "Find the token refresh path",
+      background: true,
+    });
+    expect(subagentMetaFromInput({})).toBeNull();
+    expect(subagentMetaFromInput({ path: "/tmp/a.ts" })).toBeNull();
   });
 });

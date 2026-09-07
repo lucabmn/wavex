@@ -23,7 +23,9 @@
   "bundle": {
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "sidebarImage": "icons/windows-installer.bmp",
+        "installerIcon": "icons/icon.ico"
       }
     },
     "resources": null

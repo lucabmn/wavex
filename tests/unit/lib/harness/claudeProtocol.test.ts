@@ -3,11 +3,13 @@ import { modelsForClaudeVersion, modelsFromClaudeListModels } from "@/lib/harnes
 import {
   applyClaudePromptEffortPrefix,
   askUserQuestionAllowInput,
+  assistantModel,
   buildClaudeSpawnArgs,
   buildClaudeUserMessage,
   contextFromResult,
   contextUsedFromAssistant,
   extractExitPlanModePlan,
+  isAsyncAgentLaunch,
   isClaudeInitMessage,
   isSubagentMessage,
   isTodoTool,
@@ -687,5 +689,19 @@ describe("subagent messages", () => {
       toolUseId: "toolu_agent",
       subagentType: "explore",
     });
+  });
+
+  it("reads the model off an assistant message", () => {
+    expect(
+      assistantModel({ type: "assistant", message: { model: "claude-haiku-4-5-20251001" } }),
+    ).toBe("claude-haiku-4-5-20251001");
+    expect(assistantModel({ type: "assistant", message: {} })).toBeUndefined();
+  });
+
+  it("spots an async agent launch receipt", () => {
+    expect(
+      isAsyncAgentLaunch("Async agent launched successfully. agentId: a1 The agent is working."),
+    ).toBe(true);
+    expect(isAsyncAgentLaunch("Tokens refresh in auth.ts.")).toBe(false);
   });
 });
