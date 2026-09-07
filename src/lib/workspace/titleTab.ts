@@ -127,13 +127,16 @@ export function toTitleTab(
       ? `terminal:${file.id}`
       : file.plan
         ? `plan:${file.plan.blockId}`
-        : file.releaseNotes
-          ? `release-notes:${file.releaseNotes.version}`
-          : file.path;
+        : file.subagent
+          ? `subagent:${file.subagent.blockId}`
+          : file.releaseNotes
+            ? `release-notes:${file.releaseNotes.version}`
+            : file.path;
     if (seenKeys.has(key)) return;
     seenKeys.add(key);
     files.push(
       file.plan?.title?.trim() ||
+        file.subagent?.title?.trim() ||
         (file.releaseNotes
           ? releaseNotesTitle(file.releaseNotes.version)
           : file.terminal

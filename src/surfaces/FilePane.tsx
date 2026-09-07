@@ -8,6 +8,7 @@ import {
   isPlanTab,
   isReleaseNotesTab,
   isReviewTab,
+  isSubagentTab,
   isTerminalTab,
   type EditorPane,
   type FilePaneTab,
@@ -23,6 +24,7 @@ import { BinaryFileView } from "./BinaryFileView";
 import { CommitDiff } from "./CommitDiff";
 import { FileEditor } from "./FileEditor";
 import { ReleaseNotesSurface } from "./ReleaseNotesSurface";
+import { SubagentSurface } from "./SubagentSurface";
 import { TerminalView } from "./TerminalView";
 import { WorkingTreeDiff } from "./WorkingTreeDiff";
 
@@ -105,6 +107,13 @@ function FilePaneComponent({
             >
               {isPlanTab(file) ? (
                 <PlanSurface file={file} sessions={sessions} onOpenFile={onOpenFile} />
+              ) : isSubagentTab(file) ? (
+                <SubagentSurface
+                  file={file}
+                  sessions={sessions}
+                  onOpenFile={onOpenFile}
+                  visible={focused && file.id === pane.activeFileId}
+                />
               ) : isReleaseNotesTab(file) ? (
                 <ReleaseNotesSurface source={file.releaseNotes} />
               ) : isTerminalTab(file) ? (
@@ -161,7 +170,7 @@ export const FilePane = memo(FilePaneComponent, (previous, next) => {
   }
 
   for (const file of next.pane.files) {
-    const sessionId = file.plan?.sessionId;
+    const sessionId = file.plan?.sessionId ?? file.subagent?.sessionId;
     if (!sessionId) continue;
     const before = previous.sessions.find((session) => session.id === sessionId);
     const after = next.sessions.find((session) => session.id === sessionId);

@@ -72,6 +72,7 @@ type Shared = {
   editorNavigation?: EditorNavigationTarget | null;
   onOpenDiff: (path?: string) => void;
   onOpenPlan: (sessionId: string, blockId: string) => void;
+  onOpenSubagent: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onMovePane: (fromId: string, toId: string, edge: PaneEdge) => void;
@@ -131,6 +132,7 @@ function PaneTreeComponent({
   editorNavigation,
   onOpenDiff,
   onOpenPlan,
+  onOpenSubagent,
   onSecondOpinion,
   onHandoff,
   onMovePane,
@@ -313,6 +315,7 @@ function PaneTreeComponent({
                 onOpenFile={onOpenFile}
                 onOpenDiff={onOpenDiff}
                 onOpenPlan={onOpenPlan}
+                onOpenSubagent={onOpenSubagent}
                 onSecondOpinion={onSecondOpinion}
                 onHandoff={onHandoff}
                 onNewTerminal={onNewTerminal}

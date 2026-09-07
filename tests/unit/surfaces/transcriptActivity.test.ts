@@ -5,12 +5,15 @@ import {
   activityStillRunning,
   buildActivityPhases,
   editVerb,
+  formatElapsed,
   groupTurnItems,
   groupTurns,
   hasRunningSubagent,
   lastActivityIndex,
   nestedScrollAbsorbsWheel,
   proseSummary,
+  subagentLatestActivity,
+  subagentStatus,
   toolCallLabel,
   turnCopyText,
 } from "@/surfaces/transcriptActivity";
@@ -378,6 +381,85 @@ describe("running subagents", () => {
     expect(activityStillRunning([agent("ag")])).toBe(true);
     expect(hasRunningSubagent([agent("ag", "completed")])).toBe(false);
     expect(activityStillRunning([agent("ag", "completed")])).toBe(false);
+  });
+});
+
+describe("subagent status", () => {
+  const subagent = (status = "in_progress", extra?: Partial<Block>): Block => ({
+    id: "ag",
+    role: "tool",
+    text: "Explore the auth module",
+    tool: { kind: "agent", title: "Explore the auth module", status },
+    subagent: { startedAt: 1_000, blocks: [] },
+    ...extra,
+  });
+
+  it("is null without a nested transcript", () => {
+    expect(subagentStatus({ id: "a", role: "tool", text: "Read x" })).toBeNull();
+  });
+
+  it("fails a rejected Agent call and completes a settled one", () => {
+    expect(subagentStatus(subagent("failed"))).toBe("failed");
+    expect(subagentStatus(subagent("completed"))).toBe("completed");
+    expect(
+      subagentStatus(
+        subagent("in_progress", { subagent: { startedAt: 1_000, finishedAt: 2_000, blocks: [] } }),
+      ),
+    ).toBe("completed");
+  });
+
+  it("runs while the call streams or the turn is busy", () => {
+    expect(subagentStatus(subagent())).toBe("running");
+    expect(subagentStatus({ ...subagent(), streaming: true })).toBe("running");
+    expect(subagentStatus(subagent("pending"), true)).toBe("running");
+  });
+
+  it("stops when the turn settled without a terminal status", () => {
+    expect(subagentStatus(subagent("unknown"))).toBe("stopped");
+  });
+
+  it("prefers the parent detail, then the newest nested step", () => {
+    const withDetail = subagent("in_progress", {
+      tool: {
+        kind: "agent",
+        title: "Explore",
+        status: "in_progress",
+        detail: "Read src/auth.ts",
+      },
+      subagent: {
+        startedAt: 1_000,
+        blocks: [{ id: "n", role: "assistant", text: "Older line." }],
+      },
+    });
+    expect(subagentLatestActivity(withDetail)).toBe("Read src/auth.ts");
+
+    const nested: Block = {
+      id: "ag",
+      role: "tool",
+      text: "Explore",
+      tool: { kind: "agent", title: "Explore", status: "in_progress" },
+      subagent: {
+        startedAt: 1_000,
+        blocks: [
+          { id: "n1", role: "assistant", text: "First." },
+          {
+            id: "n2",
+            role: "tool",
+            text: "Read src/auth.ts",
+            tool: { kind: "read", title: "Read src/auth.ts", status: "completed" },
+          },
+        ],
+      },
+    };
+    expect(subagentLatestActivity(nested)).toBe("Read src/auth.ts");
+    expect(subagentLatestActivity(subagent())).toBeNull();
+  });
+
+  it("formats short clocks", () => {
+    expect(formatElapsed(null)).toBeNull();
+    expect(formatElapsed(12_400)).toBe("12s");
+    expect(formatElapsed(184_000)).toBe("3m 4s");
+    expect(formatElapsed(180_000)).toBe("3m");
   });
 });
 

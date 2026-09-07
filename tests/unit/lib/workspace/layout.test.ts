@@ -7,6 +7,7 @@ import {
   isFilesystemTab,
   isReleaseNotesTab,
   isReviewTab,
+  isSubagentTab,
   isTerminalTab,
   layoutLeaves,
   layoutSashes,
@@ -16,6 +17,7 @@ import {
   newFileTab,
   newPlanTab,
   newReleaseNotesWorkspaceTab,
+  newSubagentTab,
   newTab,
   newTerminalFile,
   newTerminalWorkspaceTab,
@@ -101,10 +103,21 @@ describe("editorTabKey", () => {
       ),
     ).toBe(`commit:${cwd}:abc1234deadbeef`);
     expect(editorTabKey(newPlanTab("s", "b", "Plan", cwd))).toBe("plan:b");
+    expect(editorTabKey(newSubagentTab("s", "ag", "Explore", cwd))).toBe("subagent:ag");
     const terminal = newTerminalFile(cwd);
     expect(editorTabKey(terminal)).toBe(`terminal:${terminal.id}`);
     expect(isTerminalTab(terminal)).toBe(true);
     expect(isTerminalTab(newFileTab(path, cwd))).toBe(false);
+  });
+});
+
+describe("subagent tabs", () => {
+  it("keys and dedupes by the parent Agent call", () => {
+    const cwd = "/repo";
+    const first = openEditorTab(newTab("session-a"), newSubagentTab("s", "ag", "Explore", cwd));
+    const second = openEditorTab(first, newSubagentTab("s", "ag", "Explore", cwd));
+    expect(second.editorPanes[0]?.files.filter(isSubagentTab)).toHaveLength(1);
+    expect(isSubagentTab(newFileTab("/repo/a.ts", cwd))).toBe(false);
   });
 });
 

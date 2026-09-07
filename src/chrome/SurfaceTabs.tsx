@@ -1,4 +1,4 @@
-import { GitCompare, GripVertical, Terminal, X } from "./icons";
+import { Bot, GitCompare, GripVertical, Terminal, X } from "./icons";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useLayoutEffect, useRef } from "react";
 import { basename } from "../lib/fs";
@@ -8,6 +8,7 @@ import {
   isPlanTab,
   isReleaseNotesTab,
   isReviewTab,
+  isSubagentTab,
   isTerminalTab,
   type FilePaneTab,
 } from "../lib/workspace/layout";
@@ -65,6 +66,16 @@ export function surfaceTabPresentation(file: FilePaneTab): SurfaceTabPresentatio
       label: name,
       iconName: "CHANGES",
       tooltip: `${file.commit.shortSha} — ${file.commit.subject}`,
+    };
+  }
+
+  if (isSubagentTab(file)) {
+    const name = file.subagent.title.trim() || "Subagent";
+    return {
+      name,
+      label: name,
+      iconName: "subagent",
+      tooltip: `${name} — subagent`,
     };
   }
 
@@ -166,6 +177,7 @@ export function SurfaceTabs({
           const commit = isCommitTab(file);
           const review = isReviewTab(file) && !changes;
           const terminal = isTerminalTab(file);
+          const subagent = isSubagentTab(file);
           const { label, iconName, tooltip } = surfaceTabPresentation(file);
           const dragging = sortable.draggingId === file.id;
           const showStart =
@@ -221,6 +233,8 @@ export function SurfaceTabs({
               >
                 {terminal ? (
                   <Terminal className="size-3.5 shrink-0" strokeWidth={1.75} />
+                ) : subagent ? (
+                  <Bot className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : changes || commit ? (
                   <GitCompare className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : (

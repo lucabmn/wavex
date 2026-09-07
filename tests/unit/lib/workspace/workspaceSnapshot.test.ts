@@ -6,6 +6,7 @@ import {
   newCommitTab,
   newFileTab,
   newReleaseNotesWorkspaceTab,
+  newSubagentTab,
   newTab,
   newTerminalFile,
 } from "@/lib/workspace/layout";
@@ -62,6 +63,19 @@ describe("collectWorkspaceSnapshot", () => {
     expect(restored?.changes).toBe(true);
     expect(restored?.review).toBe(true);
     expect(restored?.path).toBe("/tmp/a/src/lib.rs");
+  });
+
+  it("round-trips a subagent tab", () => {
+    const file = newSubagentTab("s1", "ag", "Explore", "/tmp/a");
+    const tab = {
+      ...newTab("s1"),
+      id: "t1",
+      editorPanes: [{ id: "e1", files: [file], activeFileId: file.id }],
+    };
+    const snapshot = collectWorkspaceSnapshot([tab], [], "t1", "/tmp/a");
+    const workspace = hydrateWorkspaceSnapshot(snapshot, new Map());
+    const restored = workspace?.tabs[0]?.editorPanes[0]?.files[0];
+    expect(restored?.subagent).toEqual({ sessionId: "s1", blockId: "ag", title: "Explore" });
   });
 
   it("round-trips a commit review tab", () => {
@@ -152,6 +166,11 @@ describe("parseWorkspaceSnapshot", () => {
       releaseNotes: { version: "0.1.22" },
       commit: { sha: "abc", shortSha: "abc", subject: "x" },
     },
+    {
+      releaseNotes: { version: "0.1.22" },
+      subagent: { sessionId: "s", blockId: "b", title: "Subagent" },
+    },
+    { subagent: { sessionId: "", blockId: "b", title: "Subagent" } },
     { releaseNotes: { version: "0.1.22" }, terminal: true },
   ])("rejects a tab whose release pane is invalid: %j", (descriptor) => {
     const valid = { ...newTab("session-a"), id: "valid-tab" };

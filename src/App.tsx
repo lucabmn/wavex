@@ -76,6 +76,7 @@ import {
   neighborLeafId,
   newFileTab,
   newPlanTab,
+  newSubagentTab,
   newTab,
   newTerminalFile,
   newTerminalWorkspaceTab,
@@ -210,6 +211,7 @@ import {
 import {
   HARNESS_LABEL,
   canReplaceSessionTitle,
+  findBlockDeep,
   formatSessionTitle,
   sessionNeedsInput,
   newDefaultSession,
@@ -2651,6 +2653,27 @@ export default function App({
     [activeTabId],
   );
 
+  const onOpenSubagent = useCallback(
+    (sessionId: string, blockId: string) => {
+      const tab = tabsRef.current.find((entry) => entry.id === activeTabId);
+      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+      // A subagent card may itself render inside a nested transcript.
+      const block = session ? findBlockDeep(session.blocks, blockId) : undefined;
+      if (!tab || !session || !block || !block.subagent) return;
+      const file = newSubagentTab(
+        session.id,
+        block.id,
+        block.text || block.tool?.title || "Subagent",
+        session.cwd,
+      );
+      setTabs((prev) =>
+        prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
+      );
+      setComposerFocused(false);
+    },
+    [activeTabId],
+  );
+
   const onFileDirtyChange = useCallback((fileId: string, dirty: boolean) => {
     setDirtyFiles((prev) => {
       if (prev.has(fileId) === dirty) return prev;
@@ -4518,6 +4541,7 @@ export default function App({
                           editorNavigation={editorNavigation}
                           onOpenDiff={onOpenDiff}
                           onOpenPlan={onOpenPlan}
+                          onOpenSubagent={onOpenSubagent}
                           onSecondOpinion={onSecondOpinion}
                           onHandoff={onHandoff}
                           onMovePane={onMovePane}

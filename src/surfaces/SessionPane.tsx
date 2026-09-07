@@ -76,6 +76,7 @@ type Props = {
   onOpenFile: (path: string) => void;
   onOpenDiff: (path?: string) => void;
   onOpenPlan: (sessionId: string, blockId: string) => void;
+  onOpenSubagent: (sessionId: string, blockId: string) => void;
   onSecondOpinion?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onHandoff?: (sessionId: string, harness: HarnessId, turn: Block[], model: string) => void;
   onNewTerminal: (sessionId: string) => void;
@@ -114,6 +115,7 @@ export const SessionPane = memo(function SessionPane({
   onOpenFile,
   onOpenDiff,
   onOpenPlan,
+  onOpenSubagent,
   onSecondOpinion,
   onHandoff,
   onNewTerminal,
@@ -131,6 +133,10 @@ export const SessionPane = memo(function SessionPane({
   const openPlan = useCallback(
     (blockId: string) => onOpenPlan(session.id, blockId),
     [onOpenPlan, session.id],
+  );
+  const openSubagent = useCallback(
+    (blockId: string) => onOpenSubagent(session.id, blockId),
+    [onOpenSubagent, session.id],
   );
   const jumpToBottomRef = useRef<(() => void) | null>(null);
   const quoteRequestId = useRef(0);
@@ -298,6 +304,7 @@ export const SessionPane = memo(function SessionPane({
               onOpenFile={onOpenFile}
               onOpenDiff={onOpenDiff}
               onOpenPlan={openPlan}
+              onOpenSubagent={openSubagent}
               onSecondOpinion={
                 onSecondOpinion
                   ? (harness, turn, model) => onSecondOpinion(session.id, harness, turn, model)

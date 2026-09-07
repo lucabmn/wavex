@@ -899,6 +899,20 @@ function contextUsedFromUsage(usage: Record<string, unknown> | null): number {
   );
 }
 
+/** Model that wrote an `assistant` message, for subagent headers. */
+export function assistantModel(rec: Record<string, unknown>): string | undefined {
+  return stringField(asRecord(rec.message), "model");
+}
+
+/**
+ * Claude Code launches agents asynchronously by default and answers the call
+ * at once with a receipt. The real answer arrives through the task lifecycle,
+ * so the turn must wait on the call instead of completing it.
+ */
+export function isAsyncAgentLaunch(text: string): boolean {
+  return /async agent launched successfully/i.test(text);
+}
+
 /**
  * Context level from an `assistant` message. Callers must skip subagent
  * messages — subagents run their own window and would make the reading jump.
