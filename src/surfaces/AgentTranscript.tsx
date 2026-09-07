@@ -976,7 +976,7 @@ function UserMessageBlock({
         {text ? (
           <pre
             ref={textRef}
-            className={`min-w-0 whitespace-pre-wrap break-words font-sans text-sm ${expanded ? "" : "line-clamp-4"}`}
+            className={`min-w-0 whitespace-pre-wrap wrap-break-word font-sans text-sm ${expanded ? "" : "line-clamp-4"}`}
           >
             {text}
           </pre>
