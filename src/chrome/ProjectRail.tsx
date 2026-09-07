@@ -671,10 +671,12 @@ function LiveAgentsPreview({
   groupCustomColors: Record<string, string>;
   groupMascots: Record<string, string>;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const lockList = useLockOverscroll<HTMLDivElement>();
   const ticking =
+    !collapsed &&
     agents.length >= LIVE_AGENT_MIN &&
     agents.some((agent) => !agent.done && agent.startedAt != null);
 
@@ -696,49 +698,64 @@ function LiveAgentsPreview({
         aria-label="Working agents"
         className="overflow-hidden rounded-lg bg-content/5"
       >
-        <div className="flex items-center gap-2 px-3.5 py-1.5">
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expand working agents" : "Collapse working agents"}
+          onClick={() => setCollapsed((closed) => !closed)}
+          className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left hover:bg-content/8"
+        >
           <span
             aria-hidden
             className="size-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-pulse"
           />
           <span className="min-w-0 flex-1 truncate text-xs text-content/50">Working</span>
           <span className="text-[11px] tabular-nums text-content/40">{agents.length}</span>
-        </div>
-        <div
-          ref={expanded ? lockList : undefined}
-          className={`flex flex-col gap-px px-1 ${
-            extra > 0 ? "" : "pb-1"
-          } ${expanded ? "max-h-[45vh] overflow-y-auto overscroll-none" : ""}`}
-        >
-          {visible.map((agent) => (
-            <LiveAgentCard
-              key={agent.id}
-              agent={agent}
-              now={now}
-              selected={agent.id === activeSessionId}
-              onSelect={onSelect}
-              groupLabels={groupLabels}
-              groupColors={groupColors}
-              groupCustomColors={groupCustomColors}
-              groupMascots={groupMascots}
-            />
-          ))}
-        </div>
-        {extra > 0 ? (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            onClick={() => setExpanded((open) => !open)}
-            className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11px] text-content/50 hover:bg-content/8 hover:text-content"
-          >
-            {expanded ? (
-              <ChevronUp className="size-3" strokeWidth={1.75} />
-            ) : (
-              <ChevronDown className="size-3" strokeWidth={1.75} />
-            )}
-            {expanded ? "Show less" : `${extra} more`}
-          </button>
-        ) : null}
+          {collapsed ? (
+            <ChevronDown className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+          ) : (
+            <ChevronUp className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+          )}
+        </button>
+        {collapsed ? null : (
+          <>
+            <div
+              ref={expanded ? lockList : undefined}
+              className={`flex flex-col gap-px px-1 ${
+                extra > 0 ? "" : "pb-1"
+              } ${expanded ? "max-h-[45vh] overflow-y-auto overscroll-none" : ""}`}
+            >
+              {visible.map((agent) => (
+                <LiveAgentCard
+                  key={agent.id}
+                  agent={agent}
+                  now={now}
+                  selected={agent.id === activeSessionId}
+                  onSelect={onSelect}
+                  groupLabels={groupLabels}
+                  groupColors={groupColors}
+                  groupCustomColors={groupCustomColors}
+                  groupMascots={groupMascots}
+                />
+              ))}
+            </div>
+            {extra > 0 ? (
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((open) => !open)}
+                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11px] text-content/50 hover:bg-content/8 hover:text-content"
+              >
+                {expanded ? (
+                  <ChevronUp className="size-3" strokeWidth={1.75} />
+                ) : (
+                  <ChevronDown className="size-3" strokeWidth={1.75} />
+                )}
+                {expanded ? "Show less" : `${extra} more`}
+              </button>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   );
