@@ -140,4 +140,45 @@ describe("toTitleTab", () => {
   it("falls back to ~ with no session and no file", () => {
     expect(toTitleTab(newTab("s1"), [], new Set()).project).toBe("~");
   });
+
+  it("flags a tab whose session waits for approval", () => {
+    const approval = block({ id: "b1", role: "approval", approval: { requestId: 1 } });
+    const view = toTitleTab(newTab("s1"), [session({ id: "s1", blocks: [approval] })], new Set());
+    expect(view.needsApproval).toBe(true);
+  });
+
+  it("flags an unread reply through the unseen set", () => {
+    const view = toTitleTab(newTab("s1"), [session({ id: "s1" })], new Set(), {
+      unreadIds: new Set(["s1"]),
+    });
+    expect(view.hasUnread).toBe(true);
+  });
+
+  it("passes the working-copy state through", () => {
+    const view = toTitleTab(newTab("s1"), [session({ id: "s1" })], new Set(), {
+      git: { branch: "feat-x", files: 2, additions: 5, deletions: 1 },
+    });
+    expect(view.branch).toBe("feat-x");
+    expect(view.changedFiles).toBe(2);
+    expect(view.additions).toBe(5);
+    expect(view.deletions).toBe(1);
+  });
+
+  it("sums check errors across the tab's open files", () => {
+    const file = newFileTab("/tmp/web/parser.ts", "/tmp/web");
+    const tab = openEditorTab(newTab("s1"), file);
+    const view = toTitleTab(tab, [session({ id: "s1" })], new Set(), {
+      fileErrorCounts: new Map([[file.id, 3]]),
+    });
+    expect(view.checkErrors).toBe(3);
+  });
+
+  it("leaves status fields absent when there is nothing to report", () => {
+    const view = toTitleTab(newTab("s1"), [session({ id: "s1" })], new Set());
+    expect(view.needsApproval).toBeUndefined();
+    expect(view.hasUnread).toBeUndefined();
+    expect(view.branch).toBeUndefined();
+    expect(view.changedFiles).toBeUndefined();
+    expect(view.checkErrors).toBeUndefined();
+  });
 });

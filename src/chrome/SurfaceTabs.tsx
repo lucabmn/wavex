@@ -1,7 +1,8 @@
-import { Bot, GitCompare, GripVertical, Terminal, X } from "./icons";
+import { Bot, Check, CircleAlert, GitCompare, GripVertical, Terminal, X } from "./icons";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useLayoutEffect, useRef } from "react";
 import { basename } from "../lib/fs";
+import { checkLabel } from "../lib/sessionStatus";
 import {
   isChangesTab,
   isCommitTab,
@@ -102,7 +103,7 @@ export function surfaceTabPresentation(file: FilePaneTab): SurfaceTabPresentatio
 
 /** Mirrors the VS Code tab tooltip: the path, then what is wrong with it. */
 export function appendProblems(title: string, errors: number): string {
-  if (!errors) return title;
+  if (!errors) return `${title} — No problems`;
   return `${title} — ${errors} ${errors === 1 ? "problem" : "problems"}`;
 }
 
@@ -251,6 +252,24 @@ export function SurfaceTabs({
                 >
                   {label}
                 </span>
+                {errors > 0 ? (
+                  <span
+                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold tabular-nums text-red-400"
+                    title={checkLabel(errors)}
+                    aria-label={checkLabel(errors)}
+                  >
+                    <CircleAlert className="size-3" strokeWidth={1.75} />
+                    <span>{errors}</span>
+                  </span>
+                ) : !terminal && !changes && !commit ? (
+                  <span
+                    className="shrink-0 text-emerald-400/60"
+                    title={checkLabel(0)}
+                    aria-label={checkLabel(0)}
+                  >
+                    <Check className="size-3" strokeWidth={2.25} />
+                  </span>
+                ) : null}
                 {dirty ? (
                   <span
                     className="size-1.5 shrink-0 rounded-full bg-content/75"

@@ -74,6 +74,40 @@ describe("tabCopy", () => {
     expect(copy.headline).toBe("New session");
     expect(copy.meta).toBe("");
   });
+
+  it("carries agent, branch, git, and check state in the tooltip", () => {
+    const copy = tabCopy(
+      tab({
+        title: "Fix the parser",
+        needsApproval: true,
+        hasUnread: true,
+        branch: "feat-x",
+        changedFiles: 2,
+        additions: 5,
+        deletions: 1,
+        checkErrors: 3,
+      }),
+    );
+    expect(copy.tooltip).toBe(
+      "agent-terminal · Fix the parser · Needs approval · New reply · Branch feat-x · 2 files changed (+5 -1) · 3 problems",
+    );
+    expect(copy.meta).toBe("feat-x · 2 files changed");
+  });
+
+  it("names the working state when a harness is busy", () => {
+    const copy = tabCopy(tab({ title: "Fix", busyHarnesses: ["claude"] }));
+    expect(copy.tooltip).toBe("agent-terminal · Fix · Working");
+  });
+
+  it("states a clean checkout explicitly once git state is known", () => {
+    const copy = tabCopy(tab({ title: "Fix", changedFiles: 0, additions: 0, deletions: 0 }));
+    expect(copy.tooltip).toBe("agent-terminal · Fix · Clean");
+  });
+
+  it("leaves the tooltip alone while git state is unknown", () => {
+    const copy = tabCopy(tab({ title: "Fix" }));
+    expect(copy.tooltip).toBe("agent-terminal · Fix");
+  });
 });
 
 describe("tabStripOverflow", () => {

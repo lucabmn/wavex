@@ -21,6 +21,7 @@ import { FilePicker } from "./chrome/FilePicker";
 import { SymbolPicker } from "./chrome/SymbolPicker";
 import { UsageFooter } from "./chrome/UsageFooter";
 import { useProjectBranches } from "./hooks/useProjectBranches";
+import { useProjectDiffStats } from "./hooks/useProjectDiffStats";
 import {
   loadProjectRailOpen,
   loadSidebarTabOrder,
@@ -756,6 +757,14 @@ export default function App({
   const gitCwdRef = useRef(gitCwd);
   gitCwdRef.current = gitCwd;
   const projectBranches = useProjectBranches(sidebarCwd, Boolean(sidebarCwd) && sidebarCwd !== "~");
+  // One shared subscription: the tab strip and the sidebar both render this
+  // project's uncommitted state, and the hook caches per cwd.
+  const projectDiff = useProjectDiffStats(projectCwd, Boolean(projectCwd) && projectCwd !== "~");
+  const totalCheckErrors = useMemo(() => {
+    let total = 0;
+    for (const count of fileErrorCounts.values()) total += count;
+    return total;
+  }, [fileErrorCounts]);
 
   const nextBusySessionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -3730,7 +3739,20 @@ export default function App({
   );
 
   const nextTitleTabs: TitleTab[] = deckProjectTabs.map((tab) =>
-    toTitleTab(tab, sessions, dirtyFiles),
+    toTitleTab(tab, sessions, dirtyFiles, {
+      unreadIds: unseenFinishedIds,
+      fileErrorCounts,
+      git: {
+        ...(projectBranches?.current ? { branch: projectBranches.current } : {}),
+        ...(projectDiff
+          ? {
+              files: projectDiff.files,
+              additions: projectDiff.additions,
+              deletions: projectDiff.deletions,
+            }
+          : {}),
+      },
+    }),
   );
   tabProjectsRef.current = new Map(nextTitleTabs.map((tab) => [tab.id, tab.project]));
   const titleTabsRef = useRef(nextTitleTabs);
@@ -4535,6 +4557,7 @@ export default function App({
         busySessionIds={busySessionIds}
         approvalSessionIds={approvalSessionIds}
         activeSessionId={active?.id}
+        checkErrors={totalCheckErrors}
         status={historyFailed ? "error" : "idle"}
         pending={historyPending}
         onRetrySessions={() => void refreshHistory(sidebarCwd)}
