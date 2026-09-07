@@ -7,12 +7,14 @@ import {
   hasActiveSessionFilters,
   timeFilterStart,
 } from "@/lib/sessions/sessionFilters";
+import { LOCAL_HOST_ID } from "@/lib/host";
 import type { SessionSummary } from "@/lib/sessions/sessionStore";
 
 function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
   return {
     id,
     cwd: "/tmp/project",
+    hostId: LOCAL_HOST_ID,
     harness: "cursor",
     model: "gpt-5",
     runtimeMode: "supervised",

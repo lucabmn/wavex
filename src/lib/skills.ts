@@ -10,6 +10,8 @@ import { invalidateProjectFiles } from "./files/fileIndex";
 import { fuzzyMatch } from "./fuzzy";
 import { joinPath } from "./paths";
 import { looksLikeProject, normalizeProjectPath } from "./recents";
+import { hostIdForProject } from "./transport";
+import { hostPathKey, type HostId } from "./host";
 import { isMarkdownBlockquotePosition } from "./quoteDraft";
 import type { HarnessId } from "./session";
 import { discoverPiSkills } from "./harness/piSkills";
@@ -85,6 +87,8 @@ const PI_SKILL_RETRY_MS = 5_000;
 export type SkillCatalogContext = {
   harness: HarnessId;
   cwd: string;
+  /** The machine whose CLI owns these skills. Defaults to this device. */
+  hostId?: HostId;
 };
 
 type CatalogRequest = {
@@ -104,7 +108,7 @@ type CatalogEntry = {
 const catalogEntries = new Map<string, CatalogEntry>();
 
 export function skillCatalogKey(context: SkillCatalogContext): string {
-  return `${context.harness}\0${normalizeProjectPath(context.cwd)}`;
+  return `${context.harness}\0${hostPathKey(context.hostId ?? hostIdForProject(context.cwd), context.cwd)}`;
 }
 
 export function peekSkills(context: SkillCatalogContext): Skill[] | null {
@@ -133,6 +137,7 @@ export function loadSkills(
   const normalized = {
     harness: context.harness,
     cwd: normalizeProjectPath(context.cwd),
+    hostId: context.hostId ?? hostIdForProject(context.cwd),
   } satisfies SkillCatalogContext;
   const key = skillCatalogKey(normalized);
   let entry = catalogEntries.get(key);
@@ -217,13 +222,13 @@ function startCatalogLoad(
 
 async function loadCatalog(context: SkillCatalogContext): Promise<Skill[]> {
   if (context.harness === "pi") {
-    const commands = await discoverPiSkills(context.cwd);
+    const commands = await discoverPiSkills(context.cwd, context.hostId);
     return commands.map((command): NativeSkill => ({
       kind: "native",
       ...command,
     }));
   }
-  return mergeCatalog(await listSkills(context.cwd));
+  return mergeCatalog(await listSkills(context.cwd, context.hostId));
 }
 
 export function mergeCatalog(discovered: DiscoveredSkill[]): Skill[] {

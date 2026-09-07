@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { nativeWindow } from "../lib/native";
 import { Copy, Minus, Square, X } from "./icons";
 import { useEffect, useState } from "react";
 
@@ -9,16 +9,16 @@ export function WindowControls() {
     let unlisten: (() => void) | undefined;
     let mounted = true;
 
-    const win = getCurrentWindow();
+    const win = nativeWindow();
     void win
-      .isMaximized()
+      ?.isMaximized()
       .then((max) => {
         if (mounted) setIsMaximized(max);
       })
       .catch(() => {});
 
     void win
-      .onResized(async () => {
+      ?.onResized(async () => {
         try {
           const max = await win.isMaximized();
           if (mounted) setIsMaximized(max);
@@ -41,19 +41,19 @@ export function WindowControls() {
 
   const handleMinimize = () => {
     try {
-      void getCurrentWindow().minimize();
+      void nativeWindow()?.minimize();
     } catch {}
   };
 
   const handleToggleMaximize = () => {
     try {
-      void getCurrentWindow().toggleMaximize();
+      void nativeWindow()?.toggleMaximize();
     } catch {}
   };
 
   const handleClose = () => {
     try {
-      void getCurrentWindow().close();
+      void nativeWindow()?.close();
     } catch {}
   };
 

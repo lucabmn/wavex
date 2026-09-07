@@ -8,12 +8,14 @@ import {
   replaceProjectHistory,
 } from "@/lib/sessions/sessionHistory";
 import { newSession } from "@/lib/session";
+import { LOCAL_HOST_ID } from "@/lib/host";
 import type { SessionSummary } from "@/lib/sessions/sessionStore";
 
 function summary(id: string, cwd: string, updatedAt = 1): SessionSummary {
   return {
     id,
     cwd,
+    hostId: LOCAL_HOST_ID,
     harness: "cursor",
     model: "gpt-5",
     runtimeMode: "supervised",

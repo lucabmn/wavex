@@ -1,4 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
+import { getDefaultHostId, invokeOn } from "../transport";
+import { hostPathArgs, type HostId } from "../host";
 import { basename } from "../fs";
 
 /** One checkout of a repository. The first entry git reports is `main`. */
@@ -18,8 +19,9 @@ export type Worktree = {
   missing: boolean;
 };
 
-export function gitWorktreeList(cwd: string): Promise<Worktree[]> {
-  return invoke<Worktree[]>("git_worktree_list", { cwd });
+export function gitWorktreeList(cwd: string, hostId?: HostId): Promise<Worktree[]> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<Worktree[]>(target.hostId, "git_worktree_list", { cwd: target.path });
 }
 
 export function gitWorktreeCreate(
@@ -27,9 +29,11 @@ export function gitWorktreeCreate(
   path: string,
   branch: string,
   base?: string | null,
+  hostId?: HostId,
 ): Promise<Worktree> {
-  return invoke<Worktree>("git_worktree_create", {
-    cwd,
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<Worktree>(target.hostId, "git_worktree_create", {
+    cwd: target.path,
     path,
     branch,
     base: base ?? null,
@@ -40,17 +44,20 @@ export function gitWorktreeRemove(
   cwd: string,
   path: string,
   options: { force?: boolean; deleteBranch?: boolean } = {},
+  hostId?: HostId,
 ): Promise<void> {
-  return invoke<void>("git_worktree_remove", {
-    cwd,
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_worktree_remove", {
+    cwd: target.path,
     path,
     force: options.force ?? false,
     deleteBranch: options.deleteBranch ?? false,
   });
 }
 
-export function gitWorktreePrune(cwd: string): Promise<void> {
-  return invoke<void>("git_worktree_prune", { cwd });
+export function gitWorktreePrune(cwd: string, hostId?: HostId): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  return invokeOn<void>(target.hostId, "git_worktree_prune", { cwd: target.path });
 }
 
 /** What to call a worktree in the UI: its branch, else a short head, else the folder. */

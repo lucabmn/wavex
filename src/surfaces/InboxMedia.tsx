@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "../lib/native";
 import { fetchInboxMedia, sniffInboxMedia, type InboxMediaType } from "../lib/inbox/inboxMedia";
 
 type Props = {

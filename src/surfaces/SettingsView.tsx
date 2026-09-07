@@ -8,6 +8,8 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { ConnectionsPage } from "./ConnectionsPage";
+import { Heading, Row } from "../chrome/SettingsRow";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import {
   getLanguageServerAvailabilitySnapshot,
@@ -139,6 +141,7 @@ import {
   installPendingUpdate,
   readAppVersion,
   runUpdateFlow,
+  UPDATES_SUPPORTED,
   type UpdaterSnapshot,
 } from "../lib/updates/updater";
 
@@ -231,6 +234,7 @@ export function SettingsView({
           {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
           {section === "keybindings" ? <KeybindingsPage /> : null}
           {section === "providers" ? <ProvidersPage /> : null}
+          {section === "connections" ? <ConnectionsPage /> : null}
           {section === "language-servers" ? <LanguageServersPage /> : null}
           {section === "archive" ? (
             <ArchivePage
@@ -442,7 +446,9 @@ function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => vo
             ? "You're on the latest version."
             : snapshot.phase === "error"
               ? (snapshot.error ?? "Update check failed.")
-              : "wavex updates itself from the release feed.";
+              : UPDATES_SUPPORTED
+                ? "wavex updates itself from the release feed."
+                : "This host updates itself; a browser client follows whatever it runs.";
 
   return (
     <Row
@@ -461,16 +467,18 @@ function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => vo
         >
           What's new
         </SecondaryButton>
-        <SecondaryButton onClick={() => void onClick()} disabled={busy}>
-          {busy ? (
-            <Loader className="size-3.5 animate-spin" aria-hidden />
-          ) : hasUpdate ? (
-            <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
-          ) : (
-            <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
-          )}
-          {hasUpdate ? "Download" : "Check for updates"}
-        </SecondaryButton>
+        {UPDATES_SUPPORTED ? (
+          <SecondaryButton onClick={() => void onClick()} disabled={busy}>
+            {busy ? (
+              <Loader className="size-3.5 animate-spin" aria-hidden />
+            ) : hasUpdate ? (
+              <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
+            ) : (
+              <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
+            )}
+            {hasUpdate ? "Download" : "Check for updates"}
+          </SecondaryButton>
+        ) : null}
       </div>
     </Row>
   );
@@ -1198,36 +1206,6 @@ function PageHeader({ title, description }: { title: string; description: string
   );
 }
 
-function Heading({ title, first = false }: { title: string; first?: boolean }) {
-  return (
-    <h2 className={`pb-1 text-[15px] font-semibold text-content ${first ? "" : "pt-8"}`}>
-      {title}
-    </h2>
-  );
-}
-
-function Row({
-  label,
-  description,
-  children,
-}: {
-  label: ReactNode;
-  description?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-6 border-b border-content/5 py-4 last:border-b-0">
-      <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-medium text-content">{label}</div>
-        {description ? (
-          <p className="mt-1 text-[12px] leading-relaxed text-content/45">{description}</p>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>
-    </div>
-  );
-}
-
 function Segmented<T extends string>({
   label,
   value,
@@ -1337,7 +1315,6 @@ function Toggle({
     </button>
   );
 }
-
 function Select({
   label,
   value,

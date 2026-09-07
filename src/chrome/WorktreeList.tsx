@@ -2,7 +2,9 @@ import { CircleAlert, GitBranch, MoreHorizontal, Plus } from "./icons";
 import { useState, type MouseEvent } from "react";
 import { copyText } from "../lib/clipboard";
 import { notifyGitChanged, revealPath, type GitDiffStats } from "../lib/fs";
-import { REVEAL_LABEL } from "../lib/platform";
+import { canRevealPath, revealLabel } from "../lib/platform";
+import { hostIdForProject } from "../lib/transport";
+import type { HostId } from "../lib/host";
 import { sameProjectPath } from "../lib/recents";
 import { gitWorktreePrune, worktreeLabel, type Worktree } from "../lib/worktrees/worktrees";
 import { useProjectDiffStats } from "../hooks/useProjectDiffStats";
@@ -51,7 +53,7 @@ export function WorktreeList({
     setMenu(null);
     if (!worktree) return;
     if (id === "open") onSelect(worktree.path);
-    else if (id === "reveal") void revealPath(worktree.path);
+    else if (id === "reveal") void revealPath(worktree.path, hostIdForProject(repoPath));
     else if (id === "copy") void copyText(worktree.path);
     else if (id === "remove") setRemoving(worktree);
   };
@@ -114,7 +116,7 @@ export function WorktreeList({
           x={menu.x}
           y={menu.y}
           ariaLabel="Worktree actions"
-          items={worktreeMenuItems(menu.worktree)}
+          items={worktreeMenuItems(menu.worktree, hostIdForProject(repoPath))}
           onPick={onMenuPick}
           onClose={() => setMenu(null)}
         />
@@ -136,10 +138,20 @@ export function WorktreeList({
   );
 }
 
-function worktreeMenuItems(worktree: Worktree): ExplorerMenuItem[] {
+function worktreeMenuItems(worktree: Worktree, hostId: HostId): ExplorerMenuItem[] {
   return [
     { kind: "item", id: "open", label: "Open worktree" },
-    { kind: "item", id: "reveal", label: REVEAL_LABEL, disabled: worktree.missing },
+    // A file manager opens where the user is, not on the host.
+    ...(canRevealPath(hostId)
+      ? [
+          {
+            kind: "item" as const,
+            id: "reveal",
+            label: revealLabel(hostId),
+            disabled: worktree.missing,
+          },
+        ]
+      : []),
     { kind: "item", id: "copy", label: "Copy path" },
     { kind: "sep" },
     {

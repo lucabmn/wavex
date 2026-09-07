@@ -11,7 +11,7 @@ import {
   type ReactNode,
   type UIEvent,
 } from "react";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { nativeWebview } from "../lib/native";
 import {
   attachmentsFromFiles,
   attachmentsFromPaths,
@@ -21,6 +21,7 @@ import {
   revokeAttachment,
 } from "../lib/attachments";
 import type { ContextUsage } from "../lib/contextUsage";
+import { hostIdForProject } from "../lib/transport";
 import { loadProjectFiles, peekProjectFiles, recentOpenedFiles } from "../lib/files/fileIndex";
 import {
   buildMentionIndex,
@@ -268,6 +269,7 @@ export function Composer({
   const skillCatalog = useComposerSkills({
     harness,
     executionCwd,
+    hostId: hostIdForProject(cwd),
     pickerOpen,
   });
   const templateCatalog = usePromptTemplates({ cwd, pickerOpen });
@@ -627,7 +629,7 @@ export function Composer({
       if (Date.now() - nativeDropAt < 250) return;
       const files = [...data.files];
       if (files.length === 0) return;
-      void attachmentsFromFiles(files).then(addAttachments);
+      void attachmentsFromFiles(files, hostIdForProject(cwd)).then(addAttachments);
     };
 
     const root = dropRoot();
@@ -637,8 +639,8 @@ export function Composer({
 
     let cancelled = false;
     let unlisten: (() => void) | undefined;
-    void getCurrentWebview()
-      .onDragDropEvent((event) => {
+    void nativeWebview()
+      ?.onDragDropEvent((event) => {
         if (event.payload.type === "leave") {
           setFileDrag(false);
           return;
@@ -653,7 +655,7 @@ export function Composer({
         setFileDrag(false);
         if (!over || !attachmentsSupported) return;
         nativeDropAt = Date.now();
-        void attachmentsFromPaths(event.payload.paths).then(addAttachments);
+        void attachmentsFromPaths(event.payload.paths, hostIdForProject(cwd)).then(addAttachments);
       })
       .then((fn) => {
         if (cancelled) fn();
@@ -791,7 +793,7 @@ export function Composer({
 
   const attachFromPicker = () => {
     if (!attachmentsSupported) return;
-    void pickAttachments().then((files) => {
+    void pickAttachments(hostIdForProject(cwd)).then((files) => {
       addAttachments(files);
       ref.current?.focus();
     });

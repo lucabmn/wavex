@@ -70,6 +70,65 @@ threads and PR diffs, and one click to hand an item to an agent.
 **Notes and skills** — scratch notes per project, and the skills your agents
 expose surfaced in the composer.
 
+## wavex Link
+
+The machine that owns the checkout and supervises the agents does not have to be
+the machine that draws the window. Run wavex as a host on the box that stays
+awake, then open the same UI from a browser tab or from the desktop app on your
+laptop. Agents keep running while no client is attached, and reconnecting
+reattaches to the session it left.
+
+A host grants a connected client filesystem access, process execution, and Git
+write access on that machine, as the user who started it. Treat the connection
+code the way you would treat an SSH private key.
+
+**Start a host**
+
+```sh
+wavex --headless [--port <PORT>] [--profile <ID>] [--name <NAME>]
+```
+
+`--port` defaults to the port this host last used, `--profile` picks whose
+projects and history it serves, and `--name` is how the host shows up in a
+client. On macOS the binary is `/Applications/wavex.app/Contents/MacOS/wavex`.
+
+**Get the connection code**
+
+```sh
+wavex --headless --print-pairing-code
+```
+
+The code carries the host token, so it is printed only when stdout is a
+terminal — a service manager captures stdout into a log other people read. A
+windowed wavex hands out the same code under Settings → Connections.
+
+**Connect from a browser**
+
+Open `http://127.0.0.1:<port>` and paste the code once. The host serves the
+frontend it embeds, so nothing has to be installed. It trades the code for an
+`HttpOnly` cookie the page's own scripts cannot read, and that cookie lives only
+in the host process: restarting the host means pasting the code again.
+
+**Connect from the desktop app**
+
+Settings → Connections → Add a host, paste the code. Remote projects sit
+alongside local ones in the same window.
+
+**Revoke**
+
+Settings → Connections → Replace token. Every code handed out so far stops
+working, live connections are dropped, and every browser session ends.
+
+**The boundary**
+
+A host binds `127.0.0.1` and nothing else. Reaching it from another machine is
+an SSH tunnel's job or a private network's, never an address wavex picked on
+your behalf:
+
+```sh
+ssh -N -L 47821:127.0.0.1:47821 you@workstation
+```
+
 ## Install
 
 Every release ships all three platforms from

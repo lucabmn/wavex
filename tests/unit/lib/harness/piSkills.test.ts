@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   writeChild: vi.fn(),
 }));
 
+vi.mock("@/lib/transport", () => ({ getDefaultHostId: () => "local" }));
+
 vi.mock("@/lib/harness/child", () => ({
   acquireHarnessBridge: mocks.acquireHarnessBridge,
   killChild: mocks.killChild,
@@ -143,8 +145,8 @@ describe("discoverPiSkills", () => {
     expect(cwd).toBe("/repo");
     expect(mocks.request).toHaveBeenCalledWith({ type: "get_commands" }, 45_000);
     expect(mocks.close).toHaveBeenCalledOnce();
-    expect(mocks.unwatchChild).toHaveBeenCalledWith(childId);
-    expect(mocks.killChild).toHaveBeenCalledWith(childId);
+    expect(mocks.unwatchChild).toHaveBeenCalledWith(childId, "local");
+    expect(mocks.killChild).toHaveBeenCalledWith(childId, "local");
     expect(mocks.releaseBridge).toHaveBeenCalledOnce();
   });
 
@@ -169,6 +171,7 @@ describe("discoverPiSkills", () => {
         id: "ui-1",
         cancelled: true,
       }),
+      "local",
     );
 
     response.resolve({ data: { commands: [] } });

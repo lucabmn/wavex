@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { APP_COMMANDS, paletteEntries, parsePaletteQuery, type CommandId } from "@/lib/commands";
+import {
+  APP_COMMANDS,
+  commandsForClient,
+  paletteEntries,
+  parsePaletteQuery,
+  type CommandId,
+} from "@/lib/commands";
 import { KEYBINDINGS } from "@/lib/settings";
 
 const ALL = new Set(APP_COMMANDS.map((command) => command.id));
@@ -97,5 +103,35 @@ describe("paletteEntries modes", () => {
   it("keeps plain queries on the full command scope", () => {
     const entries = paletteEntries(APP_COMMANDS, ALL, "split right");
     expect(entries[0].command.id).toBe("pane.splitRight");
+  });
+});
+
+describe("commandsForClient", () => {
+  it("leaves a native client's catalog exactly as written", () => {
+    expect(commandsForClient(APP_COMMANDS, false)).toEqual([...APP_COMMANDS]);
+  });
+
+  it("drops the keys a browser tab never delivers", () => {
+    const keyed = new Map(
+      commandsForClient(APP_COMMANDS, true).map((command) => [command.id, command.keys]),
+    );
+    for (const id of ["tab.new", "pane.close", "tab.activate", "app.quickAsk"] as CommandId[]) {
+      expect(keyed.get(id)).toBeUndefined();
+    }
+  });
+
+  it("keeps a browser-reachable command runnable by name", () => {
+    const browser = commandsForClient(APP_COMMANDS, true);
+    const entries = paletteEntries(browser, new Set<CommandId>(["tab.new"]), "");
+    expect(entries.map((entry) => entry.command.id)).toEqual(["tab.new"]);
+    expect(entries[0].command.keys).toBeUndefined();
+  });
+
+  it("leaves a shortcut the page can still cancel alone", () => {
+    const keyed = new Map(
+      commandsForClient(APP_COMMANDS, true).map((command) => [command.id, command.keys]),
+    );
+    expect(keyed.get("app.commandPalette")).toBeTruthy();
+    expect(keyed.get("terminal.toggleDock")).toBeTruthy();
   });
 });

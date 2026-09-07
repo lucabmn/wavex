@@ -1,4 +1,6 @@
 import { writeChild } from "./child";
+import { getDefaultHostId } from "../transport";
+import { type HostId } from "../host";
 import { parseJsonLine, parseRpcResponse, stringField } from "./piProtocol";
 
 type Pending = {
@@ -19,6 +21,8 @@ export class PiRpc {
     private readonly sessionId: string,
     private readonly onFrame: (rec: Record<string, unknown>) => void,
     private readonly label = "Pi",
+    /** The machine running the child; its stdin is not reachable elsewhere. */
+    private readonly hostId: HostId = getDefaultHostId(),
   ) {}
 
   pushLine(line: string) {
@@ -63,7 +67,7 @@ export class PiRpc {
         },
       });
     });
-    void writeChild(this.sessionId, JSON.stringify(payload)).catch((error) => {
+    void writeChild(this.sessionId, JSON.stringify(payload), this.hostId).catch((error) => {
       const message = error instanceof Error ? error : new Error(String(error));
       const request = this.pending.get(id);
       this.pending.delete(id);

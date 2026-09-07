@@ -1,10 +1,32 @@
 import { listDir, type FsEntry } from "../fs";
 import { pathSegments } from "./fileName";
 import { joinPath, parentPath } from "../paths";
+import { hostIdForProject } from "../transport";
+import { hostPathKey, type HostId } from "../host";
+
+/**
+ * A cached listing belongs to one host's folder. Keyed on the bare path, a
+ * client holding two hosts with the same checkout path would draw one host's
+ * explorer from the other host's directory listing.
+ *
+ * A caller that names no host gets the one its project reference names, the
+ * same rule the wrappers follow, so a remote root can never land in a local
+ * slot. A bare child path still needs its host passed — nothing in the path
+ * itself says which machine it is on.
+ */
+function keyFor(hostId: HostId | undefined, path: string): string {
+  return hostPathKey(hostId ?? hostIdForProject(path), path);
+}
+
+type CachedDir = {
+  hostId: HostId;
+  path: string;
+  entries: FsEntry[];
+};
 
 const expandedByProject = new Map<string, Set<string>>();
 const selectedByProject = new Map<string, string | null>();
-const dirs = new Map<string, FsEntry[]>();
+const dirs = new Map<string, CachedDir>();
 const listeners = new Set<() => void>();
 
 const REFRESH_MS = 150;
@@ -12,58 +34,60 @@ let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let refreshing = false;
 let refreshAgain = false;
 
-export function loadExpanded(cwd: string): Set<string> {
-  const saved = expandedByProject.get(cwd);
+export function loadExpanded(cwd: string, hostId?: HostId): Set<string> {
+  const saved = expandedByProject.get(keyFor(hostId, cwd));
   return saved ? new Set(saved) : new Set([cwd]);
 }
 
-export function saveExpanded(cwd: string, expanded: Set<string>) {
-  expandedByProject.set(cwd, new Set(expanded));
+export function saveExpanded(cwd: string, expanded: Set<string>, hostId?: HostId) {
+  expandedByProject.set(keyFor(hostId, cwd), new Set(expanded));
 }
 
-export function loadSelected(cwd: string): string | null {
-  return selectedByProject.get(cwd) ?? null;
+export function loadSelected(cwd: string, hostId?: HostId): string | null {
+  return selectedByProject.get(keyFor(hostId, cwd)) ?? null;
 }
 
-export function saveSelected(cwd: string, path: string | null) {
-  selectedByProject.set(cwd, path);
+export function saveSelected(cwd: string, path: string | null, hostId?: HostId) {
+  selectedByProject.set(keyFor(hostId, cwd), path);
 }
 
 /** Cached `listDir` — same path stays instant when the tree remounts. */
-export function peekDir(path: string): FsEntry[] | null {
-  return dirs.get(path) ?? null;
+export function peekDir(path: string, hostId?: HostId): FsEntry[] | null {
+  return dirs.get(keyFor(hostId, path))?.entries ?? null;
 }
 
-export function listCachedDir(path: string): Promise<FsEntry[]> {
-  const hit = dirs.get(path);
-  if (hit) return Promise.resolve(hit);
-  return listDir(path).then((entries) => {
-    dirs.set(path, entries);
+export function listCachedDir(path: string, hostId?: HostId): Promise<FsEntry[]> {
+  const key = keyFor(hostId, path);
+  const hit = dirs.get(key);
+  if (hit) return Promise.resolve(hit.entries);
+  return listDir(path, hostId).then((entries) => {
+    dirs.set(key, { hostId: hostId ?? hostIdForProject(path), path, entries });
     return entries;
   });
 }
 
-export function refreshDir(path: string): Promise<FsEntry[]> {
-  dirs.delete(path);
-  return listCachedDir(path);
+export function refreshDir(path: string, hostId?: HostId): Promise<FsEntry[]> {
+  dirs.delete(keyFor(hostId, path));
+  return listCachedDir(path, hostId);
 }
 
-export function forgetDir(path: string) {
+export function forgetDir(path: string, hostId?: HostId) {
+  const prefix = keyFor(hostId, path);
   // Snapshot keys before deleting cached directories.
   // oxlint-disable-next-line unicorn/no-useless-spread
   for (const key of [...dirs.keys()]) {
-    if (key === path || key.startsWith(`${path}/`)) dirs.delete(key);
+    if (key === prefix || key.startsWith(`${prefix}/`)) dirs.delete(key);
   }
 }
 
 /** Re-list every cached folder. Agent writes and window focus use this. */
 export async function refreshCachedDirs(): Promise<void> {
-  const paths = [...dirs.keys()];
-  if (paths.length === 0) return;
+  const cached = [...dirs.values()];
+  if (cached.length === 0) return;
   await Promise.all(
-    paths.map((path) =>
-      refreshDir(path).catch(() => {
-        forgetDir(path);
+    cached.map((dir) =>
+      refreshDir(dir.path, dir.hostId).catch(() => {
+        forgetDir(dir.path, dir.hostId);
       }),
     ),
   );
@@ -109,13 +133,13 @@ async function runRefresh() {
 }
 
 /** Folder that VS Code would create into, given the explorer selection. */
-export function createParentOf(cwd: string, selectedPath: string | null): string {
+export function createParentOf(cwd: string, selectedPath: string | null, hostId?: HostId): string {
   if (!selectedPath || selectedPath === cwd) return cwd;
   const parent = parentPath(selectedPath);
-  const entry = peekDir(parent)?.find((e) => e.path === selectedPath);
+  const entry = peekDir(parent, hostId)?.find((e) => e.path === selectedPath);
   if (entry?.isDir) return selectedPath;
   if (entry && !entry.isDir) return parent;
-  if (peekDir(selectedPath)) return selectedPath;
+  if (peekDir(selectedPath, hostId)) return selectedPath;
   return parent;
 }
 

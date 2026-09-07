@@ -1,7 +1,9 @@
 import { homeDir } from "../fs";
+import { type HostId } from "../host";
 import { setHarnessModels, type AgentModel, type ModelSetting } from "../models";
 import {
   execChild,
+  harnessHostId,
   killChild,
   resolveClaudeBinary,
   spawnChild,
@@ -203,11 +205,14 @@ const EFFORT_LABELS: Record<string, string> = {
   max: "Max",
 };
 
-let inflight: Promise<void> | null = null;
+/** One probe in flight per host: two hosts run two installs of the CLI. */
+const inflight = new Map<HostId, Promise<void>>();
 
-export function refreshClaudeCatalog(): Promise<void> {
-  if (inflight) return inflight;
-  inflight = discoverClaudeModels()
+export function refreshClaudeCatalog(hostIdArg?: HostId): Promise<void> {
+  const hostId = harnessHostId("", hostIdArg);
+  const running = inflight.get(hostId);
+  if (running) return running;
+  const run = discoverClaudeModels(hostId)
     .then((models) => {
       if (models.length > 0) setHarnessModels("claude", models);
     })
@@ -215,23 +220,24 @@ export function refreshClaudeCatalog(): Promise<void> {
       console.debug("[wavex] claude catalog", error);
     })
     .finally(() => {
-      inflight = null;
+      inflight.delete(hostId);
     });
-  return inflight;
+  inflight.set(hostId, run);
+  return run;
 }
 
-async function discoverClaudeModels(): Promise<AgentModel[]> {
-  const listed = await discoverViaListModels().catch((error: unknown) => {
+async function discoverClaudeModels(hostId: HostId): Promise<AgentModel[]> {
+  const listed = await discoverViaListModels(hostId).catch((error: unknown) => {
     console.debug("[wavex] claude list_models catalog failed", error);
     return [];
   });
   if (listed.length > 0) return listed;
-  return discoverViaVersion();
+  return discoverViaVersion(hostId);
 }
 
-async function discoverViaListModels(): Promise<AgentModel[]> {
-  const { path } = await resolveClaudeBinary();
-  const cwd = await homeDir();
+async function discoverViaListModels(hostId: HostId): Promise<AgentModel[]> {
+  const { path } = await resolveClaudeBinary(hostId);
+  const cwd = await homeDir(hostId);
   const sessionId = crypto.randomUUID();
 
   let listed: ((models: AgentModel[]) => void) | null = null;
@@ -248,14 +254,15 @@ async function discoverViaListModels(): Promise<AgentModel[]> {
     void writeChild(
       PROBE_ID,
       JSON.stringify(buildControlRequest(LIST_MODELS_REQUEST_ID, { subtype: "list_models" })),
+      hostId,
     ).catch((error: unknown) => {
       failed?.(error instanceof Error ? error : new Error(String(error)));
     });
   };
 
   const stop = async () => {
-    unwatchChild(PROBE_ID);
-    await killChild(PROBE_ID).catch(() => undefined);
+    unwatchChild(PROBE_ID, hostId);
+    await killChild(PROBE_ID, hostId).catch(() => undefined);
   };
 
   watchChild(
@@ -270,13 +277,22 @@ async function discoverViaListModels(): Promise<AgentModel[]> {
       if (rows) listed?.(modelsFromClaudeListModels(rows));
     },
     () => failed?.(new Error("Claude Code catalog probe exited")),
+    undefined,
+    hostId,
   );
 
   try {
-    await spawnChild(PROBE_ID, path, buildClaudeSpawnArgs({ isolated: true, sessionId }), cwd);
+    await spawnChild(
+      PROBE_ID,
+      path,
+      buildClaudeSpawnArgs({ isolated: true, sessionId }),
+      cwd,
+      hostId,
+    );
     await writeChild(
       PROBE_ID,
       JSON.stringify(buildControlRequest(INIT_REQUEST_ID, { subtype: "initialize" })),
+      hostId,
     );
     return await withTimeout(DISCOVERY_TIMEOUT_MS, pending, () => {
       void stop();
@@ -286,10 +302,10 @@ async function discoverViaListModels(): Promise<AgentModel[]> {
   }
 }
 
-async function discoverViaVersion(): Promise<AgentModel[]> {
-  const { path } = await resolveClaudeBinary();
-  const cwd = await homeDir();
-  const versionOut = await execChild(path, ["--version"], cwd);
+async function discoverViaVersion(hostId: HostId): Promise<AgentModel[]> {
+  const { path } = await resolveClaudeBinary(hostId);
+  const cwd = await homeDir(hostId);
+  const versionOut = await execChild(path, ["--version"], cwd, hostId);
   const version = parseClaudeVersion(versionOut);
   return modelsForClaudeVersion(version);
 }

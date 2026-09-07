@@ -42,6 +42,7 @@ import {
   writeTextFile,
 } from "../lib/fs";
 import { syncWatchedMtime, watchFile } from "../lib/files/fileWatch";
+import { hostIdForProject } from "../lib/transport";
 import { displayPath } from "../lib/paths";
 import type { EditorNavigation } from "../lib/search";
 import { MarkdownPreview } from "./AgentMarkdown";
@@ -112,6 +113,9 @@ export function FileEditor({
   onOpenFile,
   lspCommands,
 }: Props) {
+  // The file, its git base, and its mtime all live on the machine that owns
+  // the project. A bare path says nothing about which machine that is.
+  const hostId = hostIdForProject(cwd);
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
   const [reloadKey, setReloadKey] = useState(0);
@@ -145,7 +149,7 @@ export function FileEditor({
     async (force = false) => {
       const generation = ++loadGeneration.current;
       try {
-        const content = await readTextFile(path);
+        const content = await readTextFile(path, hostId);
         if (generation !== loadGeneration.current) return;
         if (dirtyRef.current && !force) {
           pendingDiskRef.current = true;
@@ -179,7 +183,7 @@ export function FileEditor({
     setLoadState({ status: "loading" });
     setSaveState({ status: "idle" });
     const generation = ++loadGeneration.current;
-    void readTextFile(path)
+    void readTextFile(path, hostId)
       .then((content) => {
         if (cancelled || generation !== loadGeneration.current) return;
         setLoadState({ status: "ready", content });
@@ -211,7 +215,7 @@ export function FileEditor({
     setGitBase({ path, original: null });
 
     const load = () => {
-      void gitFileDiff(cwd, relative)
+      void gitFileDiff(cwd, relative, hostId)
         .then((diff) => {
           if (cancelled) return;
           if (diff.binary || diff.tooLarge) {
@@ -243,7 +247,7 @@ export function FileEditor({
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     const unsubGit = subscribeGitChanged(onGit);
-    const unsubWatch = watchFile(path, onDisk);
+    const unsubWatch = watchFile(path, onDisk, hostId);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -252,38 +256,42 @@ export function FileEditor({
       unsubGit();
       unsubWatch();
     };
-  }, [cwd, path, reloadFromDisk, showDiff]);
+  }, [cwd, path, reloadFromDisk, showDiff, hostId]);
 
   const gitOriginal = gitBase.path === path ? gitBase.original : null;
 
   useEffect(() => {
     if (loadState.status !== "ready") return;
     let timer = 0;
-    const stop = watchFile(path, () => {
-      if (dirtyRef.current) {
-        pendingDiskRef.current = true;
-        return;
-      }
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        void reloadFromDisk();
-      }, 50);
-    });
+    const stop = watchFile(
+      path,
+      () => {
+        if (dirtyRef.current) {
+          pendingDiskRef.current = true;
+          return;
+        }
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => {
+          void reloadFromDisk();
+        }, 50);
+      },
+      hostId,
+    );
     return () => {
       window.clearTimeout(timer);
       stop();
     };
-  }, [loadState.status, path, reloadFromDisk]);
+  }, [loadState.status, path, reloadFromDisk, hostId]);
 
   const save = useCallback(
     async (content: string) => {
       const generation = ++saveGeneration.current;
       setSaveState({ status: "saving" });
-      const operation = saveQueue.current.then(() => writeTextFile(path, content));
+      const operation = saveQueue.current.then(() => writeTextFile(path, content, hostId));
       saveQueue.current = operation.catch(() => {});
       try {
         await operation;
-        await syncWatchedMtime(path);
+        await syncWatchedMtime(path, hostId);
         notifyGitChanged();
         if (generation === saveGeneration.current) {
           setSaveState({ status: "saved" });

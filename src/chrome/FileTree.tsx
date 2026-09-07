@@ -11,6 +11,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -50,7 +51,9 @@ import {
   type FsEntry,
 } from "../lib/fs";
 import { displayPath, parentPath, rebasePath } from "../lib/paths";
-import { MOD, REVEAL_LABEL } from "../lib/platform";
+import { canRevealPath, MOD, revealLabel } from "../lib/platform";
+import { hostIdForProject } from "../lib/transport";
+import type { HostId } from "../lib/host";
 import type { GitStatusMap } from "../hooks/useGitFileStatuses";
 import { useProjectDiffStats } from "../hooks/useProjectDiffStats";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
@@ -81,6 +84,8 @@ type MenuTarget = { path: string; isDir: boolean; isRoot: boolean };
 type MenuState = { x: number; y: number; target: MenuTarget };
 
 type TreeCtxValue = {
+  /** The machine this tree's paths belong to. */
+  hostId: HostId;
   expanded: Set<string>;
   selectedPath: string | null;
   creating: Creating | null;
@@ -106,10 +111,11 @@ function useTree(): TreeCtxValue {
   return ctx;
 }
 
-function isDirAt(cwd: string, path: string): boolean {
+function isDirAt(cwd: string, path: string, hostId: HostId): boolean {
   if (path === cwd) return true;
   return (
-    peekDir(parentPath(path))?.find((entry) => entry.path === path)?.isDir ?? peekDir(path) != null
+    peekDir(parentPath(path), hostId)?.find((entry) => entry.path === path)?.isDir ??
+    peekDir(path, hostId) != null
   );
 }
 
@@ -132,6 +138,7 @@ function explorerItems(
   target: MenuTarget,
   clip: Clip | null,
   canOpenTerminal: boolean,
+  hostId: HostId,
 ): ExplorerMenuItem[] {
   const pasteParent = target.isDir ? target.path : parentPath(target.path);
   const pasteBlocked =
@@ -196,7 +203,9 @@ function explorerItems(
           },
         ]
       : []),
-    { kind: "item", id: "reveal", label: REVEAL_LABEL },
+    ...(canRevealPath(hostId)
+      ? [{ kind: "item" as const, id: "reveal", label: revealLabel(hostId) }]
+      : []),
   ];
 }
 
@@ -211,9 +220,14 @@ export function FileTree({
   sourceControlActive = false,
   onShowSourceControl,
 }: Props) {
-  const [expanded, setExpanded] = useState(() => loadExpanded(cwd));
-  const [selectedPath, setSelectedPath] = useState(() => loadSelected(cwd));
-  const [children, setChildren] = useState<FsEntry[] | null>(() => peekDir(cwd));
+  // Everything this tree lists, caches, and reveals belongs to the machine
+  // that owns the project, not to the one drawing the window.
+  const hostId = useMemo(() => hostIdForProject(cwd), [cwd]);
+  const [expanded, setExpanded] = useState(() => loadExpanded(cwd, hostIdForProject(cwd)));
+  const [selectedPath, setSelectedPath] = useState(() => loadSelected(cwd, hostIdForProject(cwd)));
+  const [children, setChildren] = useState<FsEntry[] | null>(() =>
+    peekDir(cwd, hostIdForProject(cwd)),
+  );
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState<Creating | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -233,28 +247,28 @@ export function FileTree({
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
-      saveExpanded(cwd, next);
+      saveExpanded(cwd, next, hostId);
       return next;
     });
   };
 
   const onSelect = (path: string) => {
     setSelectedPath(path);
-    saveSelected(cwd, path);
+    saveSelected(cwd, path, hostId);
   };
 
   const expandDirs = (dirs: string[]) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       for (const dir of dirs) next.add(dir);
-      saveExpanded(cwd, next);
+      saveExpanded(cwd, next, hostId);
       return next;
     });
   };
 
   const refreshTouched = async (touched: string[], forget: string[] = []) => {
-    for (const path of forget) forgetDir(path);
-    await Promise.all([...new Set(touched)].map((path) => refreshDir(path)));
+    for (const path of forget) forgetDir(path, hostId);
+    await Promise.all([...new Set(touched)].map((path) => refreshDir(path, hostId)));
     setEpoch((n) => n + 1);
   };
 
@@ -262,12 +276,12 @@ export function FileTree({
     setExpanded((prev) => {
       const next = new Set<string>();
       for (const path of prev) next.add(rebasePath(path, from, to));
-      saveExpanded(cwd, next);
+      saveExpanded(cwd, next, hostId);
       return next;
     });
     setSelectedPath((prev) => {
       const next = prev ? rebasePath(prev, from, to) : prev;
-      saveSelected(cwd, next);
+      saveSelected(cwd, next, hostId);
       return next;
     });
     setClip((cur) =>
@@ -278,7 +292,7 @@ export function FileTree({
   };
 
   const startCreate = (isDir: boolean, atPath: string | null = selectedPath) => {
-    const parent = createParentOf(cwd, atPath);
+    const parent = createParentOf(cwd, atPath, hostId);
     setRenaming(null);
     expandDirs([cwd, parent]);
     setCreating({ id: Date.now(), parent, isDir });
@@ -301,13 +315,13 @@ export function FileTree({
     if (!session || session.id !== id) return;
     const asFolder = session.isDir || /[/\\]$/.test(raw);
     const fileName = wellFormedFileName(raw);
-    const created = await createPath(session.parent, fileName, asFolder);
+    const created = await createPath(session.parent, fileName, asFolder, hostId);
     const touched = dirsTouchedByCreate(session.parent, fileName);
     await refreshTouched(touched);
     setCreating((cur) => (cur?.id === id ? null : cur));
     expandDirs(touched);
     setSelectedPath(created);
-    saveSelected(cwd, created);
+    saveSelected(cwd, created, hostId);
     if (!asFolder) onOpenFile(created);
   };
 
@@ -319,8 +333,8 @@ export function FileTree({
       setRenaming(null);
       return;
     }
-    const next = await renamePath(path, fileName);
-    const wasDir = isDirAt(cwd, path);
+    const next = await renamePath(path, fileName, hostId);
+    const wasDir = isDirAt(cwd, path, hostId);
     const parent = parentPath(path);
     await refreshTouched([...dirsTouchedByCreate(parent, fileName), parent], wasDir ? [path] : []);
     setRenaming(null);
@@ -331,18 +345,18 @@ export function FileTree({
 
   const removeEntry = async (path: string) => {
     if (path === cwd) return;
-    const isDir = isDirAt(cwd, path);
+    const isDir = isDirAt(cwd, path, hostId);
     const label = basename(path);
     const ok = window.confirm(
       isDir ? `Delete folder “${label}” and everything inside it?` : `Delete “${label}”?`,
     );
     if (!ok) return;
-    await deletePath(path);
+    await deletePath(path, hostId);
     await refreshTouched([parentPath(path)], isDir ? [path] : []);
     setSelectedPath((prev) => {
       if (!prev || prev === path || prev.startsWith(`${path}/`)) {
         const parent = parentPath(path);
-        saveSelected(cwd, parent);
+        saveSelected(cwd, parent, hostId);
         return parent;
       }
       return prev;
@@ -353,7 +367,7 @@ export function FileTree({
 
   const pasteAt = async (targetPath: string) => {
     if (!clip) return;
-    const destParent = createParentOf(cwd, targetPath);
+    const destParent = createParentOf(cwd, targetPath, hostId);
     if (clip.isDir && (destParent === clip.path || destParent.startsWith(`${clip.path}/`))) {
       throw new Error("Cannot paste a folder into itself.");
     }
@@ -361,7 +375,9 @@ export function FileTree({
     const mode = clip.mode;
     const isDir = clip.isDir;
     const created =
-      mode === "cut" ? await movePath(from, destParent) : await copyPath(from, destParent);
+      mode === "cut"
+        ? await movePath(from, destParent, hostId)
+        : await copyPath(from, destParent, hostId);
     if (mode === "cut") {
       await refreshTouched(dirsTouchedByMove(from, created), isDir ? [from] : []);
       remapTreePaths(from, created);
@@ -372,16 +388,16 @@ export function FileTree({
     }
     expandDirs([destParent]);
     setSelectedPath(created);
-    saveSelected(cwd, created);
+    saveSelected(cwd, created, hostId);
   };
 
   const duplicateAt = async (path: string) => {
     if (path === cwd) return;
     const destParent = parentPath(path);
-    const created = await copyPath(path, destParent);
+    const created = await copyPath(path, destParent, hostId);
     await refreshTouched([destParent]);
     setSelectedPath(created);
-    saveSelected(cwd, created);
+    saveSelected(cwd, created, hostId);
   };
 
   const run = async (work: () => Promise<void>) => {
@@ -435,7 +451,7 @@ export function FileTree({
         await run(() => removeEntry(target.path));
         return;
       case "reveal":
-        await run(() => revealPath(target.path));
+        await run(() => revealPath(target.path, hostId));
         return;
       case "open-terminal":
         onOpenTerminal?.(target.isDir ? target.path : parentPath(target.path));
@@ -465,7 +481,7 @@ export function FileTree({
     }
     const path = selectedPath ?? cwd;
     const isRoot = path === cwd;
-    const isDir = isDirAt(cwd, path);
+    const isDir = isDirAt(cwd, path, hostId);
     const mod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
     if (mod && !e.altKey && !e.shiftKey && key === "c") {
@@ -524,7 +540,7 @@ export function FileTree({
   }, []);
 
   useEffect(() => {
-    const hit = peekDir(cwd);
+    const hit = peekDir(cwd, hostId);
     if (hit) {
       setChildren(hit);
       setError(null);
@@ -533,7 +549,7 @@ export function FileTree({
     let cancelled = false;
     setChildren(null);
     setError(null);
-    void listCachedDir(cwd)
+    void listCachedDir(cwd, hostId)
       .then((entries) => {
         if (!cancelled) setChildren(entries);
       })
@@ -551,6 +567,7 @@ export function FileTree({
   return (
     <TreeCtx.Provider
       value={{
+        hostId,
         expanded,
         selectedPath,
         creating,
@@ -591,7 +608,7 @@ export function FileTree({
               setCreating(null);
               setRenaming(null);
               const next = new Set([cwd]);
-              saveExpanded(cwd, next);
+              saveExpanded(cwd, next, hostId);
               setExpanded(next);
             }}
           >
@@ -659,7 +676,7 @@ export function FileTree({
         <ExplorerMenu
           x={menu.x}
           y={menu.y}
-          items={explorerItems(menu.target, clip, !!onOpenTerminal)}
+          items={explorerItems(menu.target, clip, !!onOpenTerminal, hostId)}
           onPick={(id) => {
             const target = menu.target;
             setMenu(null);
@@ -813,6 +830,7 @@ function TreeChildren({
 
 function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
   const {
+    hostId,
     expanded,
     selectedPath,
     renaming,
@@ -828,7 +846,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
   } = useTree();
   const open = expanded.has(entry.path);
   const [children, setChildren] = useState<FsEntry[] | null>(() =>
-    entry.isDir ? peekDir(entry.path) : null,
+    entry.isDir ? peekDir(entry.path, hostId) : null,
   );
   const [error, setError] = useState<string | null>(null);
   const selected = selectedPath === entry.path;
@@ -840,14 +858,14 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
 
   useEffect(() => {
     if (!entry.isDir || !open) return;
-    const hit = peekDir(entry.path);
+    const hit = peekDir(entry.path, hostId);
     if (hit) {
       setChildren(hit);
       setError(null);
       return;
     }
     let cancelled = false;
-    void listCachedDir(entry.path)
+    void listCachedDir(entry.path, hostId)
       .then((entries) => {
         if (!cancelled) {
           setChildren(entries);
@@ -863,7 +881,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
     return () => {
       cancelled = true;
     };
-  }, [entry.isDir, entry.path, open, epoch]);
+  }, [entry.isDir, entry.path, open, epoch, hostId]);
 
   const onClick = () => {
     onSelect(entry.path);
@@ -871,7 +889,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
     else onOpenFile(entry.path);
   };
 
-  const siblings = (peekDir(parentPath(entry.path)) ?? [])
+  const siblings = (peekDir(parentPath(entry.path), hostId) ?? [])
     .map((child) => child.name)
     .filter((name) => name !== entry.name);
 

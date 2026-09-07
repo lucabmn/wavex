@@ -1,6 +1,8 @@
 import { listProjectFiles, type ProjectFile } from "../fs";
 import { scorePath, type FuzzyHit } from "../fuzzy";
-import { pathKey, resolveWorkspacePath } from "../paths";
+import { hostIdForProject } from "../transport";
+import { hostPathKey, type HostId } from "../host";
+import { resolveWorkspacePath } from "../paths";
 import { looksLikeProject } from "../recents";
 import { normalizeEditorPath } from "../search";
 
@@ -8,58 +10,70 @@ const MAX_RECENTS = 30;
 const MAX_RESULTS = 80;
 
 type Cache = {
-  cwd: string;
+  key: string;
   files: ProjectFile[];
 };
 
 let cache: Cache | null = null;
-let inflight: { cwd: string; promise: Promise<ProjectFile[]> } | null = null;
+let inflight: { key: string; promise: Promise<ProjectFile[]> } | null = null;
 let epoch = 0;
 const recentsByCwd = new Map<string, string[]>();
 
-function normCwd(cwd: string): string {
-  return pathKey(cwd);
+/** A project index belongs to one host's checkout, never to a path alone. */
+/**
+ * A project index belongs to one host's checkout. The root arrives as the
+ * string the workspace holds, so an unnamed host is read out of the reference
+ * rather than assumed to be this device — otherwise a remote project and a
+ * local one at the same path share a slot.
+ */
+function normCwd(cwd: string, hostId: HostId | undefined): string {
+  return hostPathKey(hostId ?? hostIdForProject(cwd), cwd);
 }
 
-export function peekProjectFiles(cwd: string): ProjectFile[] | null {
-  return cache?.cwd === cwd ? cache.files : null;
+export function peekProjectFiles(cwd: string, hostId?: HostId): ProjectFile[] | null {
+  return cache?.key === normCwd(cwd, hostId) ? cache.files : null;
 }
 
-export function invalidateProjectFiles(cwd?: string) {
-  if (!cwd || cache?.cwd === cwd) cache = null;
+export function invalidateProjectFiles(cwd?: string, hostId?: HostId) {
+  if (!cwd || cache?.key === normCwd(cwd, hostId)) cache = null;
 }
 
-export function rememberOpenedFile(cwd: string, path: string) {
+export function rememberOpenedFile(cwd: string, path: string, hostId?: HostId) {
   if (!path) return;
-  const key = normCwd(cwd);
+  const key = normCwd(cwd, hostId);
   const prev = recentsByCwd.get(key) ?? [];
   recentsByCwd.set(key, [path, ...prev.filter((item) => item !== path)].slice(0, MAX_RECENTS));
 }
 
-export function recentOpenedFiles(cwd: string): string[] {
-  return recentsByCwd.get(normCwd(cwd)) ?? [];
+export function recentOpenedFiles(cwd: string, hostId?: HostId): string[] {
+  return recentsByCwd.get(normCwd(cwd, hostId)) ?? [];
 }
 
-export function prefetchProjectFiles(cwd: string) {
+export function prefetchProjectFiles(cwd: string, hostId?: HostId) {
   if (!looksLikeProject(cwd)) return;
-  void loadProjectFiles(cwd);
+  void loadProjectFiles(cwd, false, hostId);
 }
 
-export function loadProjectFiles(cwd: string, refresh = false): Promise<ProjectFile[]> {
+export function loadProjectFiles(
+  cwd: string,
+  refresh = false,
+  hostId?: HostId,
+): Promise<ProjectFile[]> {
   if (!looksLikeProject(cwd)) return Promise.resolve([]);
-  if (!refresh && cache?.cwd === cwd) return Promise.resolve(cache.files);
-  if (inflight?.cwd === cwd) return inflight.promise;
+  const key = normCwd(cwd, hostId);
+  if (!refresh && cache?.key === key) return Promise.resolve(cache.files);
+  if (inflight?.key === key) return inflight.promise;
 
   const id = ++epoch;
-  const promise = listProjectFiles(cwd)
+  const promise = listProjectFiles(cwd, hostId)
     .then((files) => {
-      if (id === epoch) cache = { cwd, files };
+      if (id === epoch) cache = { key, files };
       return files;
     })
     .finally(() => {
-      if (inflight?.cwd === cwd) inflight = null;
+      if (inflight?.key === key) inflight = null;
     });
-  inflight = { cwd, promise };
+  inflight = { key, promise };
   return promise;
 }
 
@@ -108,11 +122,15 @@ export function rankProjectFiles(
 }
 
 /** Resolve a transcript or markdown file link to an existing project file. */
-export async function resolveOpenablePath(cwd: string, href: string): Promise<string | undefined> {
+export async function resolveOpenablePath(
+  cwd: string,
+  href: string,
+  hostId?: HostId,
+): Promise<string | undefined> {
   const direct = resolveWorkspacePath(href, cwd);
   if (!direct) return undefined;
 
-  const files = await loadProjectFiles(cwd);
+  const files = await loadProjectFiles(cwd, false, hostId);
   if (files.length === 0) return direct;
 
   const byPath = new Map(files.map((file) => [normalizeEditorPath(file.path), file]));

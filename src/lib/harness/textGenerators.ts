@@ -1,4 +1,5 @@
 import { gitRangeContext, gitStagedContext } from "../fs";
+import type { HostId } from "../host";
 import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
@@ -19,6 +20,7 @@ export type TextPromptRunner = (input: {
   cwd: string;
   prompt: string;
   timeoutMs: number;
+  hostId?: HostId;
 }) => Promise<string>;
 
 const TITLE_TIMEOUT_MS = 45_000;
@@ -29,12 +31,14 @@ export function createSessionTitleGenerator(run: TextPromptRunner) {
     sessionId: string;
     cwd: string;
     message: string;
+    hostId?: HostId;
   }): Promise<string | null> {
     try {
       const output = await run({
         cwd: input.cwd,
         prompt: buildThreadTitlePrompt(input.message),
         timeoutMs: TITLE_TIMEOUT_MS,
+        hostId: input.hostId,
       });
       return parseGeneratedThreadTitle(output);
     } catch (error) {
@@ -53,8 +57,8 @@ export function createGitTextGenerators(
   label: string,
   timeoutMs = DEFAULT_GIT_TIMEOUT_MS,
 ) {
-  async function generateCommitMessage(cwd: string): Promise<string> {
-    const context = await gitStagedContext(cwd);
+  async function generateCommitMessage(cwd: string, hostId?: HostId): Promise<string> {
+    const context = await gitStagedContext(cwd, hostId);
     const output = await run({
       cwd,
       prompt: buildCommitMessagePrompt({
@@ -63,6 +67,7 @@ export function createGitTextGenerators(
         stagedPatch: context.patch,
       }),
       timeoutMs,
+      hostId,
     });
     const parsed = parseCommitMessage(output);
     if (parsed) return formatCommitMessage(parsed);
@@ -76,8 +81,9 @@ export function createGitTextGenerators(
 
   async function generatePrContent(
     cwd: string,
+    hostId?: HostId,
   ): Promise<(PrContent & { base: string; head: string }) | null> {
-    const range = await gitRangeContext(cwd);
+    const range = await gitRangeContext(cwd, hostId);
     let parsed: PrContent | null = null;
     try {
       const output = await run({
@@ -90,6 +96,7 @@ export function createGitTextGenerators(
           diffPatch: range.diffPatch,
         }),
         timeoutMs,
+        hostId,
       });
       parsed = parsePrContent(output);
     } catch (error) {
@@ -106,12 +113,17 @@ export function createGitTextGenerators(
     };
   }
 
-  async function generateBranchName(cwd: string, message: string): Promise<string | null> {
+  async function generateBranchName(
+    cwd: string,
+    message: string,
+    hostId?: HostId,
+  ): Promise<string | null> {
     try {
       const output = await run({
         cwd,
         prompt: buildBranchNamePrompt(message),
         timeoutMs,
+        hostId,
       });
       return parseBranchName(output);
     } catch (error) {

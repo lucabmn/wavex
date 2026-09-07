@@ -19,9 +19,30 @@ export function pathKey(path: string): string {
     : normalized;
 }
 
+/**
+ * The scheme a project reference on another host is written with. It lives
+ * here, below `host.ts`, so the display helpers can drop it without importing
+ * the host vocabulary they sit underneath.
+ */
+export const HOST_REF_SCHEME = "wavex-host://";
+
+/**
+ * The bare path inside a project reference, or the value unchanged.
+ *
+ * A display helper wants the path the user recognises; which machine it is on
+ * is drawn separately, as a host name, not smuggled into the path text.
+ */
+export function stripHostRef(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith(HOST_REF_SCHEME)) return value;
+  const rest = trimmed.slice(HOST_REF_SCHEME.length);
+  const separator = rest.indexOf("/");
+  return separator <= 0 ? value : rest.slice(separator + 1);
+}
+
 /** Display path with home collapsed to `~`. */
 export function prettyCwd(cwd: string): string {
-  const trimmed = normalizeProjectPath(cwd);
+  const trimmed = normalizeProjectPath(stripHostRef(cwd));
   if (trimmed === "~") return "~";
 
   const parts = trimmed.split("/").filter(Boolean);
@@ -68,8 +89,8 @@ export function rebasePath(path: string, from: string, to: string): string {
 }
 
 export function isEqualOrInside(path: string, root: string): boolean {
-  const key = pathKey(path);
-  const baseKey = pathKey(root);
+  const key = pathKey(stripHostRef(path));
+  const baseKey = pathKey(stripHostRef(root));
   return key === baseKey || key.startsWith(`${baseKey}/`);
 }
 
@@ -117,7 +138,7 @@ export function resolveWorkspacePath(href: string, cwd?: string): string | undef
     return /^\/[A-Za-z]:\//.test(value) ? value.slice(1) : value;
   }
   if (!cwd || cwd === "~") return undefined;
-  return joinPath(cwd, value);
+  return joinPath(stripHostRef(cwd), value);
 }
 
 function looksLikeFilePath(value: string): boolean {
@@ -133,7 +154,7 @@ export function prettyParent(path: string): string {
 /** Path relative to cwd when it lives under the project, otherwise unchanged. */
 export function displayPath(path: string, cwd?: string): string {
   const normalized = normalizeProjectPath(path);
-  const base = cwd ? normalizeProjectPath(cwd) : undefined;
+  const base = cwd ? normalizeProjectPath(stripHostRef(cwd)) : undefined;
   if (base && base !== "~") {
     const key = pathKey(normalized);
     const baseKey = pathKey(base);
@@ -150,7 +171,7 @@ export function displayPath(path: string, cwd?: string): string {
 /** Folder name for tab labels — `~` when the cwd is home. */
 export function projectName(cwd: string): string {
   if (!cwd || prettyCwd(cwd) === "~") return "~";
-  const trimmed = normalizeProjectPath(cwd);
+  const trimmed = normalizeProjectPath(stripHostRef(cwd));
   if (/^[A-Za-z]:$/.test(trimmed)) return trimmed;
   const parts = trimmed.split("/").filter(Boolean);
   return parts[parts.length - 1] ?? trimmed;

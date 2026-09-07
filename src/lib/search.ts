@@ -1,4 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
+import { getDefaultHostId, invokeOn } from "./transport";
+import { hostPathArgs, type HostId } from "./host";
 import { pathKey } from "./paths";
 
 export type ProjectSearchMatch = {
@@ -46,6 +47,12 @@ export function editorPathsEqual(a: string, b: string): boolean {
   return pathKey(a) === pathKey(b);
 }
 
-export function searchProject(options: ProjectSearchOptions): Promise<ProjectSearchResult> {
-  return invoke<ProjectSearchResult>("search_project", { options });
+export function searchProject(
+  options: ProjectSearchOptions,
+  hostId?: HostId,
+): Promise<ProjectSearchResult> {
+  const target = hostPathArgs(options.cwd, hostId, getDefaultHostId());
+  return invokeOn<ProjectSearchResult>(target.hostId, "search_project", {
+    options: { ...options, cwd: target.path },
+  });
 }

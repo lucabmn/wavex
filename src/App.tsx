@@ -1,7 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ask, message } from "@tauri-apps/plugin-dialog";
+import { invoke, invokeLocal, listenLocal as listen } from "./lib/transport";
+import { nativeWindow, windowLabel } from "./lib/native";
+import { ask, message } from "./lib/native";
 import {
   useCallback,
   useEffect,
@@ -14,6 +13,8 @@ import {
 import { Sidebar } from "./chrome/Sidebar";
 import { ApprovalToasts } from "./chrome/ApprovalToasts";
 import { WhatsNewDialog } from "./chrome/WhatsNewDialog";
+import { HostProjectDialog } from "./chrome/HostProjectDialog";
+import { getConnectSnapshot, onHostResynced, refreshConnect } from "./lib/connect";
 import { TitleBar } from "./chrome/TitleBar";
 import { MenuBar } from "./chrome/MenuBar";
 import { FilePicker } from "./chrome/FilePicker";
@@ -233,6 +234,7 @@ import {
   newDefaultSession,
   newSession,
   sessionDisplayTitle,
+  sessionHostId,
   sessionWorkCwd,
   titleFromPrompt,
   type Attachment,
@@ -462,6 +464,7 @@ export default function App({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(installedUpdate);
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
+  const [hostPickerOpen, setHostPickerOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>(loadSettingsSection);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   /** Set for every window from the moment a switch starts until the reload. */
@@ -552,6 +555,12 @@ export default function App({
   useEffect(() => {
     if (!notesEnabled) setNotesViewOpen(false);
   }, [notesEnabled]);
+
+  // The project picker reads the paired hosts synchronously when it opens, so
+  // they are loaded once here rather than only when Settings is visited.
+  useEffect(() => {
+    void refreshConnect();
+  }, []);
 
   const tabVisitRef = useRef(emptyTabVisitHistory(activeTabId));
   const tabVisitFromHistoryRef = useRef(false);
@@ -681,7 +690,7 @@ export default function App({
         // The shade goes up before the persist, which takes long enough to
         // read as a frozen app, and stays up over the reload behind it.
         setSwitchingToProfile(findProfile(loadProfiles(), profileId) ?? null);
-        void invoke("disable_window_glass").catch(() => undefined);
+        void invokeLocal("disable_window_glass").catch(() => undefined);
         flushHarnessEvents();
         await persistQuitState(
           sessionsRef.current,
@@ -852,8 +861,8 @@ export default function App({
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    void getCurrentWindow()
-      .onFocusChanged(({ payload: focused }) => {
+    void nativeWindow()
+      ?.onFocusChanged(({ payload: focused }) => {
         if (focused) {
           flushHarnessEvents();
           syncDockBadge(sessionsRef.current);
@@ -886,8 +895,8 @@ export default function App({
       flushHarnessEvents,
       () => appModeRef.current,
     );
-    void getCurrentWindow()
-      .onCloseRequested((event) => {
+    void nativeWindow()
+      ?.onCloseRequested((event) => {
         // Listening here makes close our job. Letting the default path run
         // calls JS `window.destroy`, which Tauri denies without a permission.
         event.preventDefault();
@@ -951,6 +960,44 @@ export default function App({
   useEffect(() => {
     prefetchProjectFiles(sidebarCwd);
   }, [sidebarCwd]);
+
+  /**
+   * A host that fell too far behind this client is re-read, not patched.
+   *
+   * The host keeps a bounded journal. Once the events this client missed have
+   * been overwritten there is nothing left to replay, so the transport raises
+   * a barrier and the sessions belonging to that host are loaded again from
+   * the machine that owns them. The barrier lifts only after this returns —
+   * otherwise the stream would resume on top of a transcript that still has a
+   * hole in it, and the hole would never close.
+   */
+  useEffect(
+    () =>
+      onHostResynced(async (hostId) => {
+        const stale = sessionsRef.current.filter(
+          (session) => sessionHostId(session) === hostId && shouldPersistSession(session),
+        );
+        if (stale.length === 0) return;
+        const fresh = new Map<string, Session>();
+        await Promise.all(
+          stale.map(async (session) => {
+            const reloaded = await getSession(session.id, hostId).catch(() => null);
+            if (reloaded) fresh.set(session.id, reloaded);
+          }),
+        );
+        if (fresh.size === 0) return;
+        for (const session of fresh.values()) {
+          // The host's copy is now what this client believes it wrote. Without
+          // this the next persist would push the stale transcript back over it.
+          lastPersisted.current.set(session.id, persistFingerprint(session));
+        }
+        const next = sessionsRef.current.map((session) => fresh.get(session.id) ?? session);
+        sessionsRef.current = next;
+        setSessions(next);
+        void refreshHistory(sidebarCwdRef.current);
+      }),
+    [refreshHistory],
+  );
 
   const persistSession = useCallback((session: Session | undefined) => {
     if (!session || !shouldPersistSession(session)) return;
@@ -1101,7 +1148,7 @@ export default function App({
       if (skipForgetSessionIds.current.has(session.id)) continue;
       persistSession(session);
       for (const harness of sessionChildHarnesses(session)) {
-        void forgetHarnessSession(harness, session.id);
+        void forgetHarnessSession(harness, session.id, sessionHostId(session));
       }
     }
     setSessions((prev) =>
@@ -1358,7 +1405,7 @@ export default function App({
       const occupyPaneId = occupying && isBlankSession(occupying) ? occupying.id : undefined;
       if (occupyPaneId && occupying) {
         lastPersisted.current.delete(occupyPaneId);
-        void forgetHarnessSession(occupying.harness, occupyPaneId);
+        void forgetHarnessSession(occupying.harness, occupyPaneId, sessionHostId(occupying));
         setSessions((prev) => prev.filter((session) => session.id !== occupyPaneId));
       }
 
@@ -2076,7 +2123,7 @@ export default function App({
     lastPersisted.current.delete(paneId);
     {
       const blank = sessionsRef.current.find((entry) => entry.id === paneId);
-      if (blank) void forgetHarnessSession(blank.harness, paneId);
+      if (blank) void forgetHarnessSession(blank.harness, paneId, sessionHostId(blank));
     }
     setSessions((prev) => {
       const next = prev.filter((entry) => entry.id !== paneId);
@@ -2115,6 +2162,7 @@ export default function App({
           restored.id,
           restored.providerSessionId,
           sessionWorkCwd(restored),
+          sessionHostId(restored),
         );
       }
       lastPersisted.current.set(restored.id, persistFingerprint(restored));
@@ -2164,7 +2212,7 @@ export default function App({
       if (replaceTarget) {
         lastPersisted.current.delete(targetId);
         const blank = sessionsRef.current.find((entry) => entry.id === targetId);
-        if (blank) void forgetHarnessSession(blank.harness, targetId);
+        if (blank) void forgetHarnessSession(blank.harness, targetId, sessionHostId(blank));
       }
 
       const result = applyPlaceSessionOnPane({
@@ -2292,10 +2340,10 @@ export default function App({
       const harness = open?.harness ?? summary?.harness ?? "cursor";
       if (open) {
         for (const id of sessionChildHarnesses(open)) {
-          void forgetHarnessSession(id, sessionId);
+          void forgetHarnessSession(id, sessionId, sessionHostId(open));
         }
       } else {
-        void forgetHarnessSession(harness, sessionId);
+        void forgetHarnessSession(harness, sessionId, summary ? sessionHostId(summary) : undefined);
       }
       await deleteSession(sessionId).catch(() => undefined);
       lastPersisted.current.delete(sessionId);
@@ -2430,7 +2478,7 @@ export default function App({
       const current = sessionsRef.current.find((s) => s.id === sessionId);
       if (!current || (!current.branch && !current.worktreeCwd)) return;
       if (current.worktreeCwd && current.providerSessionId) {
-        void forgetHarnessSession(current.harness, sessionId);
+        void forgetHarnessSession(current.harness, sessionId, sessionHostId(current));
       }
       const next = {
         ...current,
@@ -2495,10 +2543,25 @@ export default function App({
     [activateTab, appendTab, onCwdChange],
   );
 
-  const pickProject = useCallback(async () => {
+  const pickLocalProject = useCallback(async () => {
+    setHostPickerOpen(false);
     const path = await pickFolder();
     if (path) onSelectProject(path);
   }, [onSelectProject]);
+
+  /**
+   * The native folder dialog only sees this machine's disk. Once a host is
+   * paired, the choice of machine has to come first, so the picker asks which
+   * one — and an install that has never paired one goes straight to the dialog
+   * it always opened.
+   */
+  const pickProject = useCallback(async () => {
+    if (getConnectSnapshot().hosts.length > 0) {
+      setHostPickerOpen(true);
+      return;
+    }
+    await pickLocalProject();
+  }, [pickLocalProject]);
 
   const onRemoveProject = useCallback(
     (path: string, options: { purgeData: boolean }) => {
@@ -2526,7 +2589,7 @@ export default function App({
             }
           }
           for (const id of sessionChildHarnesses(session)) {
-            void forgetHarnessSession(id, session.id);
+            void forgetHarnessSession(id, session.id, sessionHostId(session));
           }
           lastPersisted.current.delete(session.id);
         }
@@ -2537,7 +2600,7 @@ export default function App({
           persistSession(session);
           pendingPersist.current.delete(session.id);
           for (const id of sessionChildHarnesses(session)) {
-            void forgetHarnessSession(id, session.id);
+            void forgetHarnessSession(id, session.id, sessionHostId(session));
           }
         }
       }
@@ -2859,7 +2922,7 @@ export default function App({
     const modelSettings = preferredModelSettings(resolved, current.modelSettings);
     const plan = planComposerSwitch(current, harness);
     if (plan.kind === "empty") {
-      void forgetHarnessSession(plan.forget, sessionId);
+      void forgetHarnessSession(plan.forget, sessionId, sessionHostId(current));
     }
     setSessions((prev) =>
       prev.map((s) => {
@@ -2934,6 +2997,9 @@ export default function App({
         return;
       }
       const workCwd = sessionWorkCwd(current);
+      // A worktree cwd is a bare child path, so the machine has to come from
+      // the session, not from parsing the directory it happens to run in.
+      const workHostId = sessionHostId(current);
       const harnessText = composeNoteMessage(noteCard, text);
 
       const pendingSwitch =
@@ -3016,10 +3082,12 @@ export default function App({
             const prompt = await preparePrompt(harnessText, {
               harness: current.harness,
               cwd: workCwd,
+              hostId: workHostId,
             });
             await steerHarnessTurn({
               harness: current.harness,
               sessionId,
+              hostId: workHostId,
               cwd: workCwd,
               model: current.model,
               modelSettings: current.modelSettings,
@@ -3119,6 +3187,7 @@ export default function App({
         void generateHarnessTitle(current.harness, {
           sessionId,
           cwd: workCwd,
+          hostId: workHostId,
           message: harnessText || attachments.map((file) => file.name).join(", "),
         })
           .then((title) => {
@@ -3138,7 +3207,7 @@ export default function App({
 
       if (!live) {
         if (pendingSwitch) {
-          void forgetHarnessSession(pendingSwitch.from, sessionId);
+          void forgetHarnessSession(pendingSwitch.from, sessionId, workHostId);
         }
         return;
       }
@@ -3158,6 +3227,7 @@ export default function App({
               agentText = await requestOutgoingHandoff({
                 harness: pendingSwitch.from,
                 sessionId,
+                hostId: workHostId,
                 cwd: workCwd,
                 model: pendingSwitch.fromModel,
                 modelSettings: pendingSwitch.fromSettings,
@@ -3173,7 +3243,7 @@ export default function App({
             agentText,
             buildDeterministicHandoff(latest ?? current, text),
           );
-          await forgetHarnessSession(pendingSwitch.from, sessionId);
+          await forgetHarnessSession(pendingSwitch.from, sessionId, workHostId);
           if (turnGen.current.get(sessionId) !== gen) return;
           wrap = { from: pendingSwitch.from, to: current.harness, text: brief };
         }
@@ -3194,11 +3264,13 @@ export default function App({
           const prompt = await preparePrompt(harnessText, {
             harness: current.harness,
             cwd: workCwd,
+            hostId: workHostId,
           });
           const earlier = queuedHandoff ? userMessagesAfterHandoff(current) : [];
           await sendHarnessTurn({
             harness: current.harness,
             sessionId,
+            hostId: workHostId,
             cwd: workCwd,
             model: current.model,
             modelSettings: current.modelSettings,
@@ -3860,7 +3932,7 @@ export default function App({
       // window to prepare, so the shade is not up yet. Restoring both anyway
       // costs nothing and keeps the window usable if that ever stops holding.
       setSwitchingToProfile(null);
-      void invoke("enable_window_glass").catch(() => undefined);
+      void invokeLocal("enable_window_glass").catch(() => undefined);
       void message(error instanceof Error ? error.message : "Could not switch profile", {
         title: "wavex",
         kind: "error",
@@ -3976,7 +4048,7 @@ export default function App({
   }, [tabs]);
 
   useEffect(() => {
-    void invoke("set_traffic_lights_visible", { visible: true }).catch(() => {});
+    void invokeLocal("set_traffic_lights_visible", { visible: true }).catch(() => {});
   }, []);
 
   const actions = useRef({
@@ -4357,12 +4429,12 @@ export default function App({
         MENU_BAR_ANSWER_APPROVAL,
         ({ payload }) =>
           actions.current.onApproval(payload.sessionId, payload.requestId, payload.decision),
-        { target: getCurrentWindow().label },
+        { target: windowLabel() },
       ),
       // Stopped from Activity, which may be a different window's surface. Same
       // routing as an approval: only the window that owns the session answers.
       listen<string>(ACTIVITY_STOP_SESSION, ({ payload }) => actions.current.onStop(payload), {
-        target: getCurrentWindow().label,
+        target: windowLabel(),
       }),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
@@ -4846,6 +4918,16 @@ export default function App({
       />
       {whatsNewVersion ? (
         <WhatsNewDialog version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
+      ) : null}
+      {hostPickerOpen ? (
+        <HostProjectDialog
+          onCancel={() => setHostPickerOpen(false)}
+          onPickLocal={() => void pickLocalProject()}
+          onOpen={(ref) => {
+            setHostPickerOpen(false);
+            onSelectProject(ref);
+          }}
+        />
       ) : null}
       {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
       {profileSwitchConfirm !== null ? (

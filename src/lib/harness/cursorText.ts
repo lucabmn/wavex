@@ -1,5 +1,14 @@
+import { projectKey, type HostId } from "../host";
 import { AcpClient } from "./acp";
-import { killChild, resolveCursorBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import {
+  harnessHostId,
+  harnessTarget,
+  killChild,
+  resolveCursorBinary,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+} from "./child";
 import { mergeStream } from "./streamText";
 
 const TEXT_CHILD_ID = "wavex-text";
@@ -22,26 +31,47 @@ type LiveText = {
   closed: boolean;
 };
 
-let live: LiveText | null = null;
-let turns: Promise<void> = Promise.resolve();
+type TextState = {
+  live: LiveText | null;
+  turns: Promise<void>;
+};
 
-export async function stopCursorTextPrompt(childId?: string): Promise<void> {
-  await dropLive();
+/**
+ * One warm generator per host. A single module-level slot is one process: with
+ * two hosts, the second request tore down the first machine's child and then
+ * addressed its fixed child id over the wrong connection.
+ */
+const stateByHost = new Map<HostId, TextState>();
+
+function stateFor(hostId: HostId): TextState {
+  let state = stateByHost.get(hostId);
+  if (!state) {
+    state = { live: null, turns: Promise.resolve() };
+    stateByHost.set(hostId, state);
+  }
+  return state;
+}
+
+export async function stopCursorTextPrompt(childId?: string, hostIdArg?: HostId): Promise<void> {
+  const hostId = harnessHostId("", hostIdArg);
+  await dropLive(hostId);
   if (childId && childId !== TEXT_CHILD_ID) {
-    unwatchChild(childId);
-    await killChild(childId).catch(() => undefined);
+    unwatchChild(childId, hostId);
+    await killChild(childId, hostId).catch(() => undefined);
   }
 }
 
 /** Start the shared text ACP process in the background so the first prompt is fast. */
-export function warmupCursorText(cwd: string): Promise<void> {
+export function warmupCursorText(cwd: string, hostIdArg?: HostId): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns
+  const target = harnessTarget(cwd, hostIdArg);
+  const state = stateFor(target.hostId);
+  const run = state.turns
     .catch(() => undefined)
     .then(async () => {
-      await ensureLive(cwd);
+      await ensureLive(target.path, target.hostId);
     });
-  turns = run.then(
+  state.turns = run.then(
     () => undefined,
     () => undefined,
   );
@@ -53,21 +83,29 @@ export async function runCursorTextPrompt(input: {
   cwd: string;
   prompt: string;
   timeoutMs: number;
+  hostId?: HostId;
 }): Promise<string> {
-  const run = turns.catch(() => undefined).then(() => promptOnLive(input));
-  turns = run.then(
+  const target = harnessTarget(input.cwd, input.hostId);
+  const state = stateFor(target.hostId);
+  const run = state.turns
+    .catch(() => undefined)
+    .then(() => promptOnLive({ ...input, cwd: target.path }, target.hostId));
+  state.turns = run.then(
     () => undefined,
     () => undefined,
   );
   return run;
 }
 
-async function promptOnLive(input: {
-  cwd: string;
-  prompt: string;
-  timeoutMs: number;
-}): Promise<string> {
-  const session = await ensureLive(input.cwd);
+async function promptOnLive(
+  input: {
+    cwd: string;
+    prompt: string;
+    timeoutMs: number;
+  },
+  hostId: HostId,
+): Promise<string> {
+  const session = await ensureLive(input.cwd, hostId);
   session.output = "";
   session.collecting = true;
   try {
@@ -84,41 +122,48 @@ async function promptOnLive(input: {
     await session.acp
       .notify("session/cancel", { sessionId: session.acpSessionId })
       .catch(() => undefined);
-    if (session.closed) await dropLive();
+    if (session.closed) await dropLive(hostId);
     throw error;
   } finally {
     session.collecting = false;
-    await dropLive();
+    await dropLive(hostId);
   }
 }
 
-async function ensureLive(cwd: string): Promise<LiveText> {
-  if (live && !live.closed) {
-    if (live.cwd === cwd) return live;
+async function ensureLive(cwd: string, hostId: HostId): Promise<LiveText> {
+  const state = stateFor(hostId);
+  const current = state.live;
+  if (current && !current.closed) {
+    if (projectKey(current.cwd) === projectKey(cwd)) return current;
     try {
-      await openSession(live, cwd);
-      return live;
+      await openSession(current, cwd);
+      return current;
     } catch {
-      await dropLive();
+      await dropLive(hostId);
     }
   }
-  return startLive(cwd);
+  return startLive(cwd, hostId);
 }
 
-async function startLive(cwd: string): Promise<LiveText> {
-  await dropLive();
-  const { path } = await resolveCursorBinary();
+async function startLive(cwd: string, hostId: HostId): Promise<LiveText> {
+  await dropLive(hostId);
+  const state = stateFor(hostId);
+  const { path } = await resolveCursorBinary(hostId);
   const acpRef: { session: LiveText | null } = { session: null };
-  const acp = new AcpClient(TEXT_CHILD_ID, {
-    onNotification: (method, params) => {
-      const session = acpRef.session;
-      if (!session || method !== "session/update" || !session.collecting) return;
-      session.output = mergeStream(session.output, textFromUpdate(params));
+  const acp = new AcpClient(
+    TEXT_CHILD_ID,
+    {
+      onNotification: (method, params) => {
+        const session = acpRef.session;
+        if (!session || method !== "session/update" || !session.collecting) return;
+        session.output = mergeStream(session.output, textFromUpdate(params));
+      },
+      onRequest: (id, method, params) => {
+        void handleTextRequest(acp, id, method, params);
+      },
     },
-    onRequest: (id, method, params) => {
-      void handleTextRequest(acp, id, method, params);
-    },
-  });
+    hostId,
+  );
   const session: LiveText = {
     acp,
     cwd,
@@ -134,13 +179,15 @@ async function startLive(cwd: string): Promise<LiveText> {
     (line) => acp.pushLine(line),
     () => {
       session.closed = true;
-      if (live === session) live = null;
+      if (state.live === session) state.live = null;
       acp.close(new Error("Cursor text generator exited"));
     },
+    undefined,
+    hostId,
   );
 
   try {
-    await spawnChild(TEXT_CHILD_ID, path, ["acp"], cwd);
+    await spawnChild(TEXT_CHILD_ID, path, ["acp"], cwd, hostId);
     await acp.request(
       "initialize",
       {
@@ -154,13 +201,13 @@ async function startLive(cwd: string): Promise<LiveText> {
       .request("authenticate", { methodId: "cursor_login" }, REQUEST_TIMEOUT_MS)
       .catch(() => undefined);
     await openSession(session, cwd);
-    live = session;
+    state.live = session;
     return session;
   } catch (error) {
     session.closed = true;
     acp.close(error instanceof Error ? error : new Error(String(error)));
-    unwatchChild(TEXT_CHILD_ID);
-    await killChild(TEXT_CHILD_ID).catch(() => undefined);
+    unwatchChild(TEXT_CHILD_ID, hostId);
+    await killChild(TEXT_CHILD_ID, hostId).catch(() => undefined);
     throw error;
   }
 }
@@ -202,15 +249,16 @@ async function openSession(session: LiveText, cwd: string): Promise<void> {
   session.acpSessionId = acpSessionId;
 }
 
-async function dropLive(): Promise<void> {
-  const current = live;
-  live = null;
+async function dropLive(hostId: HostId): Promise<void> {
+  const state = stateFor(hostId);
+  const current = state.live;
+  state.live = null;
   if (current) {
     current.closed = true;
     current.acp.close();
   }
-  unwatchChild(TEXT_CHILD_ID);
-  await killChild(TEXT_CHILD_ID).catch(() => undefined);
+  unwatchChild(TEXT_CHILD_ID, hostId);
+  await killChild(TEXT_CHILD_ID, hostId).catch(() => undefined);
 }
 
 async function handleTextRequest(acp: AcpClient, id: number, method: string, params: unknown) {

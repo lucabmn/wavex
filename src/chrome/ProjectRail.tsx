@@ -40,8 +40,11 @@ import {
   saveProjectRailWidth,
 } from "../lib/appearance";
 import { basename, revealPath, type GitDiffStats } from "../lib/fs";
-import { IS_MAC, MOD, REVEAL_LABEL } from "../lib/platform";
-import { pathKey, projectName } from "../lib/paths";
+import { canRevealPath, IS_MAC, MOD, revealLabel } from "../lib/platform";
+import { hostIdForProject } from "../lib/transport";
+import type { HostId } from "../lib/host";
+import { projectKey } from "../lib/host";
+import { projectName } from "../lib/paths";
 import {
   collectRailProjects,
   loadPinnedProjects,
@@ -89,13 +92,20 @@ import { TabGroupMenu, type TabGroupMenuExtraItem } from "./TabGroupMenu";
 import { TerminalSpinner } from "./TerminalSpinner";
 import type { SettingsSectionId } from "../lib/settings";
 
-function projectMenuExtraItems(pinned: boolean, canRemove: boolean): TabGroupMenuExtraItem[] {
+function projectMenuExtraItems(
+  pinned: boolean,
+  canRemove: boolean,
+  hostId: HostId,
+): TabGroupMenuExtraItem[] {
   const items: TabGroupMenuExtraItem[] = [
     { id: "worktree", label: "New worktree…", icon: GitBranch },
     pinned
       ? { id: "unpin", label: "Unpin project", icon: PinOff }
       : { id: "pin", label: "Pin project", icon: Pin },
-    { id: "reveal", label: REVEAL_LABEL, icon: FolderOpen },
+    // A file manager opens where the user is, not on the host.
+    ...(canRevealPath(hostId)
+      ? [{ id: "reveal", label: revealLabel(hostId), icon: FolderOpen }]
+      : []),
   ];
   if (canRemove) {
     items.push(
@@ -255,7 +265,7 @@ export function ProjectRail({
 
   useEffect(() => {
     setPinnedPaths((prev) => {
-      const next = prev.filter((path) => allProjects.has(pathKey(path)));
+      const next = prev.filter((path) => allProjects.has(projectKey(path)));
       if (next.length === prev.length) return prev;
       savePinnedProjects(next);
       return next;
@@ -350,7 +360,7 @@ export function ProjectRail({
     const { path, projectKey } = projectMenu;
     if (action === "worktree") setCreatingWorktreeFor(path);
     else if (action === "pin" || action === "unpin") onTogglePin(path);
-    else if (action === "reveal") void revealPath(path);
+    else if (action === "reveal") void revealPath(path, hostIdForProject(path));
     else if (action === "archive") {
       onRemoveProject?.(path, { purgeData: false });
     } else if (action === "delete") {
@@ -591,6 +601,7 @@ export function ProjectRail({
           extraItems={projectMenuExtraItems(
             pinnedPaths.some((pinned) => sameProjectPath(pinned, projectMenu.path)),
             Boolean(onRemoveProject),
+            hostIdForProject(projectMenu.path),
           )}
           onExtraPick={onProjectMenuPick}
         />

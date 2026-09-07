@@ -1,4 +1,6 @@
 import { writeChild } from "./child";
+import { getDefaultHostId } from "../transport";
+import { type HostId } from "../host";
 
 type Pending = {
   resolve: (value: unknown) => void;
@@ -25,6 +27,8 @@ export type JsonRpcClientOptions = {
   /** Include `"jsonrpc":"2.0"` on outbound messages. Default true (ACP). Codex omits it. */
   includeJsonrpc?: boolean;
   label?: string;
+  /** The machine running the child. Its stdin is not reachable from anywhere else. */
+  hostId?: HostId;
 };
 
 /**
@@ -37,6 +41,7 @@ export class JsonRpcClient {
   private closed = false;
   private readonly includeJsonrpc: boolean;
   private readonly label: string;
+  private readonly hostId: HostId;
 
   constructor(
     private readonly sessionId: string,
@@ -45,6 +50,7 @@ export class JsonRpcClient {
   ) {
     this.includeJsonrpc = options.includeJsonrpc !== false;
     this.label = options.label ?? "rpc";
+    this.hostId = options.hostId ?? getDefaultHostId();
   }
 
   pushLine(line: string) {
@@ -150,7 +156,7 @@ export class JsonRpcClient {
   }
 
   private async send(payload: object): Promise<void> {
-    await writeChild(this.sessionId, JSON.stringify(payload));
+    await writeChild(this.sessionId, JSON.stringify(payload), this.hostId);
   }
 
   private handle(msg: JsonRpcMessage) {

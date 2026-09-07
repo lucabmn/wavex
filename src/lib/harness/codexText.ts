@@ -1,5 +1,14 @@
+import { projectKey, type HostId } from "../host";
 import { modelsFor } from "../models";
-import { killChild, resolveCodexBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import {
+  harnessHostId,
+  harnessTarget,
+  killChild,
+  resolveCodexBinary,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+} from "./child";
 import {
   asRecord,
   buildThreadStartParams,
@@ -29,8 +38,26 @@ type LiveText = {
   turnFailed: ((error: Error) => void) | null;
 };
 
-let live: LiveText | null = null;
-let turns: Promise<void> = Promise.resolve();
+type TextState = {
+  live: LiveText | null;
+  turns: Promise<void>;
+};
+
+/**
+ * One warm generator per host. A single module-level slot is one process: with
+ * two hosts, the second request tore down the first machine's child and then
+ * addressed its fixed child id over the wrong connection.
+ */
+const stateByHost = new Map<HostId, TextState>();
+
+function stateFor(hostId: HostId): TextState {
+  let state = stateByHost.get(hostId);
+  if (!state) {
+    state = { live: null, turns: Promise.resolve() };
+    stateByHost.set(hostId, state);
+  }
+  return state;
+}
 
 function pickTextModel(): string {
   const models = modelsFor("codex");
@@ -50,19 +77,21 @@ function pickTextEffort(modelId: string): string {
   return TEXT_EFFORT;
 }
 
-export async function stopCodexTextPrompt(): Promise<void> {
-  await dropLive();
+export async function stopCodexTextPrompt(hostId?: HostId): Promise<void> {
+  await dropLive(harnessHostId("", hostId));
 }
 
 /** Start the shared Codex app-server in the background so the first prompt is fast. */
-export function warmupCodexText(cwd: string): Promise<void> {
+export function warmupCodexText(cwd: string, hostIdArg?: HostId): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns
+  const target = harnessTarget(cwd, hostIdArg);
+  const state = stateFor(target.hostId);
+  const run = state.turns
     .catch(() => undefined)
     .then(async () => {
-      await ensureLive(cwd);
+      await ensureLive(target.path, target.hostId);
     });
-  turns = run.then(
+  state.turns = run.then(
     () => undefined,
     () => undefined,
   );
@@ -74,21 +103,29 @@ export async function runCodexTextPrompt(input: {
   cwd: string;
   prompt: string;
   timeoutMs?: number;
+  hostId?: HostId;
 }): Promise<string> {
-  const run = turns.catch(() => undefined).then(() => promptOnLive(input));
-  turns = run.then(
+  const target = harnessTarget(input.cwd, input.hostId);
+  const state = stateFor(target.hostId);
+  const run = state.turns
+    .catch(() => undefined)
+    .then(() => promptOnLive({ ...input, cwd: target.path }, target.hostId));
+  state.turns = run.then(
     () => undefined,
     () => undefined,
   );
   return run;
 }
 
-async function promptOnLive(input: {
-  cwd: string;
-  prompt: string;
-  timeoutMs?: number;
-}): Promise<string> {
-  const session = await ensureLive(input.cwd);
+async function promptOnLive(
+  input: {
+    cwd: string;
+    prompt: string;
+    timeoutMs?: number;
+  },
+  hostId: HostId,
+): Promise<string> {
+  const session = await ensureLive(input.cwd, hostId);
   session.output = "";
   session.collecting = true;
   const timeoutMs = input.timeoutMs ?? REQUEST_TIMEOUT_MS;
@@ -123,38 +160,45 @@ async function promptOnLive(input: {
     await session.rpc
       .request("turn/interrupt", { threadId: session.threadId })
       .catch(() => undefined);
-    if (session.closed) await dropLive();
+    if (session.closed) await dropLive(hostId);
     throw error;
   } finally {
     session.collecting = false;
     session.turnDone = null;
     session.turnFailed = null;
-    await dropLive();
+    await dropLive(hostId);
   }
 }
 
-async function ensureLive(cwd: string): Promise<LiveText> {
+async function ensureLive(cwd: string, hostId: HostId): Promise<LiveText> {
   const model = pickTextModel();
   const effort = pickTextEffort(model);
-  if (live && !live.closed) {
-    if (live.cwd === cwd && live.model === model && live.effort === effort) {
-      return live;
+  const state = stateFor(hostId);
+  const current = state.live;
+  if (current && !current.closed) {
+    if (
+      projectKey(current.cwd) === projectKey(cwd) &&
+      current.model === model &&
+      current.effort === effort
+    ) {
+      return current;
     }
     try {
-      live.model = model;
-      live.effort = effort;
-      await openThread(live, cwd);
-      return live;
+      current.model = model;
+      current.effort = effort;
+      await openThread(current, cwd);
+      return current;
     } catch {
-      await dropLive();
+      await dropLive(hostId);
     }
   }
-  return startLive(cwd);
+  return startLive(cwd, hostId);
 }
 
-async function startLive(cwd: string): Promise<LiveText> {
-  await dropLive();
-  const { path } = await resolveCodexBinary();
+async function startLive(cwd: string, hostId: HostId): Promise<LiveText> {
+  await dropLive(hostId);
+  const state = stateFor(hostId);
+  const { path } = await resolveCodexBinary(hostId);
   const sessionRef: { session: LiveText | null } = { session: null };
   const rpc = new JsonRpcClient(
     TEXT_CHILD_ID,
@@ -166,7 +210,7 @@ async function startLive(cwd: string): Promise<LiveText> {
         void handleServerRequest(rpc, id, method, params);
       },
     },
-    { includeJsonrpc: false, label: "codex-text" },
+    { includeJsonrpc: false, label: "codex-text", hostId },
   );
 
   const model = pickTextModel();
@@ -189,16 +233,18 @@ async function startLive(cwd: string): Promise<LiveText> {
     (line) => rpc.pushLine(line),
     () => {
       session.closed = true;
-      if (live === session) live = null;
+      if (state.live === session) state.live = null;
       session.turnFailed?.(new Error("Codex text generator exited"));
       session.turnDone = null;
       session.turnFailed = null;
       rpc.close(new Error("Codex text generator exited"));
     },
+    undefined,
+    hostId,
   );
 
   try {
-    await spawnChild(TEXT_CHILD_ID, path, ["app-server"], cwd);
+    await spawnChild(TEXT_CHILD_ID, path, ["app-server"], cwd, hostId);
     await rpc.request(
       "initialize",
       {
@@ -213,13 +259,13 @@ async function startLive(cwd: string): Promise<LiveText> {
     );
     await rpc.notify("initialized", undefined);
     await openThread(session, cwd);
-    live = session;
+    state.live = session;
     return session;
   } catch (error) {
     session.closed = true;
     rpc.close(error instanceof Error ? error : new Error(String(error)));
-    unwatchChild(TEXT_CHILD_ID);
-    await killChild(TEXT_CHILD_ID).catch(() => undefined);
+    unwatchChild(TEXT_CHILD_ID, hostId);
+    await killChild(TEXT_CHILD_ID, hostId).catch(() => undefined);
     throw error;
   }
 }
@@ -240,15 +286,16 @@ async function openThread(session: LiveText, cwd: string): Promise<void> {
   session.threadId = threadId;
 }
 
-async function dropLive(): Promise<void> {
-  const current = live;
-  live = null;
+async function dropLive(hostId: HostId): Promise<void> {
+  const state = stateFor(hostId);
+  const current = state.live;
+  state.live = null;
   if (current) {
     current.closed = true;
     current.rpc.close();
   }
-  unwatchChild(TEXT_CHILD_ID);
-  await killChild(TEXT_CHILD_ID).catch(() => undefined);
+  unwatchChild(TEXT_CHILD_ID, hostId);
+  await killChild(TEXT_CHILD_ID, hostId).catch(() => undefined);
 }
 
 function handleNotification(session: LiveText | null, method: string, params: unknown): void {

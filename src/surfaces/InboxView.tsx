@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "../lib/native";
 import {
   CircleDot,
   CircleX,

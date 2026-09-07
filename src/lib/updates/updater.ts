@@ -1,5 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { ask, message } from "@tauri-apps/plugin-dialog";
+import { ask, message } from "../native";
+import { IS_TAURI } from "../clientRuntime";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
 import { announceUpdateAvailable } from "../sounds";
@@ -17,6 +18,14 @@ export type UpdaterSnapshot = {
 
 let pendingUpdate: Update | null = null;
 
+/**
+ * Updating replaces the wavex on this machine. A browser client has none to
+ * replace — the host it talks to is installed software that updates itself —
+ * so the surface leaves the control out rather than offering a check that
+ * cannot mean anything.
+ */
+export const UPDATES_SUPPORTED = IS_TAURI;
+
 function isUpdaterNotConfiguredError(error: unknown): boolean {
   const text = error instanceof Error ? error.message : String(error);
   return /updater does not have any endpoints set/i.test(text);
@@ -31,6 +40,7 @@ export async function readAppVersion(): Promise<string> {
 }
 
 export async function probeForUpdate(): Promise<Update | null> {
+  if (!UPDATES_SUPPORTED) return null;
   const update = await check();
   pendingUpdate = update;
   if (update) announceUpdateAvailable(update.version);
@@ -42,6 +52,11 @@ export async function runUpdateFlow(
   onProgress?: (snapshot: UpdaterSnapshot) => void,
 ): Promise<UpdaterSnapshot> {
   const currentVersion = await readAppVersion();
+  if (!UPDATES_SUPPORTED) {
+    const current: UpdaterSnapshot = { phase: "current", currentVersion };
+    onProgress?.(current);
+    return current;
+  }
   const base: UpdaterSnapshot = { phase: "checking", currentVersion };
   onProgress?.(base);
 

@@ -1,5 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
+// A profile switch stops this install's agents, swaps its native stores, and
+// reloads its windows. It is app-wide on this device, never a host operation.
+import { emit, invokeLocal as invoke, listenLocal as listen, type UnlistenFn } from "../transport";
 import {
   addProfile,
   normalizeProfiles,

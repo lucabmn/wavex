@@ -1,7 +1,9 @@
 import { fuzzyMatch } from "../fuzzy";
+import type { HostId } from "../host";
 import { projectName } from "../paths";
 import { sameProjectPath } from "../recents";
 import { sessionDisplayTitle, sessionNeedsInput, sessionScope, type Session } from "../session";
+import { getDefaultHostId } from "../transport";
 import { shouldPersistSession, type SessionSummary } from "./sessionStore";
 
 export type SessionGitHint = {
@@ -83,9 +85,14 @@ function sessionSearchHit(row: SessionSummary, query: string): boolean {
   return fields.some((field) => field && fuzzyMatch(query, field) != null);
 }
 
-export function summaryFromSession(session: Session, git?: SessionGitHint): SessionSummary {
+export function summaryFromSession(
+  session: Session,
+  git?: SessionGitHint,
+  hostId: HostId = getDefaultHostId(),
+): SessionSummary {
   return {
     id: session.id,
+    hostId,
     cwd: session.cwd,
     harness: session.harness,
     model: session.model,

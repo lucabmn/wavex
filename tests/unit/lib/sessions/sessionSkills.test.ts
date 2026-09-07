@@ -9,7 +9,17 @@ describe("piSkillContextForSession", () => {
         cwd: "/repo",
         worktreeCwd: "/repo-worktree",
       }),
-    ).toEqual({ harness: "pi", cwd: "/repo-worktree" });
+    ).toEqual({ harness: "pi", cwd: "/repo-worktree", hostId: "local" });
+  });
+
+  it("keeps a remote session's host even though its worktree path is bare", () => {
+    expect(
+      piSkillContextForSession({
+        harness: "pi",
+        cwd: "wavex-host://dev-box//srv/app",
+        worktreeCwd: "/srv/app-worktree",
+      }),
+    ).toEqual({ harness: "pi", cwd: "/srv/app-worktree", hostId: "dev-box" });
   });
 
   it("ignores a non-Pi session", () => {

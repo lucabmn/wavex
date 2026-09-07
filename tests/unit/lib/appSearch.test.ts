@@ -15,10 +15,12 @@ import {
   snippetAround,
   type AppSearchHit,
 } from "@/lib/appSearch";
+import { LOCAL_HOST_ID } from "@/lib/host";
 
 function summary(id: string, cwd: string, title: string, updatedAt = 1): SessionSummary {
   return {
     id,
+    hostId: LOCAL_HOST_ID,
     cwd,
     harness: "cursor",
     model: "gpt-5",
@@ -179,6 +181,7 @@ describe("hitsFromSessionSearch", () => {
       {
         kind: "conversation",
         sessionId: "s1",
+        hostId: LOCAL_HOST_ID,
         cwd: "/tmp/a",
         harness: "cursor",
         title: "cursor · Fix search",
@@ -188,6 +191,7 @@ describe("hitsFromSessionSearch", () => {
       {
         kind: "message",
         sessionId: "s1",
+        hostId: LOCAL_HOST_ID,
         cwd: "/tmp/a",
         harness: "cursor",
         title: "cursor · Fix search",

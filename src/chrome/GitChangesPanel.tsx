@@ -1,5 +1,4 @@
-import { ask } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { ask, openUrl } from "../lib/native";
 import {
   Check,
   ChevronDown,

@@ -214,6 +214,44 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "diff.discard", label: "Diff: Discard File", keys: "D", when: "diffFocus", listOnly: true },
 ];
 
+/**
+ * Keystrokes the browser's own chrome takes before the page sees them, plus
+ * the one shortcut that is not a keystroke in a tab at all.
+ *
+ * A tab cannot cancel new tab, close tab, new window, or the tab-index
+ * switches on any major browser, and Quick Ask is an operating-system-wide
+ * registration a page never gets to make. wavex still binds all of them for
+ * the desktop app: this is what the client is told, not what it listens for.
+ */
+const BROWSER_RESERVED: ReadonlySet<CommandId> = new Set<CommandId>([
+  "tab.new",
+  "tab.activate",
+  "tab.activateLast",
+  "tab.cycleNext",
+  "tab.cyclePrev",
+  "pane.close",
+  "app.newWindow",
+  "app.quickAsk",
+]);
+
+/**
+ * The catalog as this client can actually use it. A shortcut that can never
+ * fire here loses its key rather than standing in the palette and the
+ * keybindings page as an instruction that does nothing; a command that is
+ * still reachable by name keeps its row.
+ */
+export function commandsForClient(
+  commands: readonly AppCommand[],
+  isBrowserClient: boolean,
+): AppCommand[] {
+  if (!isBrowserClient) return [...commands];
+  return commands.map((command) => {
+    if (!BROWSER_RESERVED.has(command.id)) return command;
+    const { keys: _keys, ...rest } = command;
+    return rest;
+  });
+}
+
 export type PaletteEntry = {
   command: AppCommand;
   /** Characters of the label the query matched, for highlighting. */

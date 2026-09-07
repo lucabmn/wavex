@@ -4,7 +4,11 @@ const sent: string[] = [];
 let onLine: ((line: string) => void) | undefined;
 let onExit: ((code: number | null) => void) | undefined;
 
+import { hostPathArgs } from "@/lib/host";
+
 vi.mock("@/lib/harness/child", () => ({
+  harnessTarget: (cwd: string, hostId?: string) => hostPathArgs(cwd, hostId, "local"),
+  harnessHostId: (cwd: string, hostId?: string) => hostPathArgs(cwd, hostId, "local").hostId,
   resolveGrokBinary: async () => ({ path: "/fake/grok" }),
   spawnChild: async () => undefined,
   killChild: async () => undefined,
@@ -137,6 +141,54 @@ describe("grok live turn sequence", () => {
     reply(promptId, { stopReason: "end_turn" });
     await turn;
     await stopGrokSession("t2");
+  });
+
+  it("answers an approval decided the moment it is announced", async () => {
+    // An automatic policy answers inside the announcement rather than after
+    // it. Registering the pending decision only once the event has been
+    // emitted would leave this call with nothing to resolve, and the turn
+    // would wait for a decision that had already been made.
+    const events: HarnessEvent[] = [];
+    const turn = sendGrokTurn({
+      sessionId: "t-auto",
+      cwd: "/repo",
+      model: "grok:grok-4.6",
+      runtimeMode: "supervised",
+      text: "run git",
+      attachments: [],
+      onEvent: (e) => {
+        events.push(e);
+        if (e.type === "approval.requested") respondGrokApproval("t-auto", e.requestId, "allow");
+      },
+    });
+    await handshake();
+    await waitFor(() => parse().some((m) => m.method === "session/prompt"), "prompt");
+    const promptId = parse().find((m) => m.method === "session/prompt")!.id;
+    onLine!(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 7,
+        method: "session/request_permission",
+        params: {
+          sessionId: "S1",
+          toolCall: {
+            toolCallId: "call_auto",
+            title: "Execute `git status`",
+            kind: "execute",
+            rawInput: { variant: "Bash", command: "git status" },
+          },
+          options: [
+            { optionId: "allow-once", name: "Allow once", kind: "allow_once" },
+            { optionId: "reject-once", name: "Reject", kind: "reject_once" },
+          ],
+        },
+      }),
+    );
+    await waitFor(() => parse().some((m) => m.id === 7 && m.result), "permission response");
+    expect(parse().find((m) => m.id === 7 && m.result).result.outcome.optionId).toBe("allow-once");
+    reply(promptId, { stopReason: "end_turn" });
+    await turn;
+    await stopGrokSession("t-auto");
   });
 
   it("routes a late exit to the current turn's listener", async () => {

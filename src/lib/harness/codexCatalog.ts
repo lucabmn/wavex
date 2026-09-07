@@ -5,7 +5,15 @@ import {
   type ModelSetting,
   type ModelSettingChoice,
 } from "../models";
-import { killChild, resolveCodexBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import { type HostId } from "../host";
+import {
+  harnessHostId,
+  killChild,
+  resolveCodexBinary,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+} from "./child";
 import { asRecord, stringField } from "./codexProtocol";
 import { JsonRpcClient } from "./jsonRpc";
 
@@ -24,11 +32,14 @@ const REASONING_LABELS: Record<string, string> = {
   ultra: "Ultra",
 };
 
-let inflight: Promise<void> | null = null;
+/** One probe in flight per host: two hosts run two installs of the CLI. */
+const inflight = new Map<HostId, Promise<void>>();
 
-export function refreshCodexCatalog(): Promise<void> {
-  if (inflight) return inflight;
-  inflight = discoverCodexModels()
+export function refreshCodexCatalog(hostIdArg?: HostId): Promise<void> {
+  const hostId = harnessHostId("", hostIdArg);
+  const running = inflight.get(hostId);
+  if (running) return running;
+  const run = discoverCodexModels(hostId)
     .then((models) => {
       if (models.length > 0) setHarnessModels("codex", models);
     })
@@ -36,14 +47,15 @@ export function refreshCodexCatalog(): Promise<void> {
       console.debug("[wavex] codex catalog", error);
     })
     .finally(() => {
-      inflight = null;
+      inflight.delete(hostId);
     });
-  return inflight;
+  inflight.set(hostId, run);
+  return run;
 }
 
-async function discoverCodexModels(): Promise<AgentModel[]> {
-  const { path } = await resolveCodexBinary();
-  const cwd = await homeDir();
+async function discoverCodexModels(hostId: HostId): Promise<AgentModel[]> {
+  const { path } = await resolveCodexBinary(hostId);
+  const cwd = await homeDir(hostId);
   const rpc = new JsonRpcClient(
     PROBE_ID,
     {
@@ -51,23 +63,25 @@ async function discoverCodexModels(): Promise<AgentModel[]> {
         void rpc.respond(id, {}).catch(() => undefined);
       },
     },
-    { includeJsonrpc: false, label: "codex-probe" },
+    { includeJsonrpc: false, label: "codex-probe", hostId },
   );
 
   const stop = async () => {
     rpc.close();
-    unwatchChild(PROBE_ID);
-    await killChild(PROBE_ID).catch(() => undefined);
+    unwatchChild(PROBE_ID, hostId);
+    await killChild(PROBE_ID, hostId).catch(() => undefined);
   };
 
   watchChild(
     PROBE_ID,
     (line) => rpc.pushLine(line),
     () => rpc.close(new Error("Codex probe exited")),
+    undefined,
+    hostId,
   );
 
   try {
-    await spawnChild(PROBE_ID, path, ["app-server"], cwd);
+    await spawnChild(PROBE_ID, path, ["app-server"], cwd, hostId);
     return await withTimeout(
       DISCOVERY_TIMEOUT_MS,
       async () => {

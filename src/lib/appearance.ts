@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeLocal as invoke } from "./transport";
 import { HAS_NATIVE_GLASS, IS_MAC } from "./platform";
 import { profileStorage } from "./profiles/profileStorage";
 
@@ -231,7 +231,9 @@ export function saveSidebarBlur(value: number) {
 
 export function applySidebarBlur(value: number) {
   const next = Math.round(clamp(value, SIDEBAR_BLUR_MIN, SIDEBAR_BLUR_MAX));
-  void invoke("set_window_background_blur", { radius: next });
+  // Native blur belongs to the machine drawing the window; a browser tab has
+  // none, and asking for it is a no-op rather than a failure.
+  void invoke("set_window_background_blur", { radius: next }).catch(() => undefined);
   return next;
 }
 

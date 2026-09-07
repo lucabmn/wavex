@@ -1,5 +1,13 @@
+import { projectKey, type HostId } from "../host";
 import { nativeModelId } from "../models";
-import { killChild, spawnChild, unwatchChild, watchChild, writeChild } from "./child";
+import {
+  harnessHostId,
+  killChild,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+  writeChild,
+} from "./child";
 import type { PiFlavor } from "./piFlavor";
 import { PiRpc } from "./piClient";
 import {
@@ -56,6 +64,8 @@ type InFlightTool = {
 type Live = {
   rpc: PiRpc;
   cwd: string;
+  /** The machine running this child. Only it can steer, abort, or kill it. */
+  hostId: HostId;
   providerSessionId: string;
   contextWindow?: number;
   nativeModel: string;
@@ -85,6 +95,7 @@ type Live = {
 type Resume = {
   sessionId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 const INIT_TIMEOUT_MS = 45_000;
@@ -94,7 +105,7 @@ type FlavorState = {
   liveByThread: Map<string, Live>;
   resumeByThread: Map<string, Resume>;
   cancelledThreads: Set<string>;
-  resolveBinary: () => Promise<{ path: string }>;
+  resolveBinary: (hostId?: HostId) => Promise<{ path: string }>;
 };
 
 /**
@@ -117,8 +128,15 @@ function stateFor(flavor: PiFlavor): FlavorState {
   return state;
 }
 
-/** Test seam. */
-export function setPiBinaryResolver(flavor: PiFlavor, fn: () => Promise<{ path: string }>): void {
+/**
+ * Test seam. The resolver stays a function of the host rather than a resolved
+ * path: two hosts run two different installs of the same CLI, so a value
+ * cached per flavor would hand one machine's binary to the other.
+ */
+export function setPiBinaryResolver(
+  flavor: PiFlavor,
+  fn: (hostId?: HostId) => Promise<{ path: string }>,
+): void {
   stateFor(flavor).resolveBinary = fn;
 }
 
@@ -194,10 +212,18 @@ export async function cancelTurn(flavor: PiFlavor, sessionId: string): Promise<v
   finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
-export async function stopSession(flavor: PiFlavor, sessionId: string): Promise<void> {
-  const { liveByThread, cancelledThreads } = stateFor(flavor);
+export async function stopSession(
+  flavor: PiFlavor,
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
+  const { liveByThread, resumeByThread, cancelledThreads } = stateFor(flavor);
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // The host that spawned the child is the only one that can reap it. Falling
+  // back to this device would send `harness_kill` to a machine that never had
+  // this session, and leave the real child running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) {
     live.muteUpdates = true;
@@ -210,13 +236,20 @@ export async function stopSession(flavor: PiFlavor, sessionId: string): Promise<
     live.turnFailed = null;
     live.rpc.close();
   }
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
-export async function forgetSession(flavor: PiFlavor, sessionId: string): Promise<void> {
-  stateFor(flavor).resumeByThread.delete(sessionId);
-  await stopSession(flavor, sessionId);
+export async function forgetSession(
+  flavor: PiFlavor,
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
+  const { resumeByThread } = stateFor(flavor);
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
+  resumeByThread.delete(sessionId);
+  await stopSession(flavor, sessionId, resumeHostId ?? fallbackHostId);
 }
 
 export function bindSession(
@@ -224,28 +257,43 @@ export function bindSession(
   threadId: string,
   providerSessionId: string,
   cwd: string,
+  hostId?: HostId,
 ): void {
   const sessionId = providerSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
-  stateFor(flavor).resumeByThread.set(threadId, { sessionId, cwd });
+  stateFor(flavor).resumeByThread.set(threadId, {
+    sessionId,
+    cwd,
+    hostId: harnessHostId(cwd, hostId),
+  });
+}
+
+/**
+ * A child is reusable only if it is the same checkout on the same machine.
+ * The host has to be part of the comparison: two hosts can hold the same path,
+ * and a session moved between them would otherwise steer the wrong process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(flavor: PiFlavor, input: SendTurnInput): Promise<Live> {
   const { liveByThread, resumeByThread } = stateFor(flavor);
+  const target = { cwd: input.cwd, hostId: harnessHostId(input.cwd, input.hostId) };
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd) {
+  if (existing && sameWork(existing, target)) {
     existing.onEvent = input.onEvent;
     await applyModel(existing, input);
     return existing;
   }
   if (existing) {
     resumeByThread.delete(input.sessionId);
-    await stopSession(flavor, input.sessionId);
+    await stopSession(flavor, input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canResume = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canResume = resume != null && sameWork(resume, target);
+  if (resume && !canResume) {
     resumeByThread.delete(input.sessionId);
   }
 
@@ -254,7 +302,7 @@ async function ensureLive(flavor: PiFlavor, input: SendTurnInput): Promise<Live>
   } catch (error) {
     if (!canResume) throw error;
     resumeByThread.delete(input.sessionId);
-    await stopSession(flavor, input.sessionId);
+    await stopSession(flavor, input.sessionId, target.hostId);
     return startLive(flavor, input, undefined);
   }
 }
@@ -266,7 +314,8 @@ async function startLive(
 ): Promise<Live> {
   const state = stateFor(flavor);
   const { liveByThread } = state;
-  const { path } = await state.resolveBinary();
+  const hostId = harnessHostId(input.cwd, input.hostId);
+  const { path } = await state.resolveBinary(hostId);
   const native = nativeModelId(input.model);
   const modelRef = parsePiModelRef(native);
   const liveRef: { current: Live | null } = { current: null };
@@ -279,11 +328,13 @@ async function startLive(
       handleFrame(flavor, input.sessionId, current, rec);
     },
     flavor.label,
+    hostId,
   );
 
   const live: Live = {
     rpc,
     cwd: input.cwd,
+    hostId,
     providerSessionId: resume ?? "",
     nativeModel: native,
     thinking: input.modelSettings?.thinking ?? "",
@@ -326,6 +377,7 @@ async function startLive(
     (line) => {
       console.debug(`[${flavor.id}]`, line);
     },
+    hostId,
   );
 
   await spawnChild(
@@ -336,6 +388,7 @@ async function startLive(
       model: modelRef ? native : undefined,
     }),
     input.cwd,
+    hostId,
   );
 
   liveByThread.set(input.sessionId, live);
@@ -353,7 +406,7 @@ async function startLive(
     live.onEvent({ type: "session.started" });
     return live;
   } catch (error) {
-    await stopSession(flavor, input.sessionId);
+    await stopSession(flavor, input.sessionId, hostId);
     throw error;
   }
 }
@@ -563,27 +616,36 @@ async function handleExtensionUi(
   }
 
   if (live.cancelled || live.muteUpdates) {
-    await writeChild(sessionId, JSON.stringify(extensionUiResponse(request, "deny"))).catch(
-      () => undefined,
-    );
+    await writeChild(
+      sessionId,
+      JSON.stringify(extensionUiResponse(request, "deny")),
+      live.hostId,
+    ).catch(() => undefined);
     return;
   }
 
   const uiId = live.nextApprovalUiId++;
+  // Registered before it is announced. A policy that answers the moment it
+  // sees the event answers synchronously, and a pending entry created
+  // afterwards would find nothing to resolve — leaving the turn waiting on a
+  // decision that has already been made.
+  const decided = new Promise<ApprovalDecision>((resolve) => {
+    live.approvals.set(uiId, { request, resolve });
+  });
   live.onEvent({
     type: "approval.requested",
     requestId: uiId,
     title: extensionUiTitle(request),
     kind: "other",
   });
-  const decision = await new Promise<ApprovalDecision>((resolve) => {
-    live.approvals.set(uiId, { request, resolve });
-  });
+  const decision = await decided;
   live.approvals.delete(uiId);
   live.onEvent({ type: "approval.resolved", requestId: uiId, decision });
-  await writeChild(sessionId, JSON.stringify(extensionUiResponse(request, decision))).catch(
-    () => undefined,
-  );
+  await writeChild(
+    sessionId,
+    JSON.stringify(extensionUiResponse(request, decision)),
+    live.hostId,
+  ).catch(() => undefined);
 }
 
 async function applyModel(live: Live, input: SendTurnInput): Promise<void> {
@@ -620,6 +682,7 @@ function bindState(flavor: PiFlavor, sessionId: string, live: Live, data: unknow
     stateFor(flavor).resumeByThread.set(sessionId, {
       sessionId: providerSessionId,
       cwd: live.cwd,
+      hostId: live.hostId,
     });
   }
   const model = asRecord(asRecord(data)?.model);
