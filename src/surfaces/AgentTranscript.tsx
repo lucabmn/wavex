@@ -40,7 +40,6 @@ import { copyText } from "../lib/clipboard";
 import { playCue } from "../lib/sounds";
 import { displayPath, resolveWorkspacePath } from "../lib/paths";
 import { resolveModel } from "../lib/models";
-import { harnessForTurn } from "../lib/secondOpinion";
 import { Shimmer } from "./Shimmer";
 import {
   hasPendingApproval,
@@ -83,6 +82,7 @@ import {
   type ActivityPhase,
   type ActivityPhaseKind,
   type ToolCallState,
+  type TurnItem,
 } from "./transcriptActivity";
 
 const NEAR_BOTTOM_PX = 16;
@@ -282,9 +282,39 @@ function AgentTranscriptComponent({
     return () => observer.disconnect();
   }, [scrollerEl, setShowJump, visible]);
 
-  const turns = groupTurns(blocks);
+  // Grouping scans the full history, so do it once per transcript change —
+  // not on every streamed token plus every local interaction on top.
+  const turns = useMemo(() => groupTurns(blocks), [blocks]);
   const firstVisibleTurn = Math.max(0, turns.length - visibleTurnCount);
-  const visibleTurns = turns.slice(firstVisibleTurn);
+  const visibleTurns = useMemo(() => turns.slice(firstVisibleTurn), [turns, firstVisibleTurn]);
+  // Nearest preceding handoff per turn in a single pass. The per-turn lookup
+  // used to scan back through `blocks` for every turn, which is O(turns ×
+  // blocks) on each render and dominates long histories.
+  const turnHarnessByKey = useMemo(() => {
+    const byKey = new Map<string, HarnessId | undefined>();
+    const indexById = new Map<string, number>();
+    blocks.forEach((block, index) => {
+      if (!indexById.has(block.id)) indexById.set(block.id, index);
+    });
+    let firstFrom: HarnessId | undefined;
+    let lastTo: HarnessId | undefined;
+    const toBefore = Array<HarnessId | undefined>(blocks.length);
+    for (let index = 0; index < blocks.length; index += 1) {
+      toBefore[index] = lastTo;
+      const handoff = blocks[index].handoff;
+      if (handoff) {
+        if (firstFrom === undefined) firstFrom = handoff.from;
+        lastTo = handoff.to;
+      }
+    }
+    for (const turn of turns) {
+      const key = turn[0]?.id;
+      if (!key) continue;
+      const index = indexById.get(key) ?? -1;
+      byKey.set(key, (index > 0 ? toBefore[index] : undefined) ?? firstFrom ?? harness);
+    }
+    return byKey;
+  }, [blocks, turns, harness]);
 
   useLayoutEffect(() => {
     const previousHeight = prependHeight.current;
@@ -320,103 +350,37 @@ function AgentTranscriptComponent({
           </div>
         ) : null}
         {visibleTurns.map((turn, turnIndex) => {
+          const turnKey = turn[0].id;
           const isLastTurn = firstVisibleTurn + turnIndex === turns.length - 1;
-          const userBlock = turnUserBlock(turn);
-          const durationMs = userBlock?.durationMs;
-          const settled = !(busy && isLastTurn);
-          const items = groupTurnItems(turn);
-          // Where the work ends and the answer begins: the last group of
-          // activity in the turn.
-          const foldedAt = lastActivityIndex(items);
-          const startedAt = userBlock?.startedAt;
-          // The agent starting its answer is the end of the work: fold the
-          // groups then, not when the turn finally settles, so the collapse
-          // never lands under the text you have already started reading.
-          const answering =
-            foldedAt >= 0 &&
-            items
-              .slice(foldedAt + 1)
-              .some((item) => item.type === "block" && isProseBlock(item.block));
-          const workStillRunning = activityStillRunning(turn);
-          const turnHarness = harness ? harnessForTurn(blocks, turn, harness) : undefined;
           return (
-            <div
-              key={turn[0].id}
-              className={`transcript-turn flex min-w-0 flex-col gap-1${
-                isLastTurn ? " transcript-turn-live" : ""
-              }${
-                promptAnchor && anchorTurn && isLastTurn && userBlock
-                  ? " transcript-turn-anchor"
-                  : ""
-              }`}
-            >
-              {items.map((item, itemIndex) =>
-                item.type === "activity" ? (
-                  <ActivityPhases
-                    key={item.blocks[0].id}
-                    blocks={item.blocks}
-                    cwd={cwd}
-                    done={!visible || settled || (answering && !workStillRunning)}
-                    busy={busy}
-                    onApproval={onApproval}
-                    onOpenFile={onOpenFile}
-                    onOpenDiff={onOpenDiff}
-                    onOpenSubagent={onOpenSubagent}
-                  />
-                ) : (
-                  <TranscriptBlock
-                    key={item.block.id}
-                    block={item.block}
-                    layout={transcriptLayout}
-                    stickyIndex={firstVisibleTurn + turnIndex + 1}
-                    compactTop={
-                      foldedAt >= 0 && itemIndex === foldedAt + 1 && isProseBlock(item.block)
-                    }
-                    onApproval={onApproval}
-                    onOpenFile={onOpenFile}
-                    onOpenDiff={onOpenDiff}
-                    onOpenPlan={onOpenPlan}
-                    onOpenSubagent={onOpenSubagent}
-                    onEditTurn={onEditTurn}
-                    cwd={cwd}
-                    busy={busy}
-                  />
-                ),
-              )}
-              {durationMs != null && settled ? (
-                <TurnDuration
-                  elapsedMs={durationMs}
-                  done
-                  modelName={modelName}
-                  completedAt={startedAt != null ? startedAt + durationMs : undefined}
-                  copyText={turnCopyText(turn)}
-                  onSaveNote={onSaveNote}
-                  harness={turnHarness}
-                  fromHarness={turnHarness}
-                  onSecondOpinion={
-                    onSecondOpinion
-                      ? (target, model) => onSecondOpinion(target, turn, model)
-                      : undefined
-                  }
-                  onHandoff={
-                    onHandoff ? (target, model) => onHandoff(target, turn, model) : undefined
-                  }
-                  onRegenerate={
-                    onRegenerateTurn && userBlock ? () => onRegenerateTurn(userBlock.id) : undefined
-                  }
-                />
-              ) : null}
-              {busy && !preparingHandoff && isLastTurn ? (
-                <LiveWorking
-                  startedAt={liveStartedAt}
-                  paused={waitingForApproval}
-                  waitingLabel={pendingQuestion ? "Waiting for answers" : undefined}
-                  subagent={hasRunningSubagent(turn)}
-                  modelName={modelName}
-                  harness={turnHarness}
-                />
-              ) : null}
-            </div>
+            <TranscriptTurn
+              key={turnKey}
+              turnKey={turnKey}
+              turn={turn}
+              isLastTurn={isLastTurn}
+              busy={busy}
+              visible={visible}
+              cwd={cwd}
+              turnHarness={turnHarnessByKey.get(turnKey)}
+              modelName={modelName}
+              liveStartedAt={liveStartedAt}
+              waitingForApproval={waitingForApproval}
+              pendingQuestion={pendingQuestion}
+              preparingHandoff={preparingHandoff}
+              anchored={Boolean(promptAnchor && anchorTurn && isLastTurn)}
+              transcriptLayout={transcriptLayout}
+              stickyIndex={firstVisibleTurn + turnIndex + 1}
+              onApproval={onApproval}
+              onSaveNote={onSaveNote}
+              onOpenFile={onOpenFile}
+              onOpenDiff={onOpenDiff}
+              onOpenPlan={onOpenPlan}
+              onOpenSubagent={onOpenSubagent}
+              onSecondOpinion={onSecondOpinion}
+              onHandoff={onHandoff}
+              onEditTurn={onEditTurn}
+              onRegenerateTurn={onRegenerateTurn}
+            />
           );
         })}
       </div>
@@ -436,6 +400,209 @@ export const AgentTranscript = memo(
   AgentTranscriptComponent,
   (previous, next) => previous.visible === false && next.visible === false,
 );
+
+type TranscriptTurnProps = {
+  turnKey: string;
+  turn: Block[];
+  isLastTurn: boolean;
+  busy?: boolean;
+  visible: boolean;
+  cwd?: string;
+  turnHarness?: HarnessId;
+  modelName?: string;
+  liveStartedAt?: number;
+  waitingForApproval: boolean;
+  pendingQuestion: boolean;
+  preparingHandoff: boolean;
+  anchored: boolean;
+  transcriptLayout: TranscriptLayout;
+  stickyIndex: number;
+  onApproval?: (requestId: number, decision: ApprovalDecision) => void;
+  onSaveNote?: (text: string) => void;
+  onOpenFile?: (path: string) => void;
+  onOpenDiff?: (path: string) => void;
+  onOpenPlan?: (blockId: string) => void;
+  onOpenSubagent?: (blockId: string) => void;
+  onSecondOpinion?: (harness: HarnessId, turn: Block[], model: string) => void;
+  onHandoff?: (harness: HarnessId, turn: Block[], model: string) => void;
+  onEditTurn?: (blockId: string, text: string) => void;
+  onRegenerateTurn?: (userBlockId: string) => void;
+};
+
+function sameBlockRefs(previous: Block[], next: Block[]): boolean {
+  if (previous.length !== next.length) return false;
+  for (let index = 0; index < previous.length; index += 1) {
+    if (previous[index] !== next[index]) return false;
+  }
+  return true;
+}
+
+/**
+ * Streaming appends (or patches) the live turn only, so settled turns keep
+ * identical block references. Skipping them bounds each streamed token to the
+ * last turn instead of re-rendering the whole history. The live turn always
+ * re-renders; everything else is compared field by field.
+ */
+function areTranscriptTurnsEqual(
+  previous: Readonly<TranscriptTurnProps>,
+  next: Readonly<TranscriptTurnProps>,
+): boolean {
+  if (previous.isLastTurn || next.isLastTurn) return false;
+  if (previous.turnKey !== next.turnKey) return false;
+  if (!sameBlockRefs(previous.turn, next.turn)) return false;
+  return (
+    previous.busy === next.busy &&
+    previous.visible === next.visible &&
+    previous.cwd === next.cwd &&
+    previous.turnHarness === next.turnHarness &&
+    previous.modelName === next.modelName &&
+    previous.liveStartedAt === next.liveStartedAt &&
+    previous.waitingForApproval === next.waitingForApproval &&
+    previous.pendingQuestion === next.pendingQuestion &&
+    previous.preparingHandoff === next.preparingHandoff &&
+    previous.anchored === next.anchored &&
+    previous.transcriptLayout === next.transcriptLayout &&
+    previous.stickyIndex === next.stickyIndex &&
+    previous.onApproval === next.onApproval &&
+    previous.onSaveNote === next.onSaveNote &&
+    previous.onOpenFile === next.onOpenFile &&
+    previous.onOpenDiff === next.onOpenDiff &&
+    previous.onOpenPlan === next.onOpenPlan &&
+    previous.onOpenSubagent === next.onOpenSubagent &&
+    previous.onSecondOpinion === next.onSecondOpinion &&
+    previous.onHandoff === next.onHandoff &&
+    previous.onEditTurn === next.onEditTurn &&
+    previous.onRegenerateTurn === next.onRegenerateTurn
+  );
+}
+
+/**
+ * One user turn: its work phases, its answer, and its footer. Owns the
+ * per-turn derivation (`groupTurnItems`, fold position, running state) so a
+ * skipped turn also skips that work.
+ */
+const TranscriptTurn = memo(function TranscriptTurn({
+  turn,
+  isLastTurn,
+  busy,
+  visible,
+  cwd,
+  turnHarness,
+  modelName,
+  liveStartedAt,
+  waitingForApproval,
+  pendingQuestion,
+  preparingHandoff,
+  anchored,
+  transcriptLayout,
+  stickyIndex,
+  onApproval,
+  onSaveNote,
+  onOpenFile,
+  onOpenDiff,
+  onOpenPlan,
+  onOpenSubagent,
+  onSecondOpinion,
+  onHandoff,
+  onEditTurn,
+  onRegenerateTurn,
+}: TranscriptTurnProps) {
+  const userBlock = useMemo(() => turnUserBlock(turn), [turn]);
+  const durationMs = userBlock?.durationMs;
+  const settled = !(busy && isLastTurn);
+  const items: TurnItem[] = useMemo(() => groupTurnItems(turn), [turn]);
+  // Where the work ends and the answer begins: the last group of
+  // activity in the turn.
+  const foldedAt = useMemo(() => lastActivityIndex(items), [items]);
+  const startedAt = userBlock?.startedAt;
+  // The agent starting its answer is the end of the work: fold the
+  // groups then, not when the turn finally settles, so the collapse
+  // never lands under the text you have already started reading.
+  const answering = useMemo(
+    () =>
+      foldedAt >= 0 &&
+      items.slice(foldedAt + 1).some((item) => item.type === "block" && isProseBlock(item.block)),
+    [foldedAt, items],
+  );
+  const workStillRunning = useMemo(() => activityStillRunning(turn), [turn]);
+  const done = !visible || settled || (answering && !workStillRunning);
+  const copyText = useMemo(
+    () => (durationMs != null && settled ? turnCopyText(turn) : undefined),
+    [durationMs, settled, turn],
+  );
+  const subagentRunning = useMemo(
+    () => (busy && !preparingHandoff && isLastTurn ? hasRunningSubagent(turn) : false),
+    [busy, preparingHandoff, isLastTurn, turn],
+  );
+  return (
+    <div
+      className={`transcript-turn flex min-w-0 flex-col gap-1${
+        isLastTurn ? " transcript-turn-live" : ""
+      }${anchored && userBlock ? " transcript-turn-anchor" : ""}`}
+    >
+      {items.map((item, itemIndex) =>
+        item.type === "activity" ? (
+          <ActivityPhases
+            key={item.blocks[0].id}
+            blocks={item.blocks}
+            cwd={cwd}
+            done={done}
+            busy={busy}
+            onApproval={onApproval}
+            onOpenFile={onOpenFile}
+            onOpenDiff={onOpenDiff}
+            onOpenSubagent={onOpenSubagent}
+          />
+        ) : (
+          <TranscriptBlock
+            key={item.block.id}
+            block={item.block}
+            layout={transcriptLayout}
+            stickyIndex={stickyIndex}
+            compactTop={foldedAt >= 0 && itemIndex === foldedAt + 1 && isProseBlock(item.block)}
+            onApproval={onApproval}
+            onOpenFile={onOpenFile}
+            onOpenDiff={onOpenDiff}
+            onOpenPlan={onOpenPlan}
+            onOpenSubagent={onOpenSubagent}
+            onEditTurn={onEditTurn}
+            cwd={cwd}
+            busy={busy}
+          />
+        ),
+      )}
+      {durationMs != null && settled ? (
+        <TurnDuration
+          elapsedMs={durationMs}
+          done
+          modelName={modelName}
+          completedAt={startedAt != null ? startedAt + durationMs : undefined}
+          copyText={copyText}
+          onSaveNote={onSaveNote}
+          harness={turnHarness}
+          fromHarness={turnHarness}
+          onSecondOpinion={
+            onSecondOpinion ? (target, model) => onSecondOpinion(target, turn, model) : undefined
+          }
+          onHandoff={onHandoff ? (target, model) => onHandoff(target, turn, model) : undefined}
+          onRegenerate={
+            onRegenerateTurn && userBlock ? () => onRegenerateTurn(userBlock.id) : undefined
+          }
+        />
+      ) : null}
+      {busy && !preparingHandoff && isLastTurn ? (
+        <LiveWorking
+          startedAt={liveStartedAt}
+          paused={waitingForApproval}
+          waitingLabel={pendingQuestion ? "Waiting for answers" : undefined}
+          subagent={subagentRunning}
+          modelName={modelName}
+          harness={turnHarness}
+        />
+      ) : null}
+    </div>
+  );
+}, areTranscriptTurnsEqual);
 
 function LiveWorking({
   startedAt,
@@ -1118,24 +1285,35 @@ function useLivePhaseScroll(el: HTMLDivElement | null, enabled: boolean, steps: 
   }, [el, enabled]);
 }
 
-/**
- * One phase: a header the whole group hangs off, and the steps under it on a
- * rail. Folding is automatic — the group opens while it is the live one and
- * closes when the agent moves on — until you click, after which it stays where
- * you put it. A step still waiting on you keeps the group open regardless.
- * While live, the open body stays a short scrolling window pinned to the
- * newest step; after the turn settles an opened group is full height again.
- */
-function ActivityPhaseGroup({
-  phase,
-  cwd,
-  active,
-  busy,
-  onApproval,
-  onOpenFile,
-  onOpenDiff,
-  onOpenSubagent,
-}: {
+function arePhaseGroupsEqual(
+  previous: Readonly<ActivityPhaseGroupProps>,
+  next: Readonly<ActivityPhaseGroupProps>,
+): boolean {
+  if (
+    previous.active !== next.active ||
+    previous.busy !== next.busy ||
+    previous.cwd !== next.cwd ||
+    previous.onApproval !== next.onApproval ||
+    previous.onOpenFile !== next.onOpenFile ||
+    previous.onOpenDiff !== next.onOpenDiff ||
+    previous.onOpenSubagent !== next.onOpenSubagent
+  ) {
+    return false;
+  }
+  const a = previous.phase;
+  const b = next.phase;
+  // Phases are rebuilt from the turn's blocks on each update, so identity
+  // never matches: compare the step references instead. A settled phase keeps
+  // the same block objects and skips; the growing live phase re-renders.
+  return (
+    a.id === b.id &&
+    a.kind === b.kind &&
+    a.headline === b.headline &&
+    sameBlockRefs(a.steps, b.steps)
+  );
+}
+
+type ActivityPhaseGroupProps = {
   phase: ActivityPhase;
   cwd?: string;
   active: boolean;
@@ -1144,7 +1322,26 @@ function ActivityPhaseGroup({
   onOpenFile?: (path: string) => void;
   onOpenDiff?: (path: string) => void;
   onOpenSubagent?: (blockId: string) => void;
-}) {
+};
+
+/**
+ * One phase: a header the whole group hangs off, and the steps under it on a
+ * rail. Folding is automatic — the group opens while it is the live one and
+ * closes when the agent moves on — until you click, after which it stays where
+ * you put it. A step still waiting on you keeps the group open regardless.
+ * While live, the open body stays a short scrolling window pinned to the
+ * newest step; after the turn settles an opened group is full height again.
+ */
+const ActivityPhaseGroup = memo(function ActivityPhaseGroup({
+  phase,
+  cwd,
+  active,
+  busy,
+  onApproval,
+  onOpenFile,
+  onOpenDiff,
+  onOpenSubagent,
+}: ActivityPhaseGroupProps) {
   const [override, setOverride] = useState<boolean | null>(null);
   const waiting = phase.steps.some(needsApproval);
   const open = waiting || (override ?? active);
@@ -1262,7 +1459,7 @@ function ActivityPhaseGroup({
       </div>
     </div>
   );
-}
+}, arePhaseGroupsEqual);
 
 /** Whether the line that titled a group has more in it than the header shows. */
 function headlineHasMore(block?: Block): boolean {

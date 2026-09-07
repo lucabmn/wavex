@@ -138,6 +138,19 @@ export const SessionPane = memo(function SessionPane({
     (blockId: string) => onOpenSubagent(session.id, blockId),
     [onOpenSubagent, session.id],
   );
+  // Stable wrappers: AgentTranscript memoizes settled turns by callback
+  // identity, so inline arrows here would re-render the whole history on
+  // every streamed token.
+  const secondOpinion = useCallback(
+    (harness: HarnessId, turn: Block[], model: string) =>
+      onSecondOpinion?.(session.id, harness, turn, model),
+    [onSecondOpinion, session.id],
+  );
+  const handoff = useCallback(
+    (harness: HarnessId, turn: Block[], model: string) =>
+      onHandoff?.(session.id, harness, turn, model),
+    [onHandoff, session.id],
+  );
   const jumpToBottomRef = useRef<(() => void) | null>(null);
   const quoteRequestId = useRef(0);
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
@@ -310,16 +323,8 @@ export const SessionPane = memo(function SessionPane({
               onOpenDiff={onOpenDiff}
               onOpenPlan={openPlan}
               onOpenSubagent={openSubagent}
-              onSecondOpinion={
-                onSecondOpinion
-                  ? (harness, turn, model) => onSecondOpinion(session.id, harness, turn, model)
-                  : undefined
-              }
-              onHandoff={
-                onHandoff
-                  ? (harness, turn, model) => onHandoff(session.id, harness, turn, model)
-                  : undefined
-              }
+              onSecondOpinion={onSecondOpinion ? secondOpinion : undefined}
+              onHandoff={onHandoff ? handoff : undefined}
               onJumpToBottomChange={setShowJumpToBottom}
               onJumpToBottomReady={onJumpToBottomReady}
             />
