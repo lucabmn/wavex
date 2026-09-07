@@ -1,7 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ask, message } from "@tauri-apps/plugin-dialog";
+import { invoke, invokeLocal, listenLocal as listen } from "./lib/transport";
+import { nativeWindow, windowLabel } from "./lib/native";
+import { ask, message } from "./lib/native";
 import {
   useCallback,
   useEffect,
@@ -14,11 +13,15 @@ import {
 import { Sidebar } from "./chrome/Sidebar";
 import { ApprovalToasts } from "./chrome/ApprovalToasts";
 import { WhatsNewDialog } from "./chrome/WhatsNewDialog";
+import { HostProjectDialog } from "./chrome/HostProjectDialog";
+import { getConnectSnapshot, onHostResynced, refreshConnect } from "./lib/connect";
 import { TitleBar } from "./chrome/TitleBar";
 import { MenuBar } from "./chrome/MenuBar";
 import { FilePicker } from "./chrome/FilePicker";
+import { SymbolPicker } from "./chrome/SymbolPicker";
 import { UsageFooter } from "./chrome/UsageFooter";
 import { useProjectBranches } from "./hooks/useProjectBranches";
+import { useProjectDiffStats } from "./hooks/useProjectDiffStats";
 import {
   loadProjectRailOpen,
   loadSidebarTabOrder,
@@ -26,13 +29,24 @@ import {
   type SidebarTabId,
 } from "./lib/appearance";
 import { HAS_NATIVE_GLASS, IS_MAC } from "./lib/platform";
+import {
+  applyUiScale,
+  loadUiScale,
+  saveUiScale,
+  UI_SCALE_DEFAULT,
+  uiScaleCommand,
+  zoomInUiScale,
+  zoomOutUiScale,
+} from "./lib/uiScale";
 import { runUpdateFlow } from "./lib/updates/updater";
 import { displayAttachments, prepareAttachments } from "./lib/attachments";
 import {
   basename,
   notifyGitChanged,
   pickFolder,
+  readTextFile,
   restoreSessionCheckout,
+  writeTextFile,
   type GitHistoryCommit,
 } from "./lib/fs";
 import {
@@ -76,6 +90,8 @@ import {
   neighborLeafId,
   newFileTab,
   newPlanTab,
+  newSubagentTab,
+  newReferencesTab,
   newTab,
   newTerminalFile,
   newTerminalWorkspaceTab,
@@ -181,13 +197,25 @@ import {
 import { nudgeWatchedFiles } from "./lib/files/fileWatch";
 import { type EditorNavigationTarget, type OpenFileFn } from "./lib/search";
 import {
+  codeNavigationBack,
+  codeNavigationForward,
+  EMPTY_CODE_NAVIGATION,
+  pruneCodeNavigation,
+  pushCodeLocation,
+  type CodeLocation,
+  type CodeNavigationHistory,
+} from "./lib/editor/codeNavigation";
+import type { LspWorkspaceCommands } from "./lib/editor/editorLsp";
+import type { LspWorkspaceEdit } from "./lib/lsp/types";
+import { planRename } from "./lib/lsp/rename";
+import {
   mergeModelSettings,
   preferredModelSettings,
   resolveModel,
   saveLastModelSettings,
 } from "./lib/models";
 import { planTitle } from "./lib/plan";
-import { displayPath, isEqualOrInside, projectName, rebasePath } from "./lib/paths";
+import { displayPath, isEqualOrInside, pathKey, projectName, rebasePath } from "./lib/paths";
 import { removeProjectData } from "./lib/project/projectData";
 import {
   archiveProject,
@@ -200,21 +228,23 @@ import {
   sameProjectPath,
 } from "./lib/recents";
 import {
-  applyDeletedSessionToWorkspace,
   applyPlaceSessionOnPane,
   filterTabsForProject,
   findTabForProject,
   planWorkspaceTabClose,
   workspaceTabCwd,
 } from "./lib/workspace/workspaceTabGroups";
+import { runSessionRemoval } from "./lib/sessions/sessionRemoval";
 import {
   HARNESS_LABEL,
   canReplaceSessionTitle,
+  findBlockDeep,
   formatSessionTitle,
   sessionNeedsInput,
   newDefaultSession,
   newSession,
   sessionDisplayTitle,
+  sessionHostId,
   sessionWorkCwd,
   titleFromPrompt,
   type Attachment,
@@ -363,6 +393,13 @@ function confirmDiscardUnsaved(message: string): Promise<boolean> {
   return ask(message, { title: "wavex", kind: "warning" });
 }
 
+function filesInWorkspaceTabs(tabs: readonly WorkspaceTab[]): FilePaneTab[] {
+  return tabs.flatMap((tab) => [
+    ...tab.editorPanes.flatMap((pane) => pane.files),
+    ...(tab.terminalPanes ?? []).flatMap((pane) => pane.files),
+  ]);
+}
+
 export default function App({
   windowTransfer = null,
   resumed = null,
@@ -444,6 +481,7 @@ export default function App({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(installedUpdate);
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
+  const [hostPickerOpen, setHostPickerOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>(loadSettingsSection);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   /** Set for every window from the moment a switch starts until the reload. */
@@ -458,7 +496,16 @@ export default function App({
   }, []);
   const [editorNavigation, setEditorNavigation] = useState<EditorNavigationTarget | null>(null);
   const editorNavigationToken = useRef(0);
+  /**
+   * Where code navigation has been. A ref rather than state: nothing renders
+   * from it, and a jump through a call graph should not repaint the workspace.
+   */
+  const codeNavRef = useRef<{ history: CodeNavigationHistory; current: CodeLocation | null }>({
+    history: EMPTY_CODE_NAVIGATION,
+    current: null,
+  });
   const [filePickerOpen, setFilePickerOpen] = useState(false);
+  const [symbolPickerOpen, setSymbolPickerOpen] = useState(false);
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(
     () => new Set(windowTransfer?.dirtyFileIds ?? []),
   );
@@ -526,6 +573,12 @@ export default function App({
     if (!notesEnabled) setNotesViewOpen(false);
   }, [notesEnabled]);
 
+  // The project picker reads the paired hosts synchronously when it opens, so
+  // they are loaded once here rather than only when Settings is visited.
+  useEffect(() => {
+    void refreshConnect();
+  }, []);
+
   const tabVisitRef = useRef(emptyTabVisitHistory(activeTabId));
   const tabVisitFromHistoryRef = useRef(false);
   const [tabVisitNav, setTabVisitNav] = useState({
@@ -541,6 +594,7 @@ export default function App({
   const workspaceSyncKey = useRef<string | null>(null);
   const observedSessions = useRef(new Map<string, Session>());
   const pendingPersist = useRef(new Map<string, Session>());
+  const removingSessionIds = useRef(new Set<string>());
   // Tokens arrive many times per frame; apply them once so React/markdown aren't
   // recomputed for every delta.
   const harnessQueued = useRef(new Map<string, HarnessEvent[]>());
@@ -580,6 +634,24 @@ export default function App({
     syncDockBadge(next);
     setSessions(next);
   }, []);
+
+  const stopSessionForRemoval = useCallback(
+    async (sessionId: string): Promise<Session | undefined> => {
+      const open = sessionsRef.current.find((session) => session.id === sessionId);
+      if (!open?.busy) return open;
+
+      turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
+      flushHarnessEvents();
+      await Promise.all(
+        sessionChildHarnesses(open).map((harness) =>
+          cancelHarnessTurn(harness, sessionId).catch(() => undefined),
+        ),
+      );
+      flushHarnessEvents();
+      return sessionsRef.current.find((session) => session.id === sessionId);
+    },
+    [flushHarnessEvents],
+  );
 
   const applyApprovalEvent = useCallback((sessionId: string, event: HarnessEvent) => {
     const queued = harnessQueued.current.get(sessionId) ?? [];
@@ -654,7 +726,7 @@ export default function App({
         // The shade goes up before the persist, which takes long enough to
         // read as a frozen app, and stays up over the reload behind it.
         setSwitchingToProfile(findProfile(loadProfiles(), profileId) ?? null);
-        void invoke("disable_window_glass").catch(() => undefined);
+        void invokeLocal("disable_window_glass").catch(() => undefined);
         flushHarnessEvents();
         await persistQuitState(
           sessionsRef.current,
@@ -720,6 +792,14 @@ export default function App({
   const gitCwdRef = useRef(gitCwd);
   gitCwdRef.current = gitCwd;
   const projectBranches = useProjectBranches(sidebarCwd, Boolean(sidebarCwd) && sidebarCwd !== "~");
+  // One shared subscription: the tab strip and the sidebar both render this
+  // project's uncommitted state, and the hook caches per cwd.
+  const projectDiff = useProjectDiffStats(projectCwd, Boolean(projectCwd) && projectCwd !== "~");
+  const totalCheckErrors = useMemo(() => {
+    let total = 0;
+    for (const count of fileErrorCounts.values()) total += count;
+    return total;
+  }, [fileErrorCounts]);
 
   const nextBusySessionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -766,6 +846,14 @@ export default function App({
     const focused = activeTab ? focusedFileTab(activeTab) : undefined;
     return !!focused && ids.has(focused.id);
   }, [activeTab, currentProjectDock, runningTerminals]);
+
+  /** The file the editor is on, for commands that ask about the current file. */
+  const focusedEditorPath = useMemo(() => {
+    const focused = activeTab ? focusedFileTab(activeTab) : undefined;
+    return focused && isFilesystemTab(focused) ? focused.path : null;
+  }, [activeTab]);
+  const focusedEditorPathRef = useRef(focusedEditorPath);
+  focusedEditorPathRef.current = focusedEditorPath;
 
   const nextApprovalSessionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -817,8 +905,8 @@ export default function App({
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    void getCurrentWindow()
-      .onFocusChanged(({ payload: focused }) => {
+    void nativeWindow()
+      ?.onFocusChanged(({ payload: focused }) => {
         if (focused) {
           flushHarnessEvents();
           syncDockBadge(sessionsRef.current);
@@ -851,8 +939,8 @@ export default function App({
       flushHarnessEvents,
       () => appModeRef.current,
     );
-    void getCurrentWindow()
-      .onCloseRequested((event) => {
+    void nativeWindow()
+      ?.onCloseRequested((event) => {
         // Listening here makes close our job. Letting the default path run
         // calls JS `window.destroy`, which Tauri denies without a permission.
         event.preventDefault();
@@ -917,8 +1005,47 @@ export default function App({
     prefetchProjectFiles(sidebarCwd);
   }, [sidebarCwd]);
 
+  /**
+   * A host that fell too far behind this client is re-read, not patched.
+   *
+   * The host keeps a bounded journal. Once the events this client missed have
+   * been overwritten there is nothing left to replay, so the transport raises
+   * a barrier and the sessions belonging to that host are loaded again from
+   * the machine that owns them. The barrier lifts only after this returns —
+   * otherwise the stream would resume on top of a transcript that still has a
+   * hole in it, and the hole would never close.
+   */
+  useEffect(
+    () =>
+      onHostResynced(async (hostId) => {
+        const stale = sessionsRef.current.filter(
+          (session) => sessionHostId(session) === hostId && shouldPersistSession(session),
+        );
+        if (stale.length === 0) return;
+        const fresh = new Map<string, Session>();
+        await Promise.all(
+          stale.map(async (session) => {
+            const reloaded = await getSession(session.id, hostId).catch(() => null);
+            if (reloaded) fresh.set(session.id, reloaded);
+          }),
+        );
+        if (fresh.size === 0) return;
+        for (const session of fresh.values()) {
+          // The host's copy is now what this client believes it wrote. Without
+          // this the next persist would push the stale transcript back over it.
+          lastPersisted.current.set(session.id, persistFingerprint(session));
+        }
+        const next = sessionsRef.current.map((session) => fresh.get(session.id) ?? session);
+        sessionsRef.current = next;
+        setSessions(next);
+        void refreshHistory(sidebarCwdRef.current);
+      }),
+    [refreshHistory],
+  );
+
   const persistSession = useCallback((session: Session | undefined) => {
-    if (!session || !shouldPersistSession(session)) return;
+    if (!session || !shouldPersistSession(session) || removingSessionIds.current.has(session.id))
+      return;
     const fingerprint = persistFingerprint(session);
     void upsertSession(session)
       .then((summary) => {
@@ -935,6 +1062,7 @@ export default function App({
     const liveIds = new Set(sessions.map((session) => session.id));
     const visibleIds = openSessionIds(tabsRef.current);
     for (const session of sessions) {
+      if (removingSessionIds.current.has(session.id)) continue;
       if (observedSessions.current.get(session.id) === session) continue;
       observedSessions.current.set(session.id, session);
       const parked = !visibleIds.has(session.id);
@@ -979,6 +1107,7 @@ export default function App({
       pendingPersist.current.clear();
       void Promise.all(
         dirty.map(async (session) => {
+          if (removingSessionIds.current.has(session.id)) return;
           const fingerprint = persistFingerprint(session);
           if (lastPersisted.current.get(session.id) === fingerprint) return;
           const summary = await upsertSession(session).catch(() => null);
@@ -1066,7 +1195,7 @@ export default function App({
       if (skipForgetSessionIds.current.has(session.id)) continue;
       persistSession(session);
       for (const harness of sessionChildHarnesses(session)) {
-        void forgetHarnessSession(harness, session.id);
+        void forgetHarnessSession(harness, session.id, sessionHostId(session));
       }
     }
     setSessions((prev) =>
@@ -1323,7 +1452,7 @@ export default function App({
       const occupyPaneId = occupying && isBlankSession(occupying) ? occupying.id : undefined;
       if (occupyPaneId && occupying) {
         lastPersisted.current.delete(occupyPaneId);
-        void forgetHarnessSession(occupying.harness, occupyPaneId);
+        void forgetHarnessSession(occupying.harness, occupyPaneId, sessionHostId(occupying));
         setSessions((prev) => prev.filter((session) => session.id !== occupyPaneId));
       }
 
@@ -2041,7 +2170,7 @@ export default function App({
     lastPersisted.current.delete(paneId);
     {
       const blank = sessionsRef.current.find((entry) => entry.id === paneId);
-      if (blank) void forgetHarnessSession(blank.harness, paneId);
+      if (blank) void forgetHarnessSession(blank.harness, paneId, sessionHostId(blank));
     }
     setSessions((prev) => {
       const next = prev.filter((entry) => entry.id !== paneId);
@@ -2080,6 +2209,7 @@ export default function App({
           restored.id,
           restored.providerSessionId,
           sessionWorkCwd(restored),
+          sessionHostId(restored),
         );
       }
       lastPersisted.current.set(restored.id, persistFingerprint(restored));
@@ -2129,7 +2259,7 @@ export default function App({
       if (replaceTarget) {
         lastPersisted.current.delete(targetId);
         const blank = sessionsRef.current.find((entry) => entry.id === targetId);
-        if (blank) void forgetHarnessSession(blank.harness, targetId);
+        if (blank) void forgetHarnessSession(blank.harness, targetId, sessionHostId(blank));
       }
 
       const result = applyPlaceSessionOnPane({
@@ -2187,24 +2317,150 @@ export default function App({
     [persistSession, refreshHistory, sidebarCwd],
   );
 
-  const onArchiveHistorySession = useCallback(async (sessionId: string, archived: boolean) => {
-    const open = sessionsRef.current.find((session) => session.id === sessionId);
-    if (open && shouldPersistSession(open)) {
-      await upsertSession(open).catch(() => undefined);
-    }
-    await setSessionArchived(sessionId, archived).catch(() => undefined);
-    setHistory((current) => {
-      const existing = current.find((entry) => entry.id === sessionId);
-      if (existing) {
-        return current.map((entry) => (entry.id === sessionId ? { ...entry, archived } : entry));
+  const onRemoveHistorySession = useCallback(
+    async (sessionId: string, mode: "archive" | "delete") => {
+      if (removingSessionIds.current.has(sessionId)) return;
+      const open = sessionsRef.current.find((session) => session.id === sessionId);
+      const summary = history.find((entry) => entry.id === sessionId);
+      const seed = open ?? summary;
+      const label = seed ? sessionDisplayTitle(seed.title, seed.harness) : "this session";
+      if (mode === "delete") {
+        const confirmed = await ask(`Delete “${label}”? This conversation cannot be recovered.`, {
+          title: "Delete conversation",
+          kind: "warning",
+        });
+        if (!confirmed) return;
       }
-      if (!open) return current;
-      return mergeHistorySummary(current, {
-        ...summaryFromSession(open),
-        archived,
-      });
-    });
-  }, []);
+
+      removingSessionIds.current.add(sessionId);
+      pendingPersist.current.delete(sessionId);
+      let savedSummary: SessionSummary | undefined;
+      try {
+        await runSessionRemoval({
+          sessionId,
+          scope: tabCloseScope,
+          readWorkspace: () => ({
+            tabs: tabsRef.current,
+            sessions: sessionsRef.current,
+            activeTabId: activeTabIdRef.current,
+            dirtyFiles: dirtyFilesRef.current,
+          }),
+          createReplacement: (latest) =>
+            newSession(
+              latest?.harness ?? seed?.harness ?? "cursor",
+              latest?.cwd ?? seed?.cwd ?? sidebarCwd,
+              latest?.model ?? seed?.model,
+              latest?.runtimeMode ?? seed?.runtimeMode,
+              latest?.modelSettings ?? open?.modelSettings,
+            ),
+          confirmClose: async (closedTabs) => {
+            const files = filesInWorkspaceTabs(closedTabs);
+            const unsaved = files.some(
+              (file) => isFilesystemTab(file) && dirtyFilesRef.current.has(file.id),
+            );
+            if (
+              unsaved &&
+              !(await confirmDiscardUnsaved(
+                `${mode === "archive" ? "Archive" : "Delete"} this conversation with unsaved files?`,
+              ))
+            )
+              return false;
+            const terminals = files.filter((file) => file.terminal);
+            return terminals.length === 0 || (await confirmCloseTerminals(terminals));
+          },
+          stop: async () => {
+            await stopSessionForRemoval(sessionId);
+          },
+          updateSession: (stopped) => {
+            const next = sessionsRef.current.map((session) =>
+              session.id === sessionId ? stopped : session,
+            );
+            sessionsRef.current = next;
+            setSessions(next);
+          },
+          persist: async (latest) => {
+            if (mode === "delete") {
+              await deleteSession(sessionId);
+              return;
+            }
+            if (latest && shouldPersistSession(latest)) {
+              const saved = await upsertSession(latest);
+              if (!saved) throw new Error("The conversation could not be saved.");
+              savedSummary = saved;
+            }
+            await setSessionArchived(sessionId, true);
+          },
+          commit: (removal) => {
+            const latest = sessionsRef.current.find((session) => session.id === sessionId);
+            const harnesses: HarnessId[] = latest
+              ? sessionChildHarnesses(latest)
+              : [seed?.harness ?? "cursor"];
+            for (const harness of harnesses) {
+              void forgetHarnessSession(harness, sessionId);
+            }
+            lastPersisted.current.delete(sessionId);
+            pendingPersist.current.delete(sessionId);
+            const closingFiles = filesInWorkspaceTabs(removal.closedTabs);
+            setDirtyFiles((current) => {
+              const next = new Set(current);
+              for (const file of closingFiles) next.delete(file.id);
+              return next;
+            });
+            sessionsRef.current = removal.sessions;
+            tabsRef.current = removal.tabs;
+            setSessions(removal.sessions);
+            setTabs(removal.tabs);
+            if (removal.activeTabId !== activeTabIdRef.current) {
+              activateTab(removal.activeTabId);
+            }
+            const activeTab = removal.tabs.find((tab) => tab.id === removal.activeTabId);
+            setComposerFocused(
+              removal.sessions.some((session) => session.id === activeTab?.focusedId),
+            );
+            if (mode === "archive") {
+              const archived = savedSummary ?? summary ?? (latest && summaryFromSession(latest));
+              if (archived) {
+                setHistory((current) =>
+                  mergeHistorySummary(current, { ...archived, archived: true }),
+                );
+              }
+            } else {
+              setHistory((current) => current.filter((entry) => entry.id !== sessionId));
+              void refreshHistory(sidebarCwd);
+            }
+          },
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        void message(`Could not ${mode} this conversation.\n\n${detail}`, {
+          title: "wavex",
+          kind: "error",
+        });
+      } finally {
+        removingSessionIds.current.delete(sessionId);
+      }
+    },
+    [activateTab, history, refreshHistory, sidebarCwd, stopSessionForRemoval, tabCloseScope],
+  );
+
+  const onArchiveHistorySession = useCallback(
+    async (sessionId: string, archived: boolean) => {
+      if (archived) return onRemoveHistorySession(sessionId, "archive");
+      if (removingSessionIds.current.has(sessionId)) return;
+      try {
+        await setSessionArchived(sessionId, false);
+        setHistory((current) =>
+          current.map((entry) => (entry.id === sessionId ? { ...entry, archived: false } : entry)),
+        );
+      } catch (error) {
+        void message(`Could not unarchive this conversation.\n\n${String(error)}`, {
+          title: "wavex",
+          kind: "error",
+        });
+      }
+    },
+    [onRemoveHistorySession],
+  );
 
   const onPinHistorySession = useCallback(async (sessionId: string, pinned: boolean) => {
     const open = sessionsRef.current.find((session) => session.id === sessionId);
@@ -2226,85 +2482,8 @@ export default function App({
   }, []);
 
   const onDeleteHistorySession = useCallback(
-    async (sessionId: string) => {
-      const open = sessionsRef.current.find((session) => session.id === sessionId);
-      const summary = history.find((entry) => entry.id === sessionId) ?? open ?? null;
-      const label = summary ? sessionDisplayTitle(summary.title, summary.harness) : "this session";
-
-      const confirmed = await ask(`Delete “${label}”? This conversation cannot be recovered.`, {
-        title: "Delete conversation",
-        kind: "warning",
-      });
-      if (!confirmed) return;
-
-      try {
-        await deleteSession(sessionId);
-      } catch (error: unknown) {
-        await message(error instanceof Error ? error.message : "Could not delete the session.", {
-          title: "Couldn’t delete session",
-          kind: "error",
-        });
-        return;
-      }
-
-      if (open?.busy) {
-        turnGen.current.set(sessionId, (turnGen.current.get(sessionId) ?? 0) + 1);
-        for (const id of sessionChildHarnesses(open)) {
-          void cancelHarnessTurn(id, sessionId);
-        }
-      }
-
-      const harness = open?.harness ?? summary?.harness ?? "cursor";
-      if (open) {
-        for (const id of sessionChildHarnesses(open)) {
-          void forgetHarnessSession(id, sessionId);
-        }
-      } else {
-        void forgetHarnessSession(harness, sessionId);
-      }
-      await deleteSession(sessionId).catch(() => undefined);
-      lastPersisted.current.delete(sessionId);
-
-      if (!tabsRef.current.some((tab) => leafIds(tab.layout).includes(sessionId))) {
-        setSessions((prev) => prev.filter((session) => session.id !== sessionId));
-        void refreshHistory(sidebarCwd);
-        return;
-      }
-
-      const {
-        tabs: nextTabs,
-        sessions: nextSessions,
-        activeTabId: nextActiveTabId,
-      } = applyDeletedSessionToWorkspace({
-        tabs: tabsRef.current,
-        sessions: sessionsRef.current,
-        sessionId,
-        activeTabId: activeTabIdRef.current,
-        scope: tabCloseScope,
-        createReplacement: (seed) =>
-          newSession(
-            seed?.harness ?? harness,
-            seed?.cwd ?? summary?.cwd ?? sidebarCwd,
-            seed?.model ?? summary?.model,
-            seed?.runtimeMode ?? summary?.runtimeMode,
-            seed?.modelSettings,
-          ),
-      });
-
-      setSessions(nextSessions);
-      setTabs(nextTabs);
-      if (nextActiveTabId !== activeTabIdRef.current) {
-        activateTab(nextActiveTabId);
-      }
-      setComposerFocused(
-        nextSessions.some((session) => {
-          const tab = nextTabs.find((entry) => entry.id === nextActiveTabId);
-          return !!tab && session.id === tab.focusedId;
-        }),
-      );
-      void refreshHistory(sidebarCwd);
-    },
-    [activateTab, history, refreshHistory, sidebarCwd, tabCloseScope],
+    (sessionId: string) => onRemoveHistorySession(sessionId, "delete"),
+    [onRemoveHistorySession],
   );
 
   const onFocusDir = useCallback(
@@ -2395,7 +2574,7 @@ export default function App({
       const current = sessionsRef.current.find((s) => s.id === sessionId);
       if (!current || (!current.branch && !current.worktreeCwd)) return;
       if (current.worktreeCwd && current.providerSessionId) {
-        void forgetHarnessSession(current.harness, sessionId);
+        void forgetHarnessSession(current.harness, sessionId, sessionHostId(current));
       }
       const next = {
         ...current,
@@ -2460,10 +2639,25 @@ export default function App({
     [activateTab, appendTab, onCwdChange],
   );
 
-  const pickProject = useCallback(async () => {
+  const pickLocalProject = useCallback(async () => {
+    setHostPickerOpen(false);
     const path = await pickFolder();
     if (path) onSelectProject(path);
   }, [onSelectProject]);
+
+  /**
+   * The native folder dialog only sees this machine's disk. Once a host is
+   * paired, the choice of machine has to come first, so the picker asks which
+   * one — and an install that has never paired one goes straight to the dialog
+   * it always opened.
+   */
+  const pickProject = useCallback(async () => {
+    if (getConnectSnapshot().hosts.length > 0) {
+      setHostPickerOpen(true);
+      return;
+    }
+    await pickLocalProject();
+  }, [pickLocalProject]);
 
   const onRemoveProject = useCallback(
     (path: string, options: { purgeData: boolean }) => {
@@ -2491,7 +2685,7 @@ export default function App({
             }
           }
           for (const id of sessionChildHarnesses(session)) {
-            void forgetHarnessSession(id, session.id);
+            void forgetHarnessSession(id, session.id, sessionHostId(session));
           }
           lastPersisted.current.delete(session.id);
         }
@@ -2502,7 +2696,7 @@ export default function App({
           persistSession(session);
           pendingPersist.current.delete(session.id);
           for (const id of sessionChildHarnesses(session)) {
-            void forgetHarnessSession(id, session.id);
+            void forgetHarnessSession(id, session.id, sessionHostId(session));
           }
         }
       }
@@ -2636,6 +2830,109 @@ export default function App({
     [activeTabId],
   );
 
+  /**
+   * Carry out a rename the server planned.
+   *
+   * The edits address the files as they are on disk. A file with unsaved
+   * changes would have those changes overwritten, so the rename stops instead
+   * of silently choosing one of the two versions.
+   */
+  const applyRenameEdit = useCallback(
+    async (symbol: string, edit: LspWorkspaceEdit): Promise<string | null> => {
+      const plan = await planRename(
+        symbol,
+        edit,
+        dirtyFilePaths(tabsRef.current, dirtyFilesRef.current),
+        (path) => readTextFile(path).catch(() => null),
+      );
+      if (!plan.ok) return plan.reason;
+      if (plan.files.length === 0) return null;
+
+      const failed: string[] = [];
+      for (const file of plan.files) {
+        await writeTextFile(file.path, file.text).catch(() => failed.push(basename(file.path)));
+      }
+      invalidateProjectFiles();
+      notifyGitChanged();
+      return failed.length > 0 ? `Couldn’t write ${failed.join(", ")}` : null;
+    },
+    [],
+  );
+
+  /**
+   * A language server result opens the way anything else does — in the focused
+   * editor pane, reusing the tab when the file is already open — and records
+   * where it came from so Go Back returns to the call site rather than to
+   * whatever tab happened to be behind it.
+   */
+  const lspCommands = useMemo<LspWorkspaceCommands>(
+    () => ({
+      goToTarget: (target, origin) => {
+        const destination: CodeLocation = {
+          path: target.path,
+          line: target.line,
+          column: target.column,
+        };
+        codeNavRef.current = {
+          history: pushCodeLocation(codeNavRef.current.history, origin, destination),
+          current: destination,
+        };
+        onOpenFile(target.path, { line: target.line, column: target.column });
+      },
+      showReferences: (symbol, targets) => {
+        const tab = tabsRef.current.find((entry) => entry.id === activeTabIdRef.current);
+        if (!tab) return;
+        const file = newReferencesTab(sidebarCwdRef.current, { symbol, targets });
+        setTabs((prev) =>
+          prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
+        );
+        setComposerFocused(false);
+      },
+      applyWorkspaceEdit: applyRenameEdit,
+    }),
+    [applyRenameEdit, onOpenFile],
+  );
+
+  /**
+   * Go Back spends the code navigation history first.
+   *
+   * A definition jump inside one file, or between two files that are both
+   * already open, never changes the workspace tab — so the tab history has
+   * nothing to unwind and Back would jump somewhere the user did not come from.
+   */
+  const codeNavigationStep = useCallback(
+    (direction: "back" | "forward") => {
+      const openPaths = openEditorPaths(tabsRef.current);
+      const history = pruneCodeNavigation(codeNavRef.current.history, openPaths);
+      // Only the location this history put the user at is worth remembering on
+      // the way past it. Once they have moved somewhere else themselves — a tab
+      // click, a search hit — the stored location is no longer where they are,
+      // and pushing it onto the forward stack would send Forward somewhere they
+      // have never been.
+      const current = codeNavRef.current.current;
+      const at =
+        current && pathKey(current.path) === pathKey(focusedEditorPathRef.current ?? "")
+          ? current
+          : null;
+      const step =
+        direction === "back" ? codeNavigationBack(history, at) : codeNavigationForward(history, at);
+      if (!step) {
+        codeNavRef.current = { ...codeNavRef.current, history };
+        return false;
+      }
+      codeNavRef.current = { history: step.history, current: step.location };
+      onOpenFile(step.location.path, {
+        line: step.location.line,
+        column: step.location.column,
+      });
+      return true;
+    },
+    [onOpenFile],
+  );
+
+  const codeNavigationStepRef = useRef(codeNavigationStep);
+  codeNavigationStepRef.current = codeNavigationStep;
+
   const onOpenPlan = useCallback(
     (sessionId: string, blockId: string) => {
       const tab = tabsRef.current.find((entry) => entry.id === activeTabId);
@@ -2643,6 +2940,27 @@ export default function App({
       const block = session?.blocks.find((entry) => entry.id === blockId);
       if (!tab || !session || !block) return;
       const file = newPlanTab(session.id, block.id, planTitle(block.text), session.cwd);
+      setTabs((prev) =>
+        prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
+      );
+      setComposerFocused(false);
+    },
+    [activeTabId],
+  );
+
+  const onOpenSubagent = useCallback(
+    (sessionId: string, blockId: string) => {
+      const tab = tabsRef.current.find((entry) => entry.id === activeTabId);
+      const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+      // A subagent card may itself render inside a nested transcript.
+      const block = session ? findBlockDeep(session.blocks, blockId) : undefined;
+      if (!tab || !session || !block || !block.subagent) return;
+      const file = newSubagentTab(
+        session.id,
+        block.id,
+        block.text || block.tool?.title || "Subagent",
+        session.cwd,
+      );
       setTabs((prev) =>
         prev.map((entry) => (entry.id === tab.id ? openEditorTab(entry, file) : entry)),
       );
@@ -2700,7 +3018,7 @@ export default function App({
     const modelSettings = preferredModelSettings(resolved, current.modelSettings);
     const plan = planComposerSwitch(current, harness);
     if (plan.kind === "empty") {
-      void forgetHarnessSession(plan.forget, sessionId);
+      void forgetHarnessSession(plan.forget, sessionId, sessionHostId(current));
     }
     setSessions((prev) =>
       prev.map((s) => {
@@ -2775,6 +3093,9 @@ export default function App({
         return;
       }
       const workCwd = sessionWorkCwd(current);
+      // A worktree cwd is a bare child path, so the machine has to come from
+      // the session, not from parsing the directory it happens to run in.
+      const workHostId = sessionHostId(current);
       const harnessText = composeNoteMessage(noteCard, text);
 
       const pendingSwitch =
@@ -2857,10 +3178,12 @@ export default function App({
             const prompt = await preparePrompt(harnessText, {
               harness: current.harness,
               cwd: workCwd,
+              hostId: workHostId,
             });
             await steerHarnessTurn({
               harness: current.harness,
               sessionId,
+              hostId: workHostId,
               cwd: workCwd,
               model: current.model,
               modelSettings: current.modelSettings,
@@ -2960,6 +3283,7 @@ export default function App({
         void generateHarnessTitle(current.harness, {
           sessionId,
           cwd: workCwd,
+          hostId: workHostId,
           message: harnessText || attachments.map((file) => file.name).join(", "),
         })
           .then((title) => {
@@ -2979,7 +3303,7 @@ export default function App({
 
       if (!live) {
         if (pendingSwitch) {
-          void forgetHarnessSession(pendingSwitch.from, sessionId);
+          void forgetHarnessSession(pendingSwitch.from, sessionId, workHostId);
         }
         return;
       }
@@ -2999,6 +3323,7 @@ export default function App({
               agentText = await requestOutgoingHandoff({
                 harness: pendingSwitch.from,
                 sessionId,
+                hostId: workHostId,
                 cwd: workCwd,
                 model: pendingSwitch.fromModel,
                 modelSettings: pendingSwitch.fromSettings,
@@ -3014,7 +3339,7 @@ export default function App({
             agentText,
             buildDeterministicHandoff(latest ?? current, text),
           );
-          await forgetHarnessSession(pendingSwitch.from, sessionId);
+          await forgetHarnessSession(pendingSwitch.from, sessionId, workHostId);
           if (turnGen.current.get(sessionId) !== gen) return;
           wrap = { from: pendingSwitch.from, to: current.harness, text: brief };
         }
@@ -3035,11 +3360,13 @@ export default function App({
           const prompt = await preparePrompt(harnessText, {
             harness: current.harness,
             cwd: workCwd,
+            hostId: workHostId,
           });
           const earlier = queuedHandoff ? userMessagesAfterHandoff(current) : [];
           await sendHarnessTurn({
             harness: current.harness,
             sessionId,
+            hostId: workHostId,
             cwd: workCwd,
             model: current.model,
             modelSettings: current.modelSettings,
@@ -3499,7 +3826,20 @@ export default function App({
   );
 
   const nextTitleTabs: TitleTab[] = deckProjectTabs.map((tab) =>
-    toTitleTab(tab, sessions, dirtyFiles),
+    toTitleTab(tab, sessions, dirtyFiles, {
+      unreadIds: unseenFinishedIds,
+      fileErrorCounts,
+      git: {
+        ...(projectBranches?.current ? { branch: projectBranches.current } : {}),
+        ...(projectDiff
+          ? {
+              files: projectDiff.files,
+              additions: projectDiff.additions,
+              deletions: projectDiff.deletions,
+            }
+          : {}),
+      },
+    }),
   );
   tabProjectsRef.current = new Map(nextTitleTabs.map((tab) => [tab.id, tab.project]));
   const titleTabsRef = useRef(nextTitleTabs);
@@ -3559,6 +3899,15 @@ export default function App({
     setUsageViewOpen(false);
     setActivityViewOpen(false);
     setFilePickerOpen(true);
+  }, []);
+
+  const onGoToSymbol = useCallback(() => {
+    setSearchViewOpen(false);
+    setInboxViewOpen(false);
+    setNotesViewOpen(false);
+    setUsageViewOpen(false);
+    setActivityViewOpen(false);
+    setSymbolPickerOpen(true);
   }, []);
 
   const onFindInProject = useCallback(() => {
@@ -3692,7 +4041,7 @@ export default function App({
       // window to prepare, so the shade is not up yet. Restoring both anyway
       // costs nothing and keeps the window usable if that ever stops holding.
       setSwitchingToProfile(null);
-      void invoke("enable_window_glass").catch(() => undefined);
+      void invokeLocal("enable_window_glass").catch(() => undefined);
       void message(error instanceof Error ? error.message : "Could not switch profile", {
         title: "wavex",
         kind: "error",
@@ -3761,6 +4110,7 @@ export default function App({
       setActivityViewOpen(false);
       return;
     }
+    if (codeNavigationStepRef.current("back")) return;
     onVisitBack();
   }, [
     onVisitBack,
@@ -3779,6 +4129,7 @@ export default function App({
     setNotesViewOpen(false);
     setUsageViewOpen(false);
     setActivityViewOpen(false);
+    if (codeNavigationStepRef.current("forward")) return;
     onVisitForward();
   }, [onVisitForward]);
 
@@ -3806,7 +4157,7 @@ export default function App({
   }, [tabs]);
 
   useEffect(() => {
-    void invoke("set_traffic_lights_visible", { visible: true }).catch(() => {});
+    void invokeLocal("set_traffic_lights_visible", { visible: true }).catch(() => {});
   }, []);
 
   const actions = useRef({
@@ -3822,6 +4173,7 @@ export default function App({
     onFocusDir,
     onToggleSidebar,
     onGoToFile,
+    onGoToSymbol,
     onFindInProject,
     onOpenSearch,
     onOpenInbox,
@@ -3851,6 +4203,7 @@ export default function App({
     onFocusDir,
     onToggleSidebar,
     onGoToFile,
+    onGoToSymbol,
     onFindInProject,
     onOpenSearch,
     onOpenInbox,
@@ -3927,6 +4280,7 @@ export default function App({
     () => ({
       "app.search": () => runInCoding("open_search", actions.current.onOpenSearch),
       "app.goToFile": () => runInCoding("go_to_file", actions.current.onGoToFile),
+      "app.goToSymbol": () => runInCoding("go_to_symbol", actions.current.onGoToSymbol),
       "app.findInFiles": () => runInCoding("find_in_project", actions.current.onFindInProject),
       "app.openProject": () =>
         runInCoding("open_project", () => {
@@ -3971,6 +4325,26 @@ export default function App({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Browser-standard UI zoom. Runs before tabCommand and always applies —
+      // even in inputs and the terminal — so Ctrl/Cmd + - 0 behave like a browser.
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.isComposing) {
+        const zoom = uiScaleCommand(e);
+        if (zoom) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (zoom === "zoom-in") {
+            const next = saveUiScale(zoomInUiScale(loadUiScale()));
+            void applyUiScale(next);
+          } else if (zoom === "zoom-out") {
+            const next = saveUiScale(zoomOutUiScale(loadUiScale()));
+            void applyUiScale(next);
+          } else {
+            saveUiScale(UI_SCALE_DEFAULT);
+            void applyUiScale(UI_SCALE_DEFAULT);
+          }
+          return;
+        }
+      }
       // Chat owns its own bindings. Every shortcut below acts on the project
       // workspace — tabs, panes, the file picker — which is hidden behind the
       // chat surface, so none of them may fire while Chat is in front. The
@@ -4039,6 +4413,12 @@ export default function App({
         e.preventDefault();
         e.stopPropagation();
         run("go_to_file", actions.current.onGoToFile);
+        return;
+      }
+      if (mod && !e.altKey && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        e.stopPropagation();
+        run("go_to_symbol", actions.current.onGoToSymbol);
         return;
       }
       if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "f") {
@@ -4156,6 +4536,9 @@ export default function App({
         }),
       ),
       listen("go_to_file", () => runInCoding("onGoToFile", () => actions.current.onGoToFile())),
+      listen("go_to_symbol", () =>
+        runInCoding("onGoToSymbol", () => actions.current.onGoToSymbol()),
+      ),
       listen("open_search", () =>
         runInCoding("onOpenSearch", () => actions.current.onOpenSearch()),
       ),
@@ -4175,16 +4558,30 @@ export default function App({
         MENU_BAR_ANSWER_APPROVAL,
         ({ payload }) =>
           actions.current.onApproval(payload.sessionId, payload.requestId, payload.decision),
-        { target: getCurrentWindow().label },
+        { target: windowLabel() },
       ),
       // Stopped from Activity, which may be a different window's surface. Same
       // routing as an approval: only the window that owns the session answers.
       listen<string>(ACTIVITY_STOP_SESSION, ({ payload }) => actions.current.onStop(payload), {
-        target: getCurrentWindow().label,
+        target: windowLabel(),
       }),
       listen("open_settings", () => actions.current.openSettings()),
       listen("check_for_updates", () => {
         void runUpdateFlow(true);
+      }),
+      listen("zoom_in", () => {
+        const next = zoomInUiScale(loadUiScale());
+        saveUiScale(next);
+        void applyUiScale(next);
+      }),
+      listen("zoom_out", () => {
+        const next = zoomOutUiScale(loadUiScale());
+        saveUiScale(next);
+        void applyUiScale(next);
+      }),
+      listen("zoom_reset", () => {
+        saveUiScale(UI_SCALE_DEFAULT);
+        void applyUiScale(UI_SCALE_DEFAULT);
       }),
       listen("sidebar_opacity", () => {
         actions.current.openSettings("appearance");
@@ -4281,6 +4678,7 @@ export default function App({
         busySessionIds={busySessionIds}
         approvalSessionIds={approvalSessionIds}
         activeSessionId={active?.id}
+        checkErrors={totalCheckErrors}
         status={historyFailed ? "error" : "idle"}
         pending={historyPending}
         onRetrySessions={() => void refreshHistory(sidebarCwd)}
@@ -4394,6 +4792,7 @@ export default function App({
               onNewTerminal={onNewTerminal}
               onToggleTerminal={onToggleProjectTerminal}
               onGoToFile={onGoToFile}
+              onGoToSymbol={onGoToSymbol}
               onToggleSidebar={onToggleSidebar}
               onShowSourceControl={onToggleChanges}
               onCloseCurrentTab={activeTabId ? () => onCloseTab(activeTabId) : undefined}
@@ -4404,6 +4803,18 @@ export default function App({
               onCommandPalette={() => setPaletteOpen((open) => !open)}
               onOpenInbox={onOpenInbox}
               onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+              onZoomIn={() => {
+                const next = saveUiScale(zoomInUiScale(loadUiScale()));
+                void applyUiScale(next);
+              }}
+              onZoomOut={() => {
+                const next = saveUiScale(zoomOutUiScale(loadUiScale()));
+                void applyUiScale(next);
+              }}
+              onZoomReset={() => {
+                saveUiScale(UI_SCALE_DEFAULT);
+                void applyUiScale(UI_SCALE_DEFAULT);
+              }}
             />
           ) : null}
           <TitleBar
@@ -4516,8 +4927,10 @@ export default function App({
                           onQuestionReply={onQuestionReply}
                           onOpenFile={onOpenFile}
                           editorNavigation={editorNavigation}
+                          lspCommands={lspCommands}
                           onOpenDiff={onOpenDiff}
                           onOpenPlan={onOpenPlan}
+                          onOpenSubagent={onOpenSubagent}
                           onSecondOpinion={onSecondOpinion}
                           onHandoff={onHandoff}
                           onMovePane={onMovePane}
@@ -4644,6 +5057,16 @@ export default function App({
         />
       ) : null}
 
+      {symbolPickerOpen ? (
+        <SymbolPicker
+          open
+          cwd={gitCwd}
+          path={focusedEditorPath}
+          onOpenFile={onOpenFile}
+          onClose={() => setSymbolPickerOpen(false)}
+        />
+      ) : null}
+
       <ApprovalToasts
         notices={hiddenApprovalToasts}
         onFocusSession={onOpenApprovalSession}
@@ -4651,6 +5074,16 @@ export default function App({
       />
       {whatsNewVersion ? (
         <WhatsNewDialog version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
+      ) : null}
+      {hostPickerOpen ? (
+        <HostProjectDialog
+          onCancel={() => setHostPickerOpen(false)}
+          onPickLocal={() => void pickLocalProject()}
+          onOpen={(ref) => {
+            setHostPickerOpen(false);
+            onSelectProject(ref);
+          }}
+        />
       ) : null}
       {switchingToProfile ? <ProfileSwitchOverlay target={switchingToProfile} /> : null}
       {profileSwitchConfirm !== null ? (
@@ -4674,6 +5107,32 @@ export default function App({
       ) : null}
     </div>
   );
+}
+
+/** Every file path open in an editor pane, across every tab. */
+function openEditorPaths(tabs: WorkspaceTab[]): string[] {
+  const paths: string[] = [];
+  for (const tab of tabs) {
+    for (const pane of tab.editorPanes) {
+      for (const file of pane.files) {
+        if (isFilesystemTab(file)) paths.push(file.path);
+      }
+    }
+  }
+  return paths;
+}
+
+/** `pathKey` of every open file with unsaved changes, across every tab. */
+function dirtyFilePaths(tabs: WorkspaceTab[], dirtyFileIds: ReadonlySet<string>): Set<string> {
+  const paths = new Set<string>();
+  for (const tab of tabs) {
+    for (const pane of tab.editorPanes) {
+      for (const file of pane.files) {
+        if (isFilesystemTab(file) && dirtyFileIds.has(file.id)) paths.add(pathKey(file.path));
+      }
+    }
+  }
+  return paths;
 }
 
 function selectedChangePath(tab: WorkspaceTab, gitCwd?: string): string | undefined {

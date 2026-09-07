@@ -1,65 +1,147 @@
 import { listProjectFiles, type ProjectFile } from "../fs";
+import { subscribeDirsChanged } from "./fileTree";
 import { scorePath, type FuzzyHit } from "../fuzzy";
-import { pathKey, resolveWorkspacePath } from "../paths";
+import { hostIdForProject } from "../transport";
+import { hostPathKey, type HostId } from "../host";
+import { resolveWorkspacePath } from "../paths";
 import { looksLikeProject } from "../recents";
 import { normalizeEditorPath } from "../search";
 
 const MAX_RECENTS = 30;
 const MAX_RESULTS = 80;
+const REFRESH_MS = 150;
 
 type Cache = {
-  cwd: string;
+  key: string;
   files: ProjectFile[];
 };
 
+type Listener = () => void;
+
 let cache: Cache | null = null;
-let inflight: { cwd: string; promise: Promise<ProjectFile[]> } | null = null;
+let inflight: { key: string; promise: Promise<ProjectFile[]> } | null = null;
+let lastRef: { cwd: string; hostId?: HostId } | null = null;
 let epoch = 0;
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+let refreshing = false;
+let refreshAgain = false;
+const listeners = new Set<Listener>();
 const recentsByCwd = new Map<string, string[]>();
 
-function normCwd(cwd: string): string {
-  return pathKey(cwd);
+/** A project index belongs to one host's checkout, never to a path alone. */
+/**
+ * A project index belongs to one host's checkout. The root arrives as the
+ * string the workspace holds, so an unnamed host is read out of the reference
+ * rather than assumed to be this device — otherwise a remote project and a
+ * local one at the same path share a slot.
+ */
+function normCwd(cwd: string, hostId: HostId | undefined): string {
+  return hostPathKey(hostId ?? hostIdForProject(cwd), cwd);
 }
 
-export function peekProjectFiles(cwd: string): ProjectFile[] | null {
-  return cache?.cwd === cwd ? cache.files : null;
+export function peekProjectFiles(cwd: string, hostId?: HostId): ProjectFile[] | null {
+  return cache?.key === normCwd(cwd, hostId) ? cache.files : null;
 }
 
-export function invalidateProjectFiles(cwd?: string) {
-  if (!cwd || cache?.cwd === cwd) cache = null;
+function notifyProjectFilesChanged() {
+  for (const listener of listeners) listener();
 }
 
-export function rememberOpenedFile(cwd: string, path: string) {
+export function subscribeProjectFiles(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function invalidateProjectFiles(cwd?: string, hostId?: HostId) {
+  const key = cwd ? normCwd(cwd, hostId) : null;
+  if (key && cache?.key !== key && inflight?.key !== key) return;
+  if (!key || cache?.key === key) cache = null;
+  if (!key || inflight?.key === key) {
+    inflight = null;
+    epoch += 1;
+  }
+  if (!key) {
+    lastRef = null;
+    if (refreshTimer != null) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+  }
+  notifyProjectFilesChanged();
+}
+
+function scheduleIndexRefresh() {
+  if (!lastRef) return;
+  if (typeof document !== "undefined" && document.hidden) return;
+  if (refreshTimer != null) return;
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+    void runIndexRefresh();
+  }, REFRESH_MS);
+}
+
+async function runIndexRefresh() {
+  if (refreshing) {
+    refreshAgain = true;
+    return;
+  }
+  const ref = lastRef;
+  if (!ref) return;
+  refreshing = true;
+  try {
+    await loadProjectFiles(ref.cwd, true, ref.hostId);
+  } catch {
+    /* next focus / dir change will retry */
+  } finally {
+    refreshing = false;
+    if (refreshAgain) {
+      refreshAgain = false;
+      scheduleIndexRefresh();
+    }
+  }
+}
+
+export function rememberOpenedFile(cwd: string, path: string, hostId?: HostId) {
   if (!path) return;
-  const key = normCwd(cwd);
+  const key = normCwd(cwd, hostId);
   const prev = recentsByCwd.get(key) ?? [];
   recentsByCwd.set(key, [path, ...prev.filter((item) => item !== path)].slice(0, MAX_RECENTS));
 }
 
-export function recentOpenedFiles(cwd: string): string[] {
-  return recentsByCwd.get(normCwd(cwd)) ?? [];
+export function recentOpenedFiles(cwd: string, hostId?: HostId): string[] {
+  return recentsByCwd.get(normCwd(cwd, hostId)) ?? [];
 }
 
-export function prefetchProjectFiles(cwd: string) {
+export function prefetchProjectFiles(cwd: string, hostId?: HostId) {
   if (!looksLikeProject(cwd)) return;
-  void loadProjectFiles(cwd);
+  void loadProjectFiles(cwd, false, hostId);
 }
 
-export function loadProjectFiles(cwd: string, refresh = false): Promise<ProjectFile[]> {
+export function loadProjectFiles(
+  cwd: string,
+  refresh = false,
+  hostId?: HostId,
+): Promise<ProjectFile[]> {
   if (!looksLikeProject(cwd)) return Promise.resolve([]);
-  if (!refresh && cache?.cwd === cwd) return Promise.resolve(cache.files);
-  if (inflight?.cwd === cwd) return inflight.promise;
+  lastRef = { cwd, hostId };
+  const key = normCwd(cwd, hostId);
+  if (!refresh && cache?.key === key) return Promise.resolve(cache.files);
+  if (!refresh && inflight?.key === key) return inflight.promise;
 
   const id = ++epoch;
-  const promise = listProjectFiles(cwd)
+  const promise = listProjectFiles(cwd, hostId)
     .then((files) => {
-      if (id === epoch) cache = { cwd, files };
+      if (id !== epoch) return files;
+      cache = { key, files };
+      notifyProjectFilesChanged();
       return files;
     })
     .finally(() => {
-      if (inflight?.cwd === cwd) inflight = null;
+      if (inflight?.promise === promise) inflight = null;
     });
-  inflight = { cwd, promise };
+  inflight = { key, promise };
   return promise;
 }
 
@@ -108,11 +190,15 @@ export function rankProjectFiles(
 }
 
 /** Resolve a transcript or markdown file link to an existing project file. */
-export async function resolveOpenablePath(cwd: string, href: string): Promise<string | undefined> {
+export async function resolveOpenablePath(
+  cwd: string,
+  href: string,
+  hostId?: HostId,
+): Promise<string | undefined> {
   const direct = resolveWorkspacePath(href, cwd);
   if (!direct) return undefined;
 
-  const files = await loadProjectFiles(cwd);
+  const files = await loadProjectFiles(cwd, false, hostId);
   if (files.length === 0) return direct;
 
   const byPath = new Map(files.map((file) => [normalizeEditorPath(file.path), file]));
@@ -179,4 +265,15 @@ function pickOpenableFile(candidates: ProjectFile[], cwd: string, relHint: strin
   }
 
   return candidates.sort((a, b) => a.relative.length - b.relative.length)[0];
+}
+
+subscribeDirsChanged(scheduleIndexRefresh);
+
+if (typeof document !== "undefined") {
+  window.addEventListener("focus", () => {
+    if (!document.hidden) scheduleIndexRefresh();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) scheduleIndexRefresh();
+  });
 }

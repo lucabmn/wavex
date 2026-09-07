@@ -1,4 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
+import { getDefaultHostId, invokeOn } from "./transport";
+import { type HostId } from "./host";
 import { fuzzyMatch } from "./fuzzy";
 import type { ProjectFile } from "./fs";
 import type { RankedFile } from "./files/fileIndex";
@@ -66,11 +67,14 @@ export function invalidateNotes() {
   cache = null;
 }
 
-export async function loadNotes(refresh = false): Promise<Note[]> {
+export async function loadNotes(
+  refresh = false,
+  hostId: HostId = getDefaultHostId(),
+): Promise<Note[]> {
   if (!refresh && cache) return cache;
   if (!refresh && inflight) return inflight;
 
-  const promise = invoke<Note[]>("notes_list")
+  const promise = invokeOn<Note[]>(hostId, "notes_list")
     .then((notes) => {
       cache = notes;
       return notes;
@@ -86,19 +90,25 @@ export async function loadNotes(refresh = false): Promise<Note[]> {
   return promise;
 }
 
-export async function getNote(id: string): Promise<Note | null> {
-  const note = await invoke<Note | null>("notes_get", { id });
+export async function getNote(
+  id: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<Note | null> {
+  const note = await invokeOn<Note | null>(hostId, "notes_get", { id });
   return note;
 }
 
-export async function upsertNote(note: NoteUpsert): Promise<Note> {
-  const saved = await invoke<Note>("notes_upsert", { note });
+export async function upsertNote(
+  note: NoteUpsert,
+  hostId: HostId = getDefaultHostId(),
+): Promise<Note> {
+  const saved = await invokeOn<Note>(hostId, "notes_upsert", { note });
   cache = null;
   return saved;
 }
 
-export async function deleteNote(id: string): Promise<void> {
-  await invoke("notes_delete", { id });
+export async function deleteNote(id: string, hostId: HostId = getDefaultHostId()): Promise<void> {
+  await invokeOn(hostId, "notes_delete", { id });
   cache = null;
 }
 

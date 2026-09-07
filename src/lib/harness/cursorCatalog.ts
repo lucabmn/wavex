@@ -1,4 +1,5 @@
 import { homeDir } from "../fs";
+import { type HostId } from "../host";
 import {
   setHarnessModels,
   type AgentModel,
@@ -8,6 +9,7 @@ import {
 import { AcpClient } from "./acp";
 import {
   execChild,
+  harnessHostId,
   killChild,
   resolveCursorBinary,
   spawnChild,
@@ -25,11 +27,14 @@ const CURSOR_CLIENT_CAPABILITIES = {
   _meta: { parameterizedModelPicker: true },
 };
 
-let inflight: Promise<void> | null = null;
+/** One probe in flight per host: two hosts run two installs of the CLI. */
+const inflight = new Map<HostId, Promise<void>>();
 
-export function refreshCursorCatalog(): Promise<void> {
-  if (inflight) return inflight;
-  inflight = discoverCursorModels()
+export function refreshCursorCatalog(hostIdArg?: HostId): Promise<void> {
+  const hostId = harnessHostId("", hostIdArg);
+  const running = inflight.get(hostId);
+  if (running) return running;
+  const run = discoverCursorModels(hostId)
     .then((models) => {
       if (models.length > 0) setHarnessModels("cursor", models);
     })
@@ -37,46 +42,53 @@ export function refreshCursorCatalog(): Promise<void> {
       console.debug("[wavex] cursor catalog", error);
     })
     .finally(() => {
-      inflight = null;
+      inflight.delete(hostId);
     });
-  return inflight;
+  inflight.set(hostId, run);
+  return run;
 }
 
-async function discoverCursorModels(): Promise<AgentModel[]> {
-  const fromAcp = await discoverViaAcp().catch((error: unknown) => {
+async function discoverCursorModels(hostId: HostId): Promise<AgentModel[]> {
+  const fromAcp = await discoverViaAcp(hostId).catch((error: unknown) => {
     console.debug("[wavex] cursor ACP catalog failed", error);
     return [];
   });
   if (fromAcp.length > 0) return fromAcp;
-  return discoverViaCli().catch((error: unknown) => {
+  return discoverViaCli(hostId).catch((error: unknown) => {
     console.debug("[wavex] cursor CLI catalog failed", error);
     return [];
   });
 }
 
-async function discoverViaAcp(): Promise<AgentModel[]> {
-  const { path } = await resolveCursorBinary();
-  const cwd = await homeDir();
-  const acp = new AcpClient(PROBE_ID, {
-    onRequest: (id) => {
-      void acp.respond(id, {}).catch(() => undefined);
+async function discoverViaAcp(hostId: HostId): Promise<AgentModel[]> {
+  const { path } = await resolveCursorBinary(hostId);
+  const cwd = await homeDir(hostId);
+  const acp = new AcpClient(
+    PROBE_ID,
+    {
+      onRequest: (id) => {
+        void acp.respond(id, {}).catch(() => undefined);
+      },
     },
-  });
+    hostId,
+  );
 
   const stop = async () => {
     acp.close();
-    unwatchChild(PROBE_ID);
-    await killChild(PROBE_ID).catch(() => undefined);
+    unwatchChild(PROBE_ID, hostId);
+    await killChild(PROBE_ID, hostId).catch(() => undefined);
   };
 
   watchChild(
     PROBE_ID,
     (line) => acp.pushLine(line),
     () => acp.close(new Error("Cursor probe exited")),
+    undefined,
+    hostId,
   );
 
   try {
-    await spawnChild(PROBE_ID, path, ["acp"], cwd);
+    await spawnChild(PROBE_ID, path, ["acp"], cwd, hostId);
     return await withTimeout(
       DISCOVERY_TIMEOUT_MS,
       async () => {
@@ -116,10 +128,10 @@ async function discoverViaAcp(): Promise<AgentModel[]> {
   }
 }
 
-async function discoverViaCli(): Promise<AgentModel[]> {
-  const { path } = await resolveCursorBinary();
-  const cwd = await homeDir();
-  const stdout = await execChild(path, ["--list-models"], cwd);
+async function discoverViaCli(hostId: HostId): Promise<AgentModel[]> {
+  const { path } = await resolveCursorBinary(hostId);
+  const cwd = await homeDir(hostId);
+  const stdout = await execChild(path, ["--list-models"], cwd, hostId);
   return modelsFromListModelsOutput(stdout);
 }
 

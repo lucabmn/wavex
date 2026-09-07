@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "../lib/native";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { LoaderCircle, X } from "../chrome/icons";
 import {

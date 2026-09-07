@@ -1,7 +1,15 @@
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { AcpClient, type AcpHandlers } from "./acp";
-import { killChild, resolveGrokBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import { projectKey, type HostId } from "../host";
+import {
+  harnessTarget,
+  killChild,
+  resolveGrokBinary,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+} from "./child";
 import {
   AUTH_HELP,
   askQuestionResponse,
@@ -29,6 +37,8 @@ type Live = {
   acp: AcpClient;
   acpSessionId: string;
   cwd: string;
+  /** The machine running this child. Only it can steer, cancel, or kill it. */
+  hostId: HostId;
   modelId: string;
   contextWindow?: number;
   muteUpdates: boolean;
@@ -44,6 +54,7 @@ type Live = {
 type Resume = {
   acpSessionId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 const INIT_TIMEOUT_MS = 12_000;
@@ -137,9 +148,12 @@ export async function cancelGrokTurn(sessionId: string): Promise<void> {
   live.acp.rejectPending(new Error("cancelled"));
 }
 
-export async function stopGrokSession(sessionId: string): Promise<void> {
+export async function stopGrokSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // Only the machine that spawned the child can reap it; sending
+  // `harness_kill` to this device instead would leave the real one running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) {
     live.muteUpdates = true;
@@ -149,42 +163,65 @@ export async function stopGrokSession(sessionId: string): Promise<void> {
     live.questions.clear();
   }
   live?.acp.close();
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
-export async function forgetGrokSession(sessionId: string): Promise<void> {
+export async function forgetGrokSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
   resumeByThread.delete(sessionId);
-  await stopGrokSession(sessionId);
+  await stopGrokSession(sessionId, resumeHostId ?? fallbackHostId);
 }
 
-export function bindGrokSession(threadId: string, acpSessionId: string, cwd: string): void {
+export function bindGrokSession(
+  threadId: string,
+  acpSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
   const sessionId = acpSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
-  resumeByThread.set(threadId, { acpSessionId: sessionId, cwd });
+  resumeByThread.set(threadId, {
+    acpSessionId: sessionId,
+    cwd,
+    hostId: harnessTarget(cwd, hostId).hostId,
+  });
+}
+
+/**
+ * A child is reusable only if it is the same checkout on the same machine: two
+ * hosts can hold the same path, and reusing across them would steer the wrong
+ * process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(input: SendTurnInput): Promise<Live> {
   const wantFullAccess = input.runtimeMode === "full-access";
+  const resolved = harnessTarget(input.cwd, input.hostId);
+  const hostId = resolved.hostId;
+  const target = { cwd: input.cwd, hostId };
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd && existing.fullAccess === wantFullAccess) {
+  if (existing && sameWork(existing, target) && existing.fullAccess === wantFullAccess) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
   }
   if (existing) {
-    await stopGrokSession(input.sessionId);
+    await stopGrokSession(input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canLoad = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canLoad = resume != null && sameWork(resume, target);
+  if (resume && !canLoad) {
     resumeByThread.delete(input.sessionId);
   }
 
-  const { path } = await resolveGrokBinary();
+  const { path } = await resolveGrokBinary(hostId);
   const handlers: AcpHandlers = {};
-  const acp = new AcpClient(input.sessionId, handlers);
+  const acp = new AcpClient(input.sessionId, handlers, hostId);
   const liveRef: { current: Live | null } = { current: null };
   const muteGate = { current: false };
 
@@ -226,6 +263,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         emit({ type: "session.error", message: `${line.trim()}\n\n${AUTH_HELP}` });
       }
     },
+    hostId,
   );
 
   await spawnChild(
@@ -237,6 +275,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       fullAccess: wantFullAccess,
     }),
     input.cwd,
+    hostId,
   );
 
   try {
@@ -284,7 +323,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
             "session/load",
             {
               sessionId: resume.acpSessionId,
-              cwd: input.cwd,
+              cwd: resolved.path,
               mcpServers: [],
             },
             SESSION_TIMEOUT_MS,
@@ -305,7 +344,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       try {
         setup = await acp.request(
           "session/new",
-          grokSessionNewParams(input.cwd, input.runtimeMode),
+          grokSessionNewParams(resolved.path, input.runtimeMode),
           SESSION_TIMEOUT_MS,
         );
       } catch (error) {
@@ -319,6 +358,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       acp,
       acpSessionId,
       cwd: input.cwd,
+      hostId,
       modelId: currentModelId(setup) ?? nativeModelId(input.model),
       contextWindow: contextWindowFromSetup(setup) ?? contextWindowFromSetup(init),
       muteUpdates: didLoad,
@@ -335,6 +375,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     resumeByThread.set(input.sessionId, {
       acpSessionId,
       cwd: input.cwd,
+      hostId,
     });
     live.onEvent({
       type: "session.providerBound",
@@ -344,7 +385,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     return live;
   } catch (error) {
     acp.close(error instanceof Error ? error : new Error(String(error)));
-    await stopGrokSession(input.sessionId);
+    await stopGrokSession(input.sessionId, hostId);
     throw error;
   }
 }
@@ -481,6 +522,13 @@ async function handlePermission(live: Live, id: number, params: unknown) {
     return;
   }
 
+  // Registered before it is announced. A policy that answers the moment it
+  // sees the event answers synchronously, and a pending entry created
+  // afterwards would find nothing to resolve — leaving the turn waiting on a
+  // decision that has already been made.
+  const decided = new Promise<ApprovalDecision>((resolve) => {
+    live.approvals.set(id, resolve);
+  });
   live.onEvent({
     type: "approval.requested",
     requestId: id,
@@ -490,9 +538,7 @@ async function handlePermission(live: Live, id: number, params: unknown) {
     preview: request.preview,
   });
 
-  const decision = await new Promise<ApprovalDecision>((resolve) => {
-    live.approvals.set(id, resolve);
-  });
+  const decision = await decided;
   live.approvals.delete(id);
   live.onEvent({ type: "approval.resolved", requestId: id, decision });
 
@@ -506,6 +552,10 @@ async function handlePermission(live: Live, id: number, params: unknown) {
 
 async function handleAskQuestion(live: Live, id: number, params: unknown) {
   const questions = askQuestionsFromAcp(params);
+  // Registered before it is announced, for the same reason as an approval.
+  const answered = new Promise<UserQuestionReply>((resolve) => {
+    live.questions.set(id, resolve);
+  });
   live.onEvent({
     type: "question.asked",
     requestId: id,
@@ -513,9 +563,7 @@ async function handleAskQuestion(live: Live, id: number, params: unknown) {
     questions,
   });
 
-  const reply = await new Promise<UserQuestionReply>((resolve) => {
-    live.questions.set(id, resolve);
-  });
+  const reply = await answered;
   live.questions.delete(id);
   live.onEvent({
     type: "question.resolved",

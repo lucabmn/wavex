@@ -1,5 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import { pathKey } from "../paths";
+import { getDefaultHostId, invokeOn } from "../transport";
+import { type HostId } from "../host";
+import { projectKey } from "../host";
 import {
   collectRailProjects,
   normalizeProjectPath,
@@ -170,11 +171,14 @@ export function inboxListIsFresh(
   return inboxListCache?.key === key && now - inboxListCache.fetchedAt < INBOX_CACHE_FRESH_MS;
 }
 
-export async function githubRepo(cwd: string): Promise<string> {
+export async function githubRepo(
+  cwd: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string> {
   const key = normalizeProjectPath(cwd);
   const cached = repoByPath.get(key);
   if (cached !== undefined) return cached;
-  const repo = await invoke<string>("git_github_repo", { cwd });
+  const repo = await invokeOn<string>(hostId, "git_github_repo", { cwd });
   repoByPath.set(key, repo);
   return repo;
 }
@@ -182,8 +186,9 @@ export async function githubRepo(cwd: string): Promise<string> {
 export function listGithubWorkItems(
   cwd: string,
   query: GithubWorkItemQuery,
+  hostId: HostId = getDefaultHostId(),
 ): Promise<GithubWorkItem[]> {
-  return invoke<GithubWorkItem[]>("git_github_work_items", {
+  return invokeOn<GithubWorkItem[]>(hostId, "git_github_work_items", {
     cwd,
     kind: query.kind,
     assignedToMe: query.assignedToMe,
@@ -266,8 +271,9 @@ export async function githubWorkItemDetails(
   cwd: string,
   kind: GithubTaskKind,
   number: number,
+  hostId: HostId = getDefaultHostId(),
 ): Promise<GithubWorkItemDetails> {
-  const details = await invoke<GithubWorkItemDetails>("git_github_work_item_details", {
+  const details = await invokeOn<GithubWorkItemDetails>(hostId, "git_github_work_item_details", {
     cwd,
     kind,
     number,
@@ -289,6 +295,7 @@ export async function githubWorkItemThread(
   kind: GithubTaskKind,
   number: number,
   options?: { force?: boolean },
+  hostId: HostId = getDefaultHostId(),
 ): Promise<GithubWorkItemThread> {
   const key = detailsCacheKey(cwd, kind, number);
   if (options?.force) {
@@ -297,7 +304,7 @@ export async function githubWorkItemThread(
   }
   const pending = threadInflight.get(key);
   if (pending) return pending;
-  const promise = invoke<GithubWorkItemThread>("git_github_work_item_thread", {
+  const promise = invokeOn<GithubWorkItemThread>(hostId, "git_github_work_item_thread", {
     cwd,
     kind,
     number,
@@ -319,8 +326,9 @@ export async function githubWorkItemComment(
   number: number,
   body: string,
   options?: { inReplyTo?: string },
+  hostId: HostId = getDefaultHostId(),
 ): Promise<string> {
-  const url = await invoke<string>("git_github_work_item_comment", {
+  const url = await invokeOn<string>(hostId, "git_github_work_item_comment", {
     cwd,
     kind,
     number,
@@ -369,11 +377,15 @@ export function peekGithubPrDiff(cwd: string, number: number): GithubPrDiff | nu
   return prDiffByKey.get(prDiffCacheKey(cwd, number)) ?? null;
 }
 
-export async function githubPrDiff(cwd: string, number: number): Promise<GithubPrDiff> {
+export async function githubPrDiff(
+  cwd: string,
+  number: number,
+  hostId: HostId = getDefaultHostId(),
+): Promise<GithubPrDiff> {
   const key = prDiffCacheKey(cwd, number);
   const pending = prDiffInflight.get(key);
   if (pending) return pending;
-  const promise = invoke<GithubPrDiff>("git_github_pr_diff", { cwd, number })
+  const promise = invokeOn<GithubPrDiff>(hostId, "git_github_pr_diff", { cwd, number })
     .then((diff) => {
       prDiffByKey.set(key, diff);
       return diff;
@@ -453,7 +465,7 @@ async function fetchInboxItems(
 
 export function inboxProjectsForRail(recents: RecentProject[], cwd: string): RecentProject[] {
   const map = collectRailProjects(recents, cwd);
-  const current = cwd ? map.get(pathKey(cwd)) : undefined;
+  const current = cwd ? map.get(projectKey(cwd)) : undefined;
   const rest = [...map.values()].filter(
     (project) => !current || !sameProjectPath(project.path, current.path),
   );

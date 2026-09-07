@@ -1,4 +1,5 @@
-import { normalizeProjectPath, pathKey, prettyCwd } from "./paths";
+import { projectKey } from "./host";
+import { normalizeProjectPath, prettyCwd } from "./paths";
 import { isWorktreePath, worktreeRepo } from "./worktrees/worktreeIndex";
 import { profileStorage } from "./profiles/profileStorage";
 
@@ -25,8 +26,9 @@ function normalize(path: string): string {
   return normalizeProjectPath(path);
 }
 
+/** True when both references name the same project on the same host. */
 export function sameProjectPath(a: string, b: string): boolean {
-  return pathKey(a) === pathKey(b);
+  return projectKey(a) === projectKey(b);
 }
 
 export function loadRecents(): RecentProject[] {
@@ -112,7 +114,7 @@ export function loadArchivedProjects(): ArchivedProject[] {
       const rec = item as { path?: unknown; archivedAt?: unknown };
       if (typeof rec.path !== "string" || !rec.path) continue;
       const path = normalize(rec.path);
-      const key = pathKey(path);
+      const key = projectKey(path);
       if (seen.has(key) || !looksLikeProject(path)) continue;
       seen.add(key);
       const archivedAt =
@@ -174,7 +176,7 @@ function readPathList(key: string): string[] {
     for (const item of parsed) {
       if (typeof item !== "string" || !item) continue;
       const path = normalize(item);
-      const key = pathKey(path);
+      const key = projectKey(path);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(path);
@@ -210,7 +212,7 @@ export function savePinnedProjects(pinned: string[]) {
 }
 
 /**
- * All projects for the rail, keyed by `pathKey` — the map key decides identity,
+ * All projects for the rail, keyed by `projectKey` — the map key decides identity,
  * the entry's `path` is what gets displayed. On Windows the same folder reaches
  * us in more than one case and must not become two rail entries.
  */
@@ -222,11 +224,11 @@ export function collectRailProjects(
   for (const item of recents) {
     if (!looksLikeProject(item.path)) continue;
     const path = normalize(item.path);
-    map.set(pathKey(path), { path, openedAt: item.openedAt });
+    map.set(projectKey(path), { path, openedAt: item.openedAt });
   }
   if (currentCwd && looksLikeProject(currentCwd)) {
     const path = normalize(currentCwd);
-    const key = pathKey(path);
+    const key = projectKey(path);
     if (!map.has(key)) {
       map.set(key, { path, openedAt: Date.now() });
     }
@@ -247,11 +249,11 @@ export function collectRailProjects(
  */
 export function repoRailPath(repo: string, projects: Iterable<string>): string | null {
   const root = normalize(repo);
-  const rootKey = pathKey(root);
+  const rootKey = projectKey(root);
   let best: string | null = null;
   for (const candidate of projects) {
     const path = normalize(candidate);
-    const key = pathKey(path);
+    const key = projectKey(path);
     if (key === rootKey) return path;
     if (!key.startsWith(`${rootKey}/`) || isWorktreePath(path)) continue;
     if (best === null || path.length < best.length) best = path;
@@ -285,7 +287,7 @@ export function syncProjectRailOrder(
   const next: string[] = [];
   const seen = new Set<string>();
   for (const path of order) {
-    const key = pathKey(path);
+    const key = projectKey(path);
     const project = projects.get(key);
     if (!project || seen.has(key)) continue;
     seen.add(key);
@@ -306,11 +308,11 @@ export function projectRailSections(
 ): ProjectRailSections {
   const projects = collectRailProjects(recents, currentCwd);
   const syncedOrder = syncProjectRailOrder(order, projects);
-  const pinnedSet = new Set(pinnedPaths.map(pathKey));
+  const pinnedSet = new Set(pinnedPaths.map(projectKey));
   const pinned: RecentProject[] = [];
   const unpinned: RecentProject[] = [];
   for (const path of syncedOrder) {
-    const key = pathKey(path);
+    const key = projectKey(path);
     const item = projects.get(key);
     if (!item) continue;
     if (pinnedSet.has(key)) pinned.push(item);

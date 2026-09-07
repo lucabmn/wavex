@@ -1,7 +1,9 @@
+import { projectKey, type HostId } from "../host";
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { loadClaudeHooks } from "../settings";
 import {
+  harnessHostId,
   killChild,
   resolveClaudeBinary,
   spawnChild,
@@ -11,6 +13,7 @@ import {
 } from "./child";
 import {
   askUserQuestionAllowInput,
+  assistantModel,
   assistantTextBlocks,
   assistantToolUses,
   contextFromResult,
@@ -24,6 +27,7 @@ import {
   extractExitPlanModePlan,
   inputJsonDeltaFromEvent,
   isAgentTaskType,
+  isAsyncAgentLaunch,
   isClaudeUltracodeEffort,
   isSubagentMessage,
   isTerminalAgentTaskStatus,
@@ -57,7 +61,7 @@ import {
   type ClaudeCliSettings,
   type ClaudeControlRequest,
 } from "./claudeProtocol";
-import { isAgentToolName } from "./preview";
+import { isAgentToolName, subagentMetaFromInput, type SubagentMetaPatch } from "./preview";
 import { joinStreamText, snapshotRemainder } from "./streamText";
 import { questionPromptTitle, questionsFromUnknown, type UserQuestionReply } from "../userQuestion";
 import type { ApprovalDecision, HarnessEvent, SendTurnInput, SteerTurnInput } from "./types";
@@ -95,8 +99,37 @@ type LiveAgentTask = {
   backgrounded: boolean;
 };
 
+/**
+ * One stream of content blocks: the parent's, or a subagent's. Each keeps its
+ * own tool index map and emitted-text tally, since a subagent's block indexes
+ * and snapshots start over from zero and would collide with the parent's.
+ */
+type StreamScope = {
+  toolsByIndex: Map<number, InFlightTool>;
+  toolsById: Map<string, InFlightTool>;
+  emittedAssistant: string;
+  emittedReasoning: string;
+};
+
+/** Where a line's events go: straight out, or nested under an Agent call. */
+type StreamTarget = {
+  scope: StreamScope;
+  emit: (event: HarnessEvent) => void;
+  /** The Agent tool call this stream belongs to; absent for the parent. */
+  parentId?: string;
+};
+
+const SUBAGENT_META_KEYS = [
+  "agentType",
+  "prompt",
+  "model",
+  "background",
+] as const satisfies readonly (keyof SubagentMetaPatch)[];
+
 type Live = {
   cwd: string;
+  /** The machine running this child. Only it can steer, interrupt, or kill it. */
+  hostId: HostId;
   claudeSessionId: string;
   runtimeMode: RuntimeMode;
   settingsKey: string;
@@ -107,7 +140,18 @@ type Live = {
   nextControlId: number;
   toolsByIndex: Map<number, InFlightTool>;
   toolsById: Map<string, InFlightTool>;
+  /** Subagent streams by the Agent tool call that spawned them. */
+  subagents: Map<string, StreamScope>;
+  /** What each subagent has already been told about itself; repeats are dropped. */
+  subagentMeta: Map<string, SubagentMetaPatch>;
+  /** Agent calls that reached a terminal status; late lines for them are dropped. */
+  finishedAgents: Set<string>;
   agentTasks: Map<string, LiveAgentTask>;
+  /**
+   * Agent calls whose tool result was only a launch receipt. The real answer
+   * arrives through the task lifecycle, so the turn waits on these too.
+   */
+  asyncAgentTools: Set<string>;
   turnResultSeen: boolean;
   cancelled: boolean;
   muteUpdates: boolean;
@@ -147,6 +191,7 @@ function withStderr(live: Live, what: string): string {
 type Resume = {
   sessionId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 const INIT_TIMEOUT_MS = 8_000;
@@ -155,10 +200,13 @@ const liveByThread = new Map<string, Live>();
 const resumeByThread = new Map<string, Resume>();
 const cancelledThreads = new Set<string>();
 
-let resolveClaudeBinaryImpl: () => Promise<{ path: string }> = resolveClaudeBinary;
+let resolveClaudeBinaryImpl: (hostId?: HostId) => Promise<{ path: string }> = resolveClaudeBinary;
 
-/** Test seam. */
-export function setClaudeBinaryResolver(fn: () => Promise<{ path: string }>): void {
+/**
+ * Test seam. Stays a function of the host: two hosts run two installs of the
+ * CLI, so a path cached here would be the wrong machine's binary.
+ */
+export function setClaudeBinaryResolver(fn: (hostId?: HostId) => Promise<{ path: string }>): void {
   resolveClaudeBinaryImpl = fn;
 }
 
@@ -201,7 +249,7 @@ export async function steerClaudeTurn(input: SteerTurnInput): Promise<void> {
   const content = (message.message as { content: unknown[] }).content;
   if (content.length === 0) return;
 
-  await writeJson(input.sessionId, message);
+  await writeJson(input.sessionId, message, live.hostId);
 }
 
 export function respondClaudeApproval(
@@ -241,13 +289,17 @@ export async function cancelClaudeTurn(sessionId: string): Promise<void> {
   await writeJson(
     sessionId,
     buildControlRequest(nextControlId(live), { subtype: "interrupt" }),
+    live.hostId,
   ).catch(() => undefined);
   finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
 
-export async function stopClaudeSession(sessionId: string): Promise<void> {
+export async function stopClaudeSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // Only the machine that spawned the child can reap it; sending
+  // `harness_kill` to this device instead would leave the real one running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) {
     live.muteUpdates = true;
@@ -262,47 +314,69 @@ export async function stopClaudeSession(sessionId: string): Promise<void> {
     live.initDone?.();
     live.initDone = null;
   }
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
-export async function forgetClaudeSession(sessionId: string): Promise<void> {
+export async function forgetClaudeSession(
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
   resumeByThread.delete(sessionId);
-  await stopClaudeSession(sessionId);
+  await stopClaudeSession(sessionId, resumeHostId ?? fallbackHostId);
 }
 
-export function bindClaudeSession(threadId: string, providerSessionId: string, cwd: string): void {
+export function bindClaudeSession(
+  threadId: string,
+  providerSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
   const sessionId = providerSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
-  resumeByThread.set(threadId, { sessionId, cwd });
+  resumeByThread.set(threadId, { sessionId, cwd, hostId: harnessHostId(cwd, hostId) });
+}
+
+/**
+ * A child is reusable only if it is the same checkout on the same machine: two
+ * hosts can hold the same path, and reusing across them would steer the wrong
+ * process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(input: SendTurnInput): Promise<Live> {
   const settingsKey = settingsKeyFor(input);
+  const target = { cwd: input.cwd, hostId: harnessHostId(input.cwd, input.hostId) };
+  const hostId = target.hostId;
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd && existing.settingsKey === settingsKey) {
+  if (existing && sameWork(existing, target) && existing.settingsKey === settingsKey) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
   }
   if (existing) {
     resumeByThread.delete(input.sessionId);
-    await stopClaudeSession(input.sessionId);
+    await stopClaudeSession(input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canResume = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canResume = resume != null && sameWork(resume, target);
+  if (resume && !canResume) {
     resumeByThread.delete(input.sessionId);
   }
 
-  const { path } = await resolveClaudeBinaryImpl();
+  const { path } = await resolveClaudeBinaryImpl(hostId);
   const liveRef: { current: Live | null } = { current: null };
   const claudeSessionId = canResume && resume ? resume.sessionId : crypto.randomUUID();
   const launch = launchOptions(input, canResume ? resume?.sessionId : undefined, claudeSessionId);
 
   const live: Live = {
     cwd: input.cwd,
+    hostId,
     claudeSessionId,
     runtimeMode: input.runtimeMode,
     settingsKey,
@@ -313,7 +387,11 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     nextControlId: 1,
     toolsByIndex: new Map(),
     toolsById: new Map(),
+    subagents: new Map(),
+    subagentMeta: new Map(),
+    finishedAgents: new Set(),
     agentTasks: new Map(),
+    asyncAgentTools: new Set(),
     turnResultSeen: false,
     cancelled: false,
     muteUpdates: false,
@@ -350,20 +428,23 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       }
     },
     (line) => noteStderr(live, line),
+    hostId,
   );
 
-  await spawnChild(input.sessionId, path, buildClaudeSpawnArgs(launch), input.cwd);
+  await spawnChild(input.sessionId, path, buildClaudeSpawnArgs(launch), input.cwd, hostId);
 
   liveByThread.set(input.sessionId, live);
   resumeByThread.set(input.sessionId, {
     sessionId: claudeSessionId,
     cwd: input.cwd,
+    hostId,
   });
 
   try {
     await writeJson(
       input.sessionId,
       buildControlRequest(nextControlId(live), { subtype: "initialize" }),
+      hostId,
     );
     await waitForInit(live, INIT_TIMEOUT_MS);
     live.onEvent({
@@ -395,7 +476,11 @@ async function runTurn(live: Live, input: SendTurnInput): Promise<void> {
   live.emittedReasoning = "";
   live.toolsByIndex.clear();
   live.toolsById.clear();
+  live.subagents.clear();
+  live.subagentMeta.clear();
+  live.finishedAgents.clear();
   live.agentTasks.clear();
+  live.asyncAgentTools.clear();
   live.turnResultSeen = false;
 
   const turnPromise = new Promise<void>((resolve, reject) => {
@@ -406,7 +491,7 @@ async function runTurn(live: Live, input: SendTurnInput): Promise<void> {
   settlePendingTurn(live);
 
   try {
-    await writeJson(input.sessionId, message);
+    await writeJson(input.sessionId, message, live.hostId);
     settlePendingTurn(live);
     await turnPromise;
   } catch (error) {
@@ -460,6 +545,7 @@ function handleLine(sessionId: string, live: Live, line: string): void {
     resumeByThread.set(sessionId, {
       sessionId: sessionIdFromLine,
       cwd: live.cwd,
+      hostId: live.hostId,
     });
     live.onEvent({
       type: "session.providerBound",
@@ -506,27 +592,75 @@ function handleLine(sessionId: string, live: Live, line: string): void {
   }
 }
 
+/**
+ * A line from a subagent carries `parent_tool_use_id`. Its events nest under
+ * that Agent call instead of landing in the parent transcript; a line whose
+ * parent is not a known Agent call is dropped, as before.
+ */
+function targetFor(live: Live, rec: Record<string, unknown>): StreamTarget | null {
+  const parentId = stringField(rec, "parent_tool_use_id");
+  if (!parentId) return { scope: live, emit: live.onEvent };
+  const parent = live.toolsById.get(parentId);
+  if (!parent || !isAgentToolName(parent.name)) return null;
+  // A line after the call settled would reopen a stream nothing will close.
+  if (live.finishedAgents.has(parentId)) return null;
+  let scope = live.subagents.get(parentId);
+  if (!scope) {
+    scope = {
+      toolsByIndex: new Map(),
+      toolsById: new Map(),
+      emittedAssistant: "",
+      emittedReasoning: "",
+    };
+    live.subagents.set(parentId, scope);
+  }
+  return {
+    scope,
+    parentId,
+    emit: (event) => live.onEvent({ type: "subagent.event", callId: parentId, event }),
+  };
+}
+
+/**
+ * `note` tells the parent row what its subagent is up to. A content_block_start
+ * has no input yet, so its title is just the tool name; the input delta that
+ * follows moments later carries the real one, and notes it then.
+ */
+function startTool(live: Live, target: StreamTarget, tool: InFlightTool, note = true): void {
+  target.emit({
+    type: "tool.started",
+    callId: tool.id,
+    title: tool.title,
+    kind: toolKindFromName(tool.name),
+    status: isAgentToolName(tool.name) ? "in_progress" : "pending",
+    preview: previewFromTool(tool.name, tool.input),
+  });
+  if (target.parentId) {
+    if (note) noteSubagentTool(live, target.parentId, tool.title);
+    return;
+  }
+  emitPlanIfNeeded(live, tool.name, tool.input);
+  emitSubagentMeta(live, tool);
+}
+
 function handleStreamEvent(live: Live, rec: Record<string, unknown>): void {
-  const subagent = isSubagentMessage(rec);
+  const target = targetFor(live, rec);
+  if (!target) return;
+  const { scope, emit, parentId } = target;
   const delta = streamDeltaFromEvent(rec);
   if (delta) {
-    if (subagent) return;
     if (delta.kind === "assistant") {
-      live.emittedAssistant = joinStreamText(live.emittedAssistant, delta.text);
-      live.onEvent({ type: "message.delta", text: delta.text });
+      scope.emittedAssistant = joinStreamText(scope.emittedAssistant, delta.text);
+      emit({ type: "message.delta", text: delta.text });
     } else {
-      live.emittedReasoning = joinStreamText(live.emittedReasoning, delta.text);
-      live.onEvent({ type: "reasoning.delta", text: delta.text });
+      scope.emittedReasoning = joinStreamText(scope.emittedReasoning, delta.text);
+      emit({ type: "reasoning.delta", text: delta.text });
     }
     return;
   }
 
   const started = toolStartFromEvent(rec);
   if (started) {
-    if (subagent) {
-      noteSubagentTool(live, rec, started.name, started.input);
-      return;
-    }
     const tool: InFlightTool = {
       id: started.id,
       name: started.name,
@@ -534,31 +668,22 @@ function handleStreamEvent(live: Live, rec: Record<string, unknown>): void {
       partialJson: "",
       title: toolTitle(started.name, started.input),
     };
-    if (started.index >= 0) live.toolsByIndex.set(started.index, tool);
-    live.toolsById.set(started.id, tool);
-    live.onEvent({
-      type: "tool.started",
-      callId: tool.id,
-      title: tool.title,
-      kind: toolKindFromName(tool.name),
-      status: isAgentToolName(tool.name) ? "in_progress" : "pending",
-      preview: previewFromTool(tool.name, tool.input),
-    });
-    emitPlanIfNeeded(live, tool.name, tool.input);
+    if (started.index >= 0) scope.toolsByIndex.set(started.index, tool);
+    scope.toolsById.set(started.id, tool);
+    startTool(live, target, tool, false);
     return;
   }
 
   const jsonDelta = inputJsonDeltaFromEvent(rec);
   if (jsonDelta) {
-    if (subagent) return;
-    const tool = live.toolsByIndex.get(jsonDelta.index);
+    const tool = scope.toolsByIndex.get(jsonDelta.index);
     if (!tool) return;
     tool.partialJson += jsonDelta.partial;
     const parsed = tryParseJsonRecord(tool.partialJson);
     if (!parsed) return;
     tool.input = parsed;
     tool.title = toolTitle(tool.name, parsed);
-    live.onEvent({
+    emit({
       type: "tool.updated",
       callId: tool.id,
       title: tool.title,
@@ -567,31 +692,38 @@ function handleStreamEvent(live: Live, rec: Record<string, unknown>): void {
       detail: summarizeToolRequest(tool.name, parsed),
       preview: previewFromTool(tool.name, parsed),
     });
+    if (parentId) {
+      noteSubagentTool(live, parentId, tool.title);
+      return;
+    }
     emitPlanIfNeeded(live, tool.name, parsed);
+    emitSubagentMeta(live, tool);
     return;
   }
 }
 
 function handleAssistant(live: Live, rec: Record<string, unknown>): void {
-  if (isSubagentMessage(rec)) {
-    for (const use of assistantToolUses(rec)) {
-      noteSubagentTool(live, rec, use.name, use.input);
-    }
-    return;
+  const target = targetFor(live, rec);
+  if (!target) return;
+  const { scope, emit, parentId } = target;
+
+  if (parentId) {
+    const model = assistantModel(rec);
+    if (model) emitSubagentUpdated(live, parentId, { model });
+  } else {
+    const used = contextUsedFromAssistant(rec);
+    if (used !== undefined) live.onEvent({ type: "context", used });
   }
 
-  const used = contextUsedFromAssistant(rec);
-  if (used !== undefined) live.onEvent({ type: "context", used });
-
   const snapshot = assistantTextBlocks(rec).join("");
-  const extra = snapshotRemainder(live.emittedAssistant, snapshot);
+  const extra = snapshotRemainder(scope.emittedAssistant, snapshot);
   if (extra) {
-    live.emittedAssistant = joinStreamText(live.emittedAssistant, extra);
-    live.onEvent({ type: "message.delta", text: extra });
+    scope.emittedAssistant = joinStreamText(scope.emittedAssistant, extra);
+    emit({ type: "message.delta", text: extra });
   }
 
   for (const use of assistantToolUses(rec)) {
-    if (live.toolsById.has(use.id)) continue;
+    if (scope.toolsById.has(use.id)) continue;
     const tool: InFlightTool = {
       id: use.id,
       name: use.name,
@@ -599,32 +731,37 @@ function handleAssistant(live: Live, rec: Record<string, unknown>): void {
       partialJson: "",
       title: toolTitle(use.name, use.input),
     };
-    live.toolsById.set(use.id, tool);
-    live.onEvent({
-      type: "tool.started",
-      callId: tool.id,
-      title: tool.title,
-      kind: toolKindFromName(tool.name),
-      status: isAgentToolName(tool.name) ? "in_progress" : "pending",
-      preview: previewFromTool(tool.name, tool.input),
-    });
-    if (use.name === "ExitPlanMode") {
+    scope.toolsById.set(use.id, tool);
+    startTool(live, target, tool);
+    if (!parentId && use.name === "ExitPlanMode") {
       const plan = extractExitPlanModePlan(use.input);
       if (plan) live.onEvent({ type: "plan", text: plan });
     }
-    emitPlanIfNeeded(live, tool.name, tool.input);
   }
 }
 
 function handleUser(live: Live, rec: Record<string, unknown>): void {
-  if (isSubagentMessage(rec)) return;
+  const target = targetFor(live, rec);
+  if (!target) return;
+  const { scope, emit, parentId } = target;
   for (const result of toolResultsFromUserMessage(rec)) {
-    const tool = live.toolsById.get(result.toolUseId);
+    const tool = scope.toolsById.get(result.toolUseId);
     if (!tool) continue;
-    if (isAgentToolName(tool.name) && isBackgroundedAgentTool(live, tool.id)) {
+    const agent = !parentId && isAgentToolName(tool.name);
+    // An Agent call's result is not its answer while the task behind it is
+    // still running, or when it is just the receipt for an asynchronous
+    // launch. The answer lands with the task's own completion.
+    if (
+      agent &&
+      (isBackgroundedAgentTool(live, tool.id) ||
+        hasLiveAgentTask(live, tool.id) ||
+        isAsyncAgentLaunch(result.text))
+    ) {
+      live.asyncAgentTools.add(tool.id);
+      emitSubagentUpdated(live, tool.id, { background: true });
       continue;
     }
-    live.onEvent({
+    emit({
       type: "tool.updated",
       callId: tool.id,
       title: tool.title,
@@ -633,6 +770,10 @@ function handleUser(live: Live, rec: Record<string, unknown>): void {
       detail: result.text || undefined,
       preview: previewFromTool(tool.name, tool.input, result.text),
     });
+    if (agent) {
+      live.subagents.delete(tool.id);
+      live.finishedAgents.add(tool.id);
+    }
   }
 }
 
@@ -655,7 +796,9 @@ async function handleControlRequest(
   control: ClaudeControlRequest,
 ): Promise<void> {
   if (control.subtype !== "can_use_tool" && control.subtype !== "permission") {
-    await writeJson(sessionId, buildControlResponse(control.requestId, {})).catch(() => undefined);
+    await writeJson(sessionId, buildControlResponse(control.requestId, {}), live.hostId).catch(
+      () => undefined,
+    );
     return;
   }
 
@@ -666,6 +809,7 @@ async function handleControlRequest(
     await writeJson(
       sessionId,
       buildControlResponse(control.requestId, toClaudePermissionResult("deny", input)),
+      live.hostId,
     ).catch(() => undefined);
     return;
   }
@@ -673,6 +817,8 @@ async function handleControlRequest(
   if (toolName === "AskUserQuestion") {
     const questions = questionsFromUnknown(input);
     const uiId = live.nextApprovalUiId++;
+    // Registered before it is announced, for the same reason as an approval.
+    const answered = waitQuestion(live, uiId, control.requestId);
     live.onEvent({
       type: "question.asked",
       requestId: uiId,
@@ -680,7 +826,7 @@ async function handleControlRequest(
       questions,
       callId: control.toolUseId,
     });
-    const outcome = await waitQuestion(live, uiId, control.requestId);
+    const outcome = await answered;
     const decision =
       outcome === "cancelled" ? "cancelled" : outcome.kind === "answered" ? "answered" : "skipped";
     live.onEvent({ type: "question.resolved", requestId: uiId, decision });
@@ -692,9 +838,11 @@ async function handleControlRequest(
             behavior: "deny",
             message: "User cancelled tool execution.",
           };
-    await writeJson(sessionId, buildControlResponse(control.requestId, response)).catch(
-      () => undefined,
-    );
+    await writeJson(
+      sessionId,
+      buildControlResponse(control.requestId, response),
+      live.hostId,
+    ).catch(() => undefined);
     return;
   }
 
@@ -708,6 +856,7 @@ async function handleControlRequest(
         message:
           "The client captured your proposed plan. Stop here and wait for the user's feedback or implementation request in a later turn.",
       }),
+      live.hostId,
     ).catch(() => undefined);
     return;
   }
@@ -718,11 +867,17 @@ async function handleControlRequest(
     await writeJson(
       sessionId,
       buildControlResponse(control.requestId, toClaudePermissionResult("allow", input)),
+      live.hostId,
     ).catch(() => undefined);
     return;
   }
 
   const uiId = live.nextApprovalUiId++;
+  // Registered before it is announced. A policy that answers the moment it
+  // sees the event answers synchronously, and a pending entry created
+  // afterwards would find nothing to resolve — leaving the turn waiting on a
+  // decision that has already been made.
+  const decided = waitApproval(live, uiId, control.requestId, input);
   live.onEvent({
     type: "approval.requested",
     requestId: uiId,
@@ -731,12 +886,13 @@ async function handleControlRequest(
     callId: control.toolUseId,
     preview: previewFromTool(toolName, input),
   });
-  const decision = await waitApproval(live, uiId, control.requestId, input);
+  const decision = await decided;
   live.onEvent({ type: "approval.resolved", requestId: uiId, decision });
   if (decision === "cancelled") return;
   await writeJson(
     sessionId,
     buildControlResponse(control.requestId, toClaudePermissionResult(decision, input)),
+    live.hostId,
   ).catch(() => undefined);
 }
 
@@ -747,19 +903,32 @@ function applyKnownToolInput(
   callId?: string,
 ): void {
   if (!callId || Object.keys(input).length === 0) return;
-  const existing = live.toolsById.get(callId);
-  if (existing) {
-    existing.input = input;
-    existing.title = toolTitle(toolName, input);
-  }
-  live.onEvent({
+  const update: HarnessEvent = {
     type: "tool.updated",
     callId,
     title: toolTitle(toolName, input),
     kind: toolKindFromName(toolName),
     status: "pending",
     preview: previewFromTool(toolName, input),
-  });
+  };
+  const existing = live.toolsById.get(callId);
+  if (existing) {
+    existing.input = input;
+    existing.title = toolTitle(toolName, input);
+    live.onEvent(update);
+    return;
+  }
+  // A subagent's tool asking permission: keep its row inside the subagent,
+  // where the call lives, rather than minting a stray one in the parent.
+  for (const [parentId, scope] of live.subagents) {
+    const nested = scope.toolsById.get(callId);
+    if (!nested) continue;
+    nested.input = input;
+    nested.title = toolTitle(toolName, input);
+    live.onEvent({ type: "subagent.event", callId: parentId, event: update });
+    return;
+  }
+  live.onEvent(update);
 }
 
 function waitApproval(
@@ -799,21 +968,40 @@ function handleAgentLifecycle(live: Live, rec: Record<string, unknown>): boolean
       description: started.description,
       backgrounded: started.backgrounded,
     });
-    upsertAgentTool(live, started.toolUseId, started.description, "in_progress");
+    upsertAgentTool(live, started.toolUseId, started.description, "in_progress", undefined, {
+      background: started.backgrounded,
+      ...(stringField(rec, "subagent_type")
+        ? { agentType: stringField(rec, "subagent_type") as string }
+        : {}),
+      ...(stringField(rec, "prompt") ? { prompt: stringField(rec, "prompt") as string } : {}),
+    });
     return true;
   }
 
   const progress = parseTaskProgress(rec);
   if (progress) {
     const task = live.agentTasks.get(progress.taskId);
-    const title = progress.description || task?.description || "Subagent";
+    // The description on a progress line drifts into "Running grep …" as the
+    // subagent works. The row keeps the brief it started with; the drift is
+    // what it is doing now.
+    const title = task?.description || progress.description || "Subagent";
+    const activity =
+      progress.description && progress.description !== title ? progress.description : undefined;
     const detail =
       progress.summary ||
+      activity ||
       progress.lastToolName ||
       (progress.subagentType
         ? `${progress.subagentType.replace(/[_-]+/g, " ")} subagent`
         : undefined);
-    upsertAgentTool(live, progress.toolUseId ?? task?.toolUseId, title, "in_progress", detail);
+    upsertAgentTool(
+      live,
+      progress.toolUseId ?? task?.toolUseId,
+      title,
+      "in_progress",
+      detail,
+      progress.subagentType ? { agentType: progress.subagentType } : undefined,
+    );
     return true;
   }
 
@@ -822,6 +1010,9 @@ function handleAgentLifecycle(live: Live, rec: Record<string, unknown>): boolean
     const task = live.agentTasks.get(updated.taskId);
     if (task && updated.backgrounded !== undefined) {
       task.backgrounded = updated.backgrounded;
+      emitSubagentUpdated(live, agentToolId(task.toolUseId, task.description), {
+        background: updated.backgrounded,
+      });
     }
     if (task && updated.description) task.description = updated.description;
     if (isTerminalAgentTaskStatus(updated.status)) {
@@ -856,14 +1047,30 @@ function handleAgentLifecycle(live: Live, rec: Record<string, unknown>): boolean
   for (const id of [...live.agentTasks.keys()]) {
     if (!next.has(id)) completeAgentTask(live, id, "completed");
   }
+  // A launch receipt with no task behind it any more is finished too;
+  // otherwise the turn would wait forever on an agent the CLI has forgotten.
+  // Deleting during Set iteration is safe; only the visited item is removed.
+  for (const id of live.asyncAgentTools) {
+    if (!hasLiveAgentTask(live, id)) live.asyncAgentTools.delete(id);
+  }
   for (const row of liveTasks) {
     if (live.agentTasks.has(row.taskId)) continue;
+    // This list can land a line before `task_started`. Remember the task so
+    // the turn stays open, but only give it a row if an Agent call already
+    // has one; minting a row here left a stray duplicate with no transcript
+    // once `task_started` pointed at the real call.
+    const toolUseId = agentToolIdByTitle(live, row.description);
     live.agentTasks.set(row.taskId, {
       taskId: row.taskId,
+      toolUseId,
       description: row.description,
       backgrounded: true,
     });
-    upsertAgentTool(live, undefined, row.description, "in_progress");
+    if (toolUseId) {
+      upsertAgentTool(live, toolUseId, row.description, "in_progress", undefined, {
+        background: true,
+      });
+    }
   }
   maybeFinishTurn(live);
   return true;
@@ -887,16 +1094,13 @@ function handleToolProgress(live: Live, rec: Record<string, unknown>): void {
     status: "in_progress",
     ...(detail ? { detail } : {}),
   });
+  if (progress.subagentType) {
+    emitSubagentUpdated(live, tool.id, { agentType: progress.subagentType });
+  }
 }
 
-function noteSubagentTool(
-  live: Live,
-  rec: Record<string, unknown>,
-  name: string,
-  input: Record<string, unknown>,
-): void {
-  const parentId = stringField(rec, "parent_tool_use_id");
-  if (!parentId) return;
+/** The parent's Agent row shows the subagent's latest step as its detail. */
+function noteSubagentTool(live: Live, parentId: string, step: string): void {
   const parent = live.toolsById.get(parentId);
   if (!parent || !isAgentToolName(parent.name)) return;
   live.onEvent({
@@ -905,8 +1109,52 @@ function noteSubagentTool(
     title: parent.title,
     kind: "agent",
     status: "in_progress",
-    detail: toolTitle(name, input),
+    detail: step,
   });
+}
+
+/**
+ * Tell the transcript something about a subagent, once. The CLI repeats the
+ * model on every message and the type on every progress line; each repeat
+ * would otherwise cost a full reducer pass for nothing.
+ */
+function emitSubagentUpdated(live: Live, callId: string, patch: SubagentMetaPatch): void {
+  const sent = live.subagentMeta.get(callId) ?? {};
+  const changed: SubagentMetaPatch = {};
+  for (const key of SUBAGENT_META_KEYS) {
+    const value = patch[key];
+    if (value === undefined || value === "" || value === sent[key]) continue;
+    Object.assign(changed, { [key]: value });
+  }
+  if (Object.keys(changed).length === 0) return;
+  live.subagentMeta.set(callId, { ...sent, ...changed });
+  live.onEvent({ type: "subagent.updated", callId, ...changed });
+}
+
+/** What the Agent call's own input says about the subagent it spawns. */
+function emitSubagentMeta(live: Live, tool: InFlightTool): void {
+  if (!isAgentToolName(tool.name)) return;
+  const meta = subagentMetaFromInput(tool.input);
+  if (meta) emitSubagentUpdated(live, tool.id, meta);
+}
+
+function agentToolId(callId: string | undefined, title: string): string {
+  return callId ?? `agent:${title}`;
+}
+
+/** The Agent call already on the transcript with this brief, if there is one. */
+function agentToolIdByTitle(live: Live, title: string): string | undefined {
+  for (const tool of live.toolsById.values()) {
+    if (isAgentToolName(tool.name) && tool.title === title) return tool.id;
+  }
+  return undefined;
+}
+
+function hasLiveAgentTask(live: Live, toolUseId: string): boolean {
+  for (const task of live.agentTasks.values()) {
+    if (task.toolUseId === toolUseId) return true;
+  }
+  return false;
 }
 
 function isBackgroundedAgentTool(live: Live, toolUseId: string): boolean {
@@ -922,9 +1170,13 @@ function upsertAgentTool(
   title: string,
   status: string,
   detail?: string,
-): void {
-  const id = callId ?? `agent:${title}`;
+  meta?: SubagentMetaPatch,
+): string {
+  const id = agentToolId(callId ?? agentToolIdByTitle(live, title), title);
   const existing = live.toolsById.get(id);
+  const emitMeta = () => {
+    if (meta) emitSubagentUpdated(live, id, meta);
+  };
   if (!existing) {
     live.toolsById.set(id, {
       id,
@@ -940,6 +1192,7 @@ function upsertAgentTool(
       kind: "agent",
       status,
     });
+    emitMeta();
     if (status !== "in_progress" && status !== "pending" && status !== "running") {
       live.onEvent({
         type: "tool.updated",
@@ -950,9 +1203,10 @@ function upsertAgentTool(
         ...(detail ? { detail } : {}),
       });
     }
-    return;
+    return id;
   }
   if (title) existing.title = title;
+  emitMeta();
   live.onEvent({
     type: "tool.updated",
     callId: id,
@@ -961,20 +1215,24 @@ function upsertAgentTool(
     status,
     ...(detail ? { detail } : {}),
   });
+  return id;
 }
 
 function completeAgentTask(live: Live, taskId: string, status: string, detail?: string): void {
   const task = live.agentTasks.get(taskId);
   live.agentTasks.delete(taskId);
   if (task) {
-    upsertAgentTool(live, task.toolUseId, task.description, status, detail);
+    const id = upsertAgentTool(live, task.toolUseId, task.description, status, detail);
+    live.subagents.delete(id);
+    live.asyncAgentTools.delete(id);
+    live.finishedAgents.add(id);
   }
   maybeFinishTurn(live);
 }
 
 function maybeFinishTurn(live: Live): void {
   if (!live.turnResultSeen) return;
-  if (live.agentTasks.size > 0) return;
+  if (live.agentTasks.size > 0 || live.asyncAgentTools.size > 0) return;
   if (!live.activeTurn && !live.turnDone) return;
   finishActiveTurn(live, [{ type: "message.completed" }, { type: "reasoning.completed" }]);
 }
@@ -1025,8 +1283,12 @@ function nextControlId(live: Live): string {
   return `wavex_${live.nextControlId}`;
 }
 
-function writeJson(sessionId: string, payload: Record<string, unknown>): Promise<void> {
-  return writeChild(sessionId, JSON.stringify(payload));
+function writeJson(
+  sessionId: string,
+  payload: Record<string, unknown>,
+  hostId: HostId,
+): Promise<void> {
+  return writeChild(sessionId, JSON.stringify(payload), hostId);
 }
 
 function settingsKeyFor(input: SendTurnInput): string {

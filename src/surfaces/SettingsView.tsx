@@ -8,7 +8,28 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { ConnectionsPage } from "./ConnectionsPage";
+import { Heading, Row } from "../chrome/SettingsRow";
 import { HarnessIcon } from "../chrome/HarnessIcon";
+import {
+  getLanguageServerAvailabilitySnapshot,
+  languageServerBinary,
+  probeLanguageServers,
+  subscribeLanguageServerAvailability,
+} from "../lib/lsp/availability";
+import {
+  languageServerChoice,
+  languageServerChoicesSnapshot,
+  setLanguageServerEnabled,
+  subscribeLanguageServerChoices,
+} from "../lib/lsp/enabled";
+import {
+  lspStatusSnapshot,
+  stopLspServersFor,
+  subscribeLspStatus,
+  type LspServerStatus,
+} from "../lib/lsp/manager";
+import { LANGUAGE_SERVERS } from "../lib/lsp/servers";
 import { DeleteProfileDialog } from "../chrome/DeleteProfileDialog";
 import { ProfileAvatar } from "../chrome/ProfileAvatar";
 import { ProfileDialog } from "../chrome/ProfileDialog";
@@ -63,6 +84,15 @@ import {
   subscribeHarnessAvailability,
 } from "../lib/harness/availability";
 import { refreshHarnessCatalogs } from "../lib/harness/registry";
+import {
+  applyUiScale,
+  loadUiScale,
+  saveUiScale,
+  subscribeUiScale,
+  UI_SCALE_DEFAULT,
+  UI_SCALE_MAX,
+  UI_SCALE_MIN,
+} from "../lib/uiScale";
 import {
   defaultModelId,
   getModelSnapshot,
@@ -120,6 +150,7 @@ import {
   installPendingUpdate,
   readAppVersion,
   runUpdateFlow,
+  UPDATES_SUPPORTED,
   type UpdaterSnapshot,
 } from "../lib/updates/updater";
 
@@ -212,6 +243,8 @@ export function SettingsView({
           {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
           {section === "keybindings" ? <KeybindingsPage /> : null}
           {section === "providers" ? <ProvidersPage /> : null}
+          {section === "connections" ? <ConnectionsPage /> : null}
+          {section === "language-servers" ? <LanguageServersPage /> : null}
           {section === "archive" ? (
             <ArchivePage
               cwd={cwd}
@@ -422,7 +455,9 @@ function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => vo
             ? "You're on the latest version."
             : snapshot.phase === "error"
               ? (snapshot.error ?? "Update check failed.")
-              : "wavex updates itself from the release feed.";
+              : UPDATES_SUPPORTED
+                ? "wavex updates itself from the release feed."
+                : "This host updates itself; a browser client follows whatever it runs.";
 
   return (
     <Row
@@ -441,16 +476,18 @@ function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => vo
         >
           What's new
         </SecondaryButton>
-        <SecondaryButton onClick={() => void onClick()} disabled={busy}>
-          {busy ? (
-            <Loader className="size-3.5 animate-spin" aria-hidden />
-          ) : hasUpdate ? (
-            <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
-          ) : (
-            <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
-          )}
-          {hasUpdate ? "Download" : "Check for updates"}
-        </SecondaryButton>
+        {UPDATES_SUPPORTED ? (
+          <SecondaryButton onClick={() => void onClick()} disabled={busy}>
+            {busy ? (
+              <Loader className="size-3.5 animate-spin" aria-hidden />
+            ) : hasUpdate ? (
+              <ArrowDownCircle className="size-3.5 text-accent" aria-hidden />
+            ) : (
+              <RefreshCw className="size-3.5" strokeWidth={1.75} aria-hidden />
+            )}
+            {hasUpdate ? "Download" : "Check for updates"}
+          </SecondaryButton>
+        ) : null}
       </div>
     </Row>
   );
@@ -465,6 +502,9 @@ function useAppearanceSettings() {
   const [themeHue, setThemeHue] = useState(loadThemeHue);
   const [themeSaturation, setThemeSaturation] = useState(loadThemeSaturation);
   const [bodyGlass, setBodyGlass] = useState(loadBodyGlass);
+  const [uiScale, setUiScale] = useState(loadUiScale);
+
+  useEffect(() => subscribeUiScale(() => setUiScale(loadUiScale())), []);
 
   const onThemePreference = useCallback((next: ThemePreference) => {
     applyThemePreference(next);
@@ -498,13 +538,20 @@ function useAppearanceSettings() {
     setBodyGlass(next);
   }, []);
 
+  const onUiScale = useCallback((percent: number) => {
+    const next = saveUiScale(percent / 100);
+    setUiScale(next);
+    void applyUiScale(next);
+  }, []);
+
   const restoreDefaults = useCallback(() => {
     onThemePreference(THEME_PREFERENCE_DEFAULT);
     onOpacity(Math.round(SIDEBAR_OPACITY_DEFAULT * 100));
     onBlur(SIDEBAR_BLUR_DEFAULT);
     onTint(THEME_HUE_DEFAULT, THEME_SATURATION_DEFAULT);
     onBodyGlass(BODY_GLASS_DEFAULT);
-  }, [onBlur, onBodyGlass, onThemePreference, onOpacity, onTint]);
+    onUiScale(Math.round(UI_SCALE_DEFAULT * 100));
+  }, [onBlur, onBodyGlass, onThemePreference, onOpacity, onTint, onUiScale]);
 
   return {
     themePreference,
@@ -513,11 +560,13 @@ function useAppearanceSettings() {
     themeHue,
     themeSaturation,
     bodyGlass,
+    uiScale,
     onThemePreference,
     onOpacity,
     onBlur,
     onTint,
     onBodyGlass,
+    onUiScale,
     restoreDefaults,
   };
 }
@@ -599,6 +648,20 @@ function AppearancePage({ appearance }: { appearance: AppearanceSettings }) {
           label="Main pane glass"
           on={appearance.bodyGlass}
           onChange={appearance.onBodyGlass}
+        />
+      </Row>
+      <Row
+        label="Interface scale"
+        description="Zoom the whole interface. You can also use Ctrl+=, Ctrl+-, and Ctrl+0 (Cmd on macOS)."
+      >
+        <Slider
+          label="Interface scale"
+          value={Math.round(appearance.uiScale * 100)}
+          display={`${Math.round(appearance.uiScale * 100)}%`}
+          min={Math.round(UI_SCALE_MIN * 100)}
+          max={Math.round(UI_SCALE_MAX * 100)}
+          step={10}
+          onChange={appearance.onUiScale}
         />
       </Row>
     </>
@@ -714,6 +777,88 @@ function ProvidersPage() {
       ))}
     </>
   );
+}
+
+/**
+ * Language servers are found, not installed. The page reports what is on the
+ * user's PATH and quotes the install line for what is not — the same posture
+ * wavex takes with the agent CLIs.
+ */
+function LanguageServersPage() {
+  useSyncExternalStore(
+    subscribeLanguageServerAvailability,
+    getLanguageServerAvailabilitySnapshot,
+    getLanguageServerAvailabilitySnapshot,
+  );
+  useSyncExternalStore(
+    subscribeLanguageServerChoices,
+    languageServerChoicesSnapshot,
+    languageServerChoicesSnapshot,
+  );
+  const running = useSyncExternalStore(subscribeLspStatus, lspStatusSnapshot, lspStatusSnapshot);
+
+  useEffect(() => {
+    void probeLanguageServers();
+  }, []);
+
+  const onToggle = (serverId: string, enabled: boolean) => {
+    setLanguageServerEnabled(serverId, enabled);
+    // Turning one off stops it now rather than leaving it indexing until the
+    // idle timer notices. Turning one on takes effect as files are opened.
+    if (!enabled) void stopLspServersFor(serverId);
+  };
+
+  return (
+    <>
+      <p className="pb-2 text-[12px] leading-relaxed text-content/45">
+        wavex uses the language servers you already have installed and never downloads one. None run
+        until you turn them on — the editor offers one the first time you open a file it covers. A
+        server starts with the first such file, and stops when you close the project, switch
+        profile, or quit.
+      </p>
+      {LANGUAGE_SERVERS.map((server) => {
+        const binary = languageServerBinary(server.id);
+        const live = running.filter((entry) => entry.serverId === server.id);
+        const choice = languageServerChoice(server.id);
+        const failure = live.find((entry) => entry.status.state === "failed")?.status;
+        return (
+          <Row
+            key={server.id}
+            label={server.name}
+            description={
+              // A failure says what went wrong, in the server's own words.
+              // "Failed to start" alone leaves the user nowhere to go.
+              failure?.state === "failed"
+                ? failure.message
+                : binary
+                  ? `Found ${binary}. Covers ${server.extensions.join(", ")}.`
+                  : `Not installed. Install it with \`${server.installHint}\`.`
+            }
+          >
+            <span className="text-[11.5px] whitespace-nowrap text-content/50">
+              {choice === "undecided" && live.length === 0
+                ? "Not asked yet"
+                : languageServerStateLabel(live)}
+            </span>
+            <Toggle
+              label={`Use ${server.name}`}
+              on={choice === "enabled"}
+              disabled={!binary}
+              onChange={(next) => onToggle(server.id, next)}
+            />
+          </Row>
+        );
+      })}
+    </>
+  );
+}
+
+function languageServerStateLabel(running: LspServerStatus[]): string {
+  if (running.length === 0) return "Not running";
+  if (running.some((entry) => entry.status.state === "failed")) return "Failed to start";
+  const ready = running.filter((entry) => entry.status.state === "ready").length;
+  if (ready === 0) return "Starting…";
+  return ready === 1 ? "Running" : `Running in ${ready} checkouts`;
 }
 
 function ProviderRow({
@@ -1096,36 +1241,6 @@ function PageHeader({ title, description }: { title: string; description: string
   );
 }
 
-function Heading({ title, first = false }: { title: string; first?: boolean }) {
-  return (
-    <h2 className={`pb-1 text-[15px] font-semibold text-content ${first ? "" : "pt-8"}`}>
-      {title}
-    </h2>
-  );
-}
-
-function Row({
-  label,
-  description,
-  children,
-}: {
-  label: ReactNode;
-  description?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-6 border-b border-content/5 py-4 last:border-b-0">
-      <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-medium text-content">{label}</div>
-        {description ? (
-          <p className="mt-1 text-[12px] leading-relaxed text-content/45">{description}</p>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>
-    </div>
-  );
-}
-
 function Segmented<T extends string>({
   label,
   value,
@@ -1170,6 +1285,7 @@ function Slider({
   display,
   min,
   max,
+  step = 1,
   onChange,
 }: {
   label: string;
@@ -1177,6 +1293,7 @@ function Slider({
   display: string;
   min: number;
   max: number;
+  step?: number;
   onChange: (value: number) => void;
 }) {
   return (
@@ -1185,6 +1302,7 @@ function Slider({
         type="range"
         min={min}
         max={max}
+        step={step}
         value={value}
         aria-valuemin={min}
         aria-valuemax={max}
@@ -1203,10 +1321,13 @@ function Slider({
 function Toggle({
   label,
   on,
+  disabled = false,
   onChange,
 }: {
   label: string;
   on: boolean;
+  /** For a switch whose thing is unavailable — an uninstalled server. */
+  disabled?: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
@@ -1215,11 +1336,12 @@ function Toggle({
       role="switch"
       aria-label={label}
       aria-checked={on}
+      disabled={disabled}
       onClick={() => {
         playCue("switch");
         onChange(!on);
       }}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
         on ? "bg-accent" : "bg-content/20"
       }`}
     >
@@ -1231,7 +1353,6 @@ function Toggle({
     </button>
   );
 }
-
 function Select({
   label,
   value,

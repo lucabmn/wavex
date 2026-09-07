@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@/lib/transport";
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (event: { payload: never }) => void>(),
@@ -7,8 +7,11 @@ const mocks = vi.hoisted(() => ({
   listen: vi.fn(),
 }));
 
-vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
-vi.mock("@tauri-apps/api/event", () => ({ listen: mocks.listen }));
+vi.mock("@/lib/transport", () => ({
+  invokeOn: (_hostId: string, ...args: unknown[]) => mocks.invoke(...args),
+  listenOn: (_hostId: string, ...args: unknown[]) => mocks.listen(...args),
+  getDefaultHostId: () => "local",
+}));
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -137,5 +140,26 @@ describe("child bridge", () => {
     await spawning;
     expect(onExit).toHaveBeenCalledWith(1);
     release();
+  });
+
+  it("routes a turn to the host named by a project reference", async () => {
+    installResolvedListeners();
+    const child = await loadChild();
+
+    expect(child.harnessTarget("wavex-host://box//home/me/app")).toEqual({
+      hostId: "box",
+      path: "/home/me/app",
+    });
+    // A worktree cwd is bare, so it names no host and falls back to this device.
+    expect(child.harnessTarget("/home/me/app-wt")).toEqual({
+      hostId: "local",
+      path: "/home/me/app-wt",
+    });
+    // An explicit host wins: only the caller knows which machine a bare
+    // worktree path belongs to.
+    expect(child.harnessTarget("/home/me/app-wt", "box")).toEqual({
+      hostId: "box",
+      path: "/home/me/app-wt",
+    });
   });
 });

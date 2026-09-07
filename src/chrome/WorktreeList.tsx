@@ -1,9 +1,12 @@
-import { CircleAlert, GitBranch, MoreHorizontal, Plus } from "./icons";
+import { Check, CircleAlert, GitBranch, Lock, MoreHorizontal, Plus } from "./icons";
 import { useState, type MouseEvent } from "react";
 import { copyText } from "../lib/clipboard";
-import { notifyGitChanged, revealPath, type GitDiffStats } from "../lib/fs";
-import { REVEAL_LABEL } from "../lib/platform";
+import { notifyGitChanged, revealPath } from "../lib/fs";
+import { canRevealPath, revealLabel } from "../lib/platform";
+import { hostIdForProject } from "../lib/transport";
+import type { HostId } from "../lib/host";
 import { sameProjectPath } from "../lib/recents";
+import { formatChangedFiles, worktreeStatusTooltip } from "../lib/sessionStatus";
 import { gitWorktreePrune, worktreeLabel, type Worktree } from "../lib/worktrees/worktrees";
 import { useProjectDiffStats } from "../hooks/useProjectDiffStats";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
@@ -51,7 +54,7 @@ export function WorktreeList({
     setMenu(null);
     if (!worktree) return;
     if (id === "open") onSelect(worktree.path);
-    else if (id === "reveal") void revealPath(worktree.path);
+    else if (id === "reveal") void revealPath(worktree.path, hostIdForProject(repoPath));
     else if (id === "copy") void copyText(worktree.path);
     else if (id === "remove") setRemoving(worktree);
   };
@@ -114,7 +117,7 @@ export function WorktreeList({
           x={menu.x}
           y={menu.y}
           ariaLabel="Worktree actions"
-          items={worktreeMenuItems(menu.worktree)}
+          items={worktreeMenuItems(menu.worktree, hostIdForProject(repoPath))}
           onPick={onMenuPick}
           onClose={() => setMenu(null)}
         />
@@ -136,10 +139,20 @@ export function WorktreeList({
   );
 }
 
-function worktreeMenuItems(worktree: Worktree): ExplorerMenuItem[] {
+function worktreeMenuItems(worktree: Worktree, hostId: HostId): ExplorerMenuItem[] {
   return [
     { kind: "item", id: "open", label: "Open worktree" },
-    { kind: "item", id: "reveal", label: REVEAL_LABEL, disabled: worktree.missing },
+    // A file manager opens where the user is, not on the host.
+    ...(canRevealPath(hostId)
+      ? [
+          {
+            kind: "item" as const,
+            id: "reveal",
+            label: revealLabel(hostId),
+            disabled: worktree.missing,
+          },
+        ]
+      : []),
     { kind: "item", id: "copy", label: "Copy path" },
     { kind: "sep" },
     {
@@ -167,6 +180,18 @@ function WorktreeRow({
 }) {
   const label = worktreeLabel(worktree);
   const stats = useProjectDiffStats(worktree.path, !worktree.missing);
+  const files = stats?.files ?? 0;
+  const dirty = files > 0 || (stats?.additions ?? 0) > 0 || (stats?.deletions ?? 0) > 0;
+  const changed = formatChangedFiles(files);
+  const title = worktreeStatusTooltip({
+    label,
+    path: worktree.path,
+    busy,
+    missing: worktree.missing,
+    locked: worktree.locked,
+    lockReason: worktree.lockReason,
+    git: stats ? { files, additions: stats.additions, deletions: stats.deletions } : null,
+  });
 
   return (
     <div
@@ -177,8 +202,8 @@ function WorktreeRow({
     >
       <button
         type="button"
-        title={worktreeRowTitle(worktree, stats, busy)}
-        aria-label={label}
+        title={title}
+        aria-label={title}
         aria-current={selected ? "true" : undefined}
         onClick={() => onSelect(worktree.path)}
         className="flex min-w-0 flex-1 items-center gap-2 text-left group-hover:pr-6"
@@ -195,12 +220,43 @@ function WorktreeRow({
         ) : (
           <span className={labelClassName}>{label}</span>
         )}
-        {stats && (stats.additions > 0 || stats.deletions > 0) ? (
-          <span className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-semibold tabular-nums group-hover:hidden">
+        {worktree.missing ? (
+          <span className="shrink-0 text-[10px] font-medium text-amber-400 group-hover:hidden">
+            Missing
+          </span>
+        ) : null}
+        {worktree.locked && !worktree.missing ? (
+          <span
+            className="flex shrink-0 items-center gap-0.5 text-content/50 group-hover:hidden"
+            title={worktree.lockReason ? `Locked: ${worktree.lockReason}` : "Locked"}
+          >
+            <Lock className="size-3" strokeWidth={1.75} />
+          </span>
+        ) : null}
+        {busy ? (
+          <span className="shrink-0 text-[10px] font-medium text-accent group-hover:hidden">
+            Working
+          </span>
+        ) : null}
+        {!worktree.missing && stats && dirty ? (
+          <span
+            className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-semibold tabular-nums group-hover:hidden"
+            title={`${changed} uncommitted`}
+          >
+            <span className="font-sans font-medium text-content/55">{changed}</span>
             {stats.additions > 0 ? (
               <span className="text-emerald-400">+{stats.additions}</span>
             ) : null}
             {stats.deletions > 0 ? <span className="text-red-400">-{stats.deletions}</span> : null}
+          </span>
+        ) : null}
+        {!worktree.missing && stats && !dirty && !busy ? (
+          <span
+            className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-content/45 group-hover:hidden"
+            title="No uncommitted changes"
+          >
+            <Check className="size-3 text-emerald-400/80" strokeWidth={2.25} />
+            <span>Clean</span>
           </span>
         ) : null}
       </button>
@@ -219,14 +275,3 @@ function WorktreeRow({
 }
 
 const labelClassName = "min-w-0 flex-1 truncate font-mono text-[12px] leading-tight";
-
-function worktreeRowTitle(worktree: Worktree, stats: GitDiffStats | null, busy: boolean): string {
-  const parts = [worktreeLabel(worktree), worktree.path];
-  if (worktree.missing) parts.push("Folder is missing");
-  if (worktree.locked)
-    parts.push(worktree.lockReason ? `Locked: ${worktree.lockReason}` : "Locked");
-  if (busy) parts.push("Working");
-  const files = stats?.files ?? 0;
-  if (files > 0) parts.push(`${files} ${files === 1 ? "file" : "files"} changed`);
-  return parts.join("\n");
-}

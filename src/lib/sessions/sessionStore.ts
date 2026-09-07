@@ -1,4 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
+import { getDefaultHostId, invokeOn } from "../transport";
+import { formatProjectRef, hostPathArgs, sessionRefKey, type HostId } from "../host";
+import { stripHostRef } from "../paths";
 import { persistableAttachment } from "../attachments";
 import type { ContextUsage } from "../contextUsage";
 import { normalizeProjectPath } from "../recents";
@@ -16,6 +18,8 @@ import { HARNESSES, RUNTIME_MODES, sessionScope } from "../session";
 
 export type SessionSummary = {
   id: string;
+  /** The machine that minted this id and owns the transcript behind it. */
+  hostId: HostId;
   cwd: string;
   harness: HarnessId;
   model: string;
@@ -84,10 +88,15 @@ export function isPersistableId(value: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(value);
 }
 
+/**
+ * The host stores a path on itself and compares `session_list_by_project`
+ * against it, so the reference form a remote project carries in the workspace
+ * is stripped back to the bare path before it goes over the wire.
+ */
 function persistableMeta(session: Session): Omit<SessionUpsertPayload, "blocks"> {
   return {
     id: session.id,
-    cwd: normalizeProjectPath(session.cwd),
+    cwd: normalizeProjectPath(stripHostRef(session.cwd)),
     harness: session.harness,
     model: session.model,
     modelSettings: session.modelSettings,
@@ -117,21 +126,40 @@ export function sanitizeSessionForPersist(session: Session): SessionUpsertPayloa
  * overwrite a newer one. Chain them per session; different sessions still
  * write concurrently.
  */
-const upsertQueues = new Map<string, Promise<unknown>>();
+const sessionWriteQueues = new Map<string, Promise<unknown>>();
+const deletedSessionRefs = new Set<string>();
 
-export async function upsertSession(session: Session): Promise<SessionSummary | null> {
-  if (!shouldPersistSession(session)) return null;
-  const payload = sanitizeSessionForPersist(session);
-  const previous = upsertQueues.get(session.id) ?? Promise.resolve();
-  const run = previous
-    .catch(() => undefined)
-    .then(() => invoke<SessionSummary>("session_upsert", { session: payload }));
-  upsertQueues.set(session.id, run);
-  try {
-    return normalizeSummary(await run);
-  } finally {
-    if (upsertQueues.get(session.id) === run) upsertQueues.delete(session.id);
+function enqueueSessionWrite<T>(queueKey: string, operation: () => Promise<T>): Promise<T> {
+  const previous = sessionWriteQueues.get(queueKey) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(operation);
+  const tail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  sessionWriteQueues.set(queueKey, tail);
+  void tail.then(() => {
+    if (sessionWriteQueues.get(queueKey) === tail) {
+      sessionWriteQueues.delete(queueKey);
+    }
+  });
+  return run;
+}
+
+export async function upsertSession(
+  session: Session,
+  hostIdArg?: HostId,
+): Promise<SessionSummary | null> {
+  const hostId = hostPathArgs(session.cwd, hostIdArg, getDefaultHostId()).hostId;
+  const queueKey = sessionRefKey(hostId, session.id);
+  if (!shouldPersistSession(session) || deletedSessionRefs.has(queueKey)) {
+    return null;
   }
+  const payload = sanitizeSessionForPersist(session);
+  const summary = await enqueueSessionWrite(queueKey, async () => {
+    if (deletedSessionRefs.has(queueKey)) return null;
+    return invokeOn<SessionSummary>(hostId, "session_upsert", { session: payload });
+  });
+  return summary ? normalizeSummary(summary, hostId) : null;
 }
 
 /**
@@ -156,23 +184,31 @@ export function persistFingerprint(session: Session): string {
   return `${JSON.stringify(persistableMeta(session))}|${session.blocks.map(blockToken).join(",")}`;
 }
 
-export async function listSessionsByProject(cwd: string): Promise<SessionSummary[]> {
+export async function listSessionsByProject(
+  cwd: string,
+  hostIdArg?: HostId,
+): Promise<SessionSummary[]> {
   if (!cwd || cwd === "~") return [];
-  const rows = await invoke<SessionSummary[]>("session_list_by_project", {
-    cwd: normalizeProjectPath(cwd),
+  const target = hostPathArgs(cwd, hostIdArg, getDefaultHostId());
+  const rows = await invokeOn<SessionSummary[]>(target.hostId, "session_list_by_project", {
+    cwd: normalizeProjectPath(target.path),
   });
-  return rows.map(normalizeSummary);
+  return rows.map((row) => normalizeSummary(row, target.hostId));
 }
 
 /** Work chats have no project, so they list by scope instead of by cwd. */
-export async function listSessionsByScope(scope: SessionScope): Promise<SessionSummary[]> {
-  const rows = await invoke<SessionSummary[]>("session_list_by_scope", { scope });
-  return rows.map(normalizeSummary);
+export async function listSessionsByScope(
+  scope: SessionScope,
+  hostId: HostId = getDefaultHostId(),
+): Promise<SessionSummary[]> {
+  const rows = await invokeOn<SessionSummary[]>(hostId, "session_list_by_scope", { scope });
+  return rows.map((row) => normalizeSummary(row, hostId));
 }
 
 export type SessionSearchHit = {
   kind: "conversation" | "message";
   sessionId: string;
+  hostId: HostId;
   cwd: string;
   harness: string;
   title: string;
@@ -193,10 +229,12 @@ export async function searchSessions(options: {
   includeArchived?: boolean;
   /** Defaults to coding so project search never surfaces a work chat. */
   scope?: SessionScope;
+  hostId?: HostId;
 }): Promise<SessionSearchResult> {
   const query = options.query.trim();
   if (!query) return { hits: [], truncated: false };
-  const result = await invoke<SessionSearchResult>("session_search", {
+  const hostId = options.hostId ?? getDefaultHostId();
+  const result = await invokeOn<SessionSearchResult>(hostId, "session_search", {
     options: {
       query,
       ...(options.cwd && options.cwd !== "~" ? { cwd: normalizeProjectPath(options.cwd) } : {}),
@@ -205,63 +243,99 @@ export async function searchSessions(options: {
     },
   });
   return {
-    hits: Array.isArray(result?.hits) ? result.hits : [],
+    hits: Array.isArray(result?.hits) ? result.hits.map((hit) => ({ ...hit, hostId })) : [],
     truncated: !!result?.truncated,
   };
 }
 
-export async function getSession(sessionId: string): Promise<Session | null> {
-  const record = await invoke<SessionRecord | null>("session_get", {
+export async function getSession(
+  sessionId: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<Session | null> {
+  const record = await invokeOn<SessionRecord | null>(hostId, "session_get", {
     sessionId,
   });
   if (!record) return null;
-  return recordToSession(record);
+  return recordToSession(record, hostId);
 }
 
-export async function deleteSession(sessionId: string): Promise<void> {
-  await invoke<void>("session_delete", { sessionId });
+export async function deleteSession(
+  sessionId: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  const queueKey = sessionRefKey(hostId, sessionId);
+  deletedSessionRefs.add(queueKey);
+  try {
+    await enqueueSessionWrite(queueKey, () =>
+      invokeOn<void>(hostId, "session_delete", { sessionId }),
+    );
+  } catch (error) {
+    deletedSessionRefs.delete(queueKey);
+    throw error;
+  }
 }
 
-export async function setSessionArchived(sessionId: string, archived: boolean): Promise<void> {
-  await invoke<void>("session_set_archived", { sessionId, archived });
+export async function setSessionArchived(
+  sessionId: string,
+  archived: boolean,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  await enqueueSessionWrite(sessionRefKey(hostId, sessionId), () =>
+    invokeOn<void>(hostId, "session_set_archived", { sessionId, archived }),
+  );
 }
 
-export async function setSessionPinned(sessionId: string, pinned: boolean): Promise<void> {
-  await invoke<void>("session_set_pinned", { sessionId, pinned });
+export async function setSessionPinned(
+  sessionId: string,
+  pinned: boolean,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  await invokeOn<void>(hostId, "session_set_pinned", { sessionId, pinned });
 }
 
 /**
  * `session_set_in_flight` runs off the main thread, so two replaces could
  * otherwise land in either order and restore a stale busy snapshot.
  */
-let inFlightWrite: Promise<unknown> = Promise.resolve();
+const inFlightWrites = new Map<HostId, Promise<unknown>>();
 
 export async function replaceInFlightSessions(
   refs: { sessionId: string; cwd: string }[],
+  hostId: HostId = getDefaultHostId(),
 ): Promise<void> {
-  const run = inFlightWrite
+  const run = (inFlightWrites.get(hostId) ?? Promise.resolve())
     .catch(() => undefined)
     .then(() =>
-      invoke("session_set_in_flight", {
+      invokeOn(hostId, "session_set_in_flight", {
         sessions: refs.map((ref) => ({
           sessionId: ref.sessionId,
           cwd: normalizeProjectPath(ref.cwd),
         })),
       }),
     );
-  inFlightWrite = run;
+  inFlightWrites.set(hostId, run);
   await run;
 }
 
 /** Kept across Vite reloads; boot must not delete the only copy. */
-export async function listInFlightSessions(): Promise<{ sessionId: string; cwd: string }[]> {
-  const rows = await invoke<{ sessionId: string; cwd: string }[]>("session_list_in_flight");
+export async function listInFlightSessions(
+  hostId: HostId = getDefaultHostId(),
+): Promise<{ sessionId: string; cwd: string }[]> {
+  const rows = await invokeOn<{ sessionId: string; cwd: string }[]>(
+    hostId,
+    "session_list_in_flight",
+  );
   return Array.isArray(rows) ? rows : [];
 }
 
 /** Destructive: the first window to boot after a quit owns these chats. */
-export async function takeInFlightSessions(): Promise<{ sessionId: string; cwd: string }[]> {
-  const rows = await invoke<{ sessionId: string; cwd: string }[]>("session_take_in_flight");
+export async function takeInFlightSessions(
+  hostId: HostId = getDefaultHostId(),
+): Promise<{ sessionId: string; cwd: string }[]> {
+  const rows = await invokeOn<{ sessionId: string; cwd: string }[]>(
+    hostId,
+    "session_take_in_flight",
+  );
   return Array.isArray(rows) ? rows : [];
 }
 
@@ -274,13 +348,13 @@ let workspaceWrite: Promise<unknown> = Promise.resolve();
 export async function saveWorkspaceSnapshot(snapshot: unknown): Promise<void> {
   const run = workspaceWrite
     .catch(() => undefined)
-    .then(() => invoke("workspace_set_snapshot", { snapshot }));
+    .then(() => invokeOn(getDefaultHostId(), "workspace_set_snapshot", { snapshot }));
   workspaceWrite = run;
   await run;
 }
 
 export async function loadWorkspaceSnapshot(): Promise<unknown | null> {
-  const raw = await invoke<unknown | null>("workspace_get_snapshot");
+  const raw = await invokeOn<unknown | null>(getDefaultHostId(), "workspace_get_snapshot");
   return raw ?? null;
 }
 
@@ -316,9 +390,16 @@ function sanitizeBlock(block: Block): Block | null {
   return next;
 }
 
-function normalizeSummary(summary: SessionSummary): SessionSummary {
+/**
+ * A host answers with a path on itself. A project root is carried through the
+ * workspace as a reference, so it is qualified again on the way back in — the
+ * one reply shape that needs it, because it is the one that is a project root.
+ */
+function normalizeSummary(summary: SessionSummary, hostId: HostId): SessionSummary {
   return {
     ...summary,
+    hostId,
+    cwd: formatProjectRef({ hostId, path: summary.cwd }),
     harness: asHarness(summary.harness),
     runtimeMode: asRuntimeMode(summary.runtimeMode),
     ...(summary.providerSessionId ? { providerSessionId: summary.providerSessionId } : {}),
@@ -332,13 +413,14 @@ function normalizeSummary(summary: SessionSummary): SessionSummary {
   };
 }
 
-function recordToSession(record: SessionRecord): Session {
+function recordToSession(record: SessionRecord, hostId: HostId): Session {
   const blocks = Array.isArray(record.blocks)
     ? record.blocks.map(sanitizeBlock).filter((block): block is Block => block != null)
     : [];
   return {
     id: record.id,
-    cwd: record.cwd,
+    hostId,
+    cwd: formatProjectRef({ hostId, path: record.cwd }),
     harness: asHarness(record.harness),
     model: record.model,
     modelSettings:

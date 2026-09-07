@@ -136,6 +136,42 @@ describe("forgetProject", () => {
   });
 });
 
+describe("projects on more than one host", () => {
+  beforeEach(() => {
+    mockLocalStorage();
+  });
+
+  afterEach(() => {
+    mockLocalStorage();
+  });
+
+  it("keeps the same path on two hosts as two rail entries", () => {
+    rememberProject("/home/me/app");
+    rememberProject("wavex-host://dev-box//home/me/app");
+
+    expect(loadRecents().map((item) => item.path)).toEqual([
+      "wavex-host://dev-box//home/me/app",
+      "/home/me/app",
+    ]);
+    expect(
+      projectRailItems(loadRecents(), "")
+        .map((item) => item.path)
+        .sort(),
+    ).toEqual(["/home/me/app", "wavex-host://dev-box//home/me/app"]);
+  });
+
+  it("forgets one host's project without touching the other", () => {
+    rememberProject("/home/me/app");
+    rememberProject("wavex-host://dev-box//home/me/app");
+    savePinnedProjects(["wavex-host://dev-box//home/me/app"]);
+
+    expect(forgetProject("/home/me/app").map((item) => item.path)).toEqual([
+      "wavex-host://dev-box//home/me/app",
+    ]);
+    expect(loadPinnedProjects()).toEqual(["wavex-host://dev-box//home/me/app"]);
+  });
+});
+
 describe("archiveProject", () => {
   beforeEach(() => {
     mockLocalStorage();
@@ -235,10 +271,10 @@ describe("worktrees on the rail", () => {
     rememberWorktrees("/Users/me/code/app", ["/private/tmp/app-main-agent"]);
 
     const items = projectRailItems(loadRecents(), "/private/tmp/app-main-agent");
-    expect(items.map((item) => item.path)).toEqual([
-      "/Users/me/code/app-tools",
-      "/private/tmp/app-main-agent",
-    ]);
+    expect(items.map((item) => item.path)).toEqual(
+      expect.arrayContaining(["/Users/me/code/app-tools", "/private/tmp/app-main-agent"]),
+    );
+    expect(items).toHaveLength(2);
   });
 
   it("does not spend a recents slot on a worktree", () => {

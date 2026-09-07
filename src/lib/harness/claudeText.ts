@@ -1,5 +1,7 @@
+import { projectKey, type HostId } from "../host";
 import { modelsFor } from "../models";
 import {
+  harnessHostId,
   killChild,
   resolveClaudeBinary,
   spawnChild,
@@ -33,8 +35,26 @@ type LiveText = {
   readyDone: (() => void) | null;
 };
 
-let live: LiveText | null = null;
-let turns: Promise<void> = Promise.resolve();
+type TextState = {
+  live: LiveText | null;
+  turns: Promise<void>;
+};
+
+/**
+ * One warm generator per host. A single module-level slot is one process: with
+ * two hosts, the second request tore down the first machine's child and then
+ * addressed its fixed child id over the wrong connection.
+ */
+const stateByHost = new Map<HostId, TextState>();
+
+function stateFor(hostId: HostId): TextState {
+  let state = stateByHost.get(hostId);
+  if (!state) {
+    state = { live: null, turns: Promise.resolve() };
+    stateByHost.set(hostId, state);
+  }
+  return state;
+}
 
 function pickTextModel(): string {
   const models = modelsFor("claude");
@@ -44,18 +64,20 @@ function pickTextModel(): string {
   return haiku?.nativeId ?? TEXT_MODEL;
 }
 
-export async function stopClaudeTextPrompt(): Promise<void> {
-  await dropLive();
+export async function stopClaudeTextPrompt(hostId?: HostId): Promise<void> {
+  await dropLive(harnessHostId("", hostId));
 }
 
-export function warmupClaudeText(cwd: string): Promise<void> {
+export function warmupClaudeText(cwd: string, hostIdArg?: HostId): Promise<void> {
   if (!cwd || cwd === "~") return Promise.resolve();
-  const run = turns
+  const hostId = harnessHostId(cwd, hostIdArg);
+  const state = stateFor(hostId);
+  const run = state.turns
     .catch(() => undefined)
     .then(async () => {
-      await ensureLive(cwd);
+      await ensureLive(cwd, hostId);
     });
-  turns = run.then(
+  state.turns = run.then(
     () => undefined,
     () => undefined,
   );
@@ -66,21 +88,27 @@ export async function runClaudeTextPrompt(input: {
   cwd: string;
   prompt: string;
   timeoutMs?: number;
+  hostId?: HostId;
 }): Promise<string> {
-  const run = turns.catch(() => undefined).then(() => promptOnLive(input));
-  turns = run.then(
+  const hostId = harnessHostId(input.cwd, input.hostId);
+  const state = stateFor(hostId);
+  const run = state.turns.catch(() => undefined).then(() => promptOnLive(input, hostId));
+  state.turns = run.then(
     () => undefined,
     () => undefined,
   );
   return run;
 }
 
-async function promptOnLive(input: {
-  cwd: string;
-  prompt: string;
-  timeoutMs?: number;
-}): Promise<string> {
-  const session = await ensureLive(input.cwd);
+async function promptOnLive(
+  input: {
+    cwd: string;
+    prompt: string;
+    timeoutMs?: number;
+  },
+  hostId: HostId,
+): Promise<string> {
+  const session = await ensureLive(input.cwd, hostId);
   session.output = "";
   session.collecting = true;
   const timeoutMs = input.timeoutMs ?? REQUEST_TIMEOUT_MS;
@@ -91,7 +119,11 @@ async function promptOnLive(input: {
       session.turnFailed = reject;
     });
 
-    await writeChild(TEXT_CHILD_ID, JSON.stringify(buildClaudeUserMessage({ text: input.prompt })));
+    await writeChild(
+      TEXT_CHILD_ID,
+      JSON.stringify(buildClaudeUserMessage({ text: input.prompt })),
+      hostId,
+    );
 
     await Promise.race([
       turnPromise,
@@ -104,24 +136,27 @@ async function promptOnLive(input: {
     if (!output) throw new Error("Claude returned empty output.");
     return output;
   } catch (error) {
-    if (session.closed) await dropLive();
+    if (session.closed) await dropLive(hostId);
     throw error;
   } finally {
     session.collecting = false;
     session.turnDone = null;
     session.turnFailed = null;
-    await dropLive();
+    await dropLive(hostId);
   }
 }
 
-async function ensureLive(cwd: string): Promise<LiveText> {
-  if (live && !live.closed && live.cwd === cwd) return live;
-  await dropLive();
-  return startLive(cwd);
+async function ensureLive(cwd: string, hostId: HostId): Promise<LiveText> {
+  const state = stateFor(hostId);
+  const current = state.live;
+  if (current && !current.closed && projectKey(current.cwd) === projectKey(cwd)) return current;
+  await dropLive(hostId);
+  return startLive(cwd, hostId);
 }
 
-async function startLive(cwd: string): Promise<LiveText> {
-  const { path } = await resolveClaudeBinary();
+async function startLive(cwd: string, hostId: HostId): Promise<LiveText> {
+  const state = stateFor(hostId);
+  const { path } = await resolveClaudeBinary(hostId);
   const session: LiveText = {
     cwd,
     collecting: false,
@@ -138,13 +173,15 @@ async function startLive(cwd: string): Promise<LiveText> {
     (line) => handleLine(session, line),
     () => {
       session.closed = true;
-      if (live === session) live = null;
+      if (state.live === session) state.live = null;
       session.turnFailed?.(new Error("Claude text generator exited"));
       session.readyDone?.();
       session.turnDone = null;
       session.turnFailed = null;
       session.readyDone = null;
     },
+    undefined,
+    hostId,
   );
 
   try {
@@ -156,21 +193,23 @@ async function startLive(cwd: string): Promise<LiveText> {
         model: pickTextModel(),
       }),
       cwd,
+      hostId,
     );
-    live = session;
+    state.live = session;
     await waitForReady(session, INIT_TIMEOUT_MS);
     return session;
   } catch (error) {
     session.closed = true;
-    unwatchChild(TEXT_CHILD_ID);
-    await killChild(TEXT_CHILD_ID).catch(() => undefined);
+    unwatchChild(TEXT_CHILD_ID, hostId);
+    await killChild(TEXT_CHILD_ID, hostId).catch(() => undefined);
     throw error;
   }
 }
 
-async function dropLive(): Promise<void> {
-  const current = live;
-  live = null;
+async function dropLive(hostId: HostId): Promise<void> {
+  const state = stateFor(hostId);
+  const current = state.live;
+  state.live = null;
   if (current) {
     current.closed = true;
     current.readyDone?.();
@@ -179,8 +218,8 @@ async function dropLive(): Promise<void> {
     current.turnFailed = null;
     current.readyDone = null;
   }
-  unwatchChild(TEXT_CHILD_ID);
-  await killChild(TEXT_CHILD_ID).catch(() => undefined);
+  unwatchChild(TEXT_CHILD_ID, hostId);
+  await killChild(TEXT_CHILD_ID, hostId).catch(() => undefined);
 }
 
 function handleLine(session: LiveText, line: string): void {

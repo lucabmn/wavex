@@ -12,12 +12,14 @@ import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import {
   APP_COMMANDS,
   PALETTE_MODES,
+  commandsForClient,
   paletteEntries,
   parsePaletteQuery,
   type CommandId,
   type PaletteEntry,
   type PaletteMode,
 } from "../lib/commands";
+import { IS_BROWSER_CLIENT } from "../lib/clientRuntime";
 import { LAYER } from "../lib/layers";
 import { useDialogFocus } from "../hooks/useDialogFocus";
 
@@ -43,7 +45,10 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
   const runnableKey = Object.keys(handlers).sort().join(" ");
   const runnable = useMemo(() => new Set(runnableKey.split(" ") as CommandId[]), [runnableKey]);
   const { mode, rest } = parsePaletteQuery(query);
-  const entries = useMemo(() => paletteEntries(APP_COMMANDS, runnable, query), [query, runnable]);
+  const entries = useMemo(
+    () => paletteEntries(commandsForClient(APP_COMMANDS, IS_BROWSER_CLIENT), runnable, query),
+    [query, runnable],
+  );
   const meta = PALETTE_MODES[mode];
 
   useEffect(() => {

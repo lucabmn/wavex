@@ -11,10 +11,11 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::dirs_home;
 use crate::fs::expand_home;
+use crate::host_events;
 
 const DATA_EVENT: &str = "pty-data";
 const EXIT_EVENT: &str = "pty-exit";
@@ -387,7 +388,7 @@ fn spawn_unix(
             false
         };
         if emit {
-            let _ = wait_app.emit(EXIT_EVENT, PtyExit { id: wait_id, code });
+            host_events::publish(&wait_app, EXIT_EVENT, PtyExit { id: wait_id, code });
         }
     });
 
@@ -504,7 +505,7 @@ fn spawn_windows(
             .try_state::<PtyHost>()
             .is_some_and(|host| host.remove_if_pid(&wait_id, pid).is_some());
         if emit {
-            let _ = wait_app.emit(EXIT_EVENT, PtyExit { id: wait_id, code });
+            host_events::publish(&wait_app, EXIT_EVENT, PtyExit { id: wait_id, code });
         }
     });
 
@@ -761,7 +762,8 @@ fn emit_pty_data(app: &AppHandle, id: &str, bytes: &[u8]) {
         return;
     }
     let data = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes);
-    let _ = app.emit(
+    host_events::publish(
+        app,
         DATA_EVENT,
         PtyData {
             id: id.to_string(),

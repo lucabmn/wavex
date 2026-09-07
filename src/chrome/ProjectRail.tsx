@@ -40,8 +40,11 @@ import {
   saveProjectRailWidth,
 } from "../lib/appearance";
 import { basename, revealPath, type GitDiffStats } from "../lib/fs";
-import { IS_MAC, MOD, REVEAL_LABEL } from "../lib/platform";
-import { pathKey, projectName } from "../lib/paths";
+import { canRevealPath, IS_MAC, MOD, revealLabel } from "../lib/platform";
+import { hostIdForProject } from "../lib/transport";
+import type { HostId } from "../lib/host";
+import { projectKey } from "../lib/host";
+import { projectName } from "../lib/paths";
 import {
   collectRailProjects,
   loadPinnedProjects,
@@ -89,13 +92,20 @@ import { TabGroupMenu, type TabGroupMenuExtraItem } from "./TabGroupMenu";
 import { TerminalSpinner } from "./TerminalSpinner";
 import type { SettingsSectionId } from "../lib/settings";
 
-function projectMenuExtraItems(pinned: boolean, canRemove: boolean): TabGroupMenuExtraItem[] {
+function projectMenuExtraItems(
+  pinned: boolean,
+  canRemove: boolean,
+  hostId: HostId,
+): TabGroupMenuExtraItem[] {
   const items: TabGroupMenuExtraItem[] = [
     { id: "worktree", label: "New worktree…", icon: GitBranch },
     pinned
       ? { id: "unpin", label: "Unpin project", icon: PinOff }
       : { id: "pin", label: "Pin project", icon: Pin },
-    { id: "reveal", label: REVEAL_LABEL, icon: FolderOpen },
+    // A file manager opens where the user is, not on the host.
+    ...(canRevealPath(hostId)
+      ? [{ id: "reveal", label: revealLabel(hostId), icon: FolderOpen }]
+      : []),
   ];
   if (canRemove) {
     items.push(
@@ -255,7 +265,7 @@ export function ProjectRail({
 
   useEffect(() => {
     setPinnedPaths((prev) => {
-      const next = prev.filter((path) => allProjects.has(pathKey(path)));
+      const next = prev.filter((path) => allProjects.has(projectKey(path)));
       if (next.length === prev.length) return prev;
       savePinnedProjects(next);
       return next;
@@ -350,7 +360,7 @@ export function ProjectRail({
     const { path, projectKey } = projectMenu;
     if (action === "worktree") setCreatingWorktreeFor(path);
     else if (action === "pin" || action === "unpin") onTogglePin(path);
-    else if (action === "reveal") void revealPath(path);
+    else if (action === "reveal") void revealPath(path, hostIdForProject(path));
     else if (action === "archive") {
       onRemoveProject?.(path, { purgeData: false });
     } else if (action === "delete") {
@@ -591,6 +601,7 @@ export function ProjectRail({
           extraItems={projectMenuExtraItems(
             pinnedPaths.some((pinned) => sameProjectPath(pinned, projectMenu.path)),
             Boolean(onRemoveProject),
+            hostIdForProject(projectMenu.path),
           )}
           onExtraPick={onProjectMenuPick}
         />
@@ -1053,7 +1064,15 @@ function ProjectCard({
         )}
         {hasChanges ? (
           <span className="shrink-0 group-hover:hidden">
-            <ProjectDiffStat additions={additions} deletions={deletions} />
+            <ProjectDiffStat additions={additions} deletions={deletions} files={files} />
+          </span>
+        ) : stats ? (
+          <span
+            className="shrink-0 text-emerald-400/70 group-hover:hidden"
+            title="No uncommitted changes"
+            aria-label="No uncommitted changes"
+          >
+            <Check className="size-3 shrink-0" strokeWidth={2.25} />
           </span>
         ) : null}
       </button>
@@ -1101,18 +1120,34 @@ function isBusyPath(path: string, busy: Set<string>): boolean {
   return false;
 }
 
-function ProjectDiffStat({ additions, deletions }: { additions: number; deletions: number }) {
-  if (additions <= 0 && deletions <= 0) return null;
+function ProjectDiffStat({
+  additions,
+  deletions,
+  files = 0,
+}: {
+  additions: number;
+  deletions: number;
+  files?: number;
+}) {
+  if (additions <= 0 && deletions <= 0 && files <= 0) return null;
 
-  const label = [additions > 0 ? `+${additions}` : "", deletions > 0 ? `-${deletions}` : ""]
+  const label = [
+    files > 0 ? `${files} ${files === 1 ? "file" : "files"} changed` : "",
+    additions > 0 ? `+${additions}` : "",
+    deletions > 0 ? `-${deletions}` : "",
+  ]
     .filter(Boolean)
     .join(" ");
 
   return (
     <span
       title={`${label} uncommitted`}
+      aria-label={`${label} uncommitted`}
       className="flex shrink-0 items-center gap-1 font-mono text-[11px] font-semibold tabular-nums"
     >
+      {files > 0 ? (
+        <span className="font-sans font-medium text-content/55">{files} changed</span>
+      ) : null}
       {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
       {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
     </span>
@@ -1130,16 +1165,20 @@ function projectCardTitle(
   const files = stats?.files ?? 0;
   const additions = stats?.additions ?? 0;
   const deletions = stats?.deletions ?? 0;
-  if (files > 0 || additions > 0 || deletions > 0) {
-    parts.push(
-      [
-        files > 0 ? `${files} ${files === 1 ? "file" : "files"} changed` : "",
-        additions > 0 ? `+${additions}` : "",
-        deletions > 0 ? `-${deletions}` : "",
-      ]
-        .filter(Boolean)
-        .join(" "),
-    );
+  if (stats) {
+    if (files > 0 || additions > 0 || deletions > 0) {
+      parts.push(
+        [
+          files > 0 ? `${files} ${files === 1 ? "file" : "files"} changed` : "",
+          additions > 0 ? `+${additions}` : "",
+          deletions > 0 ? `-${deletions}` : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+    } else {
+      parts.push("Clean");
+    }
   }
   return parts.join("\n");
 }
@@ -1150,8 +1189,12 @@ function projectCardAriaLabel(name: string, stats: GitDiffStats | null, busy: bo
   const files = stats?.files ?? 0;
   const additions = stats?.additions ?? 0;
   const deletions = stats?.deletions ?? 0;
-  if (files > 0) {
-    parts.push(`${files} ${files === 1 ? "file" : "files"} changed`);
+  if (stats) {
+    if (files > 0) {
+      parts.push(`${files} ${files === 1 ? "file" : "files"} changed`);
+    } else {
+      parts.push("clean");
+    }
   }
   if (additions > 0) parts.push(`+${additions}`);
   if (deletions > 0) parts.push(`-${deletions}`);

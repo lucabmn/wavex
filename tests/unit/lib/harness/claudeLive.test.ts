@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sent: string[] = [];
 let onLine: ((line: string) => void) | undefined;
 
+import { hostPathArgs } from "@/lib/host";
+
 vi.mock("@/lib/harness/child", () => ({
+  harnessTarget: (cwd: string, hostId?: string) => hostPathArgs(cwd, hostId, "local"),
+  harnessHostId: (cwd: string, hostId?: string) => hostPathArgs(cwd, hostId, "local").hostId,
   resolveClaudeBinary: async () => ({ path: "/fake/claude" }),
   spawnChild: async () => undefined,
   killChild: async () => undefined,
@@ -16,7 +20,7 @@ vi.mock("@/lib/harness/child", () => ({
   },
 }));
 
-const { sendClaudeTurn, stopClaudeSession, __claudeTestReset } =
+const { sendClaudeTurn, stopClaudeSession, respondClaudeApproval, __claudeTestReset } =
   await import("@/lib/harness/claude");
 import type { HarnessEvent } from "@/lib/harness/types";
 
@@ -75,6 +79,70 @@ beforeEach(() => {
 afterEach(async () => {
   await stopClaudeSession("s1");
   __claudeTestReset();
+});
+
+describe("claude approvals", () => {
+  it("answers an approval decided the moment it is announced", async () => {
+    // An automatic policy answers inside the announcement rather than after
+    // it. Registering the pending decision only once the event has been
+    // emitted would leave this call with nothing to resolve, and the turn
+    // would wait for a decision that had already been made.
+    const events: HarnessEvent[] = [];
+    const turn = sendClaudeTurn({
+      sessionId: "s1",
+      cwd: "/repo",
+      model: "claude:claude-sonnet-5",
+      modelSettings: {},
+      runtimeMode: "supervised",
+      text: "run the tests",
+      attachments: [],
+      onEvent: (event) => {
+        events.push(event);
+        if (event.type === "approval.requested") {
+          respondClaudeApproval("s1", event.requestId, "allow");
+        }
+      },
+    });
+
+    await waitFor(
+      () =>
+        parse().some((m) => {
+          const request = m.request as Record<string, unknown> | undefined;
+          return request?.subtype === "initialize";
+        }),
+      "initialize",
+    );
+    emit({ type: "system", subtype: "init", session_id: "sess_1" });
+    emit({
+      type: "control_response",
+      response: { subtype: "success", request_id: "wavex_1" },
+    });
+    await waitFor(() => parse().some((m) => m.type === "user"), "user prompt");
+
+    emit({
+      type: "control_request",
+      request_id: "req_auto",
+      request: {
+        subtype: "can_use_tool",
+        tool_name: "Bash",
+        tool_use_id: "toolu_auto",
+        input: { command: "pnpm test" },
+      },
+    });
+
+    await waitFor(
+      () =>
+        parse().some((m) => {
+          const response = m.response as Record<string, unknown> | undefined;
+          return m.type === "control_response" && response?.request_id === "req_auto";
+        }),
+      "permission response",
+    );
+    expect(events.some((event) => event.type === "approval.resolved")).toBe(true);
+
+    emit({ type: "result", subtype: "success", session_id: "sess_1" });
+    await turn;
+  });
 });
 
 describe("claude subagents", () => {
@@ -220,5 +288,177 @@ describe("claude subagents", () => {
         (event) => event.type === "message.delta" && event.text.includes("I will grep for tokens"),
       ),
     ).toBe(false);
+  });
+});
+
+describe("claude subagent transcripts", () => {
+  it("nests a subagent's text and tool calls under its Agent call", async () => {
+    const { events, turn } = await startTurn("s1");
+    emit({
+      type: "assistant",
+      session_id: "sess_1",
+      message: {
+        content: [
+          {
+            type: "tool_use",
+            id: "toolu_agent",
+            name: "Agent",
+            input: {
+              description: "Explore",
+              subagent_type: "explore",
+              prompt: "Find the token refresh path",
+            },
+          },
+        ],
+      },
+    });
+    emit({
+      type: "assistant",
+      parent_tool_use_id: "toolu_agent",
+      message: {
+        model: "claude-haiku-4-5-20251001",
+        content: [
+          { type: "text", text: "I will grep for tokens" },
+          {
+            type: "tool_use",
+            id: "toolu_grep",
+            name: "Grep",
+            input: { pattern: "refreshToken" },
+          },
+        ],
+      },
+    });
+    emit({
+      type: "user",
+      parent_tool_use_id: "toolu_agent",
+      message: {
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "toolu_grep",
+            content: "src/auth.ts:12",
+          },
+        ],
+      },
+    });
+    emit({ type: "result", subtype: "success", session_id: "sess_1" });
+    await turn;
+
+    expect(events).toContainEqual({
+      type: "subagent.updated",
+      callId: "toolu_agent",
+      agentType: "explore",
+      prompt: "Find the token refresh path",
+    });
+    expect(events).toContainEqual({
+      type: "subagent.updated",
+      callId: "toolu_agent",
+      model: "claude-haiku-4-5-20251001",
+    });
+    const nested = events.filter(
+      (event) => event.type === "subagent.event" && event.callId === "toolu_agent",
+    );
+    const inner = nested.map((event) => (event.type === "subagent.event" ? event.event : event));
+    expect(inner).toContainEqual({ type: "message.delta", text: "I will grep for tokens" });
+    expect(
+      inner.some((event) => event.type === "tool.started" && event.callId === "toolu_grep"),
+    ).toBe(true);
+    expect(
+      inner.some(
+        (event) =>
+          event.type === "tool.updated" &&
+          event.callId === "toolu_grep" &&
+          event.status === "completed",
+      ),
+    ).toBe(true);
+    // The parent transcript still only sees the Agent row and its latest step.
+    expect(
+      events.some((event) => event.type === "tool.started" && event.callId === "toolu_grep"),
+    ).toBe(false);
+    expect(
+      events.some(
+        (event) =>
+          event.type === "tool.updated" && event.callId === "toolu_agent" && !!event.detail,
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps the turn open when the Agent result is only a launch receipt", async () => {
+    const { events, turn } = await startTurn("s1");
+    let settled = false;
+    void turn.then(() => {
+      settled = true;
+    });
+
+    emit({
+      type: "assistant",
+      session_id: "sess_1",
+      message: {
+        content: [
+          {
+            type: "tool_use",
+            id: "toolu_agent",
+            name: "Agent",
+            input: { description: "Explore", subagent_type: "Explore" },
+          },
+        ],
+      },
+    });
+    emit({
+      type: "user",
+      session_id: "sess_1",
+      message: {
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "toolu_agent",
+            content:
+              "Async agent launched successfully. agentId: a1 The agent is working in the background.",
+          },
+        ],
+      },
+    });
+    emit({ type: "result", subtype: "success", session_id: "sess_1" });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+    expect(
+      events.some(
+        (event) =>
+          event.type === "tool.updated" &&
+          event.callId === "toolu_agent" &&
+          event.status === "completed",
+      ),
+    ).toBe(false);
+
+    emit({
+      type: "system",
+      subtype: "task_started",
+      session_id: "sess_1",
+      task_id: "task_1",
+      tool_use_id: "toolu_agent",
+      description: "Explore",
+      task_type: "local_agent",
+      is_backgrounded: false,
+    });
+    emit({
+      type: "system",
+      subtype: "task_notification",
+      session_id: "sess_1",
+      task_id: "task_1",
+      tool_use_id: "toolu_agent",
+      status: "completed",
+      summary: "Found it.",
+    });
+    await turn;
+    expect(settled).toBe(true);
+    expect(
+      events.some(
+        (event) =>
+          event.type === "tool.updated" &&
+          event.callId === "toolu_agent" &&
+          event.status === "completed" &&
+          event.detail === "Found it.",
+      ),
+    ).toBe(true);
   });
 });

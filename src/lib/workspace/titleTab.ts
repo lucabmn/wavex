@@ -35,6 +35,30 @@ export type TitleTab = {
   groupId?: string;
   dirty?: boolean;
   terminal?: boolean;
+  /** Any session in this tab waits for an approval decision. */
+  needsApproval?: boolean;
+  /** A finished turn in this tab has an unread reply. */
+  hasUnread?: boolean;
+  /** Working-copy branch shown on this tab. */
+  branch?: string;
+  /** Uncommitted working-copy state for this tab's project. */
+  changedFiles?: number;
+  additions?: number;
+  deletions?: number;
+  /** Lint/diagnostic problems across this tab's open files. */
+  checkErrors?: number;
+};
+
+/** Per-tab live state merged into `toTitleTab`. All fields optional. */
+export type TitleTabStatus = {
+  unreadIds?: Set<string>;
+  fileErrorCounts?: Map<string, number>;
+  git?: {
+    branch?: string;
+    files?: number;
+    additions?: number;
+    deletions?: number;
+  };
 };
 
 export function conversationTitle(session: Session): string {
@@ -81,7 +105,14 @@ export function titleTabsEqual(a: TitleTab[], b: TitleTab[]): boolean {
       tab.multiPane === other.multiPane &&
       tab.fileFocused === other.fileFocused &&
       tab.terminal === other.terminal &&
-      tab.groupId === other.groupId
+      tab.groupId === other.groupId &&
+      tab.needsApproval === other.needsApproval &&
+      tab.hasUnread === other.hasUnread &&
+      tab.branch === other.branch &&
+      tab.changedFiles === other.changedFiles &&
+      tab.additions === other.additions &&
+      tab.deletions === other.deletions &&
+      tab.checkErrors === other.checkErrors
     );
   });
 }
@@ -90,6 +121,7 @@ export function toTitleTab(
   tab: WorkspaceTab,
   sessions: Session[],
   dirtyFiles: Set<string>,
+  status?: TitleTabStatus,
 ): TitleTab {
   const paneIds = leafIds(tab.layout);
   const multiPane = paneIds.length > 1;
@@ -127,13 +159,16 @@ export function toTitleTab(
       ? `terminal:${file.id}`
       : file.plan
         ? `plan:${file.plan.blockId}`
-        : file.releaseNotes
-          ? `release-notes:${file.releaseNotes.version}`
-          : file.path;
+        : file.subagent
+          ? `subagent:${file.subagent.blockId}`
+          : file.releaseNotes
+            ? `release-notes:${file.releaseNotes.version}`
+            : file.path;
     if (seenKeys.has(key)) return;
     seenKeys.add(key);
     files.push(
       file.plan?.title?.trim() ||
+        file.subagent?.title?.trim() ||
         (file.releaseNotes
           ? releaseNotesTitle(file.releaseNotes.version)
           : file.terminal
@@ -165,6 +200,20 @@ export function toTitleTab(
   const hasTerminal = (tab.terminalPanes ?? []).some((pane) => pane.files.some(isTerminalTab));
   const focusedFile = focusedFileTab(tab);
 
+  const needsApproval = tabSessions.some((session) => sessionNeedsInput(session));
+  const hasUnread = status?.unreadIds
+    ? tabSessions.some((session) => status.unreadIds?.has(session.id))
+    : false;
+  let checkErrors = 0;
+  if (status?.fileErrorCounts) {
+    const panes = [...tab.editorPanes, ...(tab.terminalPanes ?? [])];
+    for (const pane of panes) {
+      for (const file of pane.files) {
+        checkErrors += status.fileErrorCounts.get(file.id) ?? 0;
+      }
+    }
+  }
+
   return {
     id: tab.id,
     project: focused ? projectName(focused.cwd) : focusedFile ? projectName(focusedFile.cwd) : "~",
@@ -181,5 +230,12 @@ export function toTitleTab(
     ),
     terminal: hasTerminal && harnesses.length === 0,
     groupId: tab.groupId,
+    ...(needsApproval ? { needsApproval } : {}),
+    ...(hasUnread ? { hasUnread } : {}),
+    ...(status?.git?.branch ? { branch: status.git.branch } : {}),
+    ...(status?.git?.files != null ? { changedFiles: status.git.files } : {}),
+    ...(status?.git?.additions != null ? { additions: status.git.additions } : {}),
+    ...(status?.git?.deletions != null ? { deletions: status.git.deletions } : {}),
+    ...(checkErrors > 0 ? { checkErrors } : {}),
   };
 }

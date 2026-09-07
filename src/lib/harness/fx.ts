@@ -1,7 +1,15 @@
+import { projectKey, type HostId } from "../host";
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { AcpClient, type AcpHandlers } from "./acp";
-import { killChild, resolveFxBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import {
+  harnessTarget,
+  killChild,
+  resolveFxBinary,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+} from "./child";
 import {
   autoPermissionOption,
   eventsFromAcpUpdate,
@@ -27,6 +35,8 @@ type Live = {
   acp: AcpClient;
   acpSessionId: string;
   cwd: string;
+  /** The machine running this child. Only it can steer, cancel, or kill it. */
+  hostId: HostId;
   modelConfigId: string;
   configOptions: SessionConfigOption[];
   muteUpdates: boolean;
@@ -39,6 +49,7 @@ type Live = {
 type Resume = {
   acpSessionId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 // fx answers `initialize` in well under a second when it can reach a
@@ -145,48 +156,74 @@ export async function cancelFxTurn(sessionId: string): Promise<void> {
   live.acp.rejectPending(new Error("cancelled"));
 }
 
-export async function stopFxSession(sessionId: string): Promise<void> {
+export async function stopFxSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // Only the machine that spawned the child can reap it; sending
+  // `harness_kill` to this device instead would leave the real one running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) live.muteUpdates = true;
   live?.acp.close();
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
-export async function forgetFxSession(sessionId: string): Promise<void> {
+export async function forgetFxSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
   resumeByThread.delete(sessionId);
-  await stopFxSession(sessionId);
+  await stopFxSession(sessionId, resumeHostId ?? fallbackHostId);
 }
 
-export function bindFxSession(threadId: string, acpSessionId: string, cwd: string): void {
+export function bindFxSession(
+  threadId: string,
+  acpSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
   const sessionId = acpSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
-  resumeByThread.set(threadId, { acpSessionId: sessionId, cwd });
+  resumeByThread.set(threadId, {
+    acpSessionId: sessionId,
+    cwd,
+    hostId: harnessTarget(cwd, hostId).hostId,
+  });
+}
+
+/**
+ * A child is reusable only if it is the same checkout on the same machine: two
+ * hosts can hold the same path, and reusing across them would steer the wrong
+ * process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(input: SendTurnInput): Promise<Live> {
+  const resolved = harnessTarget(input.cwd, input.hostId);
+  const hostId = resolved.hostId;
+  const target = { cwd: input.cwd, hostId };
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd) {
+  if (existing && sameWork(existing, target)) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
   }
   if (existing) {
     resumeByThread.delete(input.sessionId);
-    await stopFxSession(input.sessionId);
+    await stopFxSession(input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canLoad = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canLoad = resume != null && sameWork(resume, target);
+  if (resume && !canLoad) {
     resumeByThread.delete(input.sessionId);
   }
 
-  const { path } = await resolveFxBinary();
+  const { path } = await resolveFxBinary(hostId);
   const handlers: AcpHandlers = {};
-  const acp = new AcpClient(input.sessionId, handlers);
+  const acp = new AcpClient(input.sessionId, handlers, hostId);
   const liveRef: { current: Live | null } = { current: null };
   const muteGate = { current: false };
 
@@ -233,9 +270,10 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         emit({ type: "session.error", message: line.trim() });
       }
     },
+    hostId,
   );
 
-  await spawnChild(input.sessionId, path, fxSpawnArgs(input.model), input.cwd);
+  await spawnChild(input.sessionId, path, fxSpawnArgs(input.model), input.cwd, hostId);
 
   try {
     try {
@@ -272,7 +310,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
             "session/load",
             {
               sessionId: resume.acpSessionId,
-              cwd: input.cwd,
+              cwd: resolved.path,
               mcpServers: [],
             },
             SESSION_TIMEOUT_MS,
@@ -292,7 +330,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     if (!acpSessionId) {
       setup = await acp.request<SessionSetupResult>(
         "session/new",
-        { cwd: input.cwd, mcpServers: [] },
+        { cwd: resolved.path, mcpServers: [] },
         SESSION_TIMEOUT_MS,
       );
       acpSessionId = sessionIdFromResult(setup);
@@ -304,6 +342,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       acp,
       acpSessionId,
       cwd: input.cwd,
+      hostId,
       modelConfigId: extractModelConfigId(configOptions),
       configOptions,
       muteUpdates: didLoad,
@@ -317,6 +356,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     resumeByThread.set(input.sessionId, {
       acpSessionId,
       cwd: input.cwd,
+      hostId,
     });
     live.onEvent({
       type: "session.providerBound",
@@ -326,7 +366,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     return live;
   } catch (error) {
     acp.close(error instanceof Error ? error : new Error(String(error)));
-    await stopFxSession(input.sessionId);
+    await stopFxSession(input.sessionId, hostId);
     throw error;
   }
 }

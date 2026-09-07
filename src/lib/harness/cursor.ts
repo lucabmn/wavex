@@ -1,8 +1,16 @@
+import { projectKey, type HostId } from "../host";
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { promptBlocks } from "../attachments";
 import { AcpClient, type AcpHandlers } from "./acp";
-import { killChild, resolveCursorBinary, spawnChild, unwatchChild, watchChild } from "./child";
+import {
+  harnessTarget,
+  killChild,
+  resolveCursorBinary,
+  spawnChild,
+  unwatchChild,
+  watchChild,
+} from "./child";
 import { readStoredCursorToolCalls, type StoredCursorToolCall } from "./cursorStore";
 import type { ApprovalDecision, HarnessEvent, SendTurnInput, SteerTurnInput } from "./types";
 import {
@@ -42,6 +50,8 @@ type Live = {
   acp: AcpClient;
   acpSessionId: string;
   cwd: string;
+  /** The machine running this child. Only it can steer, cancel, or kill it. */
+  hostId: HostId;
   modelConfigId: string;
   configOptions: SessionConfigOption[];
   muteUpdates: boolean;
@@ -61,6 +71,7 @@ type Live = {
 type Resume = {
   acpSessionId: string;
   cwd: string;
+  hostId: HostId;
 };
 
 const liveByThread = new Map<string, Live>();
@@ -157,9 +168,12 @@ export async function cancelCursorTurn(sessionId: string): Promise<void> {
 }
 
 /** Kill the Cursor process but keep the ACP session id so we can session/load. */
-export async function stopCursorSession(sessionId: string): Promise<void> {
+export async function stopCursorSession(sessionId: string, fallbackHostId?: HostId): Promise<void> {
   cancelledThreads.delete(sessionId);
   const live = liveByThread.get(sessionId);
+  // Only the machine that spawned the child can reap it; sending
+  // `harness_kill` to this device instead would leave the real one running.
+  const hostId = live?.hostId ?? resumeByThread.get(sessionId)?.hostId ?? fallbackHostId;
   liveByThread.delete(sessionId);
   if (live) {
     live.muteUpdates = true;
@@ -171,44 +185,70 @@ export async function stopCursorSession(sessionId: string): Promise<void> {
     live.questions.clear();
   }
   live?.acp.close();
-  unwatchChild(sessionId);
-  await killChild(sessionId).catch(() => undefined);
+  if (!hostId) return;
+  unwatchChild(sessionId, hostId);
+  await killChild(sessionId, hostId).catch(() => undefined);
 }
 
 /** Delete or idle detach — drop the Cursor conversation too. */
-export async function forgetCursorSession(sessionId: string): Promise<void> {
+export async function forgetCursorSession(
+  sessionId: string,
+  fallbackHostId?: HostId,
+): Promise<void> {
+  const resumeHostId = resumeByThread.get(sessionId)?.hostId;
   resumeByThread.delete(sessionId);
-  await stopCursorSession(sessionId);
+  await stopCursorSession(sessionId, resumeHostId ?? fallbackHostId);
 }
 
 /** Seed ACP resume state for a restored wavex session. */
-export function bindCursorSession(threadId: string, acpSessionId: string, cwd: string): void {
+export function bindCursorSession(
+  threadId: string,
+  acpSessionId: string,
+  cwd: string,
+  hostId?: HostId,
+): void {
   const sessionId = acpSessionId.trim();
   if (!threadId || !sessionId || !cwd.trim()) return;
-  resumeByThread.set(threadId, { acpSessionId: sessionId, cwd });
+  resumeByThread.set(threadId, {
+    acpSessionId: sessionId,
+    cwd,
+    hostId: harnessTarget(cwd, hostId).hostId,
+  });
+}
+
+/**
+ * A child is reusable only if it is the same checkout on the same machine: two
+ * hosts can hold the same path, and reusing across them would steer the wrong
+ * process.
+ */
+function sameWork(a: { cwd: string; hostId: HostId }, b: { cwd: string; hostId: HostId }): boolean {
+  return a.hostId === b.hostId && projectKey(a.cwd) === projectKey(b.cwd);
 }
 
 async function ensureLive(input: SendTurnInput): Promise<Live> {
+  const resolved = harnessTarget(input.cwd, input.hostId);
+  const hostId = resolved.hostId;
+  const target = { cwd: input.cwd, hostId };
   const existing = liveByThread.get(input.sessionId);
-  if (existing && existing.cwd === input.cwd) {
+  if (existing && sameWork(existing, target)) {
     existing.onEvent = input.onEvent;
     existing.runtimeMode = input.runtimeMode;
     return existing;
   }
   if (existing) {
     resumeByThread.delete(input.sessionId);
-    await stopCursorSession(input.sessionId);
+    await stopCursorSession(input.sessionId, existing.hostId);
   }
 
   const resume = resumeByThread.get(input.sessionId);
-  const canLoad = resume != null && resume.cwd === input.cwd;
-  if (resume && resume.cwd !== input.cwd) {
+  const canLoad = resume != null && sameWork(resume, target);
+  if (resume && !canLoad) {
     resumeByThread.delete(input.sessionId);
   }
 
-  const { path } = await resolveCursorBinary();
+  const { path } = await resolveCursorBinary(hostId);
   const handlers: AcpHandlers = {};
-  const acp = new AcpClient(input.sessionId, handlers);
+  const acp = new AcpClient(input.sessionId, handlers, hostId);
   const liveRef: { current: Live | null } = { current: null };
   const muteGate = { current: false };
 
@@ -232,9 +272,11 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       liveByThread.delete(input.sessionId);
       input.onEvent({ type: "session.ended", code });
     },
+    undefined,
+    hostId,
   );
 
-  await spawnChild(input.sessionId, path, ["acp"], input.cwd);
+  await spawnChild(input.sessionId, path, ["acp"], input.cwd, hostId);
 
   try {
     await acp.request("initialize", {
@@ -253,7 +295,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       try {
         setup = await acp.request<SessionSetupResult>("session/load", {
           sessionId: resume.acpSessionId,
-          cwd: input.cwd,
+          cwd: resolved.path,
           mcpServers: [],
         });
         acpSessionId = resume.acpSessionId;
@@ -269,7 +311,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
 
     if (!acpSessionId) {
       setup = await acp.request<SessionSetupResult>("session/new", {
-        cwd: input.cwd,
+        cwd: resolved.path,
         mcpServers: [],
       });
       acpSessionId = setup.sessionId?.trim();
@@ -280,6 +322,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
       acp,
       acpSessionId,
       cwd: input.cwd,
+      hostId,
       modelConfigId: extractModelConfigId(setup),
       configOptions: readConfigOptions(setup?.configOptions),
       muteUpdates: didLoad,
@@ -299,6 +342,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     resumeByThread.set(input.sessionId, {
       acpSessionId,
       cwd: input.cwd,
+      hostId,
     });
     live.onEvent({
       type: "session.providerBound",
@@ -308,7 +352,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     return live;
   } catch (error) {
     acp.close(error instanceof Error ? error : new Error(String(error)));
-    await stopCursorSession(input.sessionId);
+    await stopCursorSession(input.sessionId, hostId);
     throw error;
   }
 }
@@ -428,6 +472,10 @@ async function handleAskQuestion(live: Live, id: number, params: unknown) {
       : typeof rec?.tool_call_id === "string"
         ? rec.tool_call_id
         : undefined;
+  // Registered before it is announced, for the same reason as an approval.
+  const answered = new Promise<UserQuestionReply>((resolve) => {
+    live.questions.set(id, resolve);
+  });
   live.onEvent({
     type: "question.asked",
     requestId: id,
@@ -436,9 +484,7 @@ async function handleAskQuestion(live: Live, id: number, params: unknown) {
     ...(callId ? { callId } : {}),
   });
 
-  const reply = await new Promise<UserQuestionReply>((resolve) => {
-    live.questions.set(id, resolve);
-  });
+  const reply = await answered;
   live.questions.delete(id);
   live.onEvent({
     type: "question.resolved",
@@ -525,6 +571,13 @@ async function handlePermission(live: Live, id: number, params: unknown) {
     return;
   }
 
+  // Registered before it is announced. A policy that answers the moment it
+  // sees the event answers synchronously, and a pending entry created
+  // afterwards would find nothing to resolve — leaving the turn waiting on a
+  // decision that has already been made.
+  const decided = new Promise<ApprovalDecision>((resolve) => {
+    live.approvals.set(id, resolve);
+  });
   live.onEvent({
     type: "approval.requested",
     requestId: id,
@@ -534,9 +587,7 @@ async function handlePermission(live: Live, id: number, params: unknown) {
     preview,
   });
 
-  const decision = await new Promise<ApprovalDecision>((resolve) => {
-    live.approvals.set(id, resolve);
-  });
+  const decision = await decided;
   live.approvals.delete(id);
   live.onEvent({ type: "approval.resolved", requestId: id, decision });
 
@@ -692,7 +743,11 @@ async function refreshCursorToolEnrichments(live: Live): Promise<void> {
   live.toolEnrichmentRunning = true;
   const callIds = [...live.pendingToolEnrichments.keys()].slice(0, 256);
   try {
-    const storedCalls = await readStoredCursorToolCalls(live.acpSessionId, callIds).catch(() => []);
+    const storedCalls = await readStoredCursorToolCalls(
+      live.acpSessionId,
+      callIds,
+      live.hostId,
+    ).catch(() => []);
     if (live.muteUpdates) return;
 
     for (const stored of storedCalls) {

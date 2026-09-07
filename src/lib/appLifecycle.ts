@@ -1,5 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
-import { ask } from "@tauri-apps/plugin-dialog";
+// Quitting, hiding, and destroying a window belong to the machine drawing it.
+// A host has no windows, so these never follow a project's host.
+import { invokeLocal as invoke } from "./transport";
+import { ask } from "./native";
 import {
   bindHarnessSession,
   forgetHarnessSession,
@@ -16,10 +18,13 @@ import {
   workspaceFromResumed,
   type ResumedWorkspace,
 } from "./inFlight";
+import { stopWindowLspServers } from "./lsp/manager";
 import { leafIds, type WorkspaceTab } from "./workspace/layout";
 import { killPty } from "./terminal/pty";
 import { projectTerminalFileIds, type ProjectTerminalDock } from "./terminal/projectTerminal";
-import { sessionWorkCwd, type Session } from "./session";
+import { isRemoteHostId, LOCAL_HOST_ID } from "./host";
+import { IS_BROWSER_CLIENT } from "./clientRuntime";
+import { sessionHostId, sessionWorkCwd, type Session } from "./session";
 import { restoreSessionCheckout } from "./fs";
 import { sessionChildHarnesses } from "./handoff";
 import {
@@ -267,6 +272,7 @@ export function bindResumedSessions(sessions: Session[]): void {
       session.id,
       session.providerSessionId,
       sessionWorkCwd(session),
+      sessionHostId(session),
     );
   }
 }
@@ -398,21 +404,38 @@ export async function reapWindowRuntime(
   tabs: WorkspaceTab[],
   projectTerminals: ProjectTerminalDock[] = [],
 ): Promise<void> {
+  // Only this device's children. A closing window must never reach across a
+  // connection and stop the agents another machine is still running — leaving a
+  // run behind is the whole point of a remote host, and reconnecting reattaches
+  // to it. Same rule as `killAllChildren` below, which is host-scoped for it.
   await Promise.all(
-    sessions.map((session) =>
-      Promise.all(
-        sessionChildHarnesses(session).map((harness) => forgetHarnessSession(harness, session.id)),
+    sessions
+      .filter((session) => !isRemoteHostId(sessionHostId(session)))
+      .map((session) =>
+        Promise.all(
+          sessionChildHarnesses(session).map((harness) =>
+            forgetHarnessSession(harness, session.id),
+          ),
+        ),
       ),
-    ),
   );
+  // Everything below is this device's own runtime, so it names this device
+  // rather than whatever host this client happens to route to. A browser tab
+  // has no device: its terminals and its probes are the host's, and a tab that
+  // is merely closing must not reach across the connection and stop them.
+  if (IS_BROWSER_CLIENT) return;
   await Promise.all(
     [...terminalFileIds(tabs), ...projectTerminalFileIds(projectTerminals)].map((id) =>
-      killPty(id),
+      killPty(id, LOCAL_HOST_ID),
     ),
   );
   // Catalog probes, title generators, and usage scrapers are not session
   // children. Drop them so an unused Pi/Codex probe cannot outlive the window.
-  await killAllChildren().catch(() => undefined);
+  await killAllChildren(LOCAL_HOST_ID).catch(() => undefined);
+  // Language servers are per project, not per session, so nothing above has
+  // stopped them. This window's only: another window may be open on the same
+  // project, and rust-analyzer there is still indexing for it.
+  await stopWindowLspServers().catch(() => undefined);
 }
 
 function terminalFileIds(tabs: WorkspaceTab[]): string[] {

@@ -12,11 +12,15 @@ export type CommandId =
   | "app.commandPalette"
   | "app.search"
   | "app.goToFile"
+  | "app.goToSymbol"
   | "app.findInFiles"
   | "app.openProject"
   | "app.newWindow"
   | "app.toggleSidebar"
   | "app.switchModel"
+  | "view.zoomIn"
+  | "view.zoomOut"
+  | "view.zoomReset"
   | "app.switchProfile"
   | "app.settings"
   | "app.toggleMode"
@@ -48,6 +52,9 @@ export type CommandId =
   | "composer.steer"
   | "editor.find"
   | "editor.replace"
+  | "editor.goToDefinition"
+  | "editor.findReferences"
+  | "editor.renameSymbol"
   | "diff.nextHunk"
   | "diff.prevHunk"
   | "diff.stage"
@@ -72,11 +79,20 @@ export const APP_COMMANDS: AppCommand[] = [
   // Shares ⌘F with the editor's find bar, which wins while an editor has focus.
   { id: "app.search", label: "App: Search", keys: `${MOD}F`, when: "!editorFocus" },
   { id: "app.goToFile", label: "App: Go to File", keys: `${MOD}P`, when: "Always" },
+  {
+    id: "app.goToSymbol",
+    label: "App: Go to Symbol",
+    keys: `${MOD}⇧O`,
+    when: "Always",
+  },
   { id: "app.findInFiles", label: "App: Find in Files", keys: `${MOD}${SHIFT}F`, when: "Always" },
   { id: "app.openProject", label: "App: Open Project", keys: `${MOD}O`, when: "Always" },
   { id: "app.newWindow", label: "App: New Window", keys: `${MOD}${SHIFT}N`, when: "Always" },
   { id: "app.toggleSidebar", label: "App: Toggle Sidebar", keys: `${MOD}B`, when: "Always" },
   { id: "app.switchModel", label: "App: Switch Model", keys: `${MOD}.`, when: "Always" },
+  { id: "view.zoomIn", label: "View: Zoom In", keys: `${MOD}+`, when: "Always" },
+  { id: "view.zoomOut", label: "View: Zoom Out", keys: `${MOD}-`, when: "Always" },
+  { id: "view.zoomReset", label: "View: Reset Zoom", keys: `${MOD}0`, when: "Always" },
   {
     id: "app.switchProfile",
     label: "App: Switch Profile",
@@ -161,6 +177,30 @@ export const APP_COMMANDS: AppCommand[] = [
     when: "editorFocus",
     listOnly: true,
   },
+  // Handled by the language server keymap inside CodeMirror. Listed here so the
+  // palette and the keybindings pane stay the full account of what the editor
+  // answers to.
+  {
+    id: "editor.goToDefinition",
+    label: "Editor: Go to Definition",
+    keys: "F12",
+    when: "editorFocus",
+    listOnly: true,
+  },
+  {
+    id: "editor.findReferences",
+    label: "Editor: Find References",
+    keys: "⇧F12",
+    when: "editorFocus",
+    listOnly: true,
+  },
+  {
+    id: "editor.renameSymbol",
+    label: "Editor: Rename Symbol",
+    keys: "F2",
+    when: "editorFocus",
+    listOnly: true,
+  },
   { id: "diff.nextHunk", label: "Diff: Next Hunk", keys: "J", when: "diffFocus", listOnly: true },
   {
     id: "diff.prevHunk",
@@ -179,6 +219,44 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "diff.unstage", label: "Diff: Unstage File", keys: "U", when: "diffFocus", listOnly: true },
   { id: "diff.discard", label: "Diff: Discard File", keys: "D", when: "diffFocus", listOnly: true },
 ];
+
+/**
+ * Keystrokes the browser's own chrome takes before the page sees them, plus
+ * the one shortcut that is not a keystroke in a tab at all.
+ *
+ * A tab cannot cancel new tab, close tab, new window, or the tab-index
+ * switches on any major browser, and Quick Ask is an operating-system-wide
+ * registration a page never gets to make. wavex still binds all of them for
+ * the desktop app: this is what the client is told, not what it listens for.
+ */
+const BROWSER_RESERVED: ReadonlySet<CommandId> = new Set<CommandId>([
+  "tab.new",
+  "tab.activate",
+  "tab.activateLast",
+  "tab.cycleNext",
+  "tab.cyclePrev",
+  "pane.close",
+  "app.newWindow",
+  "app.quickAsk",
+]);
+
+/**
+ * The catalog as this client can actually use it. A shortcut that can never
+ * fire here loses its key rather than standing in the palette and the
+ * keybindings page as an instruction that does nothing; a command that is
+ * still reachable by name keeps its row.
+ */
+export function commandsForClient(
+  commands: readonly AppCommand[],
+  isBrowserClient: boolean,
+): AppCommand[] {
+  if (!isBrowserClient) return [...commands];
+  return commands.map((command) => {
+    if (!BROWSER_RESERVED.has(command.id)) return command;
+    const { keys: _keys, ...rest } = command;
+    return rest;
+  });
+}
 
 export type PaletteEntry = {
   command: AppCommand;

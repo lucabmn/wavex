@@ -1,5 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { invokeLocal as invoke, listenLocal as listen } from "../lib/transport";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { CircleAlert, Square } from "../chrome/icons";

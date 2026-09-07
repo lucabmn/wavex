@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { HostId } from "../lib/host";
 import {
   loadSkills,
   mergeCatalog,
@@ -43,11 +44,14 @@ export function visibleComposerSkills(
 export function useComposerSkills(input: {
   harness: HarnessId;
   executionCwd: string;
+  /** The machine whose CLI owns these skills; `executionCwd` may be a bare
+   * worktree path that names none. */
+  hostId?: HostId;
   pickerOpen: boolean;
 }) {
   const context = useMemo<SkillCatalogContext>(
-    () => ({ harness: input.harness, cwd: input.executionCwd }),
-    [input.executionCwd, input.harness],
+    () => ({ harness: input.harness, cwd: input.executionCwd, hostId: input.hostId }),
+    [input.executionCwd, input.harness, input.hostId],
   );
   const contextKey = skillCatalogKey(context);
   const fallback = useMemo<Skill[]>(

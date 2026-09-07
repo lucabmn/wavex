@@ -17,6 +17,9 @@
  *   New terminal        cmd-`
  *   New terminal tab    shift-cmd-`
  *   Toggle terminal     cmd-j
+ *   Zoom in             cmd-= (cmd-+ on shift layouts)
+ *   Zoom out            cmd--
+ *   Reset zoom          cmd-0
  *   Stop focused turn   escape
  */
 

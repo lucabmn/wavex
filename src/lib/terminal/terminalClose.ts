@@ -1,4 +1,4 @@
-import { ask } from "@tauri-apps/plugin-dialog";
+import { ask } from "../native";
 import type { FilePaneTab } from "../workspace/layout";
 import { getPtyStatus } from "./pty";
 import { terminalTabLabel } from "./terminalTab";

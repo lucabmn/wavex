@@ -7,7 +7,8 @@
  * each answer for a short TTL across windows; `force` is the explicit refresh
  * and bypasses it.
  */
-import { invoke } from "@tauri-apps/api/core";
+import { getDefaultHostId, invokeOn } from "../transport";
+import { type HostId } from "../host";
 import { fetchCodexRateLimits } from "../rateLimitsFetch";
 import {
   errorPlanLimits,
@@ -24,9 +25,12 @@ type ClaudeUsageFetch = {
   error?: string | null;
 };
 
-export async function fetchClaudePlanLimits(force = false): Promise<PlanLimits> {
+export async function fetchClaudePlanLimits(
+  force = false,
+  hostId: HostId = getDefaultHostId(),
+): Promise<PlanLimits> {
   try {
-    const result = await invoke<ClaudeUsageFetch>("fetch_claude_usage", { force });
+    const result = await invokeOn<ClaudeUsageFetch>(hostId, "fetch_claude_usage", { force });
     if (result.status === "ok" && result.body) return parseClaudePlanLimits(result.body);
     if (result.status === "unavailable") {
       return unavailablePlanLimits("claude", result.error?.trim() || "Claude is not signed in");

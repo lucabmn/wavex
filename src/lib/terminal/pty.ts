@@ -1,20 +1,11 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getDefaultHostId, invokeOn, listenOn, type UnlistenFn } from "../transport";
+import { hostPathArgs, type HostId } from "../host";
 
 type DataPayload = { id: string; data: string };
 type ExitPayload = { id: string; code: number | null };
 
 type DataHandler = (data: Uint8Array) => void;
 type ExitHandler = (code: number | null) => void;
-
-const dataHandlers = new Map<string, DataHandler>();
-const exitHandlers = new Map<string, ExitHandler>();
-const dataBuffer = new Map<string, Uint8Array[]>();
-const dataBufferBytes = new Map<string, number>();
-/** PTYs this window opened. Global `pty-data` still fires for every terminal
- * in the process; decoding those in a window that never mounted them was
- * megabytes of base64 work and a 256KB replay buffer per stranger id. */
-const openedPtys = new Set<string>();
 
 /**
  * Replay budget for a PTY whose view is not mounted. Chunks arrive at up to
@@ -23,9 +14,47 @@ const openedPtys = new Set<string>();
  */
 const MAX_BUFFERED_BYTES = 256 * 1024;
 const MAX_BUFFERED = 200;
-let bridge: Promise<UnlistenFn[]> | null = null;
-let users = 0;
-let teardownTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * One host's terminals. PTY ids are minted by the host that spawned them, so
+ * two hosts can hand out the same id: a single global handler map would route
+ * one machine's terminal output into the other machine's terminal. The event
+ * bridge is per host for the same reason — `pty-data` is a stream on one
+ * connection, not a fact about this client.
+ */
+type HostPtys = {
+  dataHandlers: Map<string, DataHandler>;
+  exitHandlers: Map<string, ExitHandler>;
+  dataBuffer: Map<string, Uint8Array[]>;
+  dataBufferBytes: Map<string, number>;
+  /** PTYs this window opened. Global `pty-data` still fires for every terminal
+   * in the process; decoding those in a window that never mounted them was
+   * megabytes of base64 work and a 256KB replay buffer per stranger id. */
+  openedPtys: Set<string>;
+  bridge: Promise<UnlistenFn[]> | null;
+  users: number;
+  teardownTimer: ReturnType<typeof setTimeout> | undefined;
+};
+
+const hosts = new Map<HostId, HostPtys>();
+
+function hostPtys(hostId: HostId): HostPtys {
+  let entry = hosts.get(hostId);
+  if (!entry) {
+    entry = {
+      dataHandlers: new Map(),
+      exitHandlers: new Map(),
+      dataBuffer: new Map(),
+      dataBufferBytes: new Map(),
+      openedPtys: new Set(),
+      bridge: null,
+      users: 0,
+      teardownTimer: undefined,
+    };
+    hosts.set(hostId, entry);
+  }
+  return entry;
+}
 
 function decodeBase64(data: string): Uint8Array {
   const binary = atob(data);
@@ -54,108 +83,143 @@ export function trimReplay(sizes: number[], bytes: number): { drop: number; byte
   return { drop, bytes: left };
 }
 
-function pushBuffered(id: string, chunk: Uint8Array) {
-  const queued = dataBuffer.get(id) ?? [];
+function pushBuffered(state: HostPtys, id: string, chunk: Uint8Array) {
+  const queued = state.dataBuffer.get(id) ?? [];
   queued.push(chunk);
   const trimmed = trimReplay(
     queued.map((entry) => entry.byteLength),
-    (dataBufferBytes.get(id) ?? 0) + chunk.byteLength,
+    (state.dataBufferBytes.get(id) ?? 0) + chunk.byteLength,
   );
   if (trimmed.drop > 0) queued.splice(0, trimmed.drop);
-  dataBuffer.set(id, queued);
-  dataBufferBytes.set(id, trimmed.bytes);
+  state.dataBuffer.set(id, queued);
+  state.dataBufferBytes.set(id, trimmed.bytes);
 }
 
-function clearBuffered(id: string) {
-  dataBuffer.delete(id);
-  dataBufferBytes.delete(id);
+function clearBuffered(state: HostPtys, id: string) {
+  state.dataBuffer.delete(id);
+  state.dataBufferBytes.delete(id);
 }
 
-function ensureBridge() {
-  if (bridge) return;
-  bridge = Promise.all([
-    listen<DataPayload>("pty-data", (event) => {
+function ensureBridge(hostId: HostId) {
+  const state = hostPtys(hostId);
+  if (state.bridge) return;
+  state.bridge = Promise.all([
+    listenOn<DataPayload>(hostId, "pty-data", (event) => {
       const { id, data } = event.payload;
-      const handler = dataHandlers.get(id);
-      if (!handler && !openedPtys.has(id)) return;
+      const handler = state.dataHandlers.get(id);
+      if (!handler && !state.openedPtys.has(id)) return;
       const chunk = decodeBase64(data);
       if (handler) handler(chunk);
-      else pushBuffered(id, chunk);
+      else pushBuffered(state, id, chunk);
     }),
-    listen<ExitPayload>("pty-exit", (event) => {
+    listenOn<ExitPayload>(hostId, "pty-exit", (event) => {
       const { id, code } = event.payload;
-      exitHandlers.get(id)?.(code);
+      state.exitHandlers.get(id)?.(code);
     }),
   ]);
 }
 
-function retain() {
-  users += 1;
-  if (teardownTimer) {
-    clearTimeout(teardownTimer);
-    teardownTimer = undefined;
+function retain(hostId: HostId) {
+  const state = hostPtys(hostId);
+  state.users += 1;
+  if (state.teardownTimer) {
+    clearTimeout(state.teardownTimer);
+    state.teardownTimer = undefined;
   }
-  ensureBridge();
+  ensureBridge(hostId);
 }
 
-function release() {
-  users = Math.max(0, users - 1);
-  if (users > 0 || !bridge) return;
-  const pending = bridge;
-  teardownTimer = setTimeout(() => {
-    teardownTimer = undefined;
-    if (users > 0) return;
-    bridge = null;
+function release(hostId: HostId) {
+  const state = hostPtys(hostId);
+  state.users = Math.max(0, state.users - 1);
+  if (state.users > 0 || !state.bridge) return;
+  const pending = state.bridge;
+  state.teardownTimer = setTimeout(() => {
+    state.teardownTimer = undefined;
+    if (state.users > 0) return;
+    state.bridge = null;
     void pending.then((fns) => fns.forEach((fn) => fn()));
   }, 500);
 }
 
-export async function spawnPty(id: string, cwd: string, cols: number, rows: number): Promise<void> {
-  await invoke("pty_spawn", { id, cwd, cols, rows });
+export async function spawnPty(
+  id: string,
+  cwd: string,
+  cols: number,
+  rows: number,
+  hostId?: HostId,
+): Promise<void> {
+  const target = hostPathArgs(cwd, hostId, getDefaultHostId());
+  await invokeOn(target.hostId, "pty_spawn", { id, cwd: target.path, cols, rows });
 }
 
-export async function writePty(id: string, data: string): Promise<void> {
-  await invoke("pty_write", { id, data });
+export async function writePty(
+  id: string,
+  data: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  await invokeOn(hostId, "pty_write", { id, data });
 }
 
-export async function resizePty(id: string, cols: number, rows: number): Promise<void> {
-  await invoke("pty_resize", { id, cols, rows });
+export async function resizePty(
+  id: string,
+  cols: number,
+  rows: number,
+  hostId: HostId = getDefaultHostId(),
+): Promise<void> {
+  await invokeOn(hostId, "pty_resize", { id, cols, rows });
 }
 
-export async function getPtyStatus(id: string): Promise<{ foreground: string | null }> {
-  return invoke<{ foreground: string | null }>("pty_status", { id });
+export async function getPtyStatus(
+  id: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<{ foreground: string | null }> {
+  return invokeOn<{ foreground: string | null }>(hostId, "pty_status", { id });
 }
 
-export async function killPty(id: string): Promise<void> {
-  dataHandlers.delete(id);
-  exitHandlers.delete(id);
-  openedPtys.delete(id);
-  clearBuffered(id);
-  await invoke("pty_kill", { id }).catch(() => undefined);
+export async function killPty(id: string, hostId: HostId = getDefaultHostId()): Promise<void> {
+  const state = hostPtys(hostId);
+  state.dataHandlers.delete(id);
+  state.exitHandlers.delete(id);
+  state.openedPtys.delete(id);
+  clearBuffered(state, id);
+  await invokeOn(hostId, "pty_kill", { id }).catch(() => undefined);
 }
 
-export async function killAllPtys(): Promise<void> {
-  dataHandlers.clear();
-  exitHandlers.clear();
-  openedPtys.clear();
-  dataBuffer.clear();
-  dataBufferBytes.clear();
-  await invoke("pty_kill_all").catch(() => undefined);
+/**
+ * Every terminal on one host. Scoped to a host on purpose: closing a client
+ * must never reach across a connection and kill the terminals another machine
+ * is still running.
+ */
+export async function killAllPtys(hostId: HostId = getDefaultHostId()): Promise<void> {
+  const state = hostPtys(hostId);
+  state.dataHandlers.clear();
+  state.exitHandlers.clear();
+  state.openedPtys.clear();
+  state.dataBuffer.clear();
+  state.dataBufferBytes.clear();
+  await invokeOn(hostId, "pty_kill_all").catch(() => undefined);
 }
 
-export function subscribePty(id: string, onData: DataHandler, onExit: ExitHandler): () => void {
-  retain();
-  openedPtys.add(id);
-  dataHandlers.set(id, onData);
-  exitHandlers.set(id, onExit);
-  const queued = dataBuffer.get(id);
+export function subscribePty(
+  id: string,
+  onData: DataHandler,
+  onExit: ExitHandler,
+  hostId: HostId = getDefaultHostId(),
+): () => void {
+  const state = hostPtys(hostId);
+  retain(hostId);
+  state.openedPtys.add(id);
+  state.dataHandlers.set(id, onData);
+  state.exitHandlers.set(id, onExit);
+  const queued = state.dataBuffer.get(id);
   if (queued) {
-    clearBuffered(id);
+    clearBuffered(state, id);
     for (const chunk of queued) onData(chunk);
   }
   return () => {
-    if (dataHandlers.get(id) === onData) dataHandlers.delete(id);
-    if (exitHandlers.get(id) === onExit) exitHandlers.delete(id);
-    release();
+    if (state.dataHandlers.get(id) === onData) state.dataHandlers.delete(id);
+    if (state.exitHandlers.get(id) === onExit) state.exitHandlers.delete(id);
+    release(hostId);
   };
 }

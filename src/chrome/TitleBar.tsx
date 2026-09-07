@@ -1,7 +1,9 @@
 import {
   ChevronLeft,
   ChevronRight,
+  CircleAlert,
   Inbox,
+  MessageMultiple,
   PanelLeft,
   Plus,
   Search,
@@ -10,6 +12,7 @@ import {
   Terminal,
   X,
 } from "./icons";
+import { checkLabel, formatChangedFiles, gitStatShort } from "../lib/sessionStatus";
 import {
   memo,
   useCallback,
@@ -29,7 +32,7 @@ import { useSortable } from "../hooks/useSortable";
 import { FileTypeIcon } from "./FileTypeIcon";
 import type { TitleTab } from "../lib/workspace/titleTab";
 import { HarnessIcon } from "./HarnessIcon";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { nativeWindow } from "../lib/native";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { WindowControls } from "./WindowControls";
 import { ModeSwitch } from "./ModeSwitch";
@@ -80,8 +83,16 @@ export function tabCopy(tab: TitleTab): {
   const sessions = sessionMeta(tab);
   const untitled = "New session";
 
+  const changed = formatChangedFiles(tab.changedFiles ?? 0);
+  const stat = gitStatShort({
+    files: tab.changedFiles ?? 0,
+    additions: tab.additions ?? 0,
+    deletions: tab.deletions ?? 0,
+  });
+
   let headline: string;
   const metaParts: string[] = [];
+  if (tab.branch) metaParts.push(tab.branch);
 
   if (tab.multiPane) {
     if (tab.fileFocused && file) {
@@ -103,6 +114,7 @@ export function tabCopy(tab: TitleTab): {
     headline = conversation || file || untitled;
     if (sessions) metaParts.push(sessions);
   }
+  if (changed) metaParts.push(changed);
 
   const meta = metaParts.join(" · ");
 
@@ -110,7 +122,17 @@ export function tabCopy(tab: TitleTab): {
   if (conversation) tooltipParts.push(conversation);
   tooltipParts.push(...tab.more);
   if (tab.files.length > 0) tooltipParts.push(tab.files.join(", "));
+  if (tab.needsApproval) tooltipParts.push("Needs approval");
+  else if (tab.busyHarnesses.length > 0) tooltipParts.push("Working");
+  if (tab.hasUnread) tooltipParts.push("New reply");
+  if (tab.branch) tooltipParts.push(`Branch ${tab.branch}`);
+  if (tab.changedFiles != null) {
+    if (changed && stat) tooltipParts.push(`${changed} (${stat})`);
+    else if (changed) tooltipParts.push(changed);
+    else tooltipParts.push("Clean");
+  }
   if (tab.dirty) tooltipParts.push("Unsaved changes");
+  if ((tab.checkErrors ?? 0) > 0) tooltipParts.push(checkLabel(tab.checkErrors ?? 0));
 
   return { headline, meta, tooltip: tooltipParts.join(" · ") };
 }
@@ -285,6 +307,36 @@ function TitleTabItem({
                 title="Unsaved changes"
                 aria-label="Unsaved changes"
               />
+            ) : null}
+            {tab.needsApproval ? (
+              <span
+                className="flex shrink-0 items-center gap-0.5 text-amber-400"
+                title="Agent needs approval to continue"
+                aria-label="Agent needs approval to continue"
+              >
+                <CircleAlert className="size-3" strokeWidth={1.75} />
+                <span className="hidden text-[10px] font-medium @min-[11rem]:inline">Approval</span>
+              </span>
+            ) : null}
+            {tab.hasUnread ? (
+              <span
+                className="flex shrink-0 items-center gap-0.5 text-emerald-400"
+                title="Agent finished — new reply to read"
+                aria-label="Agent finished, new reply to read"
+              >
+                <MessageMultiple className="size-3" strokeWidth={1.75} />
+                <span className="hidden text-[10px] font-medium @min-[11rem]:inline">New</span>
+              </span>
+            ) : null}
+            {(tab.checkErrors ?? 0) > 0 ? (
+              <span
+                className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-red-400"
+                title={checkLabel(tab.checkErrors ?? 0)}
+                aria-label={checkLabel(tab.checkErrors ?? 0)}
+              >
+                <CircleAlert className="size-3" strokeWidth={1.75} />
+                <span>{tab.checkErrors}</span>
+              </span>
             ) : null}
           </span>
           {meta ? (
@@ -554,7 +606,7 @@ function TitleBarComponent({
   useEffect(() => {
     document.title = systemTitle;
     try {
-      void getCurrentWindow().setTitle(systemTitle);
+      void nativeWindow()?.setTitle(systemTitle);
     } catch {}
   }, [systemTitle]);
 

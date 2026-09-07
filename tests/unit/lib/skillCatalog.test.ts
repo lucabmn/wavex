@@ -5,6 +5,11 @@ const mocks = vi.hoisted(() => ({
   listSkills: vi.fn(),
 }));
 
+vi.mock("@/lib/transport", () => ({
+  getDefaultHostId: () => "local",
+  hostIdForProject: () => "local",
+}));
+
 vi.mock("@/lib/harness/piSkills", () => ({
   discoverPiSkills: mocks.discoverPiSkills,
 }));
@@ -59,7 +64,7 @@ describe("provider-aware skill catalog", () => {
   it("uses Pi discovery without adding wavex's built-in row", async () => {
     const catalog = await loadSkills({ harness: "pi", cwd: "/repo/" });
 
-    expect(mocks.discoverPiSkills).toHaveBeenCalledWith("/repo");
+    expect(mocks.discoverPiSkills).toHaveBeenCalledWith("/repo", "local");
     expect(catalog).toEqual([
       {
         kind: "native",
@@ -72,7 +77,7 @@ describe("provider-aware skill catalog", () => {
   it("keeps filesystem discovery and the built-in row for non-Pi providers", async () => {
     const catalog = await loadSkills({ harness: "claude", cwd: "/repo" });
 
-    expect(mocks.listSkills).toHaveBeenCalledWith("/repo");
+    expect(mocks.listSkills).toHaveBeenCalledWith("/repo", "local");
     expect(catalog).toContainEqual(BUILTIN_CREATE_SKILL);
     expect(mocks.discoverPiSkills).not.toHaveBeenCalled();
   });

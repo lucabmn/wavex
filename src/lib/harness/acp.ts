@@ -1,3 +1,4 @@
+import type { HostId } from "../host";
 import {
   JsonRpcClient,
   type JsonRpcHandlers,
@@ -19,6 +20,8 @@ export class AcpClient {
   constructor(
     sessionId: string,
     private readonly handlers: AcpHandlers,
+    /** The machine running the child; its stdin is not reachable elsewhere. */
+    hostId?: HostId,
   ) {
     const rpcHandlers: JsonRpcHandlers = {
       onNotification: (method, params) => this.handlers.onNotification?.(method, params),
@@ -30,6 +33,7 @@ export class AcpClient {
     this.rpc = new JsonRpcClient(sessionId, rpcHandlers, {
       includeJsonrpc: true,
       label: "acp",
+      hostId,
     });
   }
 

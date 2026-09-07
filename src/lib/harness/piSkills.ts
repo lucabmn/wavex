@@ -7,6 +7,8 @@ import {
   writeChild,
 } from "./child";
 import { PiRpc } from "./piClient";
+import { getDefaultHostId } from "../transport";
+import { type HostId } from "../host";
 import { PI_FLAVOR } from "./piFlavor";
 import {
   asRecord,
@@ -25,32 +27,37 @@ export type PiSkillCommand = {
   source: "pi";
 };
 
-export async function discoverPiSkills(cwd: string): Promise<PiSkillCommand[]> {
-  const { path } = await PI_FLAVOR.resolveBinary();
-  const releaseBridge = await acquireHarnessBridge();
+export async function discoverPiSkills(
+  cwd: string,
+  hostId: HostId = getDefaultHostId(),
+): Promise<PiSkillCommand[]> {
+  const { path } = await PI_FLAVOR.resolveBinary(hostId);
+  const releaseBridge = await acquireHarnessBridge(hostId);
   const childId = `wavex-pi-skills-${crypto.randomUUID()}`;
   const replyToUi = (record: Record<string, unknown>) => {
     const request = parseExtensionUiRequest(record);
     if (!request || !needsExtensionUiReply(request)) return;
-    void writeChild(childId, JSON.stringify(extensionUiResponse(request, "deny"))).catch(
+    void writeChild(childId, JSON.stringify(extensionUiResponse(request, "deny")), hostId).catch(
       () => undefined,
     );
   };
-  const rpc = new PiRpc(childId, replyToUi, PI_FLAVOR.label);
+  const rpc = new PiRpc(childId, replyToUi, PI_FLAVOR.label, hostId);
 
   try {
     watchChild(
       childId,
       (line) => rpc.pushLine(line),
       () => rpc.close(new Error(`${PI_FLAVOR.label} skill probe exited`)),
+      undefined,
+      hostId,
     );
-    await spawnChild(childId, path, buildPiSpawnArgs(PI_FLAVOR, { noSession: true }), cwd);
+    await spawnChild(childId, path, buildPiSpawnArgs(PI_FLAVOR, { noSession: true }), cwd, hostId);
     const response = await rpc.request({ type: "get_commands" }, REQUEST_TIMEOUT_MS);
     return piSkillsFromRpcData(asRecord(response)?.data);
   } finally {
     rpc.close();
-    unwatchChild(childId);
-    await killChild(childId).catch(() => undefined);
+    unwatchChild(childId, hostId);
+    await killChild(childId, hostId).catch(() => undefined);
     releaseBridge();
   }
 }

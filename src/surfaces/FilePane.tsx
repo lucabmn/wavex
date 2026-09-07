@@ -6,23 +6,28 @@ import {
   isChangesTab,
   isCommitTab,
   isPlanTab,
+  isReferencesTab,
   isReleaseNotesTab,
   isReviewTab,
+  isSubagentTab,
   isTerminalTab,
   type EditorPane,
   type FilePaneTab,
 } from "../lib/workspace/layout";
 import { isImagePath } from "../lib/files/filePreview";
 import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
-import type { EditorNavigationTarget } from "../lib/search";
+import type { EditorNavigationTarget, OpenFileFn } from "../lib/search";
 import { editorPathsEqual } from "../lib/search";
 import type { Session } from "../lib/session";
+import type { LspWorkspaceCommands } from "../lib/editor/editorLsp";
 import { loadDiffViewer, subscribeDiffViewer } from "../lib/settings";
 import { MarkdownPreview, MarkdownSource } from "./AgentMarkdown";
 import { BinaryFileView } from "./BinaryFileView";
 import { CommitDiff } from "./CommitDiff";
 import { FileEditor } from "./FileEditor";
+import { ReferencesView } from "./ReferencesView";
 import { ReleaseNotesSurface } from "./ReleaseNotesSurface";
+import { SubagentSurface } from "./SubagentSurface";
 import { TerminalView } from "./TerminalView";
 import { WorkingTreeDiff } from "./WorkingTreeDiff";
 
@@ -38,8 +43,9 @@ type Props = {
   onDirtyChange: (fileId: string, dirty: boolean) => void;
   onErrorCountChange: (fileId: string, count: number) => void;
   onReorderFiles: (paneId: string, ids: string[]) => void;
-  onOpenFile: (path: string) => void;
+  onOpenFile: OpenFileFn;
   editorNavigation?: EditorNavigationTarget | null;
+  lspCommands?: LspWorkspaceCommands;
   onPaneDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
   onTerminalMetaChange?: (fileId: string, patch: TerminalMetaPatch) => void;
 };
@@ -58,6 +64,7 @@ function FilePaneComponent({
   onReorderFiles,
   onOpenFile,
   editorNavigation,
+  lspCommands,
   onPaneDragStart,
   onTerminalMetaChange,
 }: Props) {
@@ -105,6 +112,20 @@ function FilePaneComponent({
             >
               {isPlanTab(file) ? (
                 <PlanSurface file={file} sessions={sessions} onOpenFile={onOpenFile} />
+              ) : isSubagentTab(file) ? (
+                <SubagentSurface
+                  file={file}
+                  sessions={sessions}
+                  onOpenFile={onOpenFile}
+                  visible={focused && file.id === pane.activeFileId}
+                />
+              ) : isReferencesTab(file) ? (
+                <ReferencesView
+                  cwd={file.cwd}
+                  references={file.references}
+                  active={focused && file.id === pane.activeFileId}
+                  onOpenFile={onOpenFile}
+                />
               ) : isReleaseNotesTab(file) ? (
                 <ReleaseNotesSurface source={file.releaseNotes} />
               ) : isTerminalTab(file) ? (
@@ -130,6 +151,7 @@ function FilePaneComponent({
                   onDirtyChange={(_path, dirty) => onDirtyChange(file.id, dirty)}
                   onErrorCountChange={(_path, count) => onErrorCountChange(file.id, count)}
                   onOpenFile={onOpenFile}
+                  lspCommands={lspCommands}
                 />
               )}
             </div>
@@ -154,6 +176,7 @@ export const FilePane = memo(FilePaneComponent, (previous, next) => {
     previous.onReorderFiles !== next.onReorderFiles ||
     previous.onOpenFile !== next.onOpenFile ||
     previous.editorNavigation !== next.editorNavigation ||
+    previous.lspCommands !== next.lspCommands ||
     Boolean(previous.onPaneDragStart) !== Boolean(next.onPaneDragStart) ||
     previous.onTerminalMetaChange !== next.onTerminalMetaChange
   ) {
@@ -161,7 +184,7 @@ export const FilePane = memo(FilePaneComponent, (previous, next) => {
   }
 
   for (const file of next.pane.files) {
-    const sessionId = file.plan?.sessionId;
+    const sessionId = file.plan?.sessionId ?? file.subagent?.sessionId;
     if (!sessionId) continue;
     const before = previous.sessions.find((session) => session.id === sessionId);
     const after = next.sessions.find((session) => session.id === sessionId);

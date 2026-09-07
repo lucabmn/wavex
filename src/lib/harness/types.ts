@@ -1,3 +1,4 @@
+import type { HostId } from "../host";
 import type { Attachment, RuntimeMode, ToolPreview } from "../session";
 import type { UserQuestion } from "../userQuestion";
 
@@ -55,6 +56,21 @@ export type HarnessEvent =
       decision: "answered" | "skipped" | "cancelled";
     }
   | { type: "plan"; text: string }
+  /** Metadata about the subagent behind an Agent tool call. */
+  | {
+      type: "subagent.updated";
+      callId: string;
+      agentType?: string;
+      prompt?: string;
+      model?: string;
+      background?: boolean;
+    }
+  /** An event for the subagent behind an Agent tool call, in parent terms. */
+  | {
+      type: "subagent.event";
+      callId: string;
+      event: HarnessEvent;
+    }
   /**
    * An image the turn produced. Adapters that can write the bytes to disk
    * should send `path`; `data` alone renders for this session but is not kept
@@ -74,6 +90,12 @@ export type ApprovalDecision = "allow" | "deny";
 
 export type SendTurnInput = {
   sessionId: string;
+  /**
+   * The machine that runs the agent. Passed rather than read off `cwd`: a
+   * session working in a worktree sends that worktree's bare child path, which
+   * names no host at all.
+   */
+  hostId?: HostId;
   cwd: string;
   model: string;
   modelSettings?: Record<string, string>;
@@ -85,6 +107,7 @@ export type SendTurnInput = {
 
 export type SteerTurnInput = {
   sessionId: string;
+  hostId?: HostId;
   cwd: string;
   model: string;
   modelSettings?: Record<string, string>;

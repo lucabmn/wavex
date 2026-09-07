@@ -4,7 +4,11 @@ const sent: string[] = [];
 let onLine: ((line: string) => void) | undefined;
 let onExit: ((code: number | null) => void) | undefined;
 
+import { hostPathArgs } from "@/lib/host";
+
 vi.mock("@/lib/harness/child", () => ({
+  harnessTarget: (cwd: string, hostId?: string) => hostPathArgs(cwd, hostId, "local"),
+  harnessHostId: (cwd: string, hostId?: string) => hostPathArgs(cwd, hostId, "local").hostId,
   resolveFxBinary: async () => ({ path: "/fake/fx" }),
   spawnChild: async () => undefined,
   killChild: async () => undefined,

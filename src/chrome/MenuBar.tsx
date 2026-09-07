@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeLocal as invoke } from "../lib/transport";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { ALT, MOD, SHIFT } from "../lib/platform";
@@ -11,6 +11,7 @@ type Props = {
   onNewTerminal?: () => void;
   onToggleTerminal?: () => void;
   onGoToFile?: () => void;
+  onGoToSymbol?: () => void;
   onToggleSidebar: () => void;
   onShowSourceControl?: () => void;
   onCloseCurrentTab?: () => void;
@@ -21,6 +22,9 @@ type Props = {
   onCommandPalette?: () => void;
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onZoomReset?: () => void;
 };
 
 export function MenuBar({
@@ -28,6 +32,7 @@ export function MenuBar({
   onNewTerminal,
   onToggleTerminal,
   onGoToFile,
+  onGoToSymbol,
   onToggleSidebar,
   onShowSourceControl,
   onCloseCurrentTab,
@@ -38,6 +43,9 @@ export function MenuBar({
   onCommandPalette,
   onOpenInbox,
   onOpenNotes,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<MenuKey | null>(null);
@@ -131,6 +139,9 @@ export function MenuBar({
         case "go_to_file":
           onGoToFile?.();
           break;
+        case "go_to_symbol":
+          onGoToSymbol?.();
+          break;
         case "find_in_project":
           onFindInProject?.();
           break;
@@ -152,6 +163,15 @@ export function MenuBar({
         case "check_for_updates":
           void runUpdateFlow(true);
           break;
+        case "zoom_in":
+          onZoomIn?.();
+          break;
+        case "zoom_out":
+          onZoomOut?.();
+          break;
+        case "zoom_reset":
+          onZoomReset?.();
+          break;
       }
     },
     [
@@ -160,6 +180,7 @@ export function MenuBar({
       onCloseOtherTabs,
       onFindInProject,
       onGoToFile,
+      onGoToSymbol,
       onNew,
       onNewTerminal,
       onToggleTerminal,
@@ -170,6 +191,9 @@ export function MenuBar({
       onOpenNotes,
       onShowSourceControl,
       onToggleSidebar,
+      onZoomIn,
+      onZoomOut,
+      onZoomReset,
     ],
   );
 
@@ -190,6 +214,12 @@ export function MenuBar({
           },
           { kind: "item", id: "open_search", label: "Search…", shortcut: `${MOD}F` },
           { kind: "item", id: "go_to_file", label: "Go to File…", shortcut: `${MOD}P` },
+          {
+            kind: "item",
+            id: "go_to_symbol",
+            label: "Go to Symbol…",
+            shortcut: `${MOD}\u21e7O`,
+          },
           {
             kind: "item",
             id: "find_in_project",
@@ -215,6 +245,10 @@ export function MenuBar({
           { kind: "item", id: "toggle_terminal", label: "Toggle Terminal", shortcut: `${MOD}J` },
           { kind: "item", id: "open_model_picker", label: "Switch Model…", shortcut: `${MOD}.` },
           { kind: "item", id: "toggle_diff", label: "Toggle Changes" },
+          { kind: "sep" },
+          { kind: "item", id: "zoom_in", label: "Zoom In", shortcut: `${MOD}+` },
+          { kind: "item", id: "zoom_out", label: "Zoom Out", shortcut: `${MOD}-` },
+          { kind: "item", id: "zoom_reset", label: "Reset Zoom", shortcut: `${MOD}0` },
         ];
       case "terminal":
         return [

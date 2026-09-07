@@ -1,3 +1,4 @@
+import type { HostId } from "../host";
 import type { HarnessId } from "../session";
 import type { PrContent } from "../gitText";
 import { hasLiveCatalog } from "../models";
@@ -8,11 +9,22 @@ export type TitleInput = {
   sessionId: string;
   cwd: string;
   message: string;
+  hostId?: HostId;
 };
 
 /**
  * Lifecycle contract for a live harness adapter.
  * App.tsx dispatches through the registry instead of harness-specific branches.
+ *
+ * Which machine a call routes to is the adapter's own live state, not a
+ * parameter on every method. `sendTurn` and `bindSession` carry the host and
+ * record it next to the child they started; `cancelTurn`, `respondApproval`,
+ * and `respondQuestion` read it back. Two reasons, both about being wrong
+ * safely: the host that spawned a child is the only one that can kill it, so
+ * reading it from where the child was recorded beats trusting a caller to
+ * repeat it — a caller passing a different host kills nothing, or worse, kills
+ * on the wrong machine. And the idle-park timer in this file fires with no
+ * caller at all, so a host parameter would have to be remembered here anyway.
  */
 export type HarnessAdapter = {
   id: HarnessId;
@@ -25,24 +37,31 @@ export type HarnessAdapter = {
   cancelTurn(sessionId: string): Promise<void>;
   respondApproval(sessionId: string, requestId: number, decision: ApprovalDecision): void;
   respondQuestion?(sessionId: string, requestId: number, reply: UserQuestionReply): void;
-  /** Kill the child but keep resume state for later rebind. */
-  stopSession(sessionId: string): Promise<void>;
+  /**
+   * Kill the child but keep resume state for later rebind. `hostId` is a
+   * fallback for the one case the adapter's own state cannot answer: a child
+   * still running on a host that this client has no live or resume record for.
+   */
+  stopSession(sessionId: string, hostId?: HostId): Promise<void>;
   /** Drop resume state and kill the child (delete, harness switch, idle detach). */
-  forgetSession(sessionId: string): Promise<void>;
+  forgetSession(sessionId: string, hostId?: HostId): Promise<void>;
   /** Seed resume state from a restored wavex session. */
-  bindSession(threadId: string, providerSessionId: string, cwd: string): void;
+  bindSession(threadId: string, providerSessionId: string, cwd: string, hostId?: HostId): void;
   /** Refresh the model catalog overlay when supported. */
-  refreshCatalog?(): Promise<void>;
+  refreshCatalog?(hostId?: HostId): Promise<void>;
   /** Optional LLM tab title for the first turn. */
   generateTitle?(input: TitleInput): Promise<string | null>;
   /** Optional LLM commit message from staged changes. */
-  generateCommitMessage?(cwd: string): Promise<string>;
+  generateCommitMessage?(cwd: string, hostId?: HostId): Promise<string>;
   /** Optional LLM pull request title/body from branch diff context. */
-  generatePrContent?(cwd: string): Promise<(PrContent & { base: string; head: string }) | null>;
+  generatePrContent?(
+    cwd: string,
+    hostId?: HostId,
+  ): Promise<(PrContent & { base: string; head: string }) | null>;
   /** Optional LLM branch name from a user message. */
-  generateBranchName?(cwd: string, message: string): Promise<string | null>;
+  generateBranchName?(cwd: string, message: string, hostId?: HostId): Promise<string | null>;
   /** Optional warmup for text-generation backends. */
-  warmupText?(cwd: string): Promise<void>;
+  warmupText?(cwd: string, hostId?: HostId): Promise<void>;
 };
 
 const adapters = new Map<HarnessId, HarnessAdapter>();
@@ -157,18 +176,26 @@ export function respondHarnessQuestion(
   getHarness(harness)?.respondQuestion?.(sessionId, requestId, reply);
 }
 
-export async function stopHarnessSession(harness: HarnessId, sessionId: string): Promise<void> {
+export async function stopHarnessSession(
+  harness: HarnessId,
+  sessionId: string,
+  hostId?: HostId,
+): Promise<void> {
   cancelIdlePark(sessionId);
   const adapter = getHarness(harness);
   if (!adapter?.live) return;
-  await adapter.stopSession(sessionId);
+  await adapter.stopSession(sessionId, hostId);
 }
 
-export async function forgetHarnessSession(harness: HarnessId, sessionId: string): Promise<void> {
+export async function forgetHarnessSession(
+  harness: HarnessId,
+  sessionId: string,
+  hostId?: HostId,
+): Promise<void> {
   cancelIdlePark(sessionId);
   const adapter = getHarness(harness);
   if (!adapter) return;
-  await adapter.forgetSession(sessionId);
+  await adapter.forgetSession(sessionId, hostId);
 }
 
 export function bindHarnessSession(
@@ -176,8 +203,9 @@ export function bindHarnessSession(
   threadId: string,
   providerSessionId: string,
   cwd: string,
+  hostId?: HostId,
 ): void {
-  getHarness(harness)?.bindSession(threadId, providerSessionId, cwd);
+  getHarness(harness)?.bindSession(threadId, providerSessionId, cwd, hostId);
 }
 
 /**
@@ -185,7 +213,10 @@ export function bindHarnessSession(
  * Boot used to refresh every adapter; that spawned unused CLIs (Pi with
  * extensions can sit at ~1GB) even when the workspace never touched them.
  */
-export async function refreshHarnessCatalogs(ids: Iterable<HarnessId>): Promise<void> {
+export async function refreshHarnessCatalogs(
+  ids: Iterable<HarnessId>,
+  hostId?: HostId,
+): Promise<void> {
   const wanted = new Set(ids);
   if (wanted.size === 0) return;
   await Promise.all(
@@ -193,7 +224,7 @@ export async function refreshHarnessCatalogs(ids: Iterable<HarnessId>): Promise<
       .filter((adapter) => wanted.has(adapter.id))
       .map(async (adapter) => {
         if (!adapter.refreshCatalog || hasLiveCatalog(adapter.id)) return;
-        await adapter.refreshCatalog().catch((error: unknown) => {
+        await adapter.refreshCatalog(hostId).catch((error: unknown) => {
           console.debug(`[wavex] ${adapter.id} catalog`, error);
         });
       }),
@@ -212,33 +243,40 @@ export async function generateHarnessTitle(
 export async function generateHarnessCommitMessage(
   harness: HarnessId,
   cwd: string,
+  hostId?: HostId,
 ): Promise<string> {
   const adapter = requireHarness(harness);
   if (!adapter.generateCommitMessage) {
     throw new Error(`${harness} does not support commit message generation`);
   }
-  return adapter.generateCommitMessage(cwd);
+  return adapter.generateCommitMessage(cwd, hostId);
 }
 
 export async function generateHarnessPrContent(
   harness: HarnessId,
   cwd: string,
+  hostId?: HostId,
 ): Promise<(PrContent & { base: string; head: string }) | null> {
   const adapter = getHarness(harness);
   if (!adapter?.generatePrContent) return null;
-  return adapter.generatePrContent(cwd);
+  return adapter.generatePrContent(cwd, hostId);
 }
 
 export async function generateHarnessBranchName(
   harness: HarnessId,
   cwd: string,
   message: string,
+  hostId?: HostId,
 ): Promise<string | null> {
   const adapter = getHarness(harness);
   if (!adapter?.generateBranchName) return null;
-  return adapter.generateBranchName(cwd, message);
+  return adapter.generateBranchName(cwd, message, hostId);
 }
 
-export async function warmupHarnessText(harness: HarnessId, cwd: string): Promise<void> {
-  await getHarness(harness)?.warmupText?.(cwd);
+export async function warmupHarnessText(
+  harness: HarnessId,
+  cwd: string,
+  hostId?: HostId,
+): Promise<void> {
+  await getHarness(harness)?.warmupText?.(cwd, hostId);
 }

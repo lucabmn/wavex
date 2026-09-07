@@ -223,6 +223,35 @@ export function formatAgentType(value: string): string {
   return text.replace(/\b[a-z]/g, (char) => char.toUpperCase());
 }
 
+export type SubagentMetaPatch = {
+  agentType?: string;
+  prompt?: string;
+  model?: string;
+  background?: boolean;
+};
+
+/** What an Agent tool call's own input says about the subagent it spawns. */
+export function subagentMetaFromInput(input: Record<string, unknown>): SubagentMetaPatch | null {
+  const agentType =
+    coerceString(input.subagent_type) ??
+    coerceString(input.subagentType) ??
+    coerceString(input.agent_type) ??
+    coerceString(input.agentType);
+  const prompt = coerceString(input.prompt);
+  const background =
+    input.run_in_background === true || input.background === true
+      ? true
+      : input.run_in_background === false || input.background === false
+        ? false
+        : undefined;
+  if (!agentType && !prompt && background === undefined) return null;
+  return {
+    ...(agentType ? { agentType } : {}),
+    ...(prompt ? { prompt } : {}),
+    ...(background !== undefined ? { background } : {}),
+  };
+}
+
 export function extractSearchQuery(value: unknown): string | undefined {
   const keys = [
     "pattern",

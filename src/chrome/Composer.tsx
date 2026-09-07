@@ -11,7 +11,7 @@ import {
   type ReactNode,
   type UIEvent,
 } from "react";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { nativeWebview } from "../lib/native";
 import {
   attachmentsFromFiles,
   attachmentsFromPaths,
@@ -21,7 +21,13 @@ import {
   revokeAttachment,
 } from "../lib/attachments";
 import type { ContextUsage } from "../lib/contextUsage";
-import { loadProjectFiles, peekProjectFiles, recentOpenedFiles } from "../lib/files/fileIndex";
+import { hostIdForProject } from "../lib/transport";
+import {
+  loadProjectFiles,
+  peekProjectFiles,
+  recentOpenedFiles,
+  subscribeProjectFiles,
+} from "../lib/files/fileIndex";
 import {
   buildMentionIndex,
   fileMentionParts,
@@ -143,6 +149,7 @@ type Props = {
   onResumeQueue?: () => void;
   onStop?: () => void;
   onOpenFile?: (path: string) => void;
+  onDraftChange?: (text: string) => void;
   children?: ReactNode;
 };
 
@@ -224,6 +231,7 @@ export function Composer({
   onResumeQueue,
   onStop,
   onOpenFile,
+  onDraftChange,
   children,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -268,6 +276,7 @@ export function Composer({
   const skillCatalog = useComposerSkills({
     harness,
     executionCwd,
+    hostId: hostIdForProject(cwd),
     pickerOpen,
   });
   const templateCatalog = usePromptTemplates({ cwd, pickerOpen });
@@ -394,13 +403,21 @@ export function Composer({
 
   useEffect(() => {
     let cancelled = false;
+    const apply = (next: ProjectFile[]) => {
+      if (!cancelled) setFiles(next);
+    };
+    const cached = peekProjectFiles(cwd);
+    if (cached) apply(cached);
     void loadProjectFiles(cwd, mentionOpen)
-      .then((next) => {
-        if (!cancelled) setFiles(next);
-      })
+      .then(apply)
       .catch(() => undefined);
+    const unsub = subscribeProjectFiles(() => {
+      const next = peekProjectFiles(cwd);
+      if (next) apply(next);
+    });
     return () => {
       cancelled = true;
+      unsub();
     };
   }, [cwd, mentionOpen]);
 
@@ -433,9 +450,13 @@ export function Composer({
   useEffect(() => {
     const el = ref.current;
     if (!el || !initialDraft) return;
-    el.value = initialDraft;
+    if (el.value !== initialDraft) el.value = initialDraft;
     resizeTextarea(el);
   }, [initialDraft]);
+
+  useEffect(() => {
+    onDraftChange?.(draft);
+  }, [draft, onDraftChange]);
 
   const syncHighlightScroll = (e: UIEvent<HTMLTextAreaElement>) => {
     const highlight = highlightRef.current;
@@ -627,7 +648,7 @@ export function Composer({
       if (Date.now() - nativeDropAt < 250) return;
       const files = [...data.files];
       if (files.length === 0) return;
-      void attachmentsFromFiles(files).then(addAttachments);
+      void attachmentsFromFiles(files, hostIdForProject(cwd)).then(addAttachments);
     };
 
     const root = dropRoot();
@@ -637,8 +658,8 @@ export function Composer({
 
     let cancelled = false;
     let unlisten: (() => void) | undefined;
-    void getCurrentWebview()
-      .onDragDropEvent((event) => {
+    void nativeWebview()
+      ?.onDragDropEvent((event) => {
         if (event.payload.type === "leave") {
           setFileDrag(false);
           return;
@@ -653,7 +674,7 @@ export function Composer({
         setFileDrag(false);
         if (!over || !attachmentsSupported) return;
         nativeDropAt = Date.now();
-        void attachmentsFromPaths(event.payload.paths).then(addAttachments);
+        void attachmentsFromPaths(event.payload.paths, hostIdForProject(cwd)).then(addAttachments);
       })
       .then((fn) => {
         if (cancelled) fn();
@@ -679,6 +700,7 @@ export function Composer({
     ref.current.value = "";
     ref.current.style.height = "auto";
     setDraft("");
+    onDraftChange?.("");
     setAttachments([]);
     setSlash(null);
     setMention(null);
@@ -791,7 +813,7 @@ export function Composer({
 
   const attachFromPicker = () => {
     if (!attachmentsSupported) return;
-    void pickAttachments().then((files) => {
+    void pickAttachments(hostIdForProject(cwd)).then((files) => {
       addAttachments(files);
       ref.current?.focus();
     });

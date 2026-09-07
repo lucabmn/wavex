@@ -1,5 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
+import { getDefaultHostId, invokeLocal, invokeOn } from "./transport";
+import { isRemoteHostId, LOCAL_HOST_ID, type HostId } from "./host";
+import { saveDialog as save } from "./native";
 import { basename, pickFiles as pickFilePaths, readFileBase64, writeFileBase64 } from "./fs";
 import type { Attachment, AttachmentKind } from "./session";
 
@@ -130,12 +131,17 @@ export function displayAttachments(files: Attachment[]): Attachment[] {
  * attachment is still in memory, otherwise they are read back from its path.
  * Returns the destination, or null when the dialog was dismissed.
  */
-export async function saveAttachmentAs(file: Attachment): Promise<string | null> {
+export async function saveAttachmentAs(
+  file: Attachment,
+  hostId: HostId = getDefaultHostId(),
+): Promise<string | null> {
+  // The save dialog and its destination are this machine's; the attachment
+  // itself may live on the host that ran the turn.
   const target = await save({ defaultPath: file.name });
   if (!target) return null;
-  const data = file.data ?? (file.path ? await readFileBase64(file.path) : null);
+  const data = file.data ?? (file.path ? await readFileBase64(file.path, hostId) : null);
   if (!data) throw new Error(`${file.name} has no contents to save.`);
-  await writeFileBase64(target, data);
+  await writeFileBase64(target, data, LOCAL_HOST_ID);
   return target;
 }
 
@@ -208,25 +214,37 @@ function dropMacScreenshotTwins(files: File[]): File[] {
   return files.filter((file) => !unnamedTiff(file));
 }
 
-export async function pickAttachments(): Promise<Attachment[]> {
+export async function pickAttachments(hostId: HostId = getDefaultHostId()): Promise<Attachment[]> {
   const paths = await pickFilePaths();
   if (!paths?.length) return [];
-  return attachmentsFromPaths(paths);
+  return attachmentsFromPaths(paths, hostId);
 }
 
-export async function attachmentsFromPaths(paths: string[]): Promise<Attachment[]> {
+/**
+ * Paths from the file dialog, a drop, or a drag are paths on *this* machine,
+ * whatever host the session belongs to. They are inspected here and, for a
+ * remote session, copied to the host: an agent on another machine cannot open
+ * a path that only exists on the laptop that attached it.
+ */
+export async function attachmentsFromPaths(
+  paths: string[],
+  hostId: HostId = getDefaultHostId(),
+): Promise<Attachment[]> {
   const unique = [...new Set(paths.filter((path) => path.trim()))];
   if (unique.length === 0) return [];
-  const infos = await invoke<PathInfo[]>("inspect_paths", { paths: unique });
+  const infos = await invokeLocal<PathInfo[]>("inspect_paths", { paths: unique });
   const out: Attachment[] = [];
   for (const info of infos) {
-    const file = await attachmentFromPath(info);
+    const file = await attachmentFromPath(info, hostId);
     if (file) out.push(file);
   }
   return out;
 }
 
-export async function attachmentsFromFiles(files: File[]): Promise<Attachment[]> {
+export async function attachmentsFromFiles(
+  files: File[],
+  hostId: HostId = getDefaultHostId(),
+): Promise<Attachment[]> {
   const out: Attachment[] = [];
   const pathFiles: string[] = [];
   const blobs: File[] = [];
@@ -236,16 +254,19 @@ export async function attachmentsFromFiles(files: File[]): Promise<Attachment[]>
     else blobs.push(file);
   }
   if (pathFiles.length) {
-    out.push(...(await attachmentsFromPaths(pathFiles)));
+    out.push(...(await attachmentsFromPaths(pathFiles, hostId)));
   }
   for (const file of blobs) {
-    const item = await attachmentFromBlob(file);
+    const item = await attachmentFromBlob(file, hostId);
     if (item) out.push(item);
   }
   return out;
 }
 
-export async function prepareAttachments(files: Attachment[]): Promise<Attachment[]> {
+export async function prepareAttachments(
+  files: Attachment[],
+  hostId: HostId = getDefaultHostId(),
+): Promise<Attachment[]> {
   return Promise.all(
     files.map(async (file) => {
       if (file.data || !file.path) return file;
@@ -253,7 +274,7 @@ export async function prepareAttachments(files: Attachment[]): Promise<Attachmen
         return file;
       }
       try {
-        const data = await readFileBase64(file.path);
+        const data = await readFileBase64(file.path, hostId);
         return { ...file, data };
       } catch {
         return file;
@@ -292,7 +313,7 @@ function contentBlockFor(file: Attachment): PromptContentBlock | null {
   };
 }
 
-async function attachmentFromPath(info: PathInfo): Promise<Attachment | null> {
+async function attachmentFromPath(info: PathInfo, hostId: HostId): Promise<Attachment | null> {
   if (info.isDir || skipName(info.name)) return null;
   const mimeType = mimeFromName(info.name);
   const kind = kindFromMime(mimeType);
@@ -304,17 +325,35 @@ async function attachmentFromPath(info: PathInfo): Promise<Attachment | null> {
     size: info.size,
     path: info.path,
   };
-  if (isVisionImage(mimeType) && info.size > 0 && info.size <= MAX_EMBED_BYTES) {
+  const embeddable = isVisionImage(mimeType) && info.size > 0 && info.size <= MAX_EMBED_BYTES;
+  if (embeddable) {
     try {
-      file.data = await readFileBase64(info.path);
+      file.data = await readFileBase64(info.path, LOCAL_HOST_ID);
     } catch {
       // Fall back to a resource_link so the agent can still read the file.
     }
   }
-  return file;
+  if (!isRemoteHostId(hostId)) return file;
+
+  // The agent runs on the host, so a `resource_link` has to name a path the
+  // host can open. Bytes we already read travel as-is; anything else is read
+  // here first.
+  try {
+    const data = file.data ?? (await readFileBase64(info.path, LOCAL_HOST_ID));
+    file.path = await invokeOn<string>(hostId, "write_attachment", { name: info.name, data });
+    return file;
+  } catch {
+    // The copy failed. An embedded image still carries its own bytes and is
+    // worth keeping without a path; anything else would reach the agent as a
+    // link to a path that machine does not have, or as nothing at all. Drop it
+    // so the composer never shows a chip that silently contributes nothing.
+    if (!file.data) return null;
+    delete file.path;
+    return file;
+  }
 }
 
-async function attachmentFromBlob(file: File): Promise<Attachment | null> {
+async function attachmentFromBlob(file: File, hostId: HostId): Promise<Attachment | null> {
   if (skipName(file.name) || file.size < 0) return null;
   const mimeType = mimeFromFile(file);
   const kind = kindFromMime(mimeType);
@@ -337,7 +376,7 @@ async function attachmentFromBlob(file: File): Promise<Attachment | null> {
     return null;
   }
   try {
-    const path = await invoke<string>("write_attachment", { name, data });
+    const path = await invokeOn<string>(hostId, "write_attachment", { name, data });
     return {
       id: crypto.randomUUID(),
       name,

@@ -6,6 +6,7 @@ import {
   sendHarnessTurn,
 } from "./harness/registry";
 import { mergeStream } from "./harness/streamText";
+import type { HostId } from "./host";
 import type { HarnessId } from "./session";
 
 const HANDOFF_TIMEOUT_MS = 45_000;
@@ -13,6 +14,7 @@ const HANDOFF_TIMEOUT_MS = 45_000;
 export async function requestOutgoingHandoff(input: {
   harness: HarnessId;
   sessionId: string;
+  hostId?: HostId;
   cwd: string;
   model: string;
   modelSettings?: Record<string, string>;
@@ -26,6 +28,7 @@ export async function requestOutgoingHandoff(input: {
     await sendHarnessTurn({
       harness: input.harness,
       sessionId: input.sessionId,
+      hostId: input.hostId,
       cwd: input.cwd,
       model: input.model,
       modelSettings: input.modelSettings,

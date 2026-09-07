@@ -44,8 +44,8 @@ describe("surfaceTabPresentation", () => {
 });
 
 describe("appendProblems", () => {
-  it("leaves a clean file's tooltip alone", () => {
-    expect(appendProblems("/repo/src/app.ts", 0)).toBe("/repo/src/app.ts");
+  it("states a clean file's checks explicitly", () => {
+    expect(appendProblems("/repo/src/app.ts", 0)).toBe("/repo/src/app.ts — No problems");
   });
 
   it("singularises a lone problem", () => {

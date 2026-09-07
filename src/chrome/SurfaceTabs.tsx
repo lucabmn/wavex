@@ -1,13 +1,15 @@
-import { GitCompare, GripVertical, Terminal, X } from "./icons";
+import { Bot, Check, CircleAlert, GitCompare, GripVertical, Terminal, X } from "./icons";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useLayoutEffect, useRef } from "react";
 import { basename } from "../lib/fs";
+import { checkLabel } from "../lib/sessionStatus";
 import {
   isChangesTab,
   isCommitTab,
   isPlanTab,
   isReleaseNotesTab,
   isReviewTab,
+  isSubagentTab,
   isTerminalTab,
   type FilePaneTab,
 } from "../lib/workspace/layout";
@@ -68,6 +70,16 @@ export function surfaceTabPresentation(file: FilePaneTab): SurfaceTabPresentatio
     };
   }
 
+  if (isSubagentTab(file)) {
+    const name = file.subagent.title.trim() || "Subagent";
+    return {
+      name,
+      label: name,
+      iconName: "subagent",
+      tooltip: `${name} — subagent`,
+    };
+  }
+
   const review = isReviewTab(file);
   const terminal = isTerminalTab(file);
   const name = isPlanTab(file)
@@ -91,7 +103,7 @@ export function surfaceTabPresentation(file: FilePaneTab): SurfaceTabPresentatio
 
 /** Mirrors the VS Code tab tooltip: the path, then what is wrong with it. */
 export function appendProblems(title: string, errors: number): string {
-  if (!errors) return title;
+  if (!errors) return `${title} — No problems`;
   return `${title} — ${errors} ${errors === 1 ? "problem" : "problems"}`;
 }
 
@@ -166,6 +178,7 @@ export function SurfaceTabs({
           const commit = isCommitTab(file);
           const review = isReviewTab(file) && !changes;
           const terminal = isTerminalTab(file);
+          const subagent = isSubagentTab(file);
           const { label, iconName, tooltip } = surfaceTabPresentation(file);
           const dragging = sortable.draggingId === file.id;
           const showStart =
@@ -221,6 +234,8 @@ export function SurfaceTabs({
               >
                 {terminal ? (
                   <Terminal className="size-3.5 shrink-0" strokeWidth={1.75} />
+                ) : subagent ? (
+                  <Bot className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : changes || commit ? (
                   <GitCompare className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : (
@@ -237,6 +252,24 @@ export function SurfaceTabs({
                 >
                   {label}
                 </span>
+                {errors > 0 ? (
+                  <span
+                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold tabular-nums text-red-400"
+                    title={checkLabel(errors)}
+                    aria-label={checkLabel(errors)}
+                  >
+                    <CircleAlert className="size-3" strokeWidth={1.75} />
+                    <span>{errors}</span>
+                  </span>
+                ) : !terminal && !changes && !commit ? (
+                  <span
+                    className="shrink-0 text-emerald-400/60"
+                    title={checkLabel(0)}
+                    aria-label={checkLabel(0)}
+                  >
+                    <Check className="size-3" strokeWidth={2.25} />
+                  </span>
+                ) : null}
                 {dirty ? (
                   <span
                     className="size-1.5 shrink-0 rounded-full bg-content/75"

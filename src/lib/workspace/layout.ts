@@ -1,3 +1,4 @@
+import type { CodeLocation } from "../editor/codeNavigation";
 import type { ReleaseNotesTabSource } from "../updates/releaseNotes";
 import {
   applyTerminalMeta,
@@ -35,10 +36,29 @@ export type PlanTabSource = {
   title: string;
 };
 
+export type SubagentTabSource = {
+  sessionId: string;
+  /** The parent Agent call whose nested transcript this tab shows. */
+  blockId: string;
+  title: string;
+};
+
 export type CommitTabSource = {
   sha: string;
   shortSha: string;
   subject: string;
+};
+
+/**
+ * A `find references` or multi-result `go to definition` answer.
+ *
+ * Live only. The list is a snapshot of what the server said about the code as
+ * it was, so it is deliberately not persisted: a workspace restored a day later
+ * would offer line numbers that have since moved.
+ */
+export type ReferencesTabSource = {
+  symbol: string;
+  targets: CodeLocation[];
 };
 
 export type FilePaneTab = {
@@ -46,6 +66,7 @@ export type FilePaneTab = {
   path: string;
   cwd: string;
   plan?: PlanTabSource;
+  subagent?: SubagentTabSource;
   releaseNotes?: ReleaseNotesTabSource;
   review?: boolean;
   /** Single working-tree review of every changed file (unified diff). */
@@ -53,6 +74,8 @@ export type FilePaneTab = {
   /** Historical commit review (unified diff, read-only). */
   commit?: CommitTabSource;
   terminal?: boolean;
+  /** Language server result list. Live only — not persisted. */
+  references?: ReferencesTabSource;
   /** Foreground command when it isn't the shell. Live only — not persisted. */
   foreground?: string;
 };
@@ -123,6 +146,15 @@ export function newCommitTab(cwd: string, commit: CommitTabSource): FilePaneTab 
   };
 }
 
+export function newReferencesTab(cwd: string, references: ReferencesTabSource): FilePaneTab {
+  return {
+    id: crypto.randomUUID(),
+    path: `references:${references.symbol}`,
+    cwd,
+    references,
+  };
+}
+
 export function newPlanTab(
   sessionId: string,
   blockId: string,
@@ -134,6 +166,20 @@ export function newPlanTab(
     path: `plan:${blockId}`,
     cwd,
     plan: { sessionId, blockId, title },
+  };
+}
+
+export function newSubagentTab(
+  sessionId: string,
+  blockId: string,
+  title: string,
+  cwd: string,
+): FilePaneTab {
+  return {
+    id: crypto.randomUUID(),
+    path: `subagent:${blockId}`,
+    cwd,
+    subagent: { sessionId, blockId, title },
   };
 }
 
@@ -241,6 +287,12 @@ export function isPlanTab(file: FilePaneTab): file is FilePaneTab & { plan: Plan
   return !!file.plan;
 }
 
+export function isSubagentTab(
+  file: FilePaneTab,
+): file is FilePaneTab & { subagent: SubagentTabSource } {
+  return !!file.subagent;
+}
+
 export function isReleaseNotesTab(
   file: FilePaneTab,
 ): file is FilePaneTab & { releaseNotes: ReleaseNotesTabSource } {
@@ -251,12 +303,24 @@ export function isCommitTab(file: FilePaneTab): file is FilePaneTab & { commit: 
   return !!file.commit;
 }
 
+export function isReferencesTab(
+  file: FilePaneTab,
+): file is FilePaneTab & { references: ReferencesTabSource } {
+  return !!file.references;
+}
+
 export function isTerminalTab(file: FilePaneTab): boolean {
   return !!file.terminal;
 }
 
 export function isVirtualDocumentTab(file: FilePaneTab): boolean {
-  return isPlanTab(file) || isReleaseNotesTab(file) || isCommitTab(file);
+  return (
+    isPlanTab(file) ||
+    isSubagentTab(file) ||
+    isReleaseNotesTab(file) ||
+    isCommitTab(file) ||
+    isReferencesTab(file)
+  );
 }
 
 export function isFilesystemTab(file: FilePaneTab): boolean {
@@ -326,8 +390,12 @@ export function isChangesTab(file: FilePaneTab): boolean {
 export function editorTabKey(file: FilePaneTab): string {
   if (file.terminal) return `terminal:${file.id}`;
   if (file.plan) return `plan:${file.plan.blockId}`;
+  if (file.subagent) return `subagent:${file.subagent.blockId}`;
   if (file.releaseNotes) return `release-notes:${file.releaseNotes.version}`;
   if (file.commit) return `commit:${file.cwd}:${file.commit.sha}`;
+  // Keyed on the symbol, so asking again about the same one replaces the list
+  // rather than stacking a second tab beside it.
+  if (file.references) return `references:${file.cwd}:${file.references.symbol}`;
   if (file.changes) return `changes:${file.cwd}`;
   return file.review ? `review:${file.path}` : `file:${file.path}`;
 }

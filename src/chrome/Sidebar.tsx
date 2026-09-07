@@ -6,7 +6,6 @@ import {
   ChevronRight,
   CircleAlert,
   Folder,
-  GitBranch,
   Inbox,
   ListFilter,
   Pin,
@@ -31,6 +30,8 @@ import { IS_MAC, MOD } from "../lib/platform";
 import { resolveModel } from "../lib/models";
 import { projectName } from "../lib/paths";
 import { sessionDisplayTitle } from "../lib/session";
+import { resolveAgentStatus, sessionStatusTooltip, type GitState } from "../lib/sessionStatus";
+import { AgentStatusBadge, GitStatusBadge } from "./StatusBadges";
 import { nextUnseenFinishedSessions } from "../lib/sessions/sessionDone";
 import { paneDropFromPoint, setExternalPaneDrop } from "../lib/workspace/paneDrop";
 import type { PaneEdge } from "../lib/workspace/layout";
@@ -211,6 +212,10 @@ type Props = {
   onModeChange?: (mode: AppMode) => void;
   projectRailOpen?: boolean;
   unseenFinishedIds?: Set<string>;
+  /** Project-level diff stats shared by every session in this project. */
+  gitState?: GitState | null;
+  /** Project-level lint/diagnostic problems across open files. */
+  checkErrors?: number;
   settingsOpen?: boolean;
   settingsSection?: SettingsSectionId;
   onOpenSettings?: () => void;
@@ -291,6 +296,8 @@ function SidebarComponent({
   onModeChange,
   projectRailOpen = true,
   unseenFinishedIds: unseenFinishedIdsProp,
+  gitState: gitStateProp,
+  checkErrors = 0,
   settingsOpen = false,
   settingsSection = "general",
   onOpenSettings,
@@ -735,6 +742,7 @@ function SidebarComponent({
         busy={busySessionIds.has(session.id)}
         done={unseenFinishedIds.has(session.id)}
         needsApproval={approvalSessionIds.has(session.id)}
+        git={gitState}
         dropTarget={isSessionDrop("session", session.id)}
         compact={compact}
         now={now}
@@ -810,6 +818,25 @@ function SidebarComponent({
   const changeAdditions = changeStats?.additions ?? 0;
   const changeDeletions = changeStats?.deletions ?? 0;
   const hasChangeStats = changeAdditions > 0 || changeDeletions > 0;
+  // Every session listed here shares the project checkout, so one project-level
+  // git state describes them all — same as the branch hint already did.
+  const gitState: GitState | null = gitStateProp ?? (changeStats ? { ...changeStats } : null);
+  const changeFiles = gitState?.files ?? 0;
+  const hasUncommitted = changeFiles > 0 || hasChangeStats;
+
+  const changesTabLabel = hasUncommitted
+    ? [
+        "Changes",
+        changeFiles > 0 ? `${changeFiles} ${changeFiles === 1 ? "file" : "files"}` : "",
+        changeAdditions > 0 ? `+${changeAdditions}` : "",
+        changeDeletions > 0 ? `-${changeDeletions}` : "",
+        checkErrors > 0 ? `${checkErrors} ${checkErrors === 1 ? "problem" : "problems"}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : checkErrors > 0
+      ? `Changes, clean, ${checkErrors} ${checkErrors === 1 ? "problem" : "problems"} in open files`
+      : "Changes, clean";
 
   const workspaceTabItems = visibleTabs.map((itemId, index) => {
     const active = tab === itemId;
@@ -849,19 +876,8 @@ function SidebarComponent({
           role="tab"
           aria-selected={active}
           tabIndex={active ? 0 : -1}
-          aria-label={
-            isChangesTab
-              ? hasChangeStats
-                ? [
-                    "Changes",
-                    changeAdditions > 0 ? `+${changeAdditions}` : "",
-                    changeDeletions > 0 ? `-${changeDeletions}` : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")
-                : "Changes"
-              : undefined
-          }
+          title={isChangesTab ? changesTabLabel : TAB_LABELS[itemId]}
+          aria-label={isChangesTab ? changesTabLabel : undefined}
           data-tauri-drag-region="false"
           onClick={() => {
             if (sortable.consumeClick()) return;
@@ -874,7 +890,12 @@ function SidebarComponent({
           } ${canDragTabs ? "cursor-grab active:cursor-grabbing" : ""}`}
         >
           {isChangesTab && hasChangeStats ? (
-            <DiffStat additions={changeAdditions} deletions={changeDeletions} />
+            <DiffStat additions={changeAdditions} deletions={changeDeletions} files={changeFiles} />
+          ) : isChangesTab ? (
+            <span className="flex min-w-0 items-center gap-1">
+              <span className="block truncate">{TAB_LABELS[itemId]}</span>
+              <Check className="size-3 shrink-0 text-emerald-400/80" strokeWidth={2.25} />
+            </span>
           ) : (
             <span className="block truncate">{TAB_LABELS[itemId]}</span>
           )}
@@ -1128,6 +1149,13 @@ function SidebarComponent({
                                 )}
                                 needsApproval={entry.sessions.some((session) =>
                                   approvalSessionIds.has(session.id),
+                                )}
+                                summary={folderSummary(
+                                  entry.folder.name,
+                                  entry.sessions,
+                                  busySessionIds,
+                                  approvalSessionIds,
+                                  unseenFinishedIds,
                                 )}
                                 onPointerDown={(event) =>
                                   folderSortable.onItemPointerDown(entry.folder.id, event)
@@ -1569,6 +1597,7 @@ function FolderRow({
   busy,
   done,
   needsApproval,
+  summary,
   onPointerDown,
   onToggle,
   onContextMenu,
@@ -1582,6 +1611,8 @@ function FolderRow({
   busy: boolean;
   done: boolean;
   needsApproval: boolean;
+  /** Spoken/hover aggregate, e.g. "3 sessions · 1 working · 1 needs approval". */
+  summary?: string;
   onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   onToggle: () => void;
   onContextMenu: (event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -1592,7 +1623,8 @@ function FolderRow({
   return (
     <button
       type="button"
-      title={folder.name}
+      title={summary ?? folder.name}
+      aria-label={summary ?? folder.name}
       aria-expanded={expanded}
       data-tauri-drag-region="false"
       onPointerDown={onPointerDown}
@@ -1740,6 +1772,7 @@ function SessionCard({
   busy,
   done,
   needsApproval,
+  git,
   dropTarget,
   compact = false,
   now,
@@ -1757,6 +1790,8 @@ function SessionCard({
   busy: boolean;
   done: boolean;
   needsApproval: boolean;
+  /** Project-level git state; every listed session shares the checkout. */
+  git?: GitState | null;
   dropTarget?: boolean;
   compact?: boolean;
   now: number;
@@ -1772,38 +1807,25 @@ function SessionCard({
   const skipClickUntil = useRef(0);
   const [dragging, setDragging] = useState(false);
   const title = sessionDisplayTitle(session.title, session.harness);
-  const gitLabel = formatGitLabel(session.repo, session.branch);
+  const branch = session.branch || undefined;
   const time = formatRelative(session.updatedAt, now);
   const model = compact ? null : resolveModel(session.harness, session.model).name;
-  const statusClass = needsApproval
-    ? "text-amber-400"
-    : busy
-      ? "text-accent"
-      : done
-        ? "text-emerald-400"
-        : "text-content/45";
-  const status = (
-    <span className={`flex shrink-0 items-center gap-1 text-[11px] tabular-nums ${statusClass}`}>
-      {needsApproval ? (
-        <>
-          <CircleAlert className="size-3" strokeWidth={1.75} />
-          <span>Need approval</span>
-        </>
-      ) : busy ? (
-        <>
-          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11px] leading-none text-accent" />
-          <span>Working...</span>
-        </>
-      ) : done ? (
-        <>
-          <Check className="size-3" strokeWidth={2.25} />
-          <span>Done</span>
-        </>
-      ) : (
+  const agent = resolveAgentStatus({ busy, needsApproval, unread: done });
+  const tooltip = sessionStatusTooltip({
+    title,
+    branch,
+    repo: session.repo,
+    agent,
+    git,
+  });
+  const status =
+    agent === "idle" ? (
+      <span className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-content/45">
         <span>{time}</span>
-      )}
-    </span>
-  );
+      </span>
+    ) : (
+      <AgentStatusBadge status={agent} compact={compact} />
+    );
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (e.key === "F2" && onRename) {
@@ -1917,7 +1939,8 @@ function SessionCard({
   return (
     <button
       type="button"
-      title={title}
+      title={tooltip}
+      aria-label={tooltip}
       aria-current={isActive ? "true" : undefined}
       data-session-card={session.id}
       data-tauri-drag-region="false"
@@ -1963,11 +1986,13 @@ function SessionCard({
         {compact ? status : null}
       </span>
       <span className="relative mt-1 flex items-center gap-2">
-        {gitLabel ? (
-          <span className="flex min-w-0 flex-1 items-center gap-1 text-[11px] text-content/45">
-            <GitBranch className="size-3 shrink-0" strokeWidth={1.75} />
-            <span className="min-w-0 truncate">{gitLabel}</span>
-          </span>
+        {branch || git ? (
+          <GitStatusBadge
+            branch={branch ? formatGitLabel(session.repo, branch) : session.repo}
+            files={git?.files ?? 0}
+            additions={git?.additions ?? 0}
+            deletions={git?.deletions ?? 0}
+          />
         ) : (
           <span className="min-w-0 flex-1" />
         )}
@@ -2056,10 +2081,22 @@ function SessionRenameRow({
   );
 }
 
-function DiffStat({ additions, deletions }: { additions: number; deletions: number }) {
-  if (additions <= 0 && deletions <= 0) return null;
+function DiffStat({
+  additions,
+  deletions,
+  files = 0,
+}: {
+  additions: number;
+  deletions: number;
+  files?: number;
+}) {
+  if (additions <= 0 && deletions <= 0 && files <= 0) return null;
 
-  const label = [additions > 0 ? `+${additions}` : "", deletions > 0 ? `-${deletions}` : ""]
+  const label = [
+    files > 0 ? `${files} ${files === 1 ? "file" : "files"} changed` : "",
+    additions > 0 ? `+${additions}` : "",
+    deletions > 0 ? `-${deletions}` : "",
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -2068,6 +2105,7 @@ function DiffStat({ additions, deletions }: { additions: number; deletions: numb
       title={`${label} uncommitted`}
       className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums"
     >
+      {files > 0 ? <span className="text-content/60">{files} changed</span> : null}
       {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
       {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
     </span>
@@ -2077,6 +2115,26 @@ function DiffStat({ additions, deletions }: { additions: number; deletions: numb
 function formatGitLabel(repo?: string, branch?: string): string {
   if (repo && branch) return `${repo}/${branch}`;
   return branch || repo || "";
+}
+
+function folderSummary(
+  name: string,
+  sessions: SessionSummary[],
+  busyIds: Set<string>,
+  approvalIds: Set<string>,
+  unseenIds: Set<string>,
+): string {
+  const working = sessions.filter((session) => busyIds.has(session.id)).length;
+  const approval = sessions.filter((session) => approvalIds.has(session.id)).length;
+  const unread = sessions.filter((session) => unseenIds.has(session.id)).length;
+  return [
+    `${name}, ${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`,
+    working > 0 ? `${working} working` : "",
+    approval > 0 ? `${approval} ${approval === 1 ? "needs" : "need"} approval` : "",
+    unread > 0 ? `${unread} new ${unread === 1 ? "reply" : "replies"}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function formatRelative(value: number, now: number): string {
