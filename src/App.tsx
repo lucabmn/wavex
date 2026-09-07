@@ -529,6 +529,18 @@ export default function App({
   const [notesViewOpen, setNotesViewOpen] = useState(false);
   const [usageViewOpen, setUsageViewOpen] = useState(false);
   const [activityViewOpen, setActivityViewOpen] = useState(false);
+  /**
+   * The full-window surfaces are flex siblings of the workspace, so two open at
+   * once split the window instead of one covering the other. Every entry point
+   * closes all of them through here and then opens the one it wants.
+   */
+  const closeSurfaces = useCallback(() => {
+    setSearchViewOpen(false);
+    setInboxViewOpen(false);
+    setNotesViewOpen(false);
+    setUsageViewOpen(false);
+    setActivityViewOpen(false);
+  }, []);
   /** Live race groups. Never persisted: runners are ordinary sessions. */
   const [races, setRaces] = useState<RaceGroup[]>([]);
   const racesRef = useRef(races);
@@ -1339,11 +1351,7 @@ export default function App({
   }, []);
 
   const onNew = useCallback(() => {
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     const cwd = active?.cwd ?? sessionDefaults?.cwd ?? projectCwd;
     const session = newDefaultSession(cwd, sessionDefaults?.runtimeMode);
     const tab = newTab(session.id);
@@ -1352,15 +1360,19 @@ export default function App({
     setActiveTabId(tab.id);
     setComposerFocused(true);
     return session.id;
-  }, [active?.cwd, appendTab, sessionDefaults?.cwd, sessionDefaults?.runtimeMode, projectCwd]);
+  }, [
+    active?.cwd,
+    appendTab,
+    closeSurfaces,
+    sessionDefaults?.cwd,
+    sessionDefaults?.runtimeMode,
+    projectCwd,
+  ]);
 
   const onStartInboxItem = useCallback(
     (item: InboxItem) => {
       const start = () => {
-        setInboxViewOpen(false);
-        setNotesViewOpen(false);
-        setUsageViewOpen(false);
-        setActivityViewOpen(false);
+        closeSurfaces();
         setSidebarTab("sessions");
         const cwd = item.projectPath || active?.cwd || sessionDefaults?.cwd || projectCwd;
         const ref = `#${item.number}`;
@@ -1378,17 +1390,20 @@ export default function App({
 
       start();
     },
-    [active?.cwd, appendTab, sessionDefaults?.cwd, sessionDefaults?.runtimeMode, projectCwd],
+    [
+      active?.cwd,
+      appendTab,
+      closeSurfaces,
+      sessionDefaults?.cwd,
+      sessionDefaults?.runtimeMode,
+      projectCwd,
+    ],
   );
 
   const onAddNoteToChat = useCallback(
     (card: NoteComposerCard) => {
       if (!card.id) return;
-      setSearchViewOpen(false);
-      setInboxViewOpen(false);
-      setNotesViewOpen(false);
-      setUsageViewOpen(false);
-      setActivityViewOpen(false);
+      closeSurfaces();
       setSidebarTab("sessions");
       const cwd =
         (card.sourceCwd && looksLikeProject(card.sourceCwd) ? card.sourceCwd : undefined) ||
@@ -2659,11 +2674,7 @@ export default function App({
 
   const onSelectProject = useCallback(
     (path: string) => {
-      setSearchViewOpen(false);
-      setInboxViewOpen(false);
-      setNotesViewOpen(false);
-      setUsageViewOpen(false);
-      setActivityViewOpen(false);
+      closeSurfaces();
       const normalized = normalizeProjectPath(path);
       if (!looksLikeProject(normalized)) return;
 
@@ -4070,14 +4081,10 @@ export default function App({
 
   const onSelectLiveAgent = useCallback(
     (sessionId: string) => {
-      setSearchViewOpen(false);
-      setInboxViewOpen(false);
-      setNotesViewOpen(false);
-      setUsageViewOpen(false);
-      setActivityViewOpen(false);
+      closeSurfaces();
       onOpenApprovalSession(sessionId);
     },
-    [onOpenApprovalSession],
+    [closeSurfaces, onOpenApprovalSession],
   );
 
   const nextTitleTabs: TitleTab[] = deckProjectTabs.map((tab) =>
@@ -4148,44 +4155,29 @@ export default function App({
   }, []);
 
   const onGoToFile = useCallback(() => {
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     setFilePickerOpen(true);
-  }, []);
+  }, [closeSurfaces]);
 
   const onGoToSymbol = useCallback(() => {
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     setSymbolPickerOpen(true);
-  }, []);
+  }, [closeSurfaces]);
 
   const onFindInProject = useCallback(() => {
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     setSidebarTab("files");
     setFilesSearchOpen(true);
     setSearchFocusToken((token) => token + 1);
-  }, []);
+  }, [closeSurfaces]);
 
   const onOpenSearch = useCallback(() => {
     setFilePickerOpen(false);
     setSettingsOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     setSearchViewOpen(true);
     setSearchViewFocusToken((token) => token + 1);
-  }, []);
+  }, [closeSurfaces]);
 
   const onLeaveSearch = useCallback(() => {
     setSearchViewOpen(false);
@@ -4194,12 +4186,9 @@ export default function App({
   const onOpenInbox = useCallback(() => {
     setFilePickerOpen(false);
     setSettingsOpen(false);
-    setSearchViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     setInboxViewOpen(true);
-  }, []);
+  }, [closeSurfaces]);
 
   const onLeaveInbox = useCallback(() => {
     setInboxViewOpen(false);
@@ -4209,12 +4198,9 @@ export default function App({
     if (!loadNotesEnabled()) return;
     setFilePickerOpen(false);
     setSettingsOpen(false);
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     setNotesViewOpen(true);
-  }, []);
+  }, [closeSurfaces]);
 
   const onLeaveNotes = useCallback(() => {
     setNotesViewOpen(false);
@@ -4223,11 +4209,9 @@ export default function App({
   const onOpenUsage = useCallback(() => {
     setFilePickerOpen(false);
     setSettingsOpen(false);
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
+    closeSurfaces();
     setUsageViewOpen(true);
-  }, []);
+  }, [closeSurfaces]);
 
   const onLeaveUsage = useCallback(() => {
     setUsageViewOpen(false);
@@ -4236,30 +4220,26 @@ export default function App({
   const onOpenActivity = useCallback(() => {
     setFilePickerOpen(false);
     setSettingsOpen(false);
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
+    closeSurfaces();
     setActivityViewOpen(true);
-  }, []);
+  }, [closeSurfaces]);
 
   const onLeaveActivity = useCallback(() => {
     setActivityViewOpen(false);
   }, []);
 
-  const openSettings = useCallback((section?: SettingsSectionId) => {
-    setFilePickerOpen(false);
-    setSearchViewOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
-    if (section) {
-      setSettingsSection(section);
-      saveSettingsSection(section);
-    }
-    setSettingsOpen(true);
-  }, []);
+  const openSettings = useCallback(
+    (section?: SettingsSectionId) => {
+      setFilePickerOpen(false);
+      closeSurfaces();
+      if (section) {
+        setSettingsSection(section);
+        saveSettingsSection(section);
+      }
+      setSettingsOpen(true);
+    },
+    [closeSurfaces],
+  );
 
   const onOpenSettings = useCallback(() => openSettings(), [openSettings]);
 
@@ -4378,15 +4358,11 @@ export default function App({
   ]);
 
   const onRailForward = useCallback(() => {
-    setSearchViewOpen(false);
     setSettingsOpen(false);
-    setInboxViewOpen(false);
-    setNotesViewOpen(false);
-    setUsageViewOpen(false);
-    setActivityViewOpen(false);
+    closeSurfaces();
     if (codeNavigationStepRef.current("forward")) return;
     onVisitForward();
-  }, [onVisitForward]);
+  }, [closeSurfaces, onVisitForward]);
 
   useEffect(() => {
     if (sidebarTab === "inbox") setSidebarTab("sessions");
@@ -5203,6 +5179,9 @@ export default function App({
             </div>
           </main>
         </div>
+        {/* One chain, not six independent branches: these surfaces are flex
+            siblings, so a missed close would split the window between two of
+            them rather than replace one with the other. */}
         {searchViewOpen ? (
           <SearchView
             open
@@ -5218,8 +5197,7 @@ export default function App({
             onOpenSession={onSelectHistorySession}
             onOpenProject={onSelectProject}
           />
-        ) : null}
-        {inboxViewOpen ? (
+        ) : inboxViewOpen ? (
           <InboxView
             cwd={sidebarCwd}
             recents={recents}
@@ -5228,15 +5206,13 @@ export default function App({
             onToggleSidebar={onToggleSidebar}
             onStart={onStartInboxItem}
           />
-        ) : null}
-        {usageViewOpen ? (
+        ) : usageViewOpen ? (
           <UsageView
             besideRail={projectRailOpen}
             onClose={onLeaveUsage}
             onToggleSidebar={onToggleSidebar}
           />
-        ) : null}
-        {activityViewOpen ? (
+        ) : activityViewOpen ? (
           <ActivityView
             sessions={history}
             besideRail={projectRailOpen}
@@ -5244,16 +5220,14 @@ export default function App({
             onToggleSidebar={onToggleSidebar}
             onOpenSession={onSelectHistorySession}
           />
-        ) : null}
-        {notesViewOpen ? (
+        ) : notesViewOpen ? (
           <NotesView
             besideRail={projectRailOpen}
             cwd={projectCwd}
             onClose={onLeaveNotes}
             onToggleSidebar={onToggleSidebar}
           />
-        ) : null}
-        {settingsOpen ? (
+        ) : settingsOpen ? (
           <SettingsView
             section={settingsSection}
             cwd={sidebarCwd}
