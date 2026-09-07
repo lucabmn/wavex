@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] - 2026-09-07
+
+- Race one prompt across two or three installed agents at once. The runners
+  share the session's checkout, their answers sit side by side for comparison,
+  and the winner is kept per hunk. Each runner snapshots its own baseline
+  first, so accepting or undoing one never touches your commits or another
+  runner's work.
+- Collapse the working agents section in the rail.
+- Keep long transcripts responsive while streaming. Settled turns no longer
+  re-render for every token, and a user message resolves its line height once
+  instead of on every reflow.
+- Keep the project name readable beside the diff stat in the rail. Counts are
+  shown compact in the chip, with the exact numbers in the tooltip and the
+  accessible label.
+- Show the changes-tab diff stat only while there are uncommitted changes.
+- Show the update entry in the sidebar only when an update is available.
+- Set the bundle identifier in the Windows configuration.
+
 ## [0.9.0] - 2026-09-07
 
 - Add a custom installer icon and sidebar image to the Windows bundle.
