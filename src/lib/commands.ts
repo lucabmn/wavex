@@ -18,6 +18,9 @@ export type CommandId =
   | "app.newWindow"
   | "app.toggleSidebar"
   | "app.switchModel"
+  | "view.zoomIn"
+  | "view.zoomOut"
+  | "view.zoomReset"
   | "app.switchProfile"
   | "app.settings"
   | "app.toggleMode"
@@ -87,6 +90,9 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "app.newWindow", label: "App: New Window", keys: `${MOD}${SHIFT}N`, when: "Always" },
   { id: "app.toggleSidebar", label: "App: Toggle Sidebar", keys: `${MOD}B`, when: "Always" },
   { id: "app.switchModel", label: "App: Switch Model", keys: `${MOD}.`, when: "Always" },
+  { id: "view.zoomIn", label: "View: Zoom In", keys: `${MOD}+`, when: "Always" },
+  { id: "view.zoomOut", label: "View: Zoom Out", keys: `${MOD}-`, when: "Always" },
+  { id: "view.zoomReset", label: "View: Reset Zoom", keys: `${MOD}0`, when: "Always" },
   {
     id: "app.switchProfile",
     label: "App: Switch Profile",
