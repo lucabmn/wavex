@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { APP_COMMANDS, commandsForClient, paletteEntries, type CommandId } from "@/lib/commands";
+import {
+  APP_COMMANDS,
+  commandsForClient,
+  paletteEntries,
+  parsePaletteQuery,
+  type CommandId,
+} from "@/lib/commands";
 import { KEYBINDINGS } from "@/lib/settings";
 
 const ALL = new Set(APP_COMMANDS.map((command) => command.id));
