@@ -6,7 +6,11 @@ import { canRevealPath, revealLabel } from "../lib/platform";
 import { hostIdForProject } from "../lib/transport";
 import type { HostId } from "../lib/host";
 import { sameProjectPath } from "../lib/recents";
-import { formatChangedFiles, worktreeStatusTooltip } from "../lib/sessionStatus";
+import {
+  formatChangedFiles,
+  formatCompactCount,
+  worktreeStatusTooltip,
+} from "../lib/sessionStatus";
 import { gitWorktreePrune, worktreeLabel, type Worktree } from "../lib/worktrees/worktrees";
 import { useProjectDiffStats } from "../hooks/useProjectDiffStats";
 import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
@@ -240,14 +244,18 @@ function WorktreeRow({
         ) : null}
         {!worktree.missing && stats && dirty ? (
           <span
-            className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-semibold tabular-nums group-hover:hidden"
+            className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[10px] font-semibold tabular-nums group-hover:hidden"
             title={`${changed} uncommitted`}
           >
-            <span className="font-sans font-medium text-content/55">{changed}</span>
+            <span className="truncate font-sans font-medium text-content/55">{changed}</span>
             {stats.additions > 0 ? (
-              <span className="text-emerald-400">+{stats.additions}</span>
+              <span className="shrink-0 text-emerald-400">
+                +{formatCompactCount(stats.additions)}
+              </span>
             ) : null}
-            {stats.deletions > 0 ? <span className="text-red-400">-{stats.deletions}</span> : null}
+            {stats.deletions > 0 ? (
+              <span className="shrink-0 text-red-400">-{formatCompactCount(stats.deletions)}</span>
+            ) : null}
           </span>
         ) : null}
         {!worktree.missing && stats && !dirty && !busy ? (
@@ -274,4 +282,6 @@ function WorktreeRow({
   );
 }
 
-const labelClassName = "min-w-0 flex-1 truncate font-mono text-[12px] leading-tight";
+// A floor, so the badges to its right can never squeeze the label to zero
+// width — a zero-width `truncate` renders nothing, not an ellipsis.
+const labelClassName = "min-w-14 flex-1 truncate font-mono text-[12px] leading-tight";

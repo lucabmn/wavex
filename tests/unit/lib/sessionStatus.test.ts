@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkLabel,
   formatChangedFiles,
+  formatCompactCount,
   gitDirty,
   gitStateLabel,
   gitStatShort,
@@ -136,5 +137,25 @@ describe("tabStatusTooltip", () => {
     ).toBe(
       "web · Fix the parser · parser.ts · Needs approval · New reply · Branch feat-x · 2 files changed (+5) · Unsaved changes · 2 problems",
     );
+  });
+});
+
+describe("formatCompactCount", () => {
+  it("leaves counts a row can fit alone", () => {
+    expect(formatCompactCount(0)).toBe("0");
+    expect(formatCompactCount(27)).toBe("27");
+    expect(formatCompactCount(999)).toBe("999");
+  });
+
+  it("shortens the four- and five-digit counts a dirty checkout produces", () => {
+    expect(formatCompactCount(1234)).toBe("1.2k");
+    expect(formatCompactCount(8023)).toBe("8k");
+    expect(formatCompactCount(12_345)).toBe("12k");
+    expect(formatCompactCount(2_400_000)).toBe("2.4m");
+  });
+
+  it("treats junk as nothing to show", () => {
+    expect(formatCompactCount(-5)).toBe("0");
+    expect(formatCompactCount(Number.NaN)).toBe("0");
   });
 });

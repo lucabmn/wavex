@@ -73,6 +73,7 @@ import {
   saveTabGroupMascot,
 } from "../lib/workspace/tabGroups";
 import { formatLiveElapsed, type LiveAgent } from "../lib/liveAgents";
+import { formatCompactCount } from "../lib/sessionStatus";
 import { worktreeRepo } from "../lib/worktrees/worktreeIndex";
 import { CreateWorktreeDialog } from "./CreateWorktreeDialog";
 import { WorktreeList } from "./WorktreeList";
@@ -953,7 +954,9 @@ function ProjectSection({
   );
 }
 
-const nameClassName = "min-w-0 flex-1 truncate text-sm font-medium leading-tight";
+// The name keeps a floor so a dirty checkout's diff stat can never shrink it
+// to zero width, which renders as nothing rather than as an ellipsis.
+const nameClassName = "min-w-14 flex-1 truncate text-sm font-medium leading-tight";
 
 function ProjectCard({
   item,
@@ -1080,7 +1083,7 @@ function ProjectCard({
           <span className={nameClassName}>{name}</span>
         )}
         {hasChanges ? (
-          <span className="shrink-0 group-hover:hidden">
+          <span className="min-w-0 group-hover:hidden">
             <ProjectDiffStat additions={additions} deletions={deletions} files={files} />
           </span>
         ) : stats ? (
@@ -1160,13 +1163,17 @@ function ProjectDiffStat({
     <span
       title={`${label} uncommitted`}
       aria-label={`${label} uncommitted`}
-      className="flex shrink-0 items-center gap-1 font-mono text-[11px] font-semibold tabular-nums"
+      className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[11px] font-semibold tabular-nums"
     >
       {files > 0 ? (
-        <span className="font-sans font-medium text-content/55">{files} changed</span>
+        <span className="truncate font-sans font-medium text-content/55">{files} changed</span>
       ) : null}
-      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
+      {additions > 0 ? (
+        <span className="shrink-0 text-emerald-400">+{formatCompactCount(additions)}</span>
+      ) : null}
+      {deletions > 0 ? (
+        <span className="shrink-0 text-red-400">-{formatCompactCount(deletions)}</span>
+      ) : null}
     </span>
   );
 }

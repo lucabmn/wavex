@@ -60,6 +60,21 @@ export function gitStatShort(state: GitState | null | undefined): string {
     .join(" ");
 }
 
+/**
+ * Narrow-chip count: `942`, `1.2k`, `8k`, `12k`. A checkout worked in directly
+ * reaches four and five digits, which is wide enough to squeeze a row's name
+ * out of the layout entirely, so rails render this and keep the exact number
+ * in the tooltip.
+ */
+export function formatCompactCount(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  const count = Math.trunc(value);
+  if (count < 1000) return String(count);
+  const [scaled, suffix] = count < 1_000_000 ? [count / 1000, "k"] : [count / 1_000_000, "m"];
+  const text = scaled < 10 ? scaled.toFixed(1).replace(/\.0$/, "") : String(Math.round(scaled));
+  return `${text}${suffix}`;
+}
+
 /** Lint/diagnostic problems for open files. Zero means the checks pass. */
 export function checkLabel(errors: number): string {
   if (!Number.isFinite(errors) || errors <= 0) return "No problems";
