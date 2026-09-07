@@ -144,6 +144,7 @@ type Props = {
   onResumeQueue?: () => void;
   onStop?: () => void;
   onOpenFile?: (path: string) => void;
+  onDraftChange?: (text: string) => void;
   children?: ReactNode;
 };
 
@@ -225,6 +226,7 @@ export function Composer({
   onResumeQueue,
   onStop,
   onOpenFile,
+  onDraftChange,
   children,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -435,9 +437,13 @@ export function Composer({
   useEffect(() => {
     const el = ref.current;
     if (!el || !initialDraft) return;
-    el.value = initialDraft;
+    if (el.value !== initialDraft) el.value = initialDraft;
     resizeTextarea(el);
   }, [initialDraft]);
+
+  useEffect(() => {
+    onDraftChange?.(draft);
+  }, [draft, onDraftChange]);
 
   const syncHighlightScroll = (e: UIEvent<HTMLTextAreaElement>) => {
     const highlight = highlightRef.current;
@@ -681,6 +687,7 @@ export function Composer({
     ref.current.value = "";
     ref.current.style.height = "auto";
     setDraft("");
+    onDraftChange?.("");
     setAttachments([]);
     setSlash(null);
     setMention(null);
