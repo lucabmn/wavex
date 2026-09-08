@@ -603,4 +603,27 @@ describe("proseSummary", () => {
   it("skips fenced code and list markers", () => {
     expect(proseSummary("```ts\nconst a = 1;\n```\n\n- Ran [checks](x.md)")).toBe("Ran checks");
   });
+
+  it("skips an unterminated fence", () => {
+    expect(proseSummary("```ts\nconst a = 1;")).toBe("");
+  });
+
+  it("keeps the leading paragraph behind a huge fence", () => {
+    const fence = `\`\`\`ts\n${"const a = 1;\n".repeat(20_000)}\`\`\``;
+    expect(proseSummary(`${fence}\n\nRan the checks`)).toBe("Ran the checks");
+  });
+
+  // A streaming think reaches this on every commit, so the scan is windowed.
+  // The window has to stay far wider than the one line every caller renders.
+  it("reads a bounded window of a long think", () => {
+    const paragraph = "Checking the registry. ".repeat(2000);
+    const summary = proseSummary(`${paragraph}\n\ntail`);
+    expect(summary.length).toBeLessThanOrEqual(4096);
+    expect(summary.startsWith("Checking the registry.")).toBe(true);
+  });
+
+  it("is unchanged by text past the window", () => {
+    const head = "First thought.\n\n";
+    expect(proseSummary(head + "x".repeat(500_000))).toBe(proseSummary(head));
+  });
 });

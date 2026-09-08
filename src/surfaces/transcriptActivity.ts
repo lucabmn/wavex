@@ -169,9 +169,44 @@ export function formatElapsed(elapsedMs: number | null): string | null {
   return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
 }
 
+/**
+ * How much of a block this summary is allowed to read. Every caller renders the
+ * result as one truncated line, so the first paragraph is the whole answer and
+ * a window an order of magnitude wider than any line that can fit cannot change
+ * what is displayed. A streaming reasoning block reaches this on every commit,
+ * and the old whole-text fence pass grew with the think: ~0.05 ms per row per
+ * commit at 128 KB, unbounded above that.
+ */
+const PROSE_SCAN_LIMIT = 4096;
+
+/**
+ * The leading window of `text` with fenced code replaced by a space, which is
+ * what the paragraph split below expects. Fences are hopped with `indexOf`
+ * rather than a global `/```[\s\S]*?(?:```|$)/` pass so a long code block costs
+ * a scan, not regex backtracking over the whole block.
+ */
+function proseScanWindow(text: string): string {
+  let body = "";
+  let index = 0;
+  while (index < text.length && body.length < PROSE_SCAN_LIMIT) {
+    const fence = text.indexOf("```", index);
+    if (fence !== index) {
+      const plainEnd = fence === -1 ? text.length : fence;
+      const end = Math.min(plainEnd, index + (PROSE_SCAN_LIMIT - body.length));
+      body += text.slice(index, end);
+      index = end;
+      continue;
+    }
+    const close = text.indexOf("```", fence + 3);
+    body += " ";
+    index = close === -1 ? text.length : close + 3;
+  }
+  return body;
+}
+
 /** First paragraph of a folded prose block, stripped to one plain line. */
 export function proseSummary(text: string): string {
-  const body = text.replace(/```[\s\S]*?(?:```|$)/g, " ");
+  const body = proseScanWindow(text);
   const paragraph =
     body
       .split(/\n\s*\n/)
