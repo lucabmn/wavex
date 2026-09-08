@@ -3,6 +3,7 @@ use tauri::Manager;
 mod checkpoint;
 mod connect;
 mod cursor_store;
+mod frame_probe;
 mod fs;
 mod harness;
 pub mod headless;
@@ -261,6 +262,7 @@ pub fn run(launch: headless::Launch) {
             fs::git_github_work_item_comment,
             fs::git_github_pr_diff,
             inbox_media::fetch_inbox_media,
+            frame_probe::probe_frame,
             fs::git_branches,
             fs::git_checkout,
             fs::git_create_branch,

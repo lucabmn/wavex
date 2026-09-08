@@ -12,6 +12,7 @@ import {
   type BrowserHistory,
 } from "../lib/workspace/browserHistory";
 import { openUrl } from "../lib/native";
+import { preflightFrame } from "../lib/framePreflight";
 import { PlaceholderButton, SurfacePlaceholder } from "../chrome/SurfacePlaceholder";
 
 type Props = {
@@ -20,14 +21,14 @@ type Props = {
 };
 
 /**
- * How long a page gets to commit before the frame is read.
+ * How long the cover stays up when nothing has said whether the page arrived.
  *
- * A refused frame never commits, so this is the whole wait before the panel can
- * say so — long enough that an ordinary page has started, short enough that a
- * refusal is not a silent pause. A page slower than this is called loaded on
- * its own `load` a moment later, which clears the message again.
+ * Only reached when the preflight could not answer — in a browser tab, or when
+ * the request failed in a way the frame's own request may not. Past it the page
+ * is shown and a blank one speaks for itself, which is the behaviour the panel
+ * has without a preflight at all.
  */
-const COMMIT_GRACE_MS = 3000;
+const COVER_GRACE_MS = 3000;
 
 /** Ports a dev server is reached on often enough to be worth one click. */
 const SUGGESTIONS = ["localhost:3000", "localhost:5173", "localhost:8080"];
@@ -50,6 +51,7 @@ export function DockBrowser({ browser, onChange }: Props) {
   // pointing `src` at the address it already holds would do nothing.
   const [reloads, setReloads] = useState(0);
   const [state, setState] = useState<FrameState>("idle");
+  const [refusedBy, setRefusedBy] = useState<string | null>(null);
   const url = browserHistoryUrl(browser);
   const back = canGoBack(browser);
   const forward = canGoForward(browser);
@@ -61,18 +63,29 @@ export function DockBrowser({ browser, onChange }: Props) {
     setDraft(url ?? "");
   }, [url]);
 
-  // A refused frame fires no event a listener can hear, so the frame is read
-  // once the grace period is up rather than waited on. Until then the page is
-  // covered: a frame that has not committed paints white, and a white sheet in
-  // a dark panel reads as a broken app rather than as a page on its way.
+  // The frame cannot report a refusal — no event fires, and its location throws
+  // whether it was blocked or loaded — so the headers are read instead, next to
+  // the frame's own request. Until an answer arrives the page is covered: a
+  // frame that has not committed paints white, and a white sheet in a dark
+  // panel reads as a broken app rather than as a page on its way.
   useEffect(() => {
     if (!url) {
       setState("idle");
       return;
     }
     setState("loading");
-    const timer = window.setTimeout(() => setState(settle(frame.current)), COMMIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
+    let current = true;
+    const timer = window.setTimeout(() => current && setState("ready"), COVER_GRACE_MS);
+    void preflightFrame(url).then((probe) => {
+      if (!current || !probe) return;
+      window.clearTimeout(timer);
+      setState(!probe.reachable ? "unreachable" : probe.embeddable ? "ready" : "refused");
+      setRefusedBy(probe.refusedBy);
+    });
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
   }, [url, reloads]);
 
   const openExternally = useCallback(() => {
@@ -154,15 +167,18 @@ export function DockBrowser({ browser, onChange }: Props) {
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
             referrerPolicy="strict-origin-when-cross-origin"
             className="absolute inset-0 h-full w-full border-0 bg-white"
-            onLoad={() => setState(settle(frame.current))}
+            // A page that says it can be framed and then arrives takes the
+            // cover down early; one that never arrives is already spoken for.
+            onLoad={() => setState((previous) => (previous === "loading" ? "ready" : previous))}
           />
         ) : (
           <EmptyBrowser onPick={(value) => onChange(browserVisit(browser, value))} />
         )}
         {url && state === "loading" ? <Loading url={url} /> : null}
-        {state === "blank" ? (
-          <NothingLoaded
+        {state === "refused" || state === "unreachable" ? (
+          <NotShown
             url={url ?? ""}
+            refusedBy={state === "refused" ? refusedBy : null}
             onOpen={openExternally}
             onRetry={() => setReloads((count) => count + 1)}
           />
@@ -172,25 +188,7 @@ export function DockBrowser({ browser, onChange }: Props) {
   );
 }
 
-type FrameState = "idle" | "loading" | "ready" | "blank";
-
-/**
- * What the frame has actually got in it.
- *
- * A frame that was blocked, or whose server never answered, is left sitting on
- * `about:blank` — the one document this window may read across the boundary. A
- * page that really loaded throws on the same read, and that throw is the
- * success. What this cannot say is *why* nothing arrived, so the message it
- * leads to names both reasons rather than guessing between them.
- */
-function settle(frame: HTMLIFrameElement | null): FrameState {
-  if (!frame) return "blank";
-  try {
-    return frame.contentWindow?.location.href === "about:blank" ? "blank" : "ready";
-  } catch {
-    return "ready";
-  }
-}
+type FrameState = "idle" | "loading" | "ready" | "refused" | "unreachable";
 
 function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
   return (
@@ -223,24 +221,31 @@ function Loading({ url }: { url: string }) {
   );
 }
 
-function NothingLoaded({
+function NotShown({
   url,
+  refusedBy,
   onOpen,
   onRetry,
 }: {
   url: string;
+  refusedBy: string | null;
   onOpen: () => void;
   onRetry: () => void;
 }) {
+  const host = hostOf(url);
   return (
     <div className="absolute inset-0 bg-background-base">
       <SurfacePlaceholder
         icon={Globe}
-        title={`Nothing loaded from ${hostOf(url)}`}
-        description={`Either nothing is listening there, or ${hostOf(url)} asks browsers not to embed it — which most large sites do. Development servers and documentation sites almost never do.`}
+        title={refusedBy ? `${host} will not be embedded` : `Nothing answered at ${host}`}
+        description={
+          refusedBy
+            ? `Its ${refusedBy} header tells browsers to refuse this, which most large sites do. Development servers and documentation sites almost never do.`
+            : "Nothing is listening at that address. Start the server, or check the port."
+        }
       >
-        <PlaceholderButton onClick={onRetry}>Try Again</PlaceholderButton>
         <PlaceholderButton onClick={onOpen}>Open in Browser</PlaceholderButton>
+        <PlaceholderButton onClick={onRetry}>Try Again</PlaceholderButton>
       </SurfacePlaceholder>
     </div>
   );
