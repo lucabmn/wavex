@@ -16,7 +16,8 @@ import {
   getPickerVisibilitySnapshot,
   loadFavoriteModels,
   loadModelPickerTab,
-  modelsFor,
+  enabledModelsFor,
+  isModelEnabled,
   resolveModel,
   saveFavoriteModels,
   saveModelPickerTab,
@@ -187,8 +188,11 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
       visibleTab === "favorites"
         ? favorites
             .map((id) => findModel(id))
-            .filter((item): item is AgentModel => item != null && shownInPicker(item.harness))
-        : modelsFor(visibleTab);
+            .filter(
+              (item): item is AgentModel =>
+                item != null && shownInPicker(item.harness) && isModelEnabled(item.id),
+            )
+        : enabledModelsFor(visibleTab);
     return filterModels(pool, query);
     // Catalog, install probes, and picker-visibility all feed this list:
     // catalogs land after mount, and hiding a provider must drop its favorites.

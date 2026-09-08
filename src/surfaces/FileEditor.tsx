@@ -30,7 +30,12 @@ import { LanguageServerBar } from "../chrome/LanguageServerBar";
 import { RenameSymbolDialog } from "../chrome/RenameSymbolDialog";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
-import { isLightScheme } from "../lib/appearance";
+import {
+  isLightScheme,
+  loadEditorChrome,
+  subscribeAppearance,
+  type EditorChromeSettings,
+} from "../lib/appearance";
 import { formatText, hasPrettierParser } from "../lib/format";
 import {
   basename,
@@ -78,6 +83,21 @@ import { serverForPath } from "../lib/lsp/servers";
 type EditorNavigationRequest = EditorNavigation & { token: number };
 
 const editorScheme = new Compartment();
+const editorChrome = new Compartment();
+
+/**
+ * The gutters, wrapping, and active-line highlight the user chose in Settings.
+ * `wrappedLineIndent` only has something to indent while wrapping is on, so the
+ * two travel together.
+ */
+function chromeExtensions(chrome: EditorChromeSettings) {
+  return [
+    chrome.lineNumbers ? lineNumbers() : [],
+    chrome.foldGutter ? foldGutter() : [],
+    chrome.activeLine ? [highlightActiveLine(), highlightActiveLineGutter()] : [],
+    chrome.wordWrap ? [EditorView.lineWrapping, wrappedLineIndent] : [],
+  ];
+}
 
 /** Long enough to read “No definition found”, short enough not to linger. */
 const NOTICE_MS = 2_500;
@@ -680,12 +700,7 @@ function CodeMirrorEditor({
                 : undefined,
             )
           : [],
-        lineNumbers(),
-        foldGutter(),
-        highlightActiveLine(),
-        highlightActiveLineGutter(),
-        EditorView.lineWrapping,
-        wrappedLineIndent,
+        editorChrome.of(chromeExtensions(loadEditorChrome())),
         language.of([]),
         editorScheme.of(schemeExtensions(isLightScheme() ? "light" : "dark")),
         editorMatching,
@@ -892,6 +907,20 @@ function CodeMirrorEditor({
     const timer = window.setTimeout(() => setNotice(""), NOTICE_MS);
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  // Text size and the monospace family both move the character box the view
+  // measured at mount; the gutters and wrapping change the geometry outright,
+  // so the reconfigure has to land before the measure.
+  useEffect(() => {
+    return subscribeAppearance(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: editorChrome.reconfigure(chromeExtensions(loadEditorChrome())),
+      });
+      view.requestMeasure();
+    });
+  }, []);
 
   useEffect(() => {
     if (!active) return;

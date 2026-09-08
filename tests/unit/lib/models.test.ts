@@ -3,9 +3,11 @@ import type { HarnessId } from "@/lib/session";
 import {
   coerceModelPickerTab,
   defaultModelId,
+  enabledModelsFor,
   defaultSessionChoice,
   filterModels,
   hasLiveCatalog,
+  isModelEnabled,
   isPickerProviderVisible,
   loadDefaultModels,
   loadHiddenPickerProviders,
@@ -13,14 +15,17 @@ import {
   loadLastModelSettings,
   mergeModelSettings,
   modelPickerTabs,
+  modelsFor,
   preferredModelId,
   preferredModelSettings,
   resetHarnessModelOverlays,
+  resolveModel,
   saveDefaultModel,
   saveLastModelChoice,
   saveLastModelSettings,
   savePickerProviderVisible,
   setHarnessModels,
+  setModelEnabled,
   showProviderInModelPicker,
   stepModelPickerTab,
   type AgentModel,
@@ -336,5 +341,77 @@ describe("model search", () => {
 
   it("matches the provider name", () => {
     expect(ids("fx")).toHaveLength(3);
+  });
+});
+
+describe("disabled models", () => {
+  const sonnet: AgentModel = { id: "claude:sonnet-5", harness: "claude", name: "Sonnet 5" };
+
+  beforeEach(() => {
+    mockLocalStorage();
+    resetHarnessModelOverlays();
+    setHarnessModels("claude", [sonnet, opus, haiku]);
+  });
+
+  afterEach(() => {
+    mockLocalStorage();
+    resetHarnessModelOverlays();
+  });
+
+  it("offers every model until one is turned off", () => {
+    expect(enabledModelsFor("claude").map((model) => model.id)).toEqual([
+      "claude:sonnet-5",
+      "claude:opus-5",
+      "claude:haiku-4.5",
+    ]);
+    expect(isModelEnabled("claude:opus-5")).toBe(true);
+  });
+
+  it("drops a disabled model from the picker list and puts it back", () => {
+    setModelEnabled("claude:opus-5", false);
+    expect(isModelEnabled("claude:opus-5")).toBe(false);
+    expect(enabledModelsFor("claude").map((model) => model.id)).toEqual([
+      "claude:sonnet-5",
+      "claude:haiku-4.5",
+    ]);
+
+    setModelEnabled("claude:opus-5", true);
+    expect(enabledModelsFor("claude").map((model) => model.id)).toEqual([
+      "claude:sonnet-5",
+      "claude:opus-5",
+      "claude:haiku-4.5",
+    ]);
+  });
+
+  it("keeps the catalog whole so a session resumes on the model it started with", () => {
+    setModelEnabled("claude:opus-5", false);
+    expect(modelsFor("claude").map((model) => model.id)).toContain("claude:opus-5");
+    expect(resolveModel("claude", "claude:opus-5").id).toBe("claude:opus-5");
+  });
+
+  it("moves a provider's default off the model being turned off", () => {
+    saveLastModelChoice("claude", "claude:opus-5");
+    setModelEnabled("claude:opus-5", false);
+    expect(loadDefaultModels().claude).toBe("claude:sonnet-5");
+    expect(loadLastModelChoice()).toEqual({
+      harness: "claude",
+      model: "claude:sonnet-5",
+    });
+  });
+
+  it("leaves the pointer alone when nothing is left to move it to", () => {
+    saveLastModelChoice("claude", "claude:opus-5");
+    for (const id of ["claude:sonnet-5", "claude:haiku-4.5", "claude:opus-5"]) {
+      setModelEnabled(id, false);
+    }
+    expect(enabledModelsFor("claude")).toEqual([]);
+    expect(loadLastModelChoice()?.model).toBe("claude:opus-5");
+  });
+
+  it("persists the off list across loads", () => {
+    setModelEnabled("claude:haiku-4.5", false);
+    expect(JSON.parse(localStorage.getItem("wavex.disabledModels") ?? "[]")).toEqual([
+      "claude:haiku-4.5",
+    ]);
   });
 });

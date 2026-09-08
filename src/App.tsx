@@ -57,11 +57,7 @@ import {
   resolveOpenablePath,
 } from "./lib/files/fileIndex";
 import { sameSettings, setsEqual } from "./lib/equality";
-import {
-  cancelScheduledFlush,
-  scheduleHarnessFlush,
-  type ScheduledFlush,
-} from "./lib/harness/flush";
+import { createStreamPump } from "./lib/harness/flush";
 import {
   dropOpenFiles,
   nudgeOpenEditors,
@@ -211,7 +207,7 @@ import type { LspWorkspaceEdit } from "./lib/lsp/types";
 import { planRename } from "./lib/lsp/rename";
 import {
   mergeModelSettings,
-  modelsFor,
+  enabledModelsFor,
   preferredModelSettings,
   resolveModel,
   saveLastModelSettings,
@@ -446,7 +442,7 @@ async function quotaFallbackForSession(
         ? await fetchClaudePlanLimits(false, hostId)
         : await fetchCodexPlanLimits(false, hostId);
     const fallbackRisk = assessQuota(plan);
-    const model = modelsFor(harness)[0];
+    const model = enabledModelsFor(harness)[0];
     candidates.push({
       harness,
       model: model?.id ?? "",
@@ -677,10 +673,10 @@ export default function App({
   const observedSessions = useRef(new Map<string, Session>());
   const pendingPersist = useRef(new Map<string, Session>());
   const removingSessionIds = useRef(new Set<string>());
-  // Tokens arrive many times per frame; apply them once so React/markdown aren't
-  // recomputed for every delta.
+  // Tokens arrive many times faster than a commit is worth; the pump collects
+  // them and applies one batch per window so React, markdown, and the scroller
+  // are not recomputed for every delta.
   const harnessQueued = useRef(new Map<string, HarnessEvent[]>());
-  const harnessFlush = useRef<ScheduledFlush | null>(null);
   const skipForgetSessionIds = useRef(new Set<string>());
   const importedSessionsApplied = useRef(false);
 
@@ -700,9 +696,7 @@ export default function App({
     }
   }, [windowTransfer, resumed]);
 
-  const flushHarnessEvents = useCallback(() => {
-    cancelScheduledFlush(harnessFlush.current);
-    harnessFlush.current = null;
+  const drainHarnessEvents = useCallback(() => {
     const batches = harnessQueued.current;
     if (batches.size === 0) return;
     harnessQueued.current = new Map();
@@ -716,6 +710,10 @@ export default function App({
     syncDockBadge(next);
     setSessions(next);
   }, []);
+
+  const harnessPump = useMemo(() => createStreamPump(drainHarnessEvents), [drainHarnessEvents]);
+  /** Drain on demand. A stop, a focus, or a profile switch cannot wait out the window. */
+  const flushHarnessEvents = useCallback(() => harnessPump.flushNow(), [harnessPump]);
 
   const stopSessionForRemoval = useCallback(
     async (sessionId: string): Promise<Session | undefined> => {
@@ -764,11 +762,9 @@ export default function App({
       const events = queued.get(sessionId);
       if (events) events.push(event);
       else queued.set(sessionId, [event]);
-      if (!harnessFlush.current) {
-        harnessFlush.current = scheduleHarnessFlush(flushHarnessEvents);
-      }
+      harnessPump.schedule();
     },
-    [applyApprovalEvent, flushHarnessEvents],
+    [applyApprovalEvent, harnessPump],
   );
 
   useEffect(() => {
@@ -795,10 +791,9 @@ export default function App({
       window.removeEventListener("pagehide", reap);
       window.removeEventListener("beforeunload", reap);
       stopBridge();
-      cancelScheduledFlush(harnessFlush.current);
-      harnessFlush.current = null;
+      harnessPump.cancel();
     };
-  }, [resumed]);
+  }, [harnessPump, resumed]);
 
   // A profile switch is a quit and a relaunch for one profile: persist, let the
   // native stores swap, then reload onto the profile that was chosen.

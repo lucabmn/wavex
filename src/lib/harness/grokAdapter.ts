@@ -13,7 +13,7 @@ import { runGrokTextPrompt, warmupGrokText } from "./grokText";
 import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
-const gitText = createGitTextGenerators(runGrokTextPrompt, "Grok Build", 60_000);
+const gitText = createGitTextGenerators(runGrokTextPrompt, "Grok Build", "grok", 60_000);
 
 export const grokAdapter: HarnessAdapter = {
   id: "grok",

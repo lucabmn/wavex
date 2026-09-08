@@ -108,6 +108,7 @@ import { HarnessIcon } from "./HarnessIcon";
 import { ProjectRail } from "./ProjectRail";
 import type { AppMode } from "../lib/workspace/appMode";
 import { RailAction } from "./RailAction";
+import { CLOCK_STRIDE_COARSE, useNow } from "../lib/motion";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { DevModeSlot, IconButton, TabVisitNav } from "./TitleBar";
 import { ProjectSearch } from "./ProjectSearch";
@@ -326,8 +327,10 @@ function SidebarComponent({
       rememberedWidth = next;
     },
   });
+  // Recency labels read in minutes, so the session list joins the shared clock
+  // at its coarse stride instead of holding a timer of its own.
+  const now = useNow(tab === "sessions", CLOCK_STRIDE_COARSE);
   const [tabOrder, setTabOrder] = useState<SidebarTab[]>(loadSidebarTabOrder);
-  const [now, setNow] = useState(() => Date.now());
   const sessionsLock = useLockOverscroll<HTMLDivElement>();
   const sessionsScrollRef = useRef<HTMLDivElement>(null);
   const [sessionMenu, setSessionMenu] = useState<{
@@ -504,12 +507,6 @@ function SidebarComponent({
       return next;
     });
   }, [activeSessionId, cwd, openSessions, pending, sessions, status]);
-
-  useEffect(() => {
-    if (tab !== "sessions") return;
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, [tab]);
 
   useEffect(() => {
     if (tab !== "sessions") {

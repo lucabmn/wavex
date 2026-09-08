@@ -20,7 +20,7 @@ import {
   getModelSnapshot,
   getPickerVisibilitySnapshot,
   isPickerProviderVisible,
-  modelsFor,
+  enabledModelsFor,
   preferredModelId,
   subscribeModels,
   subscribePickerVisibility,
@@ -97,7 +97,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
   const activeHarness = targets[active];
   const models = useMemo(() => {
     void catalogVersion;
-    return activeHarness ? modelsFor(activeHarness) : [];
+    return activeHarness ? enabledModelsFor(activeHarness) : [];
   }, [activeHarness, catalogVersion]);
 
   useEffect(() => {
@@ -318,10 +318,11 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                     <span className="min-w-0 flex-1 truncate">{HARNESS_TITLE[harness]}</span>
                     {on && model ? (
                       <span className="max-w-24 shrink-0 truncate text-[11px] text-content/45">
-                        {modelsFor(harness).find((entry) => entry.id === model)?.name ?? model}
+                        {enabledModelsFor(harness).find((entry) => entry.id === model)?.name ??
+                          model}
                       </span>
                     ) : null}
-                    {modelsFor(harness).length > 0 ? (
+                    {enabledModelsFor(harness).length > 0 ? (
                       <ChevronRight
                         className="size-3.5 shrink-0 text-content/40"
                         strokeWidth={1.75}

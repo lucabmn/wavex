@@ -13,7 +13,7 @@ import { runCursorTextPrompt, warmupCursorText } from "./cursorText";
 import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
-const gitText = createGitTextGenerators(runCursorTextPrompt, "Cursor", 60_000);
+const gitText = createGitTextGenerators(runCursorTextPrompt, "Cursor", "cursor", 60_000);
 
 export const cursorAdapter: HarnessAdapter = {
   id: "cursor",

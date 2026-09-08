@@ -8,7 +8,7 @@
     var(--theme-hue) var(--theme-saturation) var(--background-lightness)
   );
   --color-content: hsl(var(--theme-hue) var(--theme-saturation) var(--content-lightness));
-  --color-accent: hsl(211 92% 62%);
+  --color-accent: hsl(var(--accent-hue) var(--accent-saturation) var(--accent-lightness));
   --color-skill: #e8c547;
   --color-template: #c084fc;
   --color-mention: #38bdf8;
@@ -23,10 +23,17 @@
 :root {
   --theme-hue: 240;
   --theme-saturation: 0%;
+  --accent-hue: 211;
+  --accent-saturation: 92%;
+  --accent-lightness: 62%;
   --sidebar-opacity: 0.85;
   --background-lightness: 9%;
   --content-lightness: 92%;
-  --link-color: #7dd3fc;
+  --editor-font-size: 13px;
+  --transcript-width: 56rem;
+  --transcript-font-size: 13px;
+  --transcript-gap: 0.25rem;
+  --link-color: hsl(var(--accent-hue) 92% 75%);
   --color-skill: #e8c547;
   --color-template: #c084fc;
   --color-mention: #38bdf8;
@@ -40,7 +47,8 @@ html {
 html.theme-light {
   --background-lightness: 97%;
   --content-lightness: 18%;
-  --link-color: hsl(211 92% 40%);
+  --accent-lightness: 52%;
+  --link-color: hsl(var(--accent-hue) 92% 40%);
   --color-skill: #a07c10;
   --color-template: #7c3aed;
   --color-mention: #0284c7;
@@ -107,6 +115,23 @@ html.has-native-glass #root {
    settled the scheme, so a light install stops covering itself in black. */
 html.theme-light #boot-splash {
   background: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
+}
+
+/*
+ * Reduce motion is a preference, not a hint: a user who turned it on wants the
+ * transitions gone, including the ones a component sets inline. Animations are
+ * cut to a tick rather than removed so anything that waits on `animationend`
+ * still hears it.
+ */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
 }
 
 .sidebar-glass {

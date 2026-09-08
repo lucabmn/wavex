@@ -1,5 +1,5 @@
 import { projectKey, type HostId } from "../host";
-import { modelsFor } from "../models";
+import { gitWritingModelNativeId, modelsFor } from "../models";
 import {
   harnessHostId,
   harnessTarget,
@@ -60,6 +60,8 @@ function stateFor(hostId: HostId): TextState {
 }
 
 function pickTextModel(): string {
+  const configured = gitWritingModelNativeId("codex");
+  if (configured) return configured;
   const models = modelsFor("codex");
   const luna = models.find((model) =>
     /5\.6-luna/i.test(`${model.nativeId ?? ""} ${model.name} ${model.id}`),

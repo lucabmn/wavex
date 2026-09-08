@@ -7,6 +7,7 @@ import { Segmented } from "../chrome/Segmented";
 import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
+import { useNow } from "../lib/motion";
 import { formatLiveElapsed, type LiveAgent } from "../lib/liveAgents";
 import {
   activityBoardCards,
@@ -54,7 +55,7 @@ export function ActivityView({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const [agents, setAgents] = useState<LiveAgent[]>([]);
-  const [now, setNow] = useState(() => Date.now());
+  const now = useNow();
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ActivityFilter>("all");
   const [board, setBoard] = useState<ActivityBoardState>(loadActivityBoardState);
@@ -86,12 +87,6 @@ export function ActivityView({
       saveActivityBoardState(next);
     }
   }, [board, sessions]);
-
-  // One timer for the whole list: elapsed is the only thing ticking here.
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

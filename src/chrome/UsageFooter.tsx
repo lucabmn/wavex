@@ -2,6 +2,7 @@ import { RefreshCw } from "./icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HarnessIcon } from "./HarnessIcon";
 import { Popover } from "./Popover";
+import { CLOCK_STRIDE_COARSE, useNow } from "../lib/motion";
 import { fetchClaudeRateLimits, fetchCodexRateLimits } from "../lib/rateLimitsFetch";
 import {
   clampUsedPercent,
@@ -18,8 +19,6 @@ import {
 } from "../lib/rateLimits";
 import { HARNESS_LABEL, HARNESS_TITLE, type HarnessId } from "../lib/session";
 import { runningTerminalChipLabel, type RunningTerminal } from "../lib/terminal/terminalTab";
-
-const CLOCK_MS = 30_000;
 
 export type UsageFooterSession = {
   harness: HarnessId;
@@ -45,7 +44,7 @@ export function UsageFooter({
   const wantCodex = providers.includes("codex");
   const [claude, setClaude] = useState<ProviderRateLimits>(() => idleRateLimits("claude"));
   const [codex, setCodex] = useState<ProviderRateLimits>(() => idleRateLimits("codex"));
-  const [now, setNow] = useState(() => Date.now());
+  const now = useNow(true, CLOCK_STRIDE_COARSE);
   const [refreshing, setRefreshing] = useState(false);
   const inflight = useRef<Promise<void> | null>(null);
   const claudeRef = useRef(claude);
@@ -102,11 +101,6 @@ export function UsageFooter({
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [refresh]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), CLOCK_MS);
-    return () => window.clearInterval(timer);
-  }, []);
 
   const showUsage = wantClaude || wantCodex;
   const showTerminals = terminals.length > 0;

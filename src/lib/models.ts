@@ -187,9 +187,14 @@ export const DEFAULT_MODEL_ID: Record<HarnessId, string> = {
 const FAVORITES_KEY = "wavex.favoriteModels";
 const MODEL_PICKER_TAB_KEY = "wavex.modelPickerTab";
 const HIDDEN_PICKER_PROVIDERS_KEY = "wavex.hiddenPickerProviders";
+const DISABLED_MODELS_KEY = "wavex.disabledModels";
 const LAST_MODEL_KEY = "wavex.lastModel";
 const LAST_MODEL_SETTINGS_KEY = "wavex.lastModelSettings";
 const DEFAULT_MODELS_KEY = "wavex.defaultModels";
+const GIT_WRITING_MODEL_KEY = "wavex.gitWritingModel";
+
+/** Fired on `window` when the git-writing provider/model choice flips. */
+export const GIT_WRITING_CHANGE_EVENT = "wavex:git-writing-change";
 
 export type ModelPickerTab = "favorites" | HarnessId;
 
@@ -221,6 +226,7 @@ function emit() {
   baseByHarness = null;
   indexById = null;
   allCache = null;
+  enabledByHarness = null;
   for (const listener of listeners) listener();
 }
 
@@ -254,6 +260,8 @@ export function hasLiveCatalog(harness: HarnessId): boolean {
 export function resetHarnessModelOverlays() {
   overlays = {};
   overlayDefaults = {};
+  disabledModels = null;
+  enabledByHarness = null;
   emit();
 }
 
@@ -482,6 +490,8 @@ const pickerVisibilityListeners = new Set<() => void>();
 
 function emitPickerVisibility() {
   pickerVisibilityVersion += 1;
+  disabledModels = null;
+  enabledByHarness = null;
   for (const listener of pickerVisibilityListeners) listener();
 }
 
@@ -522,6 +532,83 @@ export function savePickerProviderVisible(id: HarnessId, visible: boolean) {
     // private mode / quota
   }
   emitPickerVisibility();
+}
+
+/**
+ * A model the user turned off in Settings. The catalog keeps it: a session
+ * started on that model has to resume on it, and `resolveModel` has to keep
+ * finding it. Only the places a new choice is made — the picker, race, second
+ * opinion — read the filtered list.
+ */
+let disabledModels: Set<string> | null = null;
+
+export function loadDisabledModels(): Set<string> {
+  if (disabledModels) return disabledModels;
+  try {
+    const raw = profileStorage.getItem(DISABLED_MODELS_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    disabledModels = new Set(
+      Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [],
+    );
+  } catch {
+    disabledModels = new Set<string>();
+  }
+  return disabledModels;
+}
+
+export function isModelEnabled(id: string): boolean {
+  return !loadDisabledModels().has(id);
+}
+
+/**
+ * The models of one provider a new conversation may still be started on. Like
+ * `modelsFor`, this sits in render bodies — the race menu asks once per
+ * provider per render — so the filtered list is cached until the catalog or
+ * the off list moves.
+ */
+let enabledByHarness: Partial<Record<HarnessId, AgentModel[]>> | null = null;
+
+export function enabledModelsFor(harness: HarnessId): AgentModel[] {
+  const disabled = loadDisabledModels();
+  if (disabled.size === 0) return modelsFor(harness);
+  enabledByHarness ??= {};
+  return (enabledByHarness[harness] ??= modelsFor(harness).filter(
+    (model) => !disabled.has(model.id),
+  ));
+}
+
+export function setModelEnabled(id: string, enabled: boolean) {
+  const next = new Set(loadDisabledModels());
+  if (enabled) next.delete(id);
+  else next.add(id);
+  try {
+    profileStorage.setItem(DISABLED_MODELS_KEY, JSON.stringify([...next]));
+  } catch {
+    // private mode / quota
+  }
+  disabledModels = next;
+  if (!enabled) repointDefaultsAway(id, next);
+  emitPickerVisibility();
+}
+
+/**
+ * Turning off the model a provider starts with would leave that provider
+ * pointing at something the picker no longer offers, so the default moves to
+ * the first model still on. A provider with nothing left keeps its pointer and
+ * reads as having no models, the same as one whose CLI is missing.
+ */
+function repointDefaultsAway(id: string, disabled: Set<string>) {
+  const model = findModel(id);
+  if (!model) return;
+  const replacement = modelsFor(model.harness).find((entry) => !disabled.has(entry.id));
+  if (!replacement) return;
+  if (loadDefaultModels()[model.harness] === id) {
+    saveDefaultModel(model.harness, replacement.id);
+  }
+  const last = loadLastModelChoice();
+  if (last?.harness === model.harness && last.model === id) {
+    saveLastModelChoice(model.harness, replacement.id);
+  }
 }
 
 /**
@@ -636,6 +723,89 @@ export function saveLastModelChoice(harness: HarnessId, model: string) {
   } catch {
     // private mode / quota
   }
+}
+
+/**
+ * Provider + model used for git writings: commit messages, PR content, and
+ * branch names. Stored per profile like the other model preferences. Until
+ * the user picks one explicitly, writings follow the new-session default.
+ */
+export type GitWritingChoice = {
+  harness: HarnessId;
+  model: string;
+};
+
+export function loadGitWritingChoice(): GitWritingChoice | null {
+  try {
+    const raw = profileStorage.getItem(GIT_WRITING_MODEL_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed === "object" &&
+      parsed != null &&
+      "harness" in parsed &&
+      "model" in parsed &&
+      typeof (parsed as GitWritingChoice).harness === "string" &&
+      typeof (parsed as GitWritingChoice).model === "string" &&
+      isHarnessId((parsed as GitWritingChoice).harness) &&
+      (parsed as GitWritingChoice).model.trim().length > 0
+    ) {
+      return parsed as GitWritingChoice;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveGitWritingChoice(harness: HarnessId, model: string) {
+  const trimmed = model.trim();
+  if (!trimmed) return;
+  try {
+    profileStorage.setItem(GIT_WRITING_MODEL_KEY, JSON.stringify({ harness, model: trimmed }));
+  } catch {
+    // private mode / quota
+  }
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(GIT_WRITING_CHANGE_EVENT));
+}
+
+export function subscribeGitWritingChoice(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(GIT_WRITING_CHANGE_EVENT, onStoreChange);
+  return () => window.removeEventListener(GIT_WRITING_CHANGE_EVENT, onStoreChange);
+}
+
+/** Saved git-writing choice, else the model new sessions start with. */
+export function gitWritingChoice(): GitWritingChoice {
+  return loadGitWritingChoice() ?? defaultSessionChoice();
+}
+
+/**
+ * Native model id the git-writing choice resolves to for `harness`, or
+ * `undefined` when the choice belongs to another provider. Lets each
+ * harness's cheap text default stand aside once the user picked a model for
+ * that provider — even before its live catalog has loaded, via the slug.
+ */
+export function gitWritingModelNativeId(harness: HarnessId): string | undefined {
+  const saved = loadGitWritingChoice();
+  if (!saved || saved.harness !== harness) return undefined;
+  const trimmed = saved.model.trim();
+  if (!trimmed) return undefined;
+  const exact = findModel(trimmed);
+  if (exact) {
+    return exact.harness === harness ? nativeModelId(exact) : undefined;
+  }
+  const colon = trimmed.indexOf(":");
+  if (colon >= 0) {
+    if (trimmed.slice(0, colon) !== harness) return undefined;
+    const slug = trimmed
+      .slice(colon + 1)
+      .split("[", 1)[0]
+      ?.trim();
+    return slug ? slug : undefined;
+  }
+  return trimmed;
 }
 
 function parseStringRecord(value: unknown): Record<string, string> {

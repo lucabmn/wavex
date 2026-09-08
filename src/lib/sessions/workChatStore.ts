@@ -24,7 +24,7 @@ import {
   stopStreaming,
   type HarnessEvent,
 } from "../harness";
-import { cancelScheduledFlush, scheduleHarnessFlush, type ScheduledFlush } from "../harness/flush";
+import { createStreamPump } from "../harness/flush";
 import {
   GENERATED_IMAGE_MIME,
   buildImagePrompt,
@@ -126,8 +126,7 @@ export function getWorkChatState(): WorkChatState {
 
 /** Test seam. */
 export function resetWorkChatStore(): void {
-  cancelScheduledFlush(flush);
-  flush = null;
+  pump.cancel();
   queued.clear();
   turnGeneration.clear();
   stoppedChats.clear();
@@ -387,13 +386,16 @@ export function setWorkChatModelSettings(id: string, settings: Record<string, st
 
 /**
  * Streamed deltas arrive far faster than a useful repaint. Queue them and
- * apply one batch per frame, matching how coding sessions are flushed.
+ * apply one batch per commit window, matching how coding sessions are flushed.
  */
 const queued = new Map<string, HarnessEvent[]>();
-let flush: ScheduledFlush | null = null;
+const pump = createStreamPump(drainEvents);
 
 function flushEvents(): void {
-  flush = null;
+  pump.flushNow();
+}
+
+function drainEvents(): void {
   if (queued.size === 0) return;
   const chats = state.chats.map((chat) => {
     const events = queued.get(chat.id);
@@ -410,7 +412,7 @@ function enqueue(id: string, event: HarnessEvent): void {
   const events = queued.get(id);
   if (events) events.push(event);
   else queued.set(id, [event]);
-  flush ??= scheduleHarnessFlush(flushEvents);
+  pump.schedule();
 }
 
 /**

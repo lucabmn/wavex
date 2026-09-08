@@ -7,6 +7,7 @@ export {
   stopStreaming,
 } from "./apply";
 export {
+  generateBranchName as generateTextBranchName,
   generateCommitMessage,
   generatePrContent,
   pickTextHarness,
