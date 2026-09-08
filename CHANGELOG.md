@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+- Redesign the whole interface. Surfaces are drawn on a four-rung ladder with
+  tinted shadows and a lit top edge instead of one flat sheet of hairlines,
+  selection is an accent spine and wash rather than a grey fill, tabs and
+  switches are raised chips, primary actions take the accent gradient, and an
+  ambient accent wash pools in the corners of the window. Transparent mode
+  keeps working throughout.
+- Ship the Halo palette as the default: an indigo-tinted interface with a
+  derived two-stop accent, a rounder corner scale, and new theme and accent
+  presets.
+- Add two appearance rules for the new design: Depth, which sets how far
+  raised surfaces stand off the ones behind them, and Ambient glow, which
+  scales the accent wash down to nothing.
+
 ## [0.13.0] - 2026-09-08
 
 - Schedule recurring agent tasks from the new Automations surface. Each run

@@ -273,7 +273,7 @@ function Toggle({
       onClick={onClick}
       className={`grid size-6 place-items-center rounded-sm ${
         active
-          ? "bg-content/15 text-content"
+          ? "bg-accent/16 text-content"
           : "text-content/40 hover:bg-content/10 hover:text-content/70"
       }`}
     >

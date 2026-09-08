@@ -407,12 +407,12 @@ function BranchList({
               row.kind === "create"
                 ? `mb-1 flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left disabled:opacity-60 ${
                     highlighted
-                      ? "bg-content/15 text-content"
+                      ? "bg-accent/16 text-content"
                       : "bg-content/10 text-content hover:bg-content/15"
                   }`
                 : `flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left disabled:opacity-60 ${
                     highlighted || selected
-                      ? "bg-content/10 text-content"
+                      ? "bg-accent/16 text-content"
                       : "text-content hover:bg-content/5"
                   }`
             }

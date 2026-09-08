@@ -40,15 +40,15 @@ const DEFAULT_SIDEBAR_TAB_ORDER: SidebarTabId[] = ["sessions", "inbox", "files",
 
 export const THEME_HUE_MIN = 0;
 export const THEME_HUE_MAX = 360;
-export const THEME_HUE_DEFAULT = 240;
+export const THEME_HUE_DEFAULT = 234;
 
 export const THEME_SATURATION_MIN = 0;
 export const THEME_SATURATION_MAX = 100;
-export const THEME_SATURATION_DEFAULT = 0;
+export const THEME_SATURATION_DEFAULT = 14;
 
 export const SIDEBAR_OPACITY_MIN = 0.15;
 export const SIDEBAR_OPACITY_MAX = 1;
-export const SIDEBAR_OPACITY_DEFAULT = 0.85;
+export const SIDEBAR_OPACITY_DEFAULT = 0.72;
 
 export const SIDEBAR_BLUR_MIN = 1;
 export const SIDEBAR_BLUR_MAX = 64;
@@ -145,6 +145,8 @@ export function initAppearance() {
   applyMonoFont(loadMonoFont());
   applyEditorFontSize(loadEditorFontSize());
   applyCornerRadius(loadCornerRadius());
+  applySurfaceDepth(loadSurfaceDepth());
+  applyAmbient(loadAmbient());
   applyReduceMotion(loadReduceMotion());
   applyTranscriptWidth(loadTranscriptWidth());
   applyTranscriptFontSize(loadTranscriptFontSize());
@@ -376,6 +378,8 @@ const TERMINAL_FONT_SIZE_KEY = "wavex.terminalFontSize";
 const TERMINAL_CURSOR_KEY = "wavex.terminalCursor";
 const TERMINAL_CURSOR_BLINK_KEY = "wavex.terminalCursorBlink";
 const CORNER_RADIUS_KEY = "wavex.cornerRadius";
+const SURFACE_DEPTH_KEY = "wavex.surfaceDepth";
+const AMBIENT_KEY = "wavex.ambientGlow";
 const REDUCE_MOTION_KEY = "wavex.reduceMotion";
 const BACKGROUND_LIGHTNESS_KEY = "wavex.backgroundLightness";
 const CONTENT_LIGHTNESS_KEY = "wavex.contentLightness";
@@ -399,20 +403,20 @@ export function subscribeAppearance(onStoreChange: () => void) {
 
 export const ACCENT_HUE_MIN = 0;
 export const ACCENT_HUE_MAX = 360;
-export const ACCENT_HUE_DEFAULT = 211;
+export const ACCENT_HUE_DEFAULT = 264;
 
 /** Named stops on the accent wheel, so the common choice is one click. */
 export const ACCENT_PRESETS: { hue: number; label: string }[] = [
-  { hue: 211, label: "Blue" },
-  { hue: 190, label: "Cyan" },
-  { hue: 162, label: "Teal" },
-  { hue: 142, label: "Green" },
-  { hue: 45, label: "Amber" },
-  { hue: 25, label: "Orange" },
-  { hue: 0, label: "Red" },
-  { hue: 330, label: "Pink" },
-  { hue: 280, label: "Violet" },
-  { hue: 250, label: "Indigo" },
+  { hue: 264, label: "Iris" },
+  { hue: 288, label: "Orchid" },
+  { hue: 320, label: "Magenta" },
+  { hue: 348, label: "Coral" },
+  { hue: 22, label: "Ember" },
+  { hue: 46, label: "Citrine" },
+  { hue: 152, label: "Jade" },
+  { hue: 182, label: "Lagoon" },
+  { hue: 205, label: "Azure" },
+  { hue: 232, label: "Cobalt" },
 ];
 
 export function loadAccentHue(): number {
@@ -632,25 +636,31 @@ export type CornerRadius = "sharp" | "soft" | "round";
 export const CORNER_RADIUS_DEFAULT: CornerRadius = "soft";
 
 const RADIUS_SCALE: Record<CornerRadius, number> = {
-  sharp: 0,
+  sharp: 0.25,
   soft: 1,
-  round: 1.8,
+  round: 1.5,
 };
 
 /**
  * Tailwind's `rounded-*` utilities resolve to these theme variables, so one
  * factor moves every corner in the app rather than a hand-picked few.
  * `rounded-full` is a literal 9999px and stays a pill.
+ *
+ * The scale is wavex's own rather than Tailwind's: the steps grow faster, so
+ * a row, a card, and a dialog read as three different sizes of thing instead
+ * of three boxes with almost the same corner. `sharp` keeps a quarter of it
+ * rather than dropping to zero — a true square corner tears against the
+ * one-pixel lit edge the panels are drawn with.
  */
 const RADIUS_TOKENS: [token: string, rem: number][] = [
-  ["--radius-xs", 0.125],
-  ["--radius-sm", 0.25],
-  ["--radius-md", 0.375],
-  ["--radius-lg", 0.5],
-  ["--radius-xl", 0.75],
-  ["--radius-2xl", 1],
-  ["--radius-3xl", 1.5],
-  ["--radius-4xl", 2],
+  ["--radius-xs", 0.25],
+  ["--radius-sm", 0.375],
+  ["--radius-md", 0.5],
+  ["--radius-lg", 0.75],
+  ["--radius-xl", 1],
+  ["--radius-2xl", 1.25],
+  ["--radius-3xl", 1.75],
+  ["--radius-4xl", 2.25],
 ];
 
 function isCornerRadius(value: unknown): value is CornerRadius {
@@ -686,6 +696,75 @@ export function applyCornerRadius(value: CornerRadius) {
   return next;
 }
 
+/* ------------------------------------------------------------------ *
+ * Depth and the ambient wash — the two rules that decide how much of the
+ * redesign's dimensionality is on. Both are plain display preferences: a
+ * user who wants a flat, quiet window turns them down and every panel in the
+ * app follows, because the shadows and the wash are single tokens rather
+ * than values repeated per component.
+ * ------------------------------------------------------------------ */
+
+export type SurfaceDepth = "flat" | "soft" | "deep";
+
+export const SURFACE_DEPTH_DEFAULT: SurfaceDepth = "soft";
+
+function isSurfaceDepth(value: unknown): value is SurfaceDepth {
+  return value === "flat" || value === "soft" || value === "deep";
+}
+
+export function loadSurfaceDepth(): SurfaceDepth {
+  try {
+    const raw = profileStorage.getItem(SURFACE_DEPTH_KEY);
+    return isSurfaceDepth(raw) ? raw : SURFACE_DEPTH_DEFAULT;
+  } catch {
+    return SURFACE_DEPTH_DEFAULT;
+  }
+}
+
+export function saveSurfaceDepth(value: SurfaceDepth) {
+  try {
+    profileStorage.setItem(
+      SURFACE_DEPTH_KEY,
+      isSurfaceDepth(value) ? value : SURFACE_DEPTH_DEFAULT,
+    );
+  } catch {
+    // private mode / quota
+  }
+}
+
+/**
+ * `soft` is the value the stylesheet already carries, so it is the absence of
+ * a class rather than a third set of shadows to keep in step with the other
+ * two.
+ */
+export function applySurfaceDepth(value: SurfaceDepth) {
+  const next = isSurfaceDepth(value) ? value : SURFACE_DEPTH_DEFAULT;
+  const root = document.documentElement.classList;
+  root.toggle("depth-flat", next === "flat");
+  root.toggle("depth-deep", next === "deep");
+  return next;
+}
+
+export const AMBIENT_MIN = 0;
+export const AMBIENT_MAX = 100;
+export const AMBIENT_DEFAULT = 70;
+
+export function loadAmbient(): number {
+  return Math.round(clamp(readNumber(AMBIENT_KEY) ?? AMBIENT_DEFAULT, AMBIENT_MIN, AMBIENT_MAX));
+}
+
+export function saveAmbient(value: number) {
+  writeNumber(AMBIENT_KEY, Math.round(clamp(value, AMBIENT_MIN, AMBIENT_MAX)));
+}
+
+export function applyAmbient(value: number) {
+  const next = Math.round(clamp(value, AMBIENT_MIN, AMBIENT_MAX));
+  // The stylesheet multiplies its mix percentages by this, so zero is the
+  // wash switched off rather than a second, washless set of rules.
+  document.documentElement.style.setProperty("--ambient", (next / 100).toFixed(3));
+  return next;
+}
+
 export const REDUCE_MOTION_DEFAULT = false;
 
 export function loadReduceMotion(): boolean {
@@ -711,8 +790,8 @@ export const SURFACE_RANGE: Record<
   ColorScheme,
   { background: [min: number, max: number, fallback: number]; content: [number, number, number] }
 > = {
-  dark: { background: [2, 22, 9], content: [70, 100, 92] },
-  light: { background: [86, 100, 97], content: [0, 42, 18] },
+  dark: { background: [2, 22, 8], content: [70, 100, 94] },
+  light: { background: [86, 100, 94], content: [0, 42, 20] },
 };
 
 function schemeKey(key: string, scheme: ColorScheme) {
@@ -781,76 +860,67 @@ export type ThemePreset = {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
-    id: "nord",
-    label: "Nord",
+    id: "halo",
+    label: "Halo",
     themeHue: THEME_HUE_DEFAULT,
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
-    dark: { background: 9, content: 92 },
-    light: { background: 97, content: 18 },
-  },
-  {
-    id: "wavex",
-    label: "wavex",
-    themeHue: 220,
-    themeSaturation: 16,
-    accentHue: 197,
-    dark: { background: 13, content: 90 },
-    light: { background: 95, content: 22 },
-  },
-  {
-    id: "gruvbox",
-    label: "Gruvbox",
-    themeHue: 32,
-    themeSaturation: 12,
-    accentHue: 42,
-    dark: { background: 11, content: 88 },
+    dark: { background: 8, content: 94 },
     light: { background: 94, content: 20 },
   },
   {
-    id: "solarized",
-    label: "Solarized",
-    themeHue: 194,
-    themeSaturation: 14,
-    accentHue: 175,
-    dark: { background: 10, content: 85 },
-    light: { background: 96, content: 24 },
-  },
-  {
-    id: "dracula",
-    label: "Dracula",
-    themeHue: 258,
-    themeSaturation: 15,
-    accentHue: 282,
-    dark: { background: 12, content: 92 },
-    light: { background: 96, content: 20 },
-  },
-  {
-    id: "rose",
-    label: "Rosé",
-    themeHue: 318,
-    themeSaturation: 10,
-    accentHue: 342,
-    dark: { background: 11, content: 90 },
-    light: { background: 96, content: 22 },
-  },
-  {
-    id: "forest",
-    label: "Forest",
-    themeHue: 152,
-    themeSaturation: 12,
-    accentHue: 148,
-    dark: { background: 9, content: 91 },
+    id: "tide",
+    label: "Tide",
+    themeHue: 202,
+    themeSaturation: 18,
+    accentHue: 186,
+    dark: { background: 9, content: 93 },
     light: { background: 95, content: 20 },
   },
   {
-    id: "paper",
-    label: "Paper",
-    themeHue: 38,
-    themeSaturation: 7,
+    id: "ember",
+    label: "Ember",
+    themeHue: 20,
+    themeSaturation: 14,
     accentHue: 24,
-    dark: { background: 10, content: 90 },
-    light: { background: 98, content: 16 },
+    dark: { background: 9, content: 92 },
+    light: { background: 96, content: 20 },
+  },
+  {
+    id: "moss",
+    label: "Moss",
+    themeHue: 146,
+    themeSaturation: 13,
+    accentHue: 158,
+    dark: { background: 8, content: 92 },
+    light: { background: 95, content: 19 },
+  },
+  {
+    id: "orchid",
+    label: "Orchid",
+    themeHue: 292,
+    themeSaturation: 15,
+    accentHue: 312,
+    dark: { background: 9, content: 93 },
+    light: { background: 96, content: 21 },
+  },
+  {
+    id: "graphite",
+    label: "Graphite",
+    themeHue: 240,
+    themeSaturation: 2,
+    accentHue: 232,
+    dark: { background: 7, content: 92 },
+    light: { background: 96, content: 18 },
+  },
+  {
+    id: "sand",
+    label: "Sand",
+    themeHue: 38,
+    themeSaturation: 9,
+    accentHue: 44,
+    dark: { background: 10, content: 91 },
+    light: { background: 97, content: 18 },
   },
 ];
 

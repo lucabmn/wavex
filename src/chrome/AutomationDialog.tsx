@@ -514,7 +514,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
           <button
             type="submit"
             disabled={busy}
-            className="rounded-md bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40"
+            className="halo-fill halo-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
           >
             {busy
               ? "Saving…"
@@ -676,7 +676,7 @@ function WeeklyFields({
               onClick={() => toggle(day)}
               className={`rounded-md px-2 py-1 text-[11.5px] transition-colors ${
                 on
-                  ? "bg-content/12 text-content"
+                  ? "bg-accent/16 text-content"
                   : "text-content/45 hover:bg-content/8 hover:text-content/75"
               }`}
             >

@@ -13,6 +13,16 @@ import {
   ACCENT_HUE_DEFAULT,
   loadAccentHue,
   saveAccentHue,
+  AMBIENT_DEFAULT,
+  AMBIENT_MAX,
+  AMBIENT_MIN,
+  loadAmbient,
+  saveAmbient,
+  loadSurfaceDepth,
+  saveSurfaceDepth,
+  SURFACE_DEPTH_DEFAULT,
+  THEME_HUE_DEFAULT,
+  THEME_SATURATION_DEFAULT,
   CORNER_RADIUS_DEFAULT,
   loadCornerRadius,
   saveCornerRadius,
@@ -192,9 +202,9 @@ describe("theme preference setting", () => {
 describe("accent hue setting", () => {
   beforeEach(mockLocalStorage);
 
-  it("defaults to the shipped blue", () => {
-    expect(ACCENT_HUE_DEFAULT).toBe(211);
-    expect(loadAccentHue()).toBe(211);
+  it("defaults to the shipped iris", () => {
+    expect(ACCENT_HUE_DEFAULT).toBe(264);
+    expect(loadAccentHue()).toBe(264);
   });
 
   it("clamps and rounds what it stores", () => {
@@ -382,13 +392,68 @@ describe("theme presets", () => {
     }
   });
 
-  it("starts with Nord and keeps the wavex palette as the second preset", () => {
-    expect(THEME_PRESETS.slice(0, 2).map((preset) => preset.label)).toEqual(["Nord", "wavex"]);
-    expect(THEME_PRESETS.slice(0, 2).map((preset) => preset.id)).toEqual(["nord", "wavex"]);
+  it("starts with Halo, the palette the app ships dressed in", () => {
+    const [first] = THEME_PRESETS;
+    expect(first.id).toBe("halo");
+    expect(first.label).toBe("Halo");
+    // The lead preset is the defaults, so picking it is a no-op rather than a
+    // fourth palette a fresh install has never seen.
+    expect(first.themeHue).toBe(THEME_HUE_DEFAULT);
+    expect(first.themeSaturation).toBe(THEME_SATURATION_DEFAULT);
+    expect(first.accentHue).toBe(ACCENT_HUE_DEFAULT);
+    expect(first.dark.background).toBe(SURFACE_RANGE.dark.background[2]);
+    expect(first.dark.content).toBe(SURFACE_RANGE.dark.content[2]);
+    expect(first.light.background).toBe(SURFACE_RANGE.light.background[2]);
+    expect(first.light.content).toBe(SURFACE_RANGE.light.content[2]);
   });
 
   it("has one id per preset", () => {
     const ids = THEME_PRESETS.map((preset) => preset.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("surface depth setting", () => {
+  beforeEach(mockLocalStorage);
+
+  it("defaults to soft", () => {
+    expect(SURFACE_DEPTH_DEFAULT).toBe("soft");
+    expect(loadSurfaceDepth()).toBe("soft");
+  });
+
+  it("round-trips the three steps", () => {
+    for (const value of ["flat", "soft", "deep"] as const) {
+      saveSurfaceDepth(value);
+      expect(loadSurfaceDepth()).toBe(value);
+    }
+  });
+
+  it("falls back rather than trusting a stored value it does not know", () => {
+    localStorage.setItem("wavex.surfaceDepth", "cavernous");
+    expect(loadSurfaceDepth()).toBe(SURFACE_DEPTH_DEFAULT);
+  });
+});
+
+describe("ambient glow setting", () => {
+  beforeEach(mockLocalStorage);
+
+  it("defaults to most of the way up", () => {
+    expect(loadAmbient()).toBe(AMBIENT_DEFAULT);
+    expect(AMBIENT_DEFAULT).toBeGreaterThan(AMBIENT_MIN);
+    expect(AMBIENT_DEFAULT).toBeLessThanOrEqual(AMBIENT_MAX);
+  });
+
+  it("clamps and rounds what it stores", () => {
+    saveAmbient(-40);
+    expect(loadAmbient()).toBe(AMBIENT_MIN);
+    saveAmbient(400);
+    expect(loadAmbient()).toBe(AMBIENT_MAX);
+    saveAmbient(42.6);
+    expect(loadAmbient()).toBe(43);
+  });
+
+  it("reads zero back as zero rather than as the default", () => {
+    saveAmbient(0);
+    expect(loadAmbient()).toBe(0);
   });
 });

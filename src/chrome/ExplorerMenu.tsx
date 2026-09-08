@@ -126,7 +126,7 @@ export function ExplorerMenu({
                     ? "bg-red-500/20 text-red-300"
                     : "text-red-300/90 hover:bg-red-500/15"
                   : highlighted
-                    ? "bg-content/10 text-content"
+                    ? "bg-accent/16 text-content"
                     : "text-content hover:bg-content/5"
             }`}
           >

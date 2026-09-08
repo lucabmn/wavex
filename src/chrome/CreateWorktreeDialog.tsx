@@ -334,7 +334,7 @@ function BaseBranchMenu({
                 aria-selected={selected}
                 onClick={() => onPick(value)}
                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left ${
-                  selected ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+                  selected ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
                 }`}
               >
                 {selected ? (

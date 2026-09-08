@@ -241,7 +241,7 @@ export function ModelPicker({
         }}
         className={`flex items-center rounded-md ${
           fill ? "h-8 w-full gap-2 px-2" : "h-6.5 max-w-52 gap-1 px-1.5"
-        } ${open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"}`}
+        } ${open ? "bg-accent/16 text-content" : "bg-content/10 text-content hover:bg-content/15"}`}
       >
         <HarnessIcon harness={current.harness} className="size-4 shrink-0" />
         <span className={`min-w-0 truncate ${fill ? "text-[13px]" : "text-[11px]"}`}>
@@ -350,7 +350,7 @@ function ProviderTabButton({
         disabled
           ? "cursor-not-allowed text-content/25"
           : selected
-            ? "bg-content/10 text-content"
+            ? "bg-accent/16 text-content"
             : "text-content/50 hover:bg-content/5 hover:text-content"
       }`}
     >

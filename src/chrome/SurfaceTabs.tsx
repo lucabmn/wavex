@@ -134,7 +134,7 @@ export function SurfaceTabs({
   }, [activeFileId, sortable.draggingId]);
 
   return (
-    <div className="flex h-9 min-w-0 shrink-0 border-b border-content/10 bg-content/2">
+    <div className="halo-topbar flex h-9 min-w-0 shrink-0 bg-surface-sunken">
       <div
         ref={lockOverscroll}
         role="tablist"
@@ -198,8 +198,9 @@ export function SurfaceTabs({
                 sortable.setItemRef(file.id, el);
                 if (el && file.id === activeFileId) activeTabRef.current = el;
               }}
-              className={`group relative flex w-52 min-w-28 shrink touch-none items-stretch border-r border-content/10 ${
-                active ? "bg-content/8" : "hover:bg-content/5"
+              data-halo={active ? "on" : undefined}
+              className={`halo-row halo-tab group relative flex w-52 min-w-28 shrink touch-none items-stretch transition-colors ${
+                active ? "bg-surface-raised" : "hover:bg-content/5"
               } ${dragging ? "opacity-40" : ""} ${
                 canDrag ? "cursor-grab active:cursor-grabbing" : ""
               }`}
@@ -213,10 +214,10 @@ export function SurfaceTabs({
               }}
             >
               {showStart ? (
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-accent" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-gradient-to-b from-accent to-accent-2" />
               ) : null}
               {showEnd ? (
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-accent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-gradient-to-b from-accent to-accent-2" />
               ) : null}
               <button
                 type="button"
@@ -230,7 +231,7 @@ export function SurfaceTabs({
                 }}
                 className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                   canDrag ? "cursor-grab active:cursor-grabbing" : ""
-                } ${active ? "text-content" : "text-content/55 hover:text-content"}`}
+                } ${active ? "font-medium text-content" : "text-content/50 hover:text-content"}`}
               >
                 {terminal ? (
                   <Terminal className="size-3.5 shrink-0" strokeWidth={1.75} />

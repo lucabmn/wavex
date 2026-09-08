@@ -1035,7 +1035,7 @@ function ChatRow({
           dropTarget
             ? "bg-accent/20 text-content"
             : active
-              ? "bg-content/10 text-content"
+              ? "bg-accent/16 text-content"
               : "text-content/75 hover:bg-content/5"
         } ${dragging ? "opacity-40" : ""} ${archived ? "opacity-60" : ""}`}
       >

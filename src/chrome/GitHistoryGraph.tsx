@@ -115,7 +115,7 @@ function HistoryRow({
         aria-pressed={active}
         className={`git-history-item flex h-[22px] min-w-0 w-full items-stretch overflow-visible pr-2 text-left ${
           row.kind === "HEAD" ? "is-head" : ""
-        } ${active ? "is-selected bg-content/10 text-content" : "text-content hover:bg-content/5"}`}
+        } ${active ? "is-selected bg-accent/16 text-content" : "text-content hover:bg-content/5"}`}
       >
         <svg
           aria-hidden

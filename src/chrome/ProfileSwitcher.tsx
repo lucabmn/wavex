@@ -38,7 +38,7 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
         onClick={() => onOpenChange(!open)}
         className={`flex w-full items-center gap-2 rounded-md px-2 h-8 text-left ${
           open
-            ? "bg-content/10 text-content"
+            ? "bg-accent/16 text-content"
             : "text-content/50 hover:bg-content/10 hover:text-content"
         }`}
       >

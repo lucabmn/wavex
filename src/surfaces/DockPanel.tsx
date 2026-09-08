@@ -476,7 +476,7 @@ function DockSurfaceSwitch({
             aria-label={DOCK_SURFACE_LABEL[value]}
             className={`flex h-6 shrink-0 items-center gap-1.5 rounded-md px-2 text-[12px] leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               selected
-                ? "bg-content/10 text-content"
+                ? "bg-accent/16 text-content"
                 : "text-content/50 hover:bg-content/5 hover:text-content"
             }`}
             onClick={() => onChange(value)}

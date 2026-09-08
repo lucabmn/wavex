@@ -3,15 +3,46 @@
 @source "../node_modules/@streamdown/code/dist/*.js";
 @source "../node_modules/@streamdown/mermaid/dist/*.js";
 
+/*
+ * ── wavex Halo ─────────────────────────────────────────────────────────────
+ *
+ * The app is drawn on a ladder of surfaces rather than one flat sheet: a
+ * sunken canvas, the panel plane, raised cards, and overlays. Every rung is
+ * derived from the one background lightness the user controls, so the whole
+ * ladder moves with a single slider instead of drifting apart.
+ *
+ * Depth is carried by a tinted cast shadow and a lit top edge rather than a
+ * hairline around every box. That is what keeps the transparent window
+ * readable: a border drawn over vibrancy reads as a seam, a highlight reads
+ * as glass.
+ */
 @theme {
   --color-background-base: hsl(
     var(--theme-hue) var(--theme-saturation) var(--background-lightness)
   );
   --color-content: hsl(var(--theme-hue) var(--theme-saturation) var(--content-lightness));
   --color-accent: hsl(var(--accent-hue) var(--accent-saturation) var(--accent-lightness));
-  --color-skill: #e8c547;
-  --color-template: #c084fc;
-  --color-mention: #38bdf8;
+  /*
+   * The second accent stop, derived rather than picked: one hue slider gives
+   * two related colors, so every gradient in the app turns with the user's
+   * choice instead of pinning a brand color they cannot change.
+   */
+  --color-accent-2: hsl(
+    calc(var(--accent-hue) + 42) var(--accent-saturation) calc(var(--accent-lightness) + 5%)
+  );
+  --color-surface: var(--surface-1);
+  --color-surface-sunken: var(--surface-0);
+  --color-surface-raised: var(--surface-2);
+  --color-surface-overlay: var(--surface-3);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-skill: #f4b942;
+  --color-template: #b491ff;
+  --color-mention: #4fd1e0;
+  --shadow-lift: var(--elevation-1);
+  --shadow-float: var(--elevation-2);
+  --shadow-cast: var(--elevation-3);
+  --shadow-halo: var(--halo);
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
@@ -21,38 +52,129 @@
 }
 
 :root {
-  --theme-hue: 240;
-  --theme-saturation: 0%;
-  --accent-hue: 211;
-  --accent-saturation: 92%;
-  --accent-lightness: 62%;
-  --sidebar-opacity: 0.85;
-  --background-lightness: 9%;
-  --content-lightness: 92%;
+  --theme-hue: 234;
+  --theme-saturation: 14%;
+  --accent-hue: 264;
+  --accent-saturation: 88%;
+  --accent-lightness: 66%;
+  --sidebar-opacity: 0.72;
+  --background-lightness: 8%;
+  --content-lightness: 94%;
+
+  /*
+   * The ladder. The steps are deliberately small — four percent of lightness
+   * reads as a plane when it carries a shadow, and as noise when it does not.
+   * Saturation climbs with the rung so a raised card looks lit by the theme
+   * rather than washed out toward gray.
+   */
+  --surface-0: hsl(
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) - 2.5%)
+  );
+  --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
+  --surface-2: hsl(
+    var(--theme-hue) calc(var(--theme-saturation) + 2%) calc(var(--background-lightness) + 4%)
+  );
+  --surface-3: hsl(
+    var(--theme-hue) calc(var(--theme-saturation) + 3%) calc(var(--background-lightness) + 7%)
+  );
+
+  --edge: color-mix(in srgb, var(--color-content) 10%, transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) 18%, transparent);
+  /* The lit top edge. Inset, one pixel, never a full border. */
+  --edge-highlight: color-mix(in srgb, white 9%, transparent);
+
+  /*
+   * Shadows take the theme hue instead of black. A neutral drop shadow on a
+   * tinted surface grays it out; a tinted one deepens it.
+   */
+  --shade: hsl(var(--theme-hue) calc(var(--theme-saturation) + 26%) 4%);
+  --elevation-1: 0 1px 2px -1px color-mix(in srgb, var(--shade) 60%, transparent);
+  --elevation-2:
+    0 8px 20px -10px color-mix(in srgb, var(--shade) 70%, transparent),
+    0 2px 6px -4px color-mix(in srgb, var(--shade) 55%, transparent);
+  --elevation-3:
+    0 32px 64px -24px color-mix(in srgb, var(--shade) 80%, transparent),
+    0 10px 24px -14px color-mix(in srgb, var(--shade) 60%, transparent);
+  --halo:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 50%, transparent),
+    0 0 20px -6px color-mix(in srgb, var(--color-accent) 70%, transparent);
+
+  /*
+   * The ambient wash: two accent-tinted pools in the top corners and one
+   * under the composer, painted as a background image so it sits behind
+   * content without a stacking context of its own. `--ambient` scales it to
+   * nothing at zero, which is the setting rather than a separate code path.
+   */
+  --ambient: 1;
+  --app-ambient:
+    radial-gradient(
+      125% 80% at 6% -14%,
+      color-mix(in srgb, var(--color-accent) calc(16% * var(--ambient)), transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      110% 70% at 97% -8%,
+      color-mix(in srgb, var(--color-accent-2) calc(13% * var(--ambient)), transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      120% 55% at 50% 118%,
+      color-mix(in srgb, var(--color-accent-2) calc(9% * var(--ambient)), transparent),
+      transparent 62%
+    );
+
   --editor-font-size: 13px;
   --transcript-width: 56rem;
   --transcript-font-size: 13px;
   --transcript-gap: 0.25rem;
-  --link-color: hsl(var(--accent-hue) 92% 75%);
-  --color-skill: #e8c547;
-  --color-template: #c084fc;
-  --color-mention: #38bdf8;
-  --color-markdown-heading: #f9a8c9;
+  --link-color: hsl(calc(var(--accent-hue) + 42) 90% 76%);
+  --color-skill: #f4b942;
+  --color-template: #b491ff;
+  --color-mention: #4fd1e0;
+  --color-markdown-heading: #8fd3ff;
 }
 
 html {
   color-scheme: dark;
 }
 
+/*
+ * Depth. `soft` is the ladder above, so it needs no class; these two are the
+ * ends of the same rule. Flat keeps a hairline where the shadow was, because
+ * a plane with neither shadow nor edge stops being a plane.
+ */
+html.depth-flat {
+  --elevation-1: none;
+  --elevation-2: 0 0 0 1px var(--edge);
+  --elevation-3: 0 0 0 1px var(--edge-strong);
+  --edge-highlight: transparent;
+}
+
+html.depth-deep {
+  --elevation-1: 0 2px 5px -2px color-mix(in srgb, var(--shade) 70%, transparent);
+  --elevation-2:
+    0 16px 34px -12px color-mix(in srgb, var(--shade) 85%, transparent),
+    0 4px 10px -5px color-mix(in srgb, var(--shade) 65%, transparent);
+  --elevation-3:
+    0 48px 96px -28px color-mix(in srgb, var(--shade) 92%, transparent),
+    0 16px 36px -18px color-mix(in srgb, var(--shade) 75%, transparent);
+}
+
 html.theme-light {
-  --background-lightness: 97%;
-  --content-lightness: 18%;
-  --accent-lightness: 52%;
-  --link-color: hsl(var(--accent-hue) 92% 40%);
-  --color-skill: #a07c10;
-  --color-template: #7c3aed;
-  --color-mention: #0284c7;
-  --color-markdown-heading: #be185d;
+  --background-lightness: 94%;
+  --content-lightness: 20%;
+  --accent-saturation: 76%;
+  --accent-lightness: 50%;
+  --edge: color-mix(in srgb, var(--color-content) 12%, transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) 22%, transparent);
+  /* On a light ground the highlight is the thing that reads, not the shadow. */
+  --edge-highlight: color-mix(in srgb, white 80%, transparent);
+  --shade: hsl(var(--theme-hue) calc(var(--theme-saturation) + 16%) 44%);
+  --link-color: hsl(calc(var(--accent-hue) + 42) 78% 42%);
+  --color-skill: #96690a;
+  --color-template: #6d3ff5;
+  --color-mention: #0b8ea8;
+  --color-markdown-heading: #0d6fa8;
   color-scheme: light;
 }
 
@@ -83,21 +205,27 @@ html:not(.is-mac) #root {
 }
 
 html:not(.is-mac) ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-track {
   background: transparent;
 }
 
+/*
+ * The thumb is inset by a transparent border rather than being a thin bar, so
+ * it floats in the gutter instead of touching the panel edge.
+ */
 html:not(.is-mac) ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-content) 16%, transparent);
+  border: 2px solid transparent;
   border-radius: 9999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--color-content) 20%, transparent);
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-content) 32%, transparent);
+  background-color: color-mix(in srgb, var(--color-content) 38%, transparent);
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-corner {
@@ -108,6 +236,16 @@ html.has-native-glass,
 html.has-native-glass body,
 html.has-native-glass #root {
   background: transparent;
+}
+
+/*
+ * The ambient wash again, on the root this time, for the surfaces that are
+ * not a panel — pairing, onboarding, a bare dialog over the window. Skipped
+ * under native vibrancy, where the root has to stay genuinely transparent and
+ * the panels paint the wash themselves.
+ */
+html:not(.has-native-glass) #root {
+  background-image: var(--app-ambient);
 }
 
 /* The inline rule in `index.html` paints the shade dark, because first paint
@@ -134,22 +272,28 @@ html.reduce-motion *::after {
   scroll-behavior: auto !important;
 }
 
+/*
+ * The rail and the sidebar sit one rung below the body, so the working area
+ * is the brightest plane on screen. Both carry the ambient wash: it is one
+ * continuous field across the window rather than a gradient per panel, which
+ * is why the panels paint it themselves instead of a layer behind them.
+ */
 .sidebar-glass {
-  background: color-mix(in srgb, var(--color-background-base) 90%, black);
-}
-
-html.theme-light .sidebar-glass {
-  background: color-mix(in srgb, var(--color-background-base) 93%, black 7%);
+  background-color: var(--surface-0);
+  background-image: var(--app-ambient);
 }
 
 html.has-native-glass .sidebar-glass {
-  background: hsl(
-    var(--theme-hue) var(--theme-saturation) var(--background-lightness) / var(--sidebar-opacity)
+  background-color: color-mix(
+    in srgb,
+    var(--surface-0) calc(var(--sidebar-opacity) * 100%),
+    transparent
   );
 }
 
 .body-glass {
-  background: var(--color-background-base);
+  background-color: var(--surface-1);
+  background-image: var(--app-ambient);
 }
 
 .transcript-turn {
@@ -176,9 +320,9 @@ html.has-native-glass .sidebar-glass {
 }
 
 html.has-native-glass.glass-body .body-glass {
-  background: color-mix(
+  background-color: color-mix(
     in srgb,
-    var(--color-background-base) calc(var(--sidebar-opacity) * 100%),
+    var(--surface-1) calc(var(--sidebar-opacity) * 100%),
     transparent
   );
 }
@@ -299,21 +443,38 @@ header[data-tauri-drag-region] button {
   height: 100%;
 }
 
+/*
+ * The settings slider. The track is sunken and the thumb is a lit disc that
+ * picks up the accent halo on hover, so a row of sliders reads as controls
+ * rather than as hairlines with dots on them.
+ */
 .sidebar-opacity-slider {
   appearance: none;
-  height: 4px;
+  height: 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-content) 15%, transparent);
+  background: var(--surface-0);
+  box-shadow:
+    inset 0 0 0 1px var(--edge),
+    inset 0 1px 2px color-mix(in srgb, var(--shade) 45%, transparent);
   outline: none;
 }
 
 .sidebar-opacity-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 999px;
-  background: var(--color-content);
+  background: linear-gradient(160deg, var(--color-accent), var(--color-accent-2));
+  box-shadow:
+    var(--elevation-1),
+    inset 0 1px 0 color-mix(in srgb, white 35%, transparent);
   cursor: pointer;
+  transition: box-shadow 140ms ease;
+}
+
+.sidebar-opacity-slider:hover::-webkit-slider-thumb,
+.sidebar-opacity-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--halo);
 }
 
 .agent-markdown [data-streamdown="code-block"],
@@ -1156,4 +1317,326 @@ header[data-tauri-drag-region] button {
 [data-session-review-shell] + [data-message-queue] [data-message-queue-card] {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+/* ── Halo primitives ───────────────────────────────────────────────────────
+ *
+ * The shapes the redesign is made of. They live here rather than as repeated
+ * utility strings because every one of them is two or three properties that
+ * only mean something together — a wash without its spine reads as a hover
+ * state, a shadow without its lit edge reads as a smudge.
+ */
+
+/*
+ * A plane that sits above the one behind it: raised fill, a hairline, a cast
+ * shadow, and the one-pixel lit top edge. The highlight is an inset shadow
+ * rather than a border so it survives a transparent window, where a real
+ * border would draw a seam through the vibrancy.
+ */
+.halo-pane {
+  border: 1px solid var(--edge);
+  background: var(--surface-2);
+  box-shadow:
+    var(--elevation-2),
+    inset 0 1px 0 0 var(--edge-highlight);
+}
+
+/* Overlays — popovers, menus, dialogs — sit a rung higher and cast further. */
+.halo-overlay {
+  border: 1px solid var(--edge);
+  background: color-mix(in srgb, var(--surface-3) 86%, transparent);
+  box-shadow:
+    var(--elevation-3),
+    inset 0 1px 0 0 var(--edge-highlight);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/*
+ * The selected row. A tinted wash plus a short accent spine on the leading
+ * edge: the spine is what carries selection at a glance down a long list,
+ * where a fill alone is just a slightly different gray.
+ */
+.halo-row {
+  position: relative;
+}
+
+.halo-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 0;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(to bottom, var(--color-accent), var(--color-accent-2));
+  opacity: 0;
+  transform: translateY(-50%);
+  transition:
+    height 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 140ms ease;
+}
+
+.halo-row[data-halo="on"]::before {
+  height: 60%;
+  opacity: 1;
+}
+
+.halo-row[data-halo="on"] {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-accent) 16%, transparent),
+    color-mix(in srgb, var(--color-accent) 6%, transparent) 55%,
+    transparent
+  );
+}
+
+/* The accent gradient, for the one primary action a surface is allowed. */
+.halo-fill {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-accent),
+    color-mix(in srgb, var(--color-accent-2) 85%, var(--color-accent))
+  );
+  color: white;
+  box-shadow:
+    var(--elevation-1),
+    inset 0 1px 0 0 color-mix(in srgb, white 22%, transparent);
+}
+
+.halo-fill:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.halo-fill:active:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+/* A tinted, unfilled action: the accent as a wash rather than a block. */
+.halo-tint {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
+
+.halo-tint:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+/* Micro-labels: the section headings above a group of rows. */
+.halo-label {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-content) 38%, transparent);
+}
+
+/*
+ * The seam between two panels. A gradient rather than a flat hairline: it is
+ * strongest where the content is and fades at the window edges, so the chrome
+ * stops looking like a wireframe of boxes.
+ */
+.halo-seam-y {
+  background-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--edge) 12%,
+    var(--edge) 88%,
+    transparent
+  );
+}
+
+.halo-seam-x {
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    var(--edge) 8%,
+    var(--edge) 92%,
+    transparent
+  );
+}
+
+/* Focus is the accent halo everywhere, not a browser outline. */
+.halo-focus:focus-visible {
+  outline: none;
+  box-shadow: var(--halo);
+}
+
+/*
+ * Typography. A hair of negative tracking across the UI tightens the small
+ * sizes the app is mostly made of; code and terminals keep their metrics,
+ * where tracking is alignment rather than style.
+ */
+html,
+body,
+#root {
+  letter-spacing: -0.006em;
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono,
+.wavex-terminal,
+.cm-editor,
+[data-streamdown="code-block-body"] {
+  letter-spacing: normal;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 34%, transparent);
+  color: var(--color-content);
+}
+
+/*
+ * Scrollbars, on every platform. macOS overlay scrollbars are the reason the
+ * rules above are scoped away from it, but the app's own scroll areas read as
+ * part of the chrome, so they get the same thin accent-neutral thumb.
+ */
+.halo-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.halo-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.halo-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--color-content) 18%, transparent);
+}
+
+.halo-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-content) 34%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo-row::before {
+    transition: none;
+  }
+}
+
+/*
+ * The title bar. Its rule fades out at both window edges rather than running
+ * corner to corner: the old chrome read as a stack of boxed strips, and the
+ * line across the top was the loudest of them.
+ */
+.halo-topbar {
+  position: relative;
+}
+
+.halo-topbar::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    var(--edge) 8%,
+    var(--edge) 92%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* A vertical seam between two strips of chrome, fading at both ends. */
+.halo-divide-r {
+  position: relative;
+}
+
+.halo-divide-r::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  right: 0;
+  width: 1px;
+  background: var(--edge);
+  pointer-events: none;
+}
+
+/* The seam between a side panel and the body it borders. */
+.halo-seam-right::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 1px;
+  background-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--edge) 6%,
+    var(--edge) 94%,
+    transparent
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/*
+ * Editor tabs. They butt up against each other, so the seam is a right-hand
+ * rule rather than a border box, and the active one drops its own so the tab
+ * and the pane below read as one shape. The halo spine runs along the top
+ * edge here instead of the leading edge, because that is where a tab meets
+ * the strip it belongs to.
+ */
+.halo-tab::after {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  right: 0;
+  width: 1px;
+  background: var(--edge);
+  pointer-events: none;
+}
+
+.halo-tab[data-halo="on"]::after,
+.halo-tab[data-halo="on"] + .halo-tab::after {
+  opacity: 0;
+}
+
+.halo-tab.halo-row::before {
+  left: 0;
+  right: 0;
+  top: 0;
+  width: auto;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(to right, var(--color-accent), var(--color-accent-2));
+  transform: none;
+}
+
+.halo-tab.halo-row[data-halo="on"]::before {
+  height: 2px;
+}
+
+.halo-tab.halo-row[data-halo="on"] {
+  background-image: none;
+}
+
+/*
+ * The composer. It is the one thing on screen the user is always about to
+ * touch, so it is the only surface that gets its own lit rim and a faint
+ * accent bloom underneath — enough to sit forward of the transcript without
+ * a heavier border doing the work.
+ */
+.halo-composer {
+  background-color: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  background-image:
+    linear-gradient(
+      to top,
+      color-mix(in srgb, var(--color-accent) calc(7% * var(--ambient)), transparent),
+      transparent 62%
+    ),
+    linear-gradient(to bottom, var(--edge-highlight), transparent 2px);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }

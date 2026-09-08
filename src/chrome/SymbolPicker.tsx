@@ -261,7 +261,7 @@ function SymbolList({
             onMouseEnter={() => onActive(index)}
             onClick={() => onPick(symbol)}
             className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm leading-none ${
-              highlighted ? "bg-content/10 text-content" : "text-content"
+              highlighted ? "bg-accent/16 text-content" : "text-content"
             }`}
           >
             <span className="w-16 shrink-0 truncate font-mono text-[10.5px] text-content/40">

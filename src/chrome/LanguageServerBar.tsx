@@ -120,7 +120,7 @@ function BarButton({ onClick, children }: { onClick: () => void; children: React
     <button
       type="button"
       onClick={onClick}
-      className="h-6 shrink-0 rounded-md bg-accent px-2 text-[11.5px] font-medium text-white"
+      className="halo-fill halo-focus h-6 shrink-0 rounded-lg px-2.5 text-[11.5px] font-medium"
     >
       {children}
     </button>

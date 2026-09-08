@@ -303,7 +303,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                     }}
                     onClick={() => toggle(harness)}
                     className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none disabled:opacity-40 ${
-                      highlighted ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+                      highlighted ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
                     }`}
                   >
                     <span
@@ -346,7 +346,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
               onClick={start}
               className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none disabled:text-content/35 ${
                 onStartRow && !error
-                  ? "bg-content/10 text-content"
+                  ? "bg-accent/16 text-content"
                   : "text-content hover:bg-content/5"
               } ${error ? "hover:bg-transparent" : ""}`}
             >
@@ -391,7 +391,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                       setInSubmenu(false);
                     }}
                     className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+                      highlighted ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate">{model.name}</span>

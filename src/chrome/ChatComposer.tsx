@@ -170,8 +170,8 @@ export function ChatComposer({
         onResume={onResumeQueue}
       />
       <div
-        className={`overflow-hidden rounded-xl border bg-background-base/60 backdrop-blur-md ${
-          dragging ? "border-accent/60" : "border-content/10"
+        className={`halo-composer overflow-hidden rounded-xl border transition-colors ${
+          dragging ? "border-accent/60 shadow-halo" : "border-edge shadow-float"
         }`}
         onDragOver={(event) => {
           if (!attachmentsSupported) return;
@@ -228,7 +228,7 @@ export function ChatComposer({
             title={attachmentsSupported ? "Attach images" : `${harness} does not support images`}
             aria-label="Attach images"
             disabled={!attachmentsSupported}
-            className="grid size-6.5 place-items-center rounded-md text-content/50 hover:bg-content/10 hover:text-content disabled:cursor-default disabled:text-content/20 disabled:hover:bg-transparent"
+            className="halo-focus grid size-6.5 place-items-center rounded-lg text-content/45 transition-colors hover:bg-content/8 hover:text-content disabled:cursor-default disabled:text-content/20 disabled:hover:bg-transparent"
             onClick={() => {
               void pickFiles().then((paths) => {
                 if (!paths?.length) return;
@@ -251,7 +251,7 @@ export function ChatComposer({
               aria-label="Answer with an image"
               className={`grid size-6.5 place-items-center rounded-md ${
                 imageMode
-                  ? "bg-content/15 text-content"
+                  ? "bg-accent/16 text-content"
                   : "text-content/50 hover:bg-content/10 hover:text-content"
               }`}
               onClick={() => {
@@ -286,7 +286,7 @@ export function ChatComposer({
                 title="Stop (Esc)"
                 aria-label="Stop"
                 onClick={onStop}
-                className="grid size-6.5 place-items-center rounded-md bg-white text-black hover:bg-white/90"
+                className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg"
               >
                 <Square className="size-2.5 fill-current" strokeWidth={0} />
               </button>
@@ -297,7 +297,7 @@ export function ChatComposer({
               aria-label="Send"
               disabled={!hasText && (imageMode || attachments.length === 0)}
               onClick={submit}
-              className="grid size-6.5 place-items-center rounded-md bg-white text-black hover:bg-white/90 disabled:cursor-default disabled:bg-white/30 disabled:text-black/40 disabled:hover:bg-white/30"
+              className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg disabled:cursor-default disabled:opacity-35 disabled:shadow-none"
             >
               <ArrowUp className="size-3.5" strokeWidth={2.25} />
             </button>

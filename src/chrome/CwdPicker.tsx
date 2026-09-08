@@ -192,7 +192,7 @@ export function CwdPicker({
         className={
           buttonClassName
             ? `${buttonClassName} ${
-                open ? "bg-content/10 text-content" : "hover:bg-content/5"
+                open ? "bg-accent/16 text-content" : "hover:bg-content/5"
               } disabled:opacity-40`
             : `flex min-w-0 items-center gap-1.5 ${
                 open ? "text-content" : "text-content/50 hover:text-content"
@@ -256,7 +256,7 @@ export function CwdPicker({
                     onClick={() => pick({ kind: "recent", path: item.path })}
                     className={`flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left ${
                       active === index
-                        ? "bg-content/10 text-content"
+                        ? "bg-accent/16 text-content"
                         : "text-content/80 hover:bg-content/5"
                     }`}
                   >
@@ -287,7 +287,7 @@ export function CwdPicker({
                 }}
                 className={`flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left ${
                   active === moreIndex || moreOpen
-                    ? "bg-content/10 text-content"
+                    ? "bg-accent/16 text-content"
                     : "text-content/80 hover:bg-content/5"
                 }`}
               >
@@ -309,7 +309,7 @@ export function CwdPicker({
                 onClick={() => pick({ kind: "new-terminal" })}
                 className={`flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left ${
                   active === newTerminalIndex
-                    ? "bg-content/10 text-content"
+                    ? "bg-accent/16 text-content"
                     : "text-content/80 hover:bg-content/5"
                 }`}
               >

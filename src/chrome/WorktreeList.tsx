@@ -200,7 +200,7 @@ function WorktreeRow({
   return (
     <div
       className={`group relative flex h-7 items-stretch rounded-md px-2 ${
-        selected ? "bg-content/12 text-content" : "opacity-65 hover:bg-content/5 hover:text-content"
+        selected ? "bg-accent/16 text-content" : "opacity-65 hover:bg-content/5 hover:text-content"
       }`}
       onContextMenu={onOpenMenu}
     >

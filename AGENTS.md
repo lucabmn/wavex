@@ -275,6 +275,36 @@ Use the existing custom chrome primitives and Tailwind 4 tokens. This is not a
 shadcn project. Import application icons from `src/chrome/icons.tsx`; that file
 deep-imports Hugeicons deliberately so the full catalog is not bundled.
 
+### The Halo design language
+
+`src/index.css` is the whole design system; components spend its tokens rather
+than inventing colors, shadows, or corners of their own.
+
+Every surface comes off one ladder derived from the single background lightness
+the user controls — `--surface-0` sunken, `--surface-1` the panel plane,
+`--surface-2` raised, `--surface-3` overlay — reachable as `bg-surface-sunken`,
+`bg-surface`, `bg-surface-raised`, `bg-surface-overlay`. Depth is a tinted cast
+shadow (`shadow-lift`, `shadow-float`, `shadow-cast`) plus a one-pixel lit top
+edge, not a hairline around every box: a border drawn over vibrancy reads as a
+seam, a highlight reads as glass. Hairlines that stay use `border-edge` and
+`border-edge-strong`.
+
+The accent is a pair. `--color-accent` is the user's hue and `--color-accent-2`
+is derived from it, so `from-accent to-accent-2` turns with their choice rather
+than pinning a color they cannot change. Selection is `halo-row` with
+`data-halo="on"` — an accent spine on the leading edge over a wash — never
+another grey fill. The primary action of a surface takes `halo-fill`; a
+secondary one takes `halo-tint`. Overlays take `halo-overlay`, section cards
+`halo-pane`, focus `halo-focus`, group headings `halo-label`, and the seam
+between two panels `halo-seam-x` / `halo-seam-right`, which fades at both ends
+instead of ruling the window corner to corner.
+
+Two appearance rules scale the language: `Depth` swaps the shadow set through
+`html.depth-flat` / `html.depth-deep`, and `Ambient glow` multiplies the
+accent wash through `--ambient`, so zero is the wash switched off rather than a
+second set of rules. Both mean every panel follows at once — which only holds
+while depth and the wash stay single tokens.
+
 Long transcripts, file lists, and live streaming are performance-sensitive.
 Avoid unbounded rendering, unnecessary global subscriptions, continuously
 repainting decoration, and work repeated for every streamed token.

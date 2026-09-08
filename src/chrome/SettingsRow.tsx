@@ -13,7 +13,9 @@ import { playCue } from "../lib/sounds";
 export function PageHeader({ title, description }: { title: string; description?: string }) {
   return (
     <header className="pb-5">
-      <h1 className="text-[20px] font-semibold leading-tight text-content">{title}</h1>
+      <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-content">
+        {title}
+      </h1>
       {description ? (
         <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-content/45">{description}</p>
       ) : null}
@@ -37,9 +39,7 @@ export function Section({
     <section className="pb-7 last:pb-2">
       <div className="flex items-end justify-between gap-4 pb-2">
         <div className="min-w-0">
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.07em] text-content/50">
-            {title}
-          </h2>
+          <h2 className="halo-label text-[11px] text-content/45">{title}</h2>
           {description ? (
             <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-content/40">
               {description}
@@ -48,9 +48,7 @@ export function Section({
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
-      <div className="overflow-hidden rounded-xl border border-content/10 bg-content/[0.025]">
-        {children}
-      </div>
+      <div className="halo-pane overflow-hidden rounded-xl">{children}</div>
     </section>
   );
 }
@@ -121,12 +119,12 @@ export function Toggle({
         playCue("switch");
         onChange(!on);
       }}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
-        on ? "bg-accent" : "bg-content/20"
+      className={`halo-focus relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
+        on ? "halo-fill" : "bg-content/15 shadow-[inset_0_1px_2px_var(--shade)]"
       }`}
     >
       <span
-        className={`absolute top-0.5 size-4 rounded-full bg-white transition-[left] ${
+        className={`absolute top-0.5 size-4 rounded-full bg-white shadow-lift transition-[left] ${
           on ? "left-4.5" : "left-0.5"
         }`}
       />
@@ -149,7 +147,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="grid gap-0.5 rounded-md border border-content/10 p-0.5 text-[12px]"
+      className="grid gap-0.5 rounded-lg border border-edge bg-surface-sunken p-0.5 text-[12px]"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(3.75rem, 1fr))` }}
     >
       {options.map((option) => (
@@ -159,10 +157,10 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`min-w-0 truncate rounded-[5px] px-1.5 py-1 ${
+          className={`halo-focus min-w-0 truncate rounded-md px-1.5 py-1 font-medium transition-colors ${
             value === option.value
-              ? "bg-content/10 text-content"
-              : "text-content/50 hover:text-content"
+              ? "bg-surface-raised text-content shadow-lift"
+              : "text-content/55 hover:bg-content/6 hover:text-content"
           }`}
         >
           {option.label}
@@ -204,7 +202,7 @@ export function Slider({
         className="sidebar-opacity-slider min-w-0 flex-1"
         onChange={(event) => onChange(Number(event.target.value))}
       />
-      <span className="w-10 shrink-0 text-right text-[12px] text-content tabular-nums">
+      <span className="w-10 shrink-0 text-right font-mono text-[11.5px] text-content/70 tabular-nums">
         {display}
       </span>
     </div>
@@ -230,7 +228,7 @@ export function Select({
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
-      className="max-w-52 rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[12px] text-content outline-none hover:border-content/20 disabled:opacity-40"
+      className="halo-focus max-w-52 rounded-lg border border-edge bg-surface-raised px-2.5 py-1.5 text-[12px] text-content shadow-lift outline-none transition-colors hover:border-edge-strong disabled:opacity-40"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -257,10 +255,10 @@ export function SecondaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex shrink-0 items-center gap-1.5 rounded-md border border-content/10 px-2.5 py-1 text-[12px] ${
+      className={`halo-focus flex shrink-0 items-center gap-1.5 rounded-lg border border-edge px-3 py-1.5 text-[12px] font-medium transition-colors ${
         danger
           ? "text-red-400 hover:border-red-400/40 hover:bg-red-400/10"
-          : "text-content/70 hover:bg-content/10 hover:text-content"
+          : "bg-surface-raised text-content/70 shadow-lift hover:border-edge-strong hover:text-content"
       } disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
     >
       {children}

@@ -278,7 +278,7 @@ export function SecondOpinionButton({
                       !available && probed
                         ? "text-content/30"
                         : highlighted
-                          ? "bg-content/10 text-content"
+                          ? "bg-accent/16 text-content"
                           : "text-content hover:bg-content/5"
                     }`}
                   >
@@ -326,7 +326,7 @@ export function SecondOpinionButton({
                     }}
                     onClick={() => pick(activeHarness, model.id)}
                     className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+                      highlighted ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate">{model.name}</span>

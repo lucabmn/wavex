@@ -22,7 +22,7 @@ type Props = {
  * surface is announced.
  *
  * Plain pills, not a boxed segmented control: it sits directly above the rail's
- * own tab strip, and every tab row in the app is a filled pill on the bare
+ * own tab strip, and every tab row in the app is a raised chip on the bare
  * surface rather than a bordered track.
  */
 export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
@@ -59,12 +59,12 @@ export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
             tabIndex={selected ? 0 : -1}
             title={`${APP_MODE_LABEL[value]} — ${APP_MODE_DESCRIPTION[value]} (${MOD}${SHIFT}M)`}
             aria-label={`${APP_MODE_LABEL[value]}: ${APP_MODE_DESCRIPTION[value]}`}
-            className={`flex h-6 items-center justify-center rounded-md px-2 text-[12px] leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            className={`halo-focus flex h-6.5 items-center justify-center rounded-lg px-2.5 text-[12px] font-medium leading-none transition-colors ${
               stretch ? "flex-1" : ""
             } ${
               selected
-                ? "bg-content/10 text-content"
-                : "text-content/50 hover:bg-content/5 hover:text-content"
+                ? "border border-edge bg-surface-raised text-content shadow-lift"
+                : "border border-transparent text-content/55 hover:bg-content/6 hover:text-content"
             }`}
             onClick={() => onChange(value)}
           >

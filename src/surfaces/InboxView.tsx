@@ -363,7 +363,7 @@ export function InboxView({
           aria-haspopup="menu"
           onClick={onFilterButtonClick}
           className={`grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content ${
-            filterMenu || filtersActive ? "bg-content/10 text-content" : ""
+            filterMenu || filtersActive ? "bg-accent/16 text-content" : ""
           }`}
         >
           <ListFilter className="size-3" strokeWidth={1.75} />
@@ -596,7 +596,7 @@ function InboxCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-content/10 text-content"
+          ? "border-transparent bg-accent/16 text-content"
           : "border-transparent text-content/80 hover:bg-content/5 hover:text-content"
       }`}
     >

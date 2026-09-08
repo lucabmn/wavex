@@ -295,7 +295,7 @@ export function MenuBar({
             }}
             className={`rounded px-2 py-0.5 transition-colors ${
               isActive
-                ? "bg-content/15 text-content"
+                ? "bg-accent/16 text-content"
                 : "text-content/70 hover:bg-content/10 hover:text-content"
             }`}
           >

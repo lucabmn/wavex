@@ -835,7 +835,7 @@ function ChangeRow({
     <li>
       <div
         className={`group flex h-7 w-full items-center gap-1 px-2 leading-none ${
-          active ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+          active ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
         }`}
       >
         <button

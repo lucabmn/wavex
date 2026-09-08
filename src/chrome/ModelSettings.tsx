@@ -179,7 +179,7 @@ function SelectSetting({
           setOpen(true);
         }}
         className={`flex h-6.5 max-w-36 items-center gap-1 rounded-md px-1.5 ${
-          open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"
+          open ? "bg-accent/16 text-content" : "bg-content/10 text-content hover:bg-content/15"
         }`}
       >
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -217,7 +217,7 @@ function SelectSetting({
                 onClick={() => pick(option.value)}
                 className={`flex w-full items-center rounded-lg px-2 py-1.5 text-left text-[13px] ${
                   highlighted || selected
-                    ? "bg-content/10 text-content"
+                    ? "bg-accent/16 text-content"
                     : "text-content hover:bg-content/5"
                 }`}
               >

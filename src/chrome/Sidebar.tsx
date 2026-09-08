@@ -869,10 +869,10 @@ function SidebarComponent({
         }}
       >
         {showStart ? (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-accent" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 rounded-full bg-gradient-to-b from-accent to-accent-2" />
         ) : null}
         {showEnd ? (
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-accent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 rounded-full bg-gradient-to-b from-accent to-accent-2" />
         ) : null}
         <button
           type="button"
@@ -886,10 +886,10 @@ function SidebarComponent({
             if (sortable.consumeClick()) return;
             onTabPick(itemId);
           }}
-          className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center overflow-hidden rounded-md px-2 text-[12px] leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+          className={`halo-focus flex h-6.5 min-w-0 flex-1 items-center justify-center self-center overflow-hidden rounded-lg px-2 text-[12px] font-medium leading-none transition-colors ${
             active
-              ? "bg-content/10 text-content"
-              : "text-content/50 hover:bg-content/5 hover:text-content"
+              ? "border border-edge bg-surface-raised text-content shadow-lift"
+              : "border border-transparent text-content/55 hover:bg-content/6 hover:text-content"
           } ${canDragTabs ? "cursor-grab active:cursor-grabbing" : ""}`}
         >
           {isChangesTab && hasUncommitted ? (
@@ -910,23 +910,21 @@ function SidebarComponent({
   const sidebarContent = (
     <aside
       ref={resize.setPaneRef}
-      className="sidebar-glass relative flex h-full min-h-0 shrink-0 flex-col border-r border-content/10"
+      className="sidebar-glass halo-seam-right relative flex h-full min-h-0 shrink-0 flex-col"
     >
       {railVisible ? (
         <>
           <div
-            className="flex h-10 shrink-0 select-none items-center gap-1 border-b border-content/10 pl-3 pr-1.5"
+            className="halo-topbar flex h-10 shrink-0 select-none items-center gap-1 pl-3 pr-1.5"
             data-tauri-drag-region="deep"
           >
-            <span className="min-w-0 flex-1 truncate text-sm font-medium leading-tight">
-              Workspace
-            </span>
+            <span className="halo-label min-w-0 flex-1 truncate leading-tight">Workspace</span>
             <WorkspaceTitleActions onSearch={onGoToFile} onNew={onNew} />
           </div>
           <div
             role="tablist"
             aria-label="Workspace"
-            className="flex h-9 shrink-0 items-center gap-px border-b border-content/10 px-2"
+            className="halo-topbar flex h-9 shrink-0 items-center gap-0.5 px-2"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
@@ -935,7 +933,7 @@ function SidebarComponent({
       ) : (
         <>
           <div
-            className="flex h-10 shrink-0 select-none items-center border-b border-content/10 pr-1.5"
+            className="halo-topbar flex h-10 shrink-0 select-none items-center pr-1.5"
             data-tauri-drag-region="deep"
           >
             {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
@@ -974,7 +972,7 @@ function SidebarComponent({
           <div
             role="tablist"
             aria-label="Workspace"
-            className="flex h-9 shrink-0 items-center gap-px overflow-visible border-b border-content/10 px-2"
+            className="halo-topbar flex h-9 shrink-0 items-center gap-0.5 overflow-visible px-2"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
@@ -1060,7 +1058,7 @@ function SidebarComponent({
                     <button
                       type="button"
                       onClick={onRetrySessions}
-                      className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-content/15 hover:text-content"
+                      className="halo-focus self-start rounded-lg border border-edge bg-surface-raised px-2.5 py-1 text-[11.5px] font-medium text-content/75 shadow-lift transition-colors hover:text-content"
                     >
                       Try again
                     </button>
@@ -1547,8 +1545,8 @@ function SessionsHeaderButton({
       aria-haspopup={hasPopup ? "menu" : undefined}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`relative z-50 grid size-6 place-items-center rounded-md text-content/50 hover:bg-content/10 hover:text-content ${
-        open || active ? "bg-content/10 text-content" : ""
+      className={`halo-focus relative z-50 grid size-6 place-items-center rounded-lg text-content/45 transition-colors hover:bg-content/8 hover:text-content ${
+        open || active ? "bg-accent/16 text-content" : ""
       }`}
     >
       {children}
@@ -1663,7 +1661,7 @@ function FolderRow({
       }`}
     >
       {dropTarget ? (
-        <div className="pointer-events-none absolute inset-0 rounded-md bg-accent/20" />
+        <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/20 shadow-halo" />
       ) : null}
       <span
         className={`relative grid size-4 shrink-0 place-items-center ${
@@ -1773,7 +1771,7 @@ function FolderRenameRow({
             finish(false);
           }
         }}
-        className="relative min-w-0 flex-1 rounded bg-content/10 px-2 py-0.5 text-[13px] font-semibold leading-snug text-content outline-none ring-1 ring-accent/40"
+        className="relative min-w-0 flex-1 rounded-md bg-surface-sunken px-2 py-0.5 text-[13px] font-semibold leading-snug text-content shadow-halo outline-none"
       />
       <span className="relative shrink-0 text-[11px] tabular-nums text-content/45">
         {memberCount}
@@ -1968,16 +1966,17 @@ function SessionCard({
       }}
       onContextMenu={onContextMenu}
       onKeyDown={onKeyDown}
-      className={`relative border flex w-full touch-none flex-col rounded-md px-2.5 text-left ${
+      data-halo={!dropTarget && !needsApproval && isActive ? "on" : undefined}
+      className={`halo-row relative flex w-full touch-none flex-col rounded-lg border px-2.5 text-left transition-colors ${
         compact ? "py-1.5" : "py-2"
       } ${dragging ? "opacity-40" : ""} ${
         dropTarget
-          ? "text-content border-transparent"
+          ? "border-transparent text-content"
           : needsApproval
-            ? "bg-content/20 text-content border-content/30 border-dashed"
+            ? "border-dashed border-amber-400/45 bg-amber-400/10 text-content"
             : isActive
-              ? "bg-content/10 text-content border-transparent"
-              : "text-content/80 hover:bg-content/5 hover:text-content border-transparent"
+              ? "border-transparent text-content"
+              : "border-transparent text-content/75 hover:bg-content/6 hover:text-content"
       }`}
     >
       {dropTarget ? (
@@ -2076,12 +2075,13 @@ function SessionRenameRow({
 
   return (
     <div
-      className={`flex w-full flex-col rounded-md px-2.5 py-2 ${
+      data-halo={!needsApproval && isActive ? "on" : undefined}
+      className={`halo-row flex w-full flex-col rounded-lg px-2.5 py-2 ${
         needsApproval
           ? "bg-amber-400/10 text-content"
           : isActive
-            ? "bg-content/10 text-content"
-            : "text-content/80"
+            ? "text-content"
+            : "text-content/75"
       }`}
     >
       <input
@@ -2091,7 +2091,7 @@ function SessionRenameRow({
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => finish(true)}
         onKeyDown={onKeyDown}
-        className="w-full rounded bg-content/10 px-2 py-1 text-[13px] font-semibold leading-snug text-content outline-none ring-1 ring-accent/40"
+        className="w-full rounded-md bg-surface-sunken px-2 py-1 text-[13px] font-semibold leading-snug text-content shadow-halo outline-none"
       />
     </div>
   );

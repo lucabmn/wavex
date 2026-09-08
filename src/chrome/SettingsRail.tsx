@@ -41,16 +41,14 @@ export function SettingsNav({ section, onSelect, onClose }: Props) {
       <div
         ref={lockOverscroll}
         aria-label="Settings"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none px-2 pb-2"
+        className="halo-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none px-2 pb-2"
       >
         {SETTINGS_GROUPS.map((group) => {
           const sections = settingsSectionsInGroup(group.id);
           if (sections.length === 0) return null;
           return (
             <div key={group.id} className="flex flex-col gap-px pt-3 first:pt-0">
-              <h2 className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-content/30">
-                {group.label}
-              </h2>
+              <h2 className="halo-label px-2 pb-1.5 pt-1">{group.label}</h2>
               {sections.map((item) => (
                 <NavRow
                   key={item.id}
@@ -87,14 +85,16 @@ function NavRow({
       type="button"
       onClick={onClick}
       aria-current={active ? "true" : undefined}
-      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${
-        active
-          ? "bg-content/10 text-content"
-          : "text-content/50 hover:bg-content/5 hover:text-content"
+      data-halo={active ? "on" : undefined}
+      className={`halo-row halo-focus flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors ${
+        active ? "text-content" : "text-content/50 hover:bg-content/6 hover:text-content"
       }`}
     >
-      <Icon className="size-4 shrink-0 opacity-70" strokeWidth={1.75} />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-tight">{label}</span>
+      <Icon
+        className={`size-4 shrink-0 ${active ? "opacity-100" : "opacity-65"}`}
+        strokeWidth={1.75}
+      />
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-tight">{label}</span>
     </button>
   );
 }

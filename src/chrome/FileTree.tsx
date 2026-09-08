@@ -710,7 +710,7 @@ function HeaderIcon({
       onClick={onClick}
       className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
         active
-          ? "bg-content/10 text-content"
+          ? "bg-accent/16 text-content"
           : "text-content/50 hover:bg-content/5 hover:text-content"
       }`}
     >
@@ -757,14 +757,14 @@ function FileTreeDiffButton({
       onClick={onClick}
       className={`relative flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
         active
-          ? "bg-content/10 text-content"
+          ? "bg-accent/16 text-content"
           : "text-content/50 hover:bg-content/5 hover:text-content"
       }`}
     >
       <span className="relative">
         <GitCompare className="size-3.5" strokeWidth={1.75} />
         {files > 0 ? (
-          <span className="pointer-events-none absolute -top-1.5 -right-2 grid min-h-3.5 min-w-3.5 place-items-center rounded-full bg-accent px-0.5 text-[7px] font-semibold leading-none text-white tabular-nums">
+          <span className="halo-fill pointer-events-none absolute -top-1.5 -right-2 grid min-h-3.5 min-w-3.5 place-items-center rounded-full px-0.5 text-[7px] font-semibold leading-none tabular-nums">
             {badge}
           </span>
         ) : null}
@@ -915,7 +915,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
           onContextMenu={(e) => onItemContextMenu(entry, e)}
           style={{ paddingLeft: 8 + depth * 12 }}
           className={`flex h-7.5 w-full cursor-default items-center gap-1 pr-2 text-left text-[14px] leading-none ${
-            selected ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+            selected ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
           } ${cutPath === entry.path ? "opacity-50" : ""}`}
         >
           <span className="grid size-4 shrink-0 place-items-center text-content/50">

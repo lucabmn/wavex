@@ -75,7 +75,7 @@ export function BrowserPairing({ onPaired }: Props) {
           <button
             type="submit"
             disabled={pairing || !code.trim()}
-            className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="halo-fill halo-focus flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
           >
             {pairing ? <Loader className="size-3.5 animate-spin" /> : null}
             Connect

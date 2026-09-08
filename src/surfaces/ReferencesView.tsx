@@ -122,7 +122,7 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
                     data-selected={index === selected}
                     onClick={() => open(target, index)}
                     className={`flex w-full items-center gap-2 py-0.5 pr-2 pl-7 text-left font-mono text-[11px] hover:bg-content/5 ${
-                      index === selected ? "bg-content/10 text-content" : "text-content/60"
+                      index === selected ? "bg-accent/16 text-content" : "text-content/60"
                     }`}
                   >
                     <span className="w-9 shrink-0 text-right tabular-nums text-content/35">

@@ -90,7 +90,7 @@ export function ProfileDialog({
           <button
             type="submit"
             disabled={!clean}
-            className="rounded-md bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40"
+            className="halo-fill halo-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
           >
             {confirmLabel}
           </button>

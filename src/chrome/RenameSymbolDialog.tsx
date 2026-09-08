@@ -66,7 +66,7 @@ export function RenameSymbolDialog({ symbol, onCancel, onRename }: Props) {
           <button
             type="submit"
             disabled={!trimmed || trimmed === symbol}
-            className="h-7 rounded-md bg-accent px-2.5 text-[12px] font-medium text-white disabled:opacity-40"
+            className="halo-fill halo-focus h-7 rounded-lg px-3 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
           >
             Rename
           </button>

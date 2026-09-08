@@ -965,12 +965,14 @@ export function Composer({
         <div
           ref={boxRef}
           data-composer-box
-          className={`relative z-10 rounded-lg border bg-content/3 ${
-            fileDrag ? "border-accent/60" : "border-content/10 has-focus:border-content/20"
+          className={`halo-composer relative z-10 rounded-xl border transition-colors ${
+            fileDrag
+              ? "border-accent/60 shadow-halo"
+              : "border-edge shadow-float has-focus:border-edge-strong"
           }`}
         >
           {fileDrag ? (
-            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg bg-accent/8 text-[12px] text-content/70">
+            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-xl bg-accent/10 text-[12px] text-content/70">
               Drop files to attach
             </div>
           ) : null}
@@ -1229,7 +1231,7 @@ function ComposerAction({
             title="Send"
             aria-label="Send"
             onClick={onSend}
-            className="grid size-6.5 place-items-center rounded-md bg-white text-black hover:bg-white/90"
+            className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg"
           >
             <ArrowUp className="size-3.5" strokeWidth={2.25} />
           </button>
@@ -1239,7 +1241,7 @@ function ComposerAction({
           title="Stop"
           aria-label="Stop"
           onClick={onStop}
-          className="grid size-6.5 place-items-center rounded-md bg-white text-black hover:bg-white/90"
+          className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>
@@ -1254,7 +1256,7 @@ function ComposerAction({
       aria-label="Send"
       disabled={!hasValue}
       onClick={onSend}
-      className="grid size-6.5 place-items-center rounded-md bg-white text-black hover:bg-white/90 disabled:cursor-default disabled:bg-white/30 disabled:text-black/40 disabled:hover:bg-white/30"
+      className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg disabled:cursor-default disabled:opacity-35 disabled:shadow-none"
     >
       <ArrowUp className="size-3.5" strokeWidth={2.25} />
     </button>

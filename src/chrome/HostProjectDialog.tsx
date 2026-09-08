@@ -88,7 +88,7 @@ export function HostProjectDialog({ onCancel, onOpen, onPickLocal }: Props) {
               onClick={() => setHostId(host.hostId)}
               className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 host.hostId === hostId
-                  ? "bg-content/10 text-content"
+                  ? "bg-accent/16 text-content"
                   : "text-content/55 hover:bg-content/8 hover:text-content"
               }`}
             >
@@ -212,7 +212,7 @@ function HostBrowser({
           type="button"
           disabled={!canOpen}
           onClick={() => cwd && onOpen(cwd)}
-          className="rounded-md bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="halo-fill halo-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
         >
           Open this folder
         </button>

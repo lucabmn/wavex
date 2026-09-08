@@ -424,7 +424,7 @@ export function ProjectRail({
     <nav
       ref={resize.setPaneRef}
       aria-label="Projects"
-      className="sidebar-glass relative flex shrink-0 flex-col border-r border-content/10"
+      className="sidebar-glass halo-seam-right relative flex shrink-0 flex-col"
     >
       <div
         className="flex h-10 shrink-0 select-none items-center pr-1.5"
@@ -823,8 +823,9 @@ function LiveAgentCard({
       aria-label={[agent.title, where, activity, elapsed].filter(Boolean).join(", ")}
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect?.(agent.id)}
-      className={`relative flex w-full flex-col rounded-md px-2 py-1.5 text-left ${
-        selected ? "bg-content/10" : "hover:bg-content/8"
+      data-halo={selected ? "on" : undefined}
+      className={`halo-row halo-focus relative flex w-full flex-col rounded-lg px-2 py-1.5 text-left transition-colors ${
+        selected ? "" : "hover:bg-content/6"
       }`}
     >
       <span className="flex min-w-0 items-center gap-2">
@@ -931,7 +932,7 @@ function ProjectSection({
             title="Open project"
             aria-label="Open project"
             onClick={onAdd}
-            className="grid size-5 shrink-0 place-items-center rounded-md text-content/50 hover:bg-content/8 hover:text-content"
+            className="halo-focus grid size-5 shrink-0 place-items-center rounded-md text-content/45 transition-colors hover:bg-content/8 hover:text-content"
           >
             <Plus className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -1037,12 +1038,13 @@ function ProjectCard({
   return (
     <div
       ref={(el) => sortable.setItemRef(item.path, el)}
-      className={`group relative flex touch-none items-stretch rounded-md px-2 h-8 ${
+      data-halo={selected ? "on" : undefined}
+      className={`halo-row group relative flex h-8 touch-none items-stretch rounded-lg px-2 transition-colors ${
         selected
-          ? "bg-content/12 text-content"
+          ? "text-content"
           : expanded
-            ? "text-content hover:bg-content/5"
-            : "opacity-65 hover:bg-content/5 hover:text-content"
+            ? "text-content hover:bg-content/6"
+            : "opacity-60 hover:bg-content/6 hover:text-content"
       } ${dragging ? "opacity-40" : ""} cursor-default`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -1061,10 +1063,10 @@ function ProjectCard({
       onContextMenu={(event) => onContextMenu(item.path, event)}
     >
       {showStart ? (
-        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 rounded-full bg-gradient-to-r from-accent to-accent-2" />
       ) : null}
       {showEnd ? (
-        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 rounded-full bg-gradient-to-r from-accent to-accent-2" />
       ) : null}
       <button
         type="button"
@@ -1122,7 +1124,7 @@ function ProjectCard({
           event.stopPropagation();
           onOpenMenu(item.path, event.clientX, event.clientY);
         }}
-        className="absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-content/55 hover:bg-content/8 hover:text-content group-hover:grid"
+        className="halo-focus absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-content/50 transition-colors hover:bg-content/8 hover:text-content group-hover:grid"
       >
         <MoreHorizontal className="size-4" strokeWidth={1.75} />
       </button>
