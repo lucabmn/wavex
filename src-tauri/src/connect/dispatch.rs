@@ -22,7 +22,7 @@ use crate::harness::HarnessHost;
 use crate::host_events::HostEventJournal;
 use crate::pty::PtyHost;
 use crate::session_store::SessionStore;
-use crate::{checkpoint, cursor_store, fs, harness, host_events, notes, project_logo};
+use crate::{automations, checkpoint, cursor_store, fs, harness, host_events, notes, project_logo};
 use crate::{prompt_templates, pty, rate_limits, search, session_store, skills, usage, worktree};
 
 /// Deserializes one command's arguments into a struct named for the call site.
@@ -179,6 +179,21 @@ commands![
     "prompt_templates_upsert",
     "prompt_templates_delete",
     "prompt_templates_delete_project",
+    // Managing an automation is a client's business; running one is the
+    // owning host's, and a run reaches the harness through the same commands
+    // an interactive turn does.
+    "automations_list",
+    "automations_upsert",
+    "automations_delete",
+    "automations_set_state",
+    "automations_set_all_paused",
+    "automations_all_paused",
+    "automation_runs_list",
+    "automation_run_start",
+    "automation_run_attach_session",
+    "automation_run_finish",
+    "automation_runs_heartbeat",
+    "automation_runs_reconcile",
     "session_checkpoint_ensure",
     "session_checkpoint_capture",
     "session_checkpoint_sync",
@@ -778,6 +793,107 @@ fn call(app: &AppHandle, command: &str, args: Value) -> Result<Value, String> {
                 a.project_key,
             ))
         }
+
+        "automations_list" => done(automations::automations_list(app.state::<SessionStore>())),
+        "automations_upsert" => {
+            let a = args!(args, { automation: automations::AutomationUpsert });
+            done(automations::automations_upsert(
+                app.state::<SessionStore>(),
+                a.automation,
+            ))
+        }
+        "automations_delete" => {
+            let a = args!(args, { id: String });
+            done(automations::automations_delete(
+                app.state::<SessionStore>(),
+                a.id,
+            ))
+        }
+        "automations_set_state" => {
+            let a = args!(args, {
+                id: String,
+                enabled: bool,
+                #[serde(default)] next_due_at: Option<i64>,
+                #[serde(default)] paused_reason: String,
+            });
+            done(automations::automations_set_state(
+                app.state::<SessionStore>(),
+                a.id,
+                a.enabled,
+                a.next_due_at,
+                a.paused_reason,
+            ))
+        }
+        "automations_set_all_paused" => {
+            let a = args!(args, { paused: bool });
+            done(automations::automations_set_all_paused(
+                app.state::<SessionStore>(),
+                a.paused,
+            ))
+        }
+        "automations_all_paused" => done(automations::automations_all_paused(
+            app.state::<SessionStore>(),
+        )),
+        "automation_runs_list" => {
+            let a = args!(args, {
+                #[serde(default)] automation_id: Option<String>,
+                #[serde(default)] limit: Option<i64>,
+            });
+            done(automations::automation_runs_list(
+                app.state::<SessionStore>(),
+                a.automation_id,
+                a.limit,
+            ))
+        }
+        "automation_run_start" => {
+            let a = args!(args, {
+                automation_id: String,
+                run_id: String,
+                due_at: i64,
+                #[serde(default)] manual: bool,
+            });
+            done(automations::automation_run_start(
+                app.state::<SessionStore>(),
+                a.automation_id,
+                a.run_id,
+                a.due_at,
+                a.manual,
+            ))
+        }
+        "automation_run_attach_session" => {
+            let a = args!(args, { run_id: String, session_id: String });
+            done(automations::automation_run_attach_session(
+                app.state::<SessionStore>(),
+                a.run_id,
+                a.session_id,
+            ))
+        }
+        "automation_run_finish" => {
+            let a = args!(args, {
+                run_id: String,
+                status: String,
+                #[serde(default)] error: Option<String>,
+                #[serde(default)] summary: Option<String>,
+            });
+            done(automations::automation_run_finish(
+                app.state::<SessionStore>(),
+                a.run_id,
+                a.status,
+                a.error,
+                a.summary,
+            ))
+        }
+        "automation_runs_heartbeat" => {
+            let a = args!(args, { run_ids: Vec<String> });
+            done(automations::automation_runs_heartbeat(
+                app.state::<SessionStore>(),
+                a.run_ids,
+            ))
+        }
+        "automation_runs_reconcile" => done(automations::automation_runs_reconcile(
+            app.state::<SessionStore>(),
+            app.state::<automations::Automations>(),
+        )),
 
         "session_checkpoint_ensure" => {
             let a = args!(args, { session_id: String, cwd: String });

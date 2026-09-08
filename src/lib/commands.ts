@@ -26,6 +26,7 @@ export type CommandId =
   | "app.toggleMode"
   | "app.quickAsk"
   | "app.activity"
+  | "app.automations"
   | "app.inbox"
   | "app.notes"
   | "app.usage"
@@ -115,6 +116,7 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "app.inbox", label: "App: Inbox", when: "Always" },
   { id: "app.notes", label: "App: Notes", when: "Always" },
   { id: "app.usage", label: "App: Usage", when: "Always" },
+  { id: "app.automations", label: "App: Automations", when: "Always" },
   { id: "tab.new", label: "Tab: New", keys: `${MOD}T`, when: "Always" },
   { id: "tab.closeOthers", label: "Tab: Close Others", keys: `${MOD}${ALT}T`, when: "Always" },
   { id: "tab.next", label: "Tab: Next", keys: `${MOD}${SHIFT}]`, when: "Always" },

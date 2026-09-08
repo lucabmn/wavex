@@ -361,6 +361,11 @@ import { OnboardingView } from "./surfaces/OnboardingView";
 import { UsageView } from "./surfaces/UsageView";
 import { InboxView } from "./surfaces/InboxView";
 import { NotesView } from "./surfaces/NotesView";
+import { AutomationsView } from "./surfaces/AutomationsView";
+import {
+  startAutomationScheduler,
+  stopAutomationScheduler,
+} from "./lib/automations/automationStore";
 import { inboxComposerCard, type InboxComposerCard, type InboxItem } from "./lib/inbox/githubTasks";
 import {
   loadDiffViewer,
@@ -535,6 +540,7 @@ export default function App({
   const [notesViewOpen, setNotesViewOpen] = useState(false);
   const [usageViewOpen, setUsageViewOpen] = useState(false);
   const [activityViewOpen, setActivityViewOpen] = useState(false);
+  const [automationsViewOpen, setAutomationsViewOpen] = useState(false);
   /**
    * The full-window surfaces are flex siblings of the workspace, so two open at
    * once split the window instead of one covering the other. Every entry point
@@ -546,6 +552,7 @@ export default function App({
     setNotesViewOpen(false);
     setUsageViewOpen(false);
     setActivityViewOpen(false);
+    setAutomationsViewOpen(false);
   }, []);
   /** Live race groups. Never persisted: runners are ordinary sessions. */
   const races = useSyncExternalStore(subscribeRaces, getRacesSnapshot, getRacesSnapshot);
@@ -635,6 +642,8 @@ export default function App({
   usageViewOpenRef.current = usageViewOpen;
   const activityViewOpenRef = useRef(activityViewOpen);
   activityViewOpenRef.current = activityViewOpen;
+  const automationsViewOpenRef = useRef(automationsViewOpen);
+  automationsViewOpenRef.current = automationsViewOpen;
   /**
    * Sessions whose current turn the user stopped. A queued prompt must not fire
    * into that gap; the queue stays paused until the user resumes it.
@@ -818,6 +827,9 @@ export default function App({
           "quit",
           projectDocksRef.current,
         ).catch(() => undefined);
+        // Automations are the profile's, so the tick stops with the agents
+        // and terminals of the profile being left.
+        stopAutomationScheduler();
         beginProfileSwitch();
       },
       onChanged: () => window.location.reload(),
@@ -826,6 +838,14 @@ export default function App({
       void unlisten.then((off) => off()).catch(() => undefined);
     };
   }, [flushHarnessEvents]);
+
+  // One tick per window is safe: the host claims a due occurrence inside a
+  // transaction, so whichever window asks first runs it and the rest are told
+  // no.
+  useEffect(() => {
+    startAutomationScheduler();
+    return () => stopAutomationScheduler();
+  }, []);
 
   useEffect(() => {
     void probeHarnessAvailability();
@@ -2303,11 +2323,11 @@ export default function App({
   }, []);
 
   const ensureOpenSession = useCallback(
-    async (sessionId: string): Promise<Session | null> => {
+    async (sessionId: string, hostId?: HostId): Promise<Session | null> => {
       const open = sessionsRef.current.find((session) => session.id === sessionId);
       if (open) return open;
 
-      const loaded = await getSession(sessionId).catch(() => null);
+      const loaded = await getSession(sessionId, hostId).catch(() => null);
       if (!loaded) {
         void refreshHistory(sidebarCwd);
         return null;
@@ -2334,9 +2354,9 @@ export default function App({
   );
 
   const onSelectHistorySession = useCallback(
-    async (sessionId: string) => {
+    async (sessionId: string, hostId?: HostId) => {
       if (focusOpenSession(sessionId)) return;
-      const session = await ensureOpenSession(sessionId);
+      const session = await ensureOpenSession(sessionId, hostId);
       if (!session) return;
       if (replaceBlankPaneWithSession(session)) return;
       const tab = newTab(session.id);
@@ -4203,6 +4223,35 @@ export default function App({
     setActivityViewOpen(false);
   }, []);
 
+  /**
+   * A full-window surface is in front of the workspace.
+   *
+   * One name rather than the condition written out at each site: it was
+   * spelled six times and had already fallen one surface behind, which left
+   * the workspace visible underneath.
+   */
+  const surfaceOpen =
+    searchViewOpen ||
+    settingsOpen ||
+    inboxViewOpen ||
+    notesViewOpen ||
+    usageViewOpen ||
+    activityViewOpen ||
+    automationsViewOpen;
+
+  const automationProjects = useMemo(() => recents.map((entry) => entry.path), [recents]);
+
+  const onOpenAutomations = useCallback(() => {
+    setFilePickerOpen(false);
+    setSettingsOpen(false);
+    closeSurfaces();
+    setAutomationsViewOpen(true);
+  }, [closeSurfaces]);
+
+  const onLeaveAutomations = useCallback(() => {
+    setAutomationsViewOpen(false);
+  }, []);
+
   const openSettings = useCallback(
     (section?: SettingsSectionId) => {
       setFilePickerOpen(false);
@@ -4320,6 +4369,10 @@ export default function App({
       setActivityViewOpen(false);
       return;
     }
+    if (automationsViewOpen) {
+      setAutomationsViewOpen(false);
+      return;
+    }
     if (codeNavigationStepRef.current("back")) return;
     onVisitBack();
   }, [
@@ -4330,6 +4383,7 @@ export default function App({
     notesViewOpen,
     usageViewOpen,
     activityViewOpen,
+    automationsViewOpen,
   ]);
 
   const onRailForward = useCallback(() => {
@@ -4386,6 +4440,7 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onOpenActivity,
+    onOpenAutomations,
     onSelectLiveAgent,
     onApproval,
     onStop,
@@ -4417,6 +4472,7 @@ export default function App({
     onOpenNotes,
     onOpenUsage,
     onOpenActivity,
+    onOpenAutomations,
     onSelectLiveAgent,
     onApproval,
     onStop,
@@ -4504,6 +4560,7 @@ export default function App({
       "app.inbox": () => runInCoding("open_inbox", actions.current.onOpenInbox),
       "app.notes": () => runInCoding("open_notes", actions.current.onOpenNotes),
       "app.usage": () => runInCoding("open_usage", actions.current.onOpenUsage),
+      "app.automations": () => runInCoding("open_automations", actions.current.onOpenAutomations),
       "tab.new": () => runInWorkspace("new", actions.current.onNew, "new"),
       "tab.closeOthers": () => runInWorkspace("close-others", actions.current.onCloseOtherTabs),
       "tab.next": () => runInWorkspace("next", actions.current.onNext, "next"),
@@ -4612,6 +4669,7 @@ export default function App({
         !notesViewOpenRef.current &&
         !usageViewOpenRef.current &&
         !activityViewOpenRef.current &&
+        !automationsViewOpenRef.current &&
         handleEditorFindKey(e)
       ) {
         e.stopPropagation();
@@ -4970,14 +5028,7 @@ export default function App({
         onOpenTerminal={(cwd) => onOpenTerminal(cwd)}
         onFileMoved={onFileMoved}
         onFileDeleted={onFileDeleted}
-        canGoBack={
-          tabVisitNav.canBack ||
-          searchViewOpen ||
-          settingsOpen ||
-          inboxViewOpen ||
-          notesViewOpen ||
-          usageViewOpen
-        }
+        canGoBack={tabVisitNav.canBack || surfaceOpen}
         canGoForward={tabVisitNav.canForward}
         onGoBack={onRailBack}
         onGoForward={onRailForward}
@@ -5004,12 +5055,14 @@ export default function App({
         onOpenNotes={notesEnabled ? onOpenNotes : undefined}
         onOpenUsage={onOpenUsage}
         onOpenActivity={onOpenActivity}
+        onOpenAutomations={onOpenAutomations}
         onGoToFile={onGoToFile}
         searchActive={searchViewOpen}
         inboxActive={inboxViewOpen}
         notesActive={notesViewOpen}
         usageActive={usageViewOpen}
         activityActive={activityViewOpen}
+        automationsActive={automationsViewOpen}
         notesEnabled={notesEnabled}
         projectRailOpen={projectRailOpen}
         onToggleProjectRail={onToggleProjectRail}
@@ -5036,33 +5089,9 @@ export default function App({
         inert={workMode || undefined}
       >
         <div
-          className={
-            searchViewOpen ||
-            settingsOpen ||
-            inboxViewOpen ||
-            notesViewOpen ||
-            usageViewOpen ||
-            activityViewOpen
-              ? "hidden"
-              : "flex min-h-0 min-w-0 flex-1 flex-col"
-          }
-          aria-hidden={
-            searchViewOpen ||
-            settingsOpen ||
-            inboxViewOpen ||
-            notesViewOpen ||
-            usageViewOpen ||
-            activityViewOpen
-          }
-          inert={
-            searchViewOpen ||
-            settingsOpen ||
-            inboxViewOpen ||
-            notesViewOpen ||
-            usageViewOpen ||
-            activityViewOpen ||
-            undefined
-          }
+          className={surfaceOpen ? "hidden" : "flex min-h-0 min-w-0 flex-1 flex-col"}
+          aria-hidden={surfaceOpen}
+          inert={surfaceOpen || undefined}
         >
           {!IS_MAC ? (
             <MenuBar
@@ -5281,6 +5310,17 @@ export default function App({
             onToggleSidebar={onToggleSidebar}
             onOpenSession={onSelectHistorySession}
           />
+        ) : automationsViewOpen ? (
+          <AutomationsView
+            projects={automationProjects}
+            besideRail={projectRailOpen}
+            onClose={onLeaveAutomations}
+            onToggleSidebar={onToggleSidebar}
+            onOpenSession={(sessionId, hostId) => {
+              onLeaveAutomations();
+              void onSelectHistorySession(sessionId, hostId);
+            }}
+          />
         ) : notesViewOpen ? (
           <NotesView
             besideRail={projectRailOpen}
@@ -5313,12 +5353,7 @@ export default function App({
             onClose={closeRaceView}
           />
         ) : null}
-        {searchViewOpen ||
-        inboxViewOpen ||
-        notesViewOpen ||
-        usageViewOpen ||
-        activityViewOpen ||
-        settingsOpen ? null : (
+        {surfaceOpen ? null : (
           <UsageFooter
             providers={usageProviders}
             onOpenUsage={onOpenUsage}

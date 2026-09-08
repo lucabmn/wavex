@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityBoard } from "../chrome/ActivityBoard";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { Board, CircleAlert, ListView, Square } from "../chrome/icons";
+import { FilterChip } from "../chrome/FilterChip";
 import { Segmented } from "../chrome/Segmented";
 import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
@@ -213,26 +214,26 @@ export function ActivityView({
             aria-label="Filter agent activity"
             className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
           >
-            <ActivityFilterButton
+            <FilterChip
               label="All"
               count={agents.length}
               active={filter === "all"}
               onClick={() => setFilter("all")}
             />
-            <ActivityFilterButton
+            <FilterChip
               label="Needs you"
               count={counts.waiting}
               active={filter === "waiting"}
               tone="attention"
               onClick={() => setFilter("waiting")}
             />
-            <ActivityFilterButton
+            <FilterChip
               label="Working"
               count={counts.working}
               active={filter === "working"}
               onClick={() => setFilter("working")}
             />
-            <ActivityFilterButton
+            <FilterChip
               label="Done"
               count={counts.done}
               active={filter === "done"}
@@ -298,41 +299,6 @@ export function ActivityView({
         )}
       </div>
     </div>
-  );
-}
-
-function ActivityFilterButton({
-  label,
-  count,
-  active,
-  tone = "default",
-  onClick,
-}: {
-  label: string;
-  count: number;
-  active: boolean;
-  tone?: "default" | "attention";
-  onClick: () => void;
-}) {
-  const attention = tone === "attention" && count > 0;
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`inline-flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] transition-colors ${
-        active
-          ? attention
-            ? "bg-amber-400/15 text-amber-300"
-            : "bg-content/12 text-content"
-          : attention
-            ? "text-amber-300/80 hover:bg-amber-400/10 hover:text-amber-300"
-            : "text-content/45 hover:bg-content/8 hover:text-content/75"
-      }`}
-    >
-      <span className="truncate">{label}</span>
-      <span className="tabular-nums opacity-70">{count}</span>
-    </button>
   );
 }
 

@@ -1,5 +1,6 @@
 use tauri::Manager;
 
+mod automations;
 mod checkpoint;
 mod connect;
 mod cursor_store;
@@ -192,6 +193,7 @@ pub fn run(launch: headless::Launch) {
             // Profiles decide where every other store lives, so they bind first.
             profiles::init(app.handle())?;
             session_store::init(app.handle())?;
+            automations::init(app.handle());
             checkpoint::init(app.handle())?;
             connect::init(app.handle())?;
             if headless {
@@ -366,6 +368,18 @@ pub fn run(launch: headless::Launch) {
             prompt_templates::prompt_templates_upsert,
             prompt_templates::prompt_templates_delete,
             prompt_templates::prompt_templates_delete_project,
+            automations::automations_list,
+            automations::automations_upsert,
+            automations::automations_delete,
+            automations::automations_set_state,
+            automations::automations_set_all_paused,
+            automations::automations_all_paused,
+            automations::automation_runs_list,
+            automations::automation_run_start,
+            automations::automation_run_attach_session,
+            automations::automation_run_finish,
+            automations::automation_runs_heartbeat,
+            automations::automation_runs_reconcile,
             checkpoint::session_checkpoint_ensure,
             checkpoint::session_checkpoint_capture,
             checkpoint::session_checkpoint_sync,

@@ -60,6 +60,7 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/updates/`: updater state and release notes
 - `src/lib/project/`: project logos, mascots, and metadata
 - `src/lib/usage/`: local provider usage summaries
+- `src/lib/automations/`: scheduled agent tasks, their schedules, and their runs
 
 `src/chrome/` contains application chrome and reusable controls,
 `src/surfaces/` the main views, `src/hooks/` React hooks, and
@@ -124,6 +125,37 @@ that language covers; the answer is remembered per profile and lives in
 Settings. Nothing about the editor changes until the answer is yes. Servers stop on profile switch,
 window close, and quit, like agents and terminals. A missing, crashed, or
 still-starting server leaves the editor exactly as it behaves without one.
+
+### Automations
+
+An automation is a prompt, a checkout, and a schedule. Every occurrence it
+produces is an ordinary persisted session, so a scheduled turn is as
+inspectable afterwards as one somebody typed.
+
+Every schedule calculation lives in `src/lib/automations/`, against an IANA
+zone through `Intl`. Rust stores the definition, the next instant, and a
+bounded run history, and never parses a schedule — implementing weekdays,
+zones, and daylight-saving twice would mean testing them once. An interval is
+elapsed time from an anchor, so it is immune to a clock jump; a wall time the
+spring transition deletes follows the automation's daylight-saving policy, and
+an hour the autumn transition repeats fires once.
+
+The tick runs in every window, because it is not what decides anything:
+`automation_run_start` claims an occurrence inside a transaction, keyed on the
+occurrence rather than the clock, so whichever window asks first runs it. That
+is stronger than electing one window, which still double-fires when a window
+misses the hand-off. A window driving a run renews its lease each tick, and a
+run that stops being renewed is settled as interrupted — a row left marked
+going would refuse every later claim and take the automation off the schedule
+for good.
+
+Nothing runs while no window is open, because the harness adapters are
+TypeScript. That is a fact the surface states rather than works around: an
+occurrence that comes due with wavex closed is a missed run, and the
+automation's missed-run policy decides what happens to it. A run inherits the
+harness's normal approval behaviour and is never granted more; one that stops
+on an approval settles as needing attention and waits for a person. A missing
+checkout is a failed run, never a checkout wavex repairs.
 
 ### Profiles
 

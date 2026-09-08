@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleAlert,
+  Clock,
   Folder,
   Inbox,
   ListFilter,
@@ -199,11 +200,13 @@ type Props = {
   onOpenNotes?: () => void;
   onOpenUsage?: () => void;
   onOpenActivity?: () => void;
+  onOpenAutomations?: () => void;
   onGoToFile?: () => void;
   searchActive?: boolean;
   inboxActive?: boolean;
   notesActive?: boolean;
   activityActive?: boolean;
+  automationsActive?: boolean;
   notesEnabled?: boolean;
   usageActive?: boolean;
   onToggleProjectRail?: () => void;
@@ -284,11 +287,13 @@ function SidebarComponent({
   onOpenNotes,
   onOpenUsage,
   onOpenActivity,
+  onOpenAutomations,
   onGoToFile,
   searchActive = false,
   inboxActive = false,
   notesActive = false,
   activityActive = false,
+  automationsActive = false,
   notesEnabled = true,
   usageActive = false,
   onToggleProjectRail,
@@ -451,6 +456,7 @@ function SidebarComponent({
     !notesActive &&
     !usageActive &&
     !activityActive &&
+    !automationsActive &&
     !settingsOpen &&
     inProject;
   const gitStatuses = useGitFileStatuses(gitRoot, open && tab === "files");
@@ -955,11 +961,13 @@ function SidebarComponent({
               onOpenNotes={notesEnabled ? onOpenNotes : undefined}
               onOpenUsage={onOpenUsage}
               onOpenActivity={onOpenActivity}
+              onOpenAutomations={onOpenAutomations}
               searchActive={searchActive}
               inboxActive={inboxActive}
               notesActive={notesActive}
               usageActive={usageActive}
               activityActive={activityActive}
+              automationsActive={automationsActive}
               inboxUnseen={inboxUnseen}
             />
           ) : null}
@@ -1338,6 +1346,8 @@ function SidebarComponent({
           usageActive={usageActive}
           onOpenActivity={onOpenActivity}
           activityActive={activityActive}
+          onOpenAutomations={onOpenAutomations}
+          automationsActive={automationsActive}
           onTogglePanel={onToggleProjectRail}
           mode={mode}
           onModeChange={onModeChange}
@@ -1377,11 +1387,13 @@ function SidebarProjectPicker({
   onOpenNotes,
   onOpenUsage,
   onOpenActivity,
+  onOpenAutomations,
   searchActive = false,
   inboxActive = false,
   notesActive = false,
   activityActive = false,
   usageActive = false,
+  automationsActive = false,
   inboxUnseen = false,
 }: {
   cwd: string;
@@ -1394,11 +1406,13 @@ function SidebarProjectPicker({
   onOpenNotes?: () => void;
   onOpenUsage?: () => void;
   onOpenActivity?: () => void;
+  onOpenAutomations?: () => void;
   searchActive?: boolean;
   inboxActive?: boolean;
   notesActive?: boolean;
   activityActive?: boolean;
   usageActive?: boolean;
+  automationsActive?: boolean;
   inboxUnseen?: boolean;
 }) {
   const [groupLabels] = useState(loadTabGroupLabels);
@@ -1474,6 +1488,11 @@ function SidebarProjectPicker({
         {onOpenUsage ? (
           <IconButton label="Usage" active={usageActive} onClick={onOpenUsage}>
             <BarChart className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
+        ) : null}
+        {onOpenAutomations ? (
+          <IconButton label="Automations" active={automationsActive} onClick={onOpenAutomations}>
+            <Clock className="size-3.5" strokeWidth={1.75} />
           </IconButton>
         ) : null}
         {onOpenActivity ? (
