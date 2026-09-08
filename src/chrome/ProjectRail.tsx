@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   CircleAlert,
+  Clock,
   FolderOpen,
   BarChart,
   Bot,
@@ -137,7 +138,9 @@ type Props = {
   onOpenUsage?: () => void;
   usageActive?: boolean;
   onOpenActivity?: () => void;
+  onOpenAutomations?: () => void;
   activityActive?: boolean;
+  automationsActive?: boolean;
   onTogglePanel?: () => void;
   onSelectProject: (path: string) => void;
   onOpenProject: () => void;
@@ -184,7 +187,9 @@ export function ProjectRail({
   onOpenUsage,
   usageActive = false,
   onOpenActivity,
+  onOpenAutomations,
   activityActive = false,
+  automationsActive = false,
   onTogglePanel,
   onSelectProject,
   onOpenProject,
@@ -395,6 +400,16 @@ export function ProjectRail({
       />
     ) : null;
 
+  // A project list under a surface is a list nobody is looking at, so the
+  // rows drop their highlight the same way they do under search.
+  const surfaceCovering =
+    searchActive ||
+    inboxActive ||
+    notesActive ||
+    usageActive ||
+    activityActive ||
+    automationsActive;
+
   const pinnedIds = sections.pinned.map((item) => item.path);
   const projectIds = sections.projects.map((item) => item.path);
   const pinnedSortable = useSortable(pinnedIds, onReorderPinned, {
@@ -475,6 +490,13 @@ export function ProjectRail({
               ariaLabel="Usage"
             />
             <RailAction
+              label="Automations"
+              icon={Clock}
+              onClick={onOpenAutomations}
+              active={automationsActive}
+              ariaLabel="Automations"
+            />
+            <RailAction
               label="Activity"
               icon={Bot}
               onClick={onOpenActivity}
@@ -504,9 +526,7 @@ export function ProjectRail({
                 busy={busy}
                 sortable={pinnedSortable}
                 pinned
-                searchActive={
-                  searchActive || inboxActive || notesActive || usageActive || activityActive
-                }
+                searchActive={surfaceCovering}
                 onSelect={onSelectProject}
                 onTogglePin={onTogglePin}
                 onContextMenu={onProjectContextMenu}
@@ -530,9 +550,7 @@ export function ProjectRail({
               busy={busy}
               sortable={projectSortable}
               pinned={false}
-              searchActive={
-                searchActive || inboxActive || notesActive || usageActive || activityActive
-              }
+              searchActive={surfaceCovering}
               onSelect={onSelectProject}
               onTogglePin={onTogglePin}
               onContextMenu={onProjectContextMenu}

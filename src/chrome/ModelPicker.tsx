@@ -32,12 +32,26 @@ import { HARNESSES, HARNESS_TITLE, type HarnessId } from "../lib/session";
 import { HarnessIcon } from "./HarnessIcon";
 import { ModelMenu } from "./ModelMenu";
 import { Popover } from "./Popover";
+import { LAYER } from "../lib/layers";
 import { MOD } from "../lib/platform";
 
 type Props = {
   harness: HarnessId;
   model: string;
   hotkeys?: boolean;
+  /**
+   * Render as a form field rather than a composer chip: full width and the
+   * same height as the inputs beside it. The composer wants the compact one,
+   * a dialog row wants this.
+   */
+  fill?: boolean;
+  /**
+   * Where the menu sits in the stack. Defaults to the popover layer; a picker
+   * opened from inside a dialog has to outrank the dialog it is standing on.
+   */
+  layer?: number;
+  /** Whether the menu is showing, for a host that has to yield its focus trap. */
+  onOpenChange?: (open: boolean) => void;
   onChange: (harness: HarnessId, model: string) => void;
   onClose?: () => void;
 };
@@ -46,7 +60,16 @@ const MENU_WIDTH = 300;
 const MENU_MIN_HEIGHT = 180;
 const MENU_MAX_HEIGHT = 340;
 
-export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose }: Props) {
+export function ModelPicker({
+  harness,
+  model,
+  hotkeys = false,
+  fill = false,
+  layer = LAYER.popover,
+  onOpenChange,
+  onChange,
+  onClose,
+}: Props) {
   const catalogVersion = useSyncExternalStore(subscribeModels, getModelSnapshot, getModelSnapshot);
   const availabilityVersion = useSyncExternalStore(
     subscribeHarnessAvailability,
@@ -64,6 +87,8 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
   const root = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
   const current = resolveModel(harness, model);
   const tabRef = useRef(tab);
   const openRef = useRef(open);
@@ -81,11 +106,13 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
 
   const dismiss = (restore: boolean) => {
     setOpen(false);
+    onOpenChangeRef.current?.(false);
     if (restore) onCloseRef.current?.();
   };
 
   const openPicker = () => {
     setOpen(true);
+    onOpenChangeRef.current?.(true);
   };
 
   const togglePicker = () => {
@@ -196,7 +223,7 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
   };
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className={fill ? "relative w-full" : "relative"}>
       <button
         type="button"
         title={`${HARNESS_TITLE[current.harness]} · ${current.name} (${MOD}.)`}
@@ -212,14 +239,16 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
           }
           openPicker();
         }}
-        className={`flex h-6.5 max-w-52 items-center gap-1 rounded-md px-1.5 ${
-          open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"
-        }`}
+        className={`flex items-center rounded-md ${
+          fill ? "h-8 w-full gap-2 px-2" : "h-6.5 max-w-52 gap-1 px-1.5"
+        } ${open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"}`}
       >
         <HarnessIcon harness={current.harness} className="size-4 shrink-0" />
-        <span className="min-w-0 truncate text-[11px]">{current.name}</span>
+        <span className={`min-w-0 truncate ${fill ? "text-[13px]" : "text-[11px]"}`}>
+          {current.name}
+        </span>
         <ChevronDown
-          className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
+          className={`size-3 shrink-0 text-content/50 ${fill ? "ml-auto" : ""} ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
         />
       </button>
@@ -227,6 +256,7 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
         <Popover
           anchor={root}
           side="top"
+          layer={layer}
           width={MENU_WIDTH}
           minHeight={MENU_MIN_HEIGHT}
           maxHeight={MENU_MAX_HEIGHT}
