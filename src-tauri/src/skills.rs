@@ -8,6 +8,10 @@ use crate::fs::expand_home;
 
 const MAX_SKILLS: usize = 300;
 const MAX_FRONTMATTER_BYTES: usize = 16 * 1024;
+const MAX_SKILL_FILES: usize = 4096;
+const MAX_SKILL_TOOLS: usize = 32;
+/// Appended to `SKILL.md` to take a skill out of circulation.
+const DISABLED_SUFFIX: &str = ".off";
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -17,6 +21,44 @@ pub struct DiscoveredSkill {
     pub path: String,
     pub scope: String,
     pub source: String,
+}
+
+/// One folder a skill was found in, and the agent whose directory holds it.
+///
+/// The `skills` CLI writes a skill once under `.agents/skills` and links it
+/// into each agent's own folder, so the same name in several roots is one skill
+/// installed in several places rather than several skills.
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillInstall {
+    pub source: String,
+    pub scope: String,
+    pub dir: String,
+    pub path: String,
+    pub link: bool,
+    pub enabled: bool,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillDetail {
+    pub name: String,
+    pub description: String,
+    pub enabled: bool,
+    /// Installed and updated by an agent CLI's own plugin manager, so wavex
+    /// reads it and nothing more.
+    pub managed: bool,
+    pub bytes: u64,
+    pub updated_ms: u64,
+    pub tools: Vec<String>,
+    pub installs: Vec<SkillInstall>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillInstallResult {
+    pub ok: bool,
+    pub output: String,
 }
 
 /// Skills visible for the open project: `.agents/skills` first, then native
@@ -30,28 +72,124 @@ pub fn list_skills(cwd: String) -> Result<Vec<DiscoveredSkill>, String> {
 
 pub(crate) fn list_skills_from(project: &Path, home: Option<&Path>) -> Vec<DiscoveredSkill> {
     let mut by_name: HashMap<String, DiscoveredSkill> = HashMap::new();
-    let mut seen_roots: HashSet<PathBuf> = HashSet::new();
 
-    let mut add_root = |root: PathBuf, scope: &str, source: &str| {
+    for root in unique_roots(skill_roots(project, home)) {
         if by_name.len() >= MAX_SKILLS {
-            return;
+            break;
         }
-        let key = std::fs::canonicalize(&root).unwrap_or(root.clone());
-        if !seen_roots.insert(key) {
-            return;
-        }
-        for skill in scan_root(&root, scope, source) {
+        for skill in scan_root(&root.path, false) {
             if by_name.len() >= MAX_SKILLS {
                 break;
             }
-            by_name.entry(skill.name.clone()).or_insert(skill);
+            let name = root.qualify(&skill.name);
+            by_name.entry(name.clone()).or_insert(DiscoveredSkill {
+                name,
+                description: skill.description,
+                path: crate::fs::path_to_js(&skill.skill_md),
+                scope: root.scope.to_string(),
+                source: root.source.to_string(),
+            });
         }
-    };
+    }
 
-    // Highest priority first so later roots cannot replace a name.
-    add_root(project.join(".agents/skills"), "project", "agents");
+    let mut out: Vec<DiscoveredSkill> = by_name.into_values().collect();
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    out
+}
+
+/// Everything the skills settings page shows, which `list_skills` deliberately
+/// does not carry: the folder in every agent directory the skill was found in,
+/// its size, when it last changed, and whether it is switched on.
+///
+/// It is a second command rather than a wider `list_skills` because that one
+/// feeds the composer picker on every keystroke and must not stat a few hundred
+/// skill trees to answer.
+#[tauri::command(async)]
+pub fn list_skill_details(cwd: String) -> Result<Vec<SkillDetail>, String> {
+    let project = expand_home(&cwd);
+    let home = dirs_home().map(PathBuf::from);
+    Ok(skill_details_from(&project, home.as_deref()))
+}
+
+pub(crate) fn skill_details_from(project: &Path, home: Option<&Path>) -> Vec<SkillDetail> {
+    let mut by_name: HashMap<String, SkillDetail> = HashMap::new();
+
+    for root in unique_roots(skill_roots(project, home)) {
+        for skill in scan_root(&root.path, true) {
+            let name = root.qualify(&skill.name);
+            let install = SkillInstall {
+                source: root.source.to_string(),
+                scope: root.scope.to_string(),
+                dir: crate::fs::path_to_js(&skill.dir),
+                path: crate::fs::path_to_js(&skill.skill_md),
+                link: is_symlink(&skill.dir),
+                enabled: skill.enabled,
+            };
+            if let Some(detail) = by_name.get_mut(&name) {
+                // A skill the `skills` CLI installed is one real folder plus a
+                // link per agent, so the same name in a second root is another
+                // place it is installed rather than a second skill.
+                detail.enabled = detail.enabled || skill.enabled;
+                detail.installs.push(install);
+                continue;
+            }
+            if by_name.len() >= MAX_SKILLS {
+                break;
+            }
+            by_name.insert(
+                name.clone(),
+                SkillDetail {
+                    name,
+                    description: skill.description,
+                    enabled: skill.enabled,
+                    managed: root.namespace.is_some(),
+                    bytes: dir_bytes(&skill.dir),
+                    updated_ms: modified_ms(&skill.skill_md),
+                    tools: skill.tools,
+                    installs: vec![install],
+                },
+            );
+        }
+    }
+
+    let mut out: Vec<SkillDetail> = by_name.into_values().collect();
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    out
+}
+
+/// One directory skills are read from, and the agent it belongs to.
+struct SkillRoot {
+    path: PathBuf,
+    scope: &'static str,
+    source: &'static str,
+    /// Claude plugin skills answer to `plugin:name`, so they cannot collide
+    /// with a skill of the same name the user wrote themselves.
+    namespace: Option<String>,
+}
+
+impl SkillRoot {
+    fn qualify(&self, name: &str) -> String {
+        match &self.namespace {
+            Some(namespace) => format!("{namespace}:{name}"),
+            None => name.to_string(),
+        }
+    }
+}
+
+fn root(path: PathBuf, scope: &'static str, source: &'static str) -> SkillRoot {
+    SkillRoot {
+        path,
+        scope,
+        source,
+        namespace: None,
+    }
+}
+
+/// Highest priority first, so a later root can never replace a name.
+fn skill_roots(project: &Path, home: Option<&Path>) -> Vec<SkillRoot> {
+    let mut roots = vec![root(project.join(".agents/skills"), "project", "agents")];
     if let Some(home) = home {
-        add_root(home.join(".agents/skills"), "user", "agents");
+        roots.push(root(home.join(".agents/skills"), "user", "agents"));
     }
 
     for (dir, source) in [
@@ -64,41 +202,291 @@ pub(crate) fn list_skills_from(project: &Path, home: Option<&Path>) -> Vec<Disco
         (".fx/skills", "fx"),
         (".grok/skills", "grok"),
     ] {
-        add_root(project.join(dir), "project", source);
+        roots.push(root(project.join(dir), "project", source));
         if let Some(home) = home {
-            add_root(home.join(dir), "user", source);
+            roots.push(root(home.join(dir), "user", source));
         }
     }
     if let Some(home) = home {
-        add_root(home.join(".pi/agent/skills"), "user", "pi");
-        add_root(home.join(".omp/agent/skills"), "user", "omp");
-        for (root, scope, namespace) in claude_plugin_skill_roots(home, project) {
-            add_namespaced_root(&mut by_name, root, scope, "claude", &namespace);
+        roots.push(root(home.join(".pi/agent/skills"), "user", "pi"));
+        roots.push(root(home.join(".omp/agent/skills"), "user", "omp"));
+        for (path, scope, namespace) in claude_plugin_skill_roots(home, project) {
+            roots.push(SkillRoot {
+                path,
+                scope,
+                source: "claude",
+                namespace: Some(namespace),
+            });
         }
     }
-
-    let mut out: Vec<DiscoveredSkill> = by_name.into_values().collect();
-    out.sort_by(|a, b| a.name.cmp(&b.name));
-    out
+    roots
 }
 
-fn add_namespaced_root(
-    by_name: &mut HashMap<String, DiscoveredSkill>,
-    root: PathBuf,
-    scope: &str,
-    source: &str,
-    namespace: &str,
-) {
-    if by_name.len() >= MAX_SKILLS {
-        return;
-    }
-    for mut skill in scan_root(&root, scope, source) {
-        if by_name.len() >= MAX_SKILLS {
-            break;
+/// Drop roots that resolve to a directory an earlier root already covered.
+fn unique_roots(roots: Vec<SkillRoot>) -> Vec<SkillRoot> {
+    let mut seen: HashSet<PathBuf> = HashSet::new();
+    roots
+        .into_iter()
+        .filter(|root| {
+            let key = std::fs::canonicalize(&root.path).unwrap_or_else(|_| root.path.clone());
+            seen.insert(key)
+        })
+        .collect()
+}
+
+/// Switch a skill on or off by renaming its `SKILL.md` aside.
+///
+/// The rename is what actually takes a skill out of circulation: every agent
+/// CLI discovers a skill by that one file, so a flag wavex kept to itself would
+/// hide the skill from the picker while Claude Code went on loading it.
+/// Renaming the folder instead would dangle the link each agent directory holds.
+#[tauri::command(async)]
+pub fn set_skill_enabled(cwd: String, dirs: Vec<String>, enabled: bool) -> Result<(), String> {
+    let project = expand_home(&cwd);
+    let home = dirs_home().map(PathBuf::from);
+    set_skill_enabled_in(&project, home.as_deref(), dirs, enabled)
+}
+
+pub(crate) fn set_skill_enabled_in(
+    project: &Path,
+    home: Option<&Path>,
+    dirs: Vec<String>,
+    enabled: bool,
+) -> Result<(), String> {
+    for dir in unique_targets(skill_dirs(project, home, dirs)?) {
+        let Some((path, current)) = skill_md_path(&dir) else {
+            continue;
+        };
+        if current == enabled {
+            continue;
         }
-        skill.name = format!("{namespace}:{}", skill.name);
-        by_name.entry(skill.name.clone()).or_insert(skill);
+        let target = if enabled {
+            path.with_extension("")
+        } else {
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("SKILL.md");
+            path.with_file_name(format!("{name}{DISABLED_SUFFIX}"))
+        };
+        std::fs::rename(&path, &target)
+            .map_err(|error| format!("Could not rename {}: {error}", path.display()))?;
     }
+    Ok(())
+}
+
+/// Delete every folder a skill is installed in.
+#[tauri::command(async)]
+pub fn delete_skills(cwd: String, dirs: Vec<String>) -> Result<(), String> {
+    let project = expand_home(&cwd);
+    let home = dirs_home().map(PathBuf::from);
+    delete_skills_in(&project, home.as_deref(), dirs)
+}
+
+pub(crate) fn delete_skills_in(
+    project: &Path,
+    home: Option<&Path>,
+    dirs: Vec<String>,
+) -> Result<(), String> {
+    // Validate the whole set before removing anything, then take the links
+    // first: dropping the real folder ahead of them would leave each agent
+    // directory pointing at nothing. Every distinct folder has to go, so this
+    // one keeps a link and the folder it resolves to rather than collapsing
+    // them the way a rename has to.
+    let mut targets = skill_dirs(project, home, dirs)?;
+    targets.sort_by_key(|dir| !is_symlink(dir));
+
+    for dir in targets {
+        if is_symlink(&dir) {
+            remove_link(&dir)?;
+            continue;
+        }
+        std::fs::remove_dir_all(&dir)
+            .map_err(|error| format!("Could not delete {}: {error}", dir.display()))?;
+    }
+    Ok(())
+}
+
+/// A directory symlink is a file on Unix and a directory on Windows.
+fn remove_link(path: &Path) -> Result<(), String> {
+    #[cfg(windows)]
+    let removed = std::fs::remove_dir(path).or_else(|_| std::fs::remove_file(path));
+    #[cfg(not(windows))]
+    let removed = std::fs::remove_file(path);
+    removed.map_err(|error| format!("Could not delete {}: {error}", path.display()))
+}
+
+/// Resolve the folders a mutation was asked for, refusing anything that is not
+/// a skill wavex may touch.
+fn skill_dirs(
+    project: &Path,
+    home: Option<&Path>,
+    dirs: Vec<String>,
+) -> Result<Vec<PathBuf>, String> {
+    let managed = managed_skill_roots(project, home);
+    let mut seen: HashSet<PathBuf> = HashSet::new();
+    let mut out = Vec::new();
+    for raw in dirs {
+        let dir = expand_home(&raw);
+        if !is_skill_dir(&dir) {
+            return Err(format!("{raw} is not a skill folder"));
+        }
+        if is_within_roots(&dir, &managed) {
+            return Err(format!(
+                "{raw} belongs to an installed plugin, which owns the file on disk."
+            ));
+        }
+        if seen.insert(dir.clone()) {
+            out.push(dir);
+        }
+    }
+    Ok(out)
+}
+
+/// Collapse folders that reach the same one through a link. A rename needs
+/// this: the second one would look for a file the first already moved.
+fn unique_targets(dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut seen: HashSet<PathBuf> = HashSet::new();
+    dirs.into_iter()
+        .filter(|dir| seen.insert(std::fs::canonicalize(dir).unwrap_or_else(|_| dir.clone())))
+        .collect()
+}
+
+/// The skill folders an agent CLI's plugin manager owns. wavex lists what is in
+/// them and stops there: the installer wrote those files, does not know wavex
+/// moved one, and puts it back on the next update.
+fn managed_skill_roots(project: &Path, home: Option<&Path>) -> Vec<PathBuf> {
+    skill_roots(project, home)
+        .into_iter()
+        .filter(|root| root.namespace.is_some())
+        .map(|root| std::fs::canonicalize(&root.path).unwrap_or(root.path))
+        .collect()
+}
+
+fn is_within_roots(dir: &Path, roots: &[PathBuf]) -> bool {
+    let Some(parent) = dir.parent() else {
+        return false;
+    };
+    let parent = std::fs::canonicalize(parent).unwrap_or_else(|_| parent.to_path_buf());
+    roots.iter().any(|root| root == &parent)
+}
+
+/// A skill folder sits inside a `skills` directory and holds a `SKILL.md`, so a
+/// path the WebView sends can only ever name something wavex itself listed.
+fn is_skill_dir(dir: &Path) -> bool {
+    let inside_skills = dir
+        .parent()
+        .and_then(|parent| parent.file_name())
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("skills"));
+    inside_skills && skill_md_path(dir).is_some()
+}
+
+/// Add a skill package with the `skills` CLI.
+///
+/// wavex never downloads a skill itself. This runs the command the user would
+/// have typed, with the agents and the scope they picked, and hands back what
+/// it printed. An installed `skills` is preferred over `npx` so a machine that
+/// already has the CLI does not go to the registry for it.
+#[tauri::command(async)]
+pub fn install_skills(
+    cwd: String,
+    package: String,
+    agents: Vec<String>,
+    skills: Vec<String>,
+    global: bool,
+) -> Result<SkillInstallResult, String> {
+    let package = package.trim().to_string();
+    if package.is_empty() || package.starts_with('-') {
+        return Err("Enter a package such as owner/repo.".into());
+    }
+    for agent in &agents {
+        if !is_cli_token(agent) {
+            return Err(format!("{agent} is not an agent name."));
+        }
+    }
+    for skill in &skills {
+        if skill != "*" && !is_valid_skill_name(skill) {
+            return Err(format!("{skill} is not a skill name."));
+        }
+    }
+
+    let (program, mut args) = match crate::harness::resolve_gui_binary("skills") {
+        Some(path) => (path, Vec::new()),
+        None => {
+            let npx = crate::harness::resolve_gui_binary("npx")
+                .ok_or("Node is not installed, so the skills CLI cannot be run.")?;
+            (npx, vec!["-y".to_string(), "skills@latest".to_string()])
+        }
+    };
+    args.push("add".into());
+    args.push(package);
+    for agent in agents {
+        args.push("--agent".into());
+        args.push(agent);
+    }
+    for skill in skills {
+        args.push("--skill".into());
+        args.push(skill);
+    }
+    if global {
+        args.push("--global".into());
+    }
+    args.push("--yes".into());
+
+    let mut cmd = crate::process::command(&program);
+    cmd.args(&args);
+    let project = expand_home(&cwd);
+    if project.is_dir() {
+        cmd.current_dir(&project);
+    }
+    crate::harness::apply_gui_env(&mut cmd);
+    // No terminal is attached, so a prompt the CLI still decides to ask has to
+    // fail rather than wait for an answer that can never arrive.
+    cmd.stdin(std::process::Stdio::null());
+
+    let output = cmd
+        .output()
+        .map_err(|error| format!("Could not run {}: {error}", program.display()))?;
+    let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
+    text.push_str(&String::from_utf8_lossy(&output.stderr));
+    Ok(SkillInstallResult {
+        ok: output.status.success(),
+        output: strip_ansi(&text).trim().to_string(),
+    })
+}
+
+/// The shape of every agent id and flag value the CLI accepts.
+fn is_cli_token(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value
+            .chars()
+            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
+}
+
+/// The CLI draws spinners and colour even without a terminal, and the page
+/// shows what it printed as plain text.
+fn strip_ansi(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut chars = raw.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch != '\u{1b}' {
+            out.push(ch);
+            continue;
+        }
+        if chars.peek() == Some(&'[') {
+            chars.next();
+            for ch in chars.by_ref() {
+                if ch.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        } else {
+            chars.next();
+        }
+    }
+    out
 }
 
 fn claude_plugin_skill_roots(home: &Path, project: &Path) -> Vec<(PathBuf, &'static str, String)> {
@@ -267,7 +655,17 @@ fn path_is_within(path: &Path, root: &Path) -> bool {
     path == root || path.starts_with(root)
 }
 
-fn scan_root(root: &Path, scope: &str, source: &str) -> Vec<DiscoveredSkill> {
+/// A skill folder as it sits on disk, before it is attributed to an agent.
+struct ScannedSkill {
+    name: String,
+    description: String,
+    tools: Vec<String>,
+    dir: PathBuf,
+    skill_md: PathBuf,
+    enabled: bool,
+}
+
+fn scan_root(root: &Path, include_disabled: bool) -> Vec<ScannedSkill> {
     let Ok(reader) = std::fs::read_dir(root) else {
         return Vec::new();
     };
@@ -283,8 +681,12 @@ fn scan_root(root: &Path, scope: &str, source: &str) -> Vec<DiscoveredSkill> {
         if folder.starts_with('.') || folder == "skills-cursor" {
             continue;
         }
-        let skill_md = skill_md_path(&dir);
-        let Some(skill_md) = skill_md else { continue };
+        let Some((skill_md, enabled)) = skill_md_path(&dir) else {
+            continue;
+        };
+        if !enabled && !include_disabled {
+            continue;
+        }
         let Ok(bytes) = read_prefix(&skill_md, MAX_FRONTMATTER_BYTES) else {
             continue;
         };
@@ -295,31 +697,80 @@ fn scan_root(root: &Path, scope: &str, source: &str) -> Vec<DiscoveredSkill> {
         if fallback.is_empty() {
             continue;
         }
-        let (name, description) = parse_frontmatter(&text, &fallback);
-        if name.is_empty() {
+        let front = parse_frontmatter(&text, &fallback);
+        if front.name.is_empty() {
             continue;
         }
-        out.push(DiscoveredSkill {
-            name,
-            description,
-            path: crate::fs::path_to_js(&skill_md),
-            scope: scope.to_string(),
-            source: source.to_string(),
+        out.push(ScannedSkill {
+            name: front.name,
+            description: front.description,
+            tools: front.tools,
+            dir,
+            skill_md,
+            enabled,
         });
     }
     out
 }
 
-fn skill_md_path(dir: &Path) -> Option<PathBuf> {
-    let upper = dir.join("SKILL.md");
-    if upper.is_file() {
-        return Some(upper);
+/// The `SKILL.md` in a skill folder, and whether it is switched on.
+///
+/// A skill wavex switched off keeps its folder and every link pointing at it,
+/// with the one file every agent looks for renamed aside.
+fn skill_md_path(dir: &Path) -> Option<(PathBuf, bool)> {
+    for name in ["SKILL.md", "skill.md"] {
+        let path = dir.join(name);
+        if path.is_file() {
+            return Some((path, true));
+        }
     }
-    let lower = dir.join("skill.md");
-    if lower.is_file() {
-        return Some(lower);
+    for name in ["SKILL.md", "skill.md"] {
+        let path = dir.join(format!("{name}{DISABLED_SUFFIX}"));
+        if path.is_file() {
+            return Some((path, false));
+        }
     }
     None
+}
+
+fn is_symlink(path: &Path) -> bool {
+    std::fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_symlink())
+}
+
+fn modified_ms(path: &Path) -> u64 {
+    std::fs::metadata(path)
+        .ok()
+        .and_then(|meta| meta.modified().ok())
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|since| since.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+/// Bytes a skill folder holds, so the page can say what a skill costs an agent
+/// that loads it. Bounded rather than exact: a skill that ships a corpus should
+/// read as large, and a link cycle must not walk forever.
+fn dir_bytes(dir: &Path) -> u64 {
+    let mut total = 0u64;
+    let mut visited = 0usize;
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(next) = stack.pop() {
+        let Ok(reader) = std::fs::read_dir(&next) else {
+            continue;
+        };
+        for ent in reader.flatten() {
+            if visited >= MAX_SKILL_FILES {
+                return total;
+            }
+            visited += 1;
+            let Ok(meta) = ent.metadata() else { continue };
+            if meta.is_dir() {
+                stack.push(ent.path());
+            } else {
+                total += meta.len();
+            }
+        }
+    }
+    total
 }
 
 fn read_prefix(path: &Path, max: usize) -> std::io::Result<Vec<u8>> {
@@ -330,10 +781,22 @@ fn read_prefix(path: &Path, max: usize) -> std::io::Result<Vec<u8>> {
     Ok(buf)
 }
 
-fn parse_frontmatter(text: &str, fallback: &str) -> (String, String) {
+/// The `SKILL.md` header fields wavex reads.
+struct Frontmatter {
+    name: String,
+    description: String,
+    tools: Vec<String>,
+}
+
+fn parse_frontmatter(text: &str, fallback: &str) -> Frontmatter {
+    let blank = || Frontmatter {
+        name: fallback.to_string(),
+        description: String::new(),
+        tools: Vec::new(),
+    };
     let trimmed = text.trim_start_matches('\u{feff}');
     let Some(rest) = trimmed.strip_prefix("---") else {
-        return (fallback.to_string(), String::new());
+        return blank();
     };
     let rest = rest.strip_prefix('\r').unwrap_or(rest);
     let rest = rest.strip_prefix('\n').unwrap_or(rest);
@@ -345,8 +808,10 @@ fn parse_frontmatter(text: &str, fallback: &str) -> (String, String) {
 
     let mut name: Option<String> = None;
     let mut description = String::new();
+    let mut tools: Vec<String> = Vec::new();
     let mut in_desc = false;
     let mut fold_desc = false;
+    let mut in_tools = false;
 
     for raw in yaml.lines() {
         if in_desc {
@@ -363,6 +828,15 @@ fn parse_frontmatter(text: &str, fallback: &str) -> (String, String) {
             }
             in_desc = false;
         }
+        if in_tools {
+            if is_yaml_indent(raw) {
+                if let Some(item) = raw.trim().strip_prefix('-') {
+                    push_tool(&mut tools, item);
+                }
+                continue;
+            }
+            in_tools = false;
+        }
 
         let line = raw.trim_end();
         if let Some(value) = yaml_value(line, "name") {
@@ -376,12 +850,44 @@ fn parse_frontmatter(text: &str, fallback: &str) -> (String, String) {
             } else {
                 description = unquote(value);
             }
+        } else if let Some(value) = tool_list_value(line) {
+            let value = value.trim();
+            tools.clear();
+            if value.is_empty() {
+                in_tools = true;
+            } else {
+                for piece in value
+                    .trim_start_matches('[')
+                    .trim_end_matches(']')
+                    .split(',')
+                {
+                    push_tool(&mut tools, piece);
+                }
+            }
         }
     }
 
-    let folder = fallback.to_string();
-    let name = name.filter(|n| is_valid_skill_name(n)).unwrap_or(folder);
-    (name, description.trim().to_string())
+    let name = name
+        .filter(|n| is_valid_skill_name(n))
+        .unwrap_or_else(|| fallback.to_string());
+    Frontmatter {
+        name,
+        description: description.trim().to_string(),
+        tools,
+    }
+}
+
+/// `allowed-tools` is Claude's spelling, `tools` the one other CLIs use.
+fn tool_list_value(line: &str) -> Option<String> {
+    yaml_value(line, "allowed-tools").or_else(|| yaml_value(line, "tools"))
+}
+
+fn push_tool(tools: &mut Vec<String>, raw: &str) {
+    let tool = unquote(raw.trim());
+    if tool.is_empty() || tools.len() >= MAX_SKILL_TOOLS || tools.contains(&tool) {
+        return;
+    }
+    tools.push(tool);
 }
 
 fn yaml_value(line: &str, key: &str) -> Option<String> {
@@ -507,19 +1013,24 @@ mod tests {
 
     #[test]
     fn parse_frontmatter_reads_name_and_folded_description() {
-        let (name, desc) = parse_frontmatter(
-            "---\nname: review-pr\ndescription: >\n  Review pull requests.\n  Use when asked to review.\n---\n\n# hi\n",
+        let front = parse_frontmatter(
+            "---\nname: review-pr\ndescription: >\n  Review pull requests.\n  Use when asked to review.\nallowed-tools: Read, Write, Edit\n---\n\n# hi\n",
             "fallback",
         );
-        assert_eq!(name, "review-pr");
-        assert_eq!(desc, "Review pull requests. Use when asked to review.");
+        assert_eq!(front.name, "review-pr");
+        assert_eq!(
+            front.description,
+            "Review pull requests. Use when asked to review."
+        );
+        assert_eq!(front.tools, ["Read", "Write", "Edit"]);
     }
 
     #[test]
     fn parse_frontmatter_falls_back_to_folder_name() {
-        let (name, desc) = parse_frontmatter("# no yaml\n", "create-skill");
-        assert_eq!(name, "create-skill");
-        assert_eq!(desc, "");
+        let front = parse_frontmatter("# no yaml\n", "create-skill");
+        assert_eq!(front.name, "create-skill");
+        assert_eq!(front.description, "");
+        assert!(front.tools.is_empty());
     }
 
     #[test]
@@ -832,6 +1343,144 @@ mod tests {
 
         let skills = list_skills_from(&project.0, Some(&home.0));
         assert!(!skills.iter().any(|skill| skill.name == "stale-skill"));
+    }
+
+    #[test]
+    fn details_group_one_skill_across_every_agent_it_is_installed_in() {
+        let project = tmp("proj-details");
+        let home = tmp("home-details");
+        write_skill(
+            &home.0.join(".agents/skills"),
+            "ship",
+            "---\nname: ship\ndescription: Ship it\nallowed-tools:\n  - Read\n  - Write\n---\nbody\n",
+        );
+        write_skill(
+            &home.0.join(".claude/skills"),
+            "ship",
+            "---\nname: ship\ndescription: Ship it\n---\nbody\n",
+        );
+
+        let details = skill_details_from(&project.0, Some(&home.0));
+        let ship = details.iter().find(|d| d.name == "ship").unwrap();
+        assert!(ship.enabled);
+        assert_eq!(ship.tools, ["Read", "Write"]);
+        assert!(ship.bytes > 0);
+        let sources: Vec<&str> = ship
+            .installs
+            .iter()
+            .map(|install| install.source.as_str())
+            .collect();
+        assert_eq!(sources, ["agents", "claude"]);
+    }
+
+    #[test]
+    fn disabling_hides_a_skill_from_every_agent_and_enabling_brings_it_back() {
+        let project = tmp("proj-toggle");
+        let home = tmp("home-toggle");
+        let dir = home.0.join(".agents/skills/ship");
+        write_skill(
+            &home.0.join(".agents/skills"),
+            "ship",
+            "---\nname: ship\ndescription: Ship it\n---\n",
+        );
+
+        let path = crate::fs::path_to_js(&dir);
+        set_skill_enabled_in(&project.0, Some(&home.0), vec![path.clone()], false).unwrap();
+        assert!(dir.join("SKILL.md.off").is_file());
+        assert!(!dir.join("SKILL.md").exists());
+        assert!(!list_skills_from(&project.0, Some(&home.0))
+            .iter()
+            .any(|skill| skill.name == "ship"));
+
+        let details = skill_details_from(&project.0, Some(&home.0));
+        let ship = details.iter().find(|d| d.name == "ship").unwrap();
+        assert!(!ship.enabled);
+
+        set_skill_enabled_in(&project.0, Some(&home.0), vec![path], true).unwrap();
+        assert!(dir.join("SKILL.md").is_file());
+        assert!(list_skills_from(&project.0, Some(&home.0))
+            .iter()
+            .any(|skill| skill.name == "ship"));
+    }
+
+    #[test]
+    fn a_path_outside_a_skills_folder_is_refused() {
+        let home = tmp("home-guard");
+        let dir = home.0.join("notes/ship");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("SKILL.md"), "---\nname: ship\n---\n").unwrap();
+        let target = vec![crate::fs::path_to_js(&dir)];
+        assert!(set_skill_enabled_in(&home.0, Some(&home.0), target.clone(), false).is_err());
+        assert!(delete_skills_in(&home.0, Some(&home.0), target).is_err());
+        assert!(dir.join("SKILL.md").is_file());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn deleting_takes_the_agent_links_before_the_folder_they_point_at() {
+        let home = tmp("home-delete");
+        let real = home.0.join(".agents/skills/ship");
+        write_skill(
+            &home.0.join(".agents/skills"),
+            "ship",
+            "---\nname: ship\ndescription: Ship it\n---\n",
+        );
+        let links = home.0.join(".claude/skills");
+        std::fs::create_dir_all(&links).unwrap();
+        let link = links.join("ship");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        // The link ahead of the folder is the order the detail pane sends,
+        // because `.agents` is not always the first root a skill is found in.
+        delete_skills_in(
+            &home.0,
+            Some(&home.0),
+            vec![crate::fs::path_to_js(&link), crate::fs::path_to_js(&real)],
+        )
+        .unwrap();
+        assert!(!real.exists());
+        assert!(std::fs::symlink_metadata(&link).is_err());
+    }
+
+    #[test]
+    fn a_plugin_owned_skill_cannot_be_switched_off_or_deleted() {
+        let project = tmp("proj-managed");
+        let home = tmp("home-managed");
+        let plugin = home
+            .0
+            .join(".claude/plugins/cache/community/workflow-kit/1.2.3");
+        write_skill(
+            &plugin.join("skills"),
+            "quick-plan",
+            "---\nname: quick-plan\ndescription: Plan from plugin\n---\n",
+        );
+        std::fs::create_dir_all(home.0.join(".claude/plugins")).unwrap();
+        std::fs::write(
+            home.0.join(".claude/plugins/installed_plugins.json"),
+            r#"{"version":2,"plugins":{"workflow-kit@community":[{"scope":"user","installPath":"~/.claude/plugins/cache/community/workflow-kit/1.2.3","version":"1.2.3"}]}}"#,
+        )
+        .unwrap();
+
+        let details = skill_details_from(&project.0, Some(&home.0));
+        let skill = details
+            .iter()
+            .find(|detail| detail.name == "workflow-kit:quick-plan")
+            .unwrap();
+        assert!(skill.managed);
+
+        let dir = plugin.join("skills/quick-plan");
+        let target = vec![crate::fs::path_to_js(&dir)];
+        assert!(set_skill_enabled_in(&project.0, Some(&home.0), target.clone(), false).is_err());
+        assert!(delete_skills_in(&project.0, Some(&home.0), target).is_err());
+        assert!(dir.join("SKILL.md").is_file());
+    }
+
+    #[test]
+    fn strip_ansi_drops_colour_and_spinner_escapes() {
+        assert_eq!(
+            strip_ansi("\u{1b}[33mInvalid agents: bogus\u{1b}[0m\u{1b}[1G\u{1b}[Jdone"),
+            "Invalid agents: bogusdone"
+        );
     }
 
     #[test]

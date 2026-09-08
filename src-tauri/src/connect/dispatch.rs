@@ -119,6 +119,10 @@ commands![
     "read_text_file",
     "write_text_file",
     "list_skills",
+    "list_skill_details",
+    "set_skill_enabled",
+    "delete_skills",
+    "install_skills",
     "search_project",
     "cursor_tool_calls",
     "usage_summary",
@@ -465,6 +469,30 @@ fn call(app: &AppHandle, command: &str, args: Value) -> Result<Value, String> {
         "list_skills" => {
             let a = args!(args, { cwd: String });
             done(skills::list_skills(a.cwd))
+        }
+        "list_skill_details" => {
+            let a = args!(args, { cwd: String });
+            done(skills::list_skill_details(a.cwd))
+        }
+        "set_skill_enabled" => {
+            let a = args!(args, { cwd: String, dirs: Vec<String>, enabled: bool });
+            done(skills::set_skill_enabled(a.cwd, a.dirs, a.enabled))
+        }
+        "delete_skills" => {
+            let a = args!(args, { cwd: String, dirs: Vec<String> });
+            done(skills::delete_skills(a.cwd, a.dirs))
+        }
+        "install_skills" => {
+            let a = args!(args, {
+                cwd: String,
+                package: String,
+                agents: Vec<String>,
+                skills: Vec<String>,
+                global: bool,
+            });
+            done(skills::install_skills(
+                a.cwd, a.package, a.agents, a.skills, a.global,
+            ))
         }
         "search_project" => {
             let a = args!(args, { options: search::SearchOptions });
