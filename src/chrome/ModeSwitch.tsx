@@ -20,6 +20,10 @@ type Props = {
  * Top-level surface switch. A tablist rather than two buttons so arrow keys
  * move between the modes the way a keyboard user expects, and so the current
  * surface is announced.
+ *
+ * Plain pills, not a boxed segmented control: it sits directly above the rail's
+ * own tab strip, and every tab row in the app is a filled pill on the bare
+ * surface rather than a bordered track.
  */
 export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
   const tabs = useRef(new Map<AppMode, HTMLButtonElement | null>());
@@ -37,9 +41,7 @@ export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
       role="tablist"
       aria-label="Surface"
       onKeyDown={onKeyDown}
-      className={`flex items-center gap-0.5 rounded-md border border-content/10 bg-content/5 p-0.5 ${
-        stretch ? "w-full" : "shrink-0"
-      }`}
+      className={`flex items-center gap-0.5 ${stretch ? "w-full" : "shrink-0"}`}
       data-tauri-drag-region="false"
     >
       {ORDER.map((value) => {
@@ -57,12 +59,12 @@ export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
             tabIndex={selected ? 0 : -1}
             title={`${APP_MODE_LABEL[value]} — ${APP_MODE_DESCRIPTION[value]} (${MOD}${SHIFT}M)`}
             aria-label={`${APP_MODE_LABEL[value]}: ${APP_MODE_DESCRIPTION[value]}`}
-            className={`rounded py-0.5 text-[11.5px] font-medium transition-colors ${
-              stretch ? "flex-1 text-center" : "px-2.5"
+            className={`flex h-6 items-center justify-center rounded-md px-2 text-[12px] leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              stretch ? "flex-1" : ""
             } ${
               selected
-                ? "bg-content/12 text-content"
-                : "text-content/45 hover:bg-content/5 hover:text-content/80"
+                ? "bg-content/10 text-content"
+                : "text-content/50 hover:bg-content/5 hover:text-content"
             }`}
             onClick={() => onChange(value)}
           >
