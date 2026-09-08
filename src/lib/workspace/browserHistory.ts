@@ -7,14 +7,14 @@
  * navigated to — what the address bar shows and what back and forward walk —
  * and not a mirror of the frame's own session history.
  */
-export type DockBrowser = {
+export type BrowserHistory = {
   /** Addresses wavex navigated to, oldest first. Always normalized. */
   entries: string[];
   /** Position in `entries`, or -1 when nothing has been visited. */
   index: number;
 };
 
-export const EMPTY_DOCK_BROWSER: DockBrowser = { entries: [], index: -1 };
+export const EMPTY_BROWSER_HISTORY: BrowserHistory = { entries: [], index: -1 };
 
 /** Enough history to walk back through an afternoon, and no more. */
 const HISTORY_LIMIT = 100;
@@ -68,46 +68,46 @@ export function normalizeBrowserUrl(input: string): string | null {
   return parse(`http://${text}`)?.href ?? null;
 }
 
-export function dockBrowserUrl(browser: DockBrowser): string | null {
+export function browserHistoryUrl(browser: BrowserHistory): string | null {
   return browser.entries[browser.index] ?? null;
 }
 
-export function canGoBack(browser: DockBrowser): boolean {
+export function canGoBack(browser: BrowserHistory): boolean {
   return browser.index > 0;
 }
 
-export function canGoForward(browser: DockBrowser): boolean {
+export function canGoForward(browser: BrowserHistory): boolean {
   return browser.index >= 0 && browser.index < browser.entries.length - 1;
 }
 
 /** Navigate, dropping whatever forward trail the user had walked back past. */
-export function browserVisit(browser: DockBrowser, input: string): DockBrowser {
+export function browserVisit(browser: BrowserHistory, input: string): BrowserHistory {
   const url = normalizeBrowserUrl(input);
   if (!url) return browser;
-  if (url === dockBrowserUrl(browser)) return browser;
+  if (url === browserHistoryUrl(browser)) return browser;
   const entries = [...browser.entries.slice(0, browser.index + 1), url];
   const dropped = Math.max(0, entries.length - HISTORY_LIMIT);
   return { entries: entries.slice(dropped), index: entries.length - dropped - 1 };
 }
 
-export function browserBack(browser: DockBrowser): DockBrowser {
+export function browserBack(browser: BrowserHistory): BrowserHistory {
   return canGoBack(browser) ? { ...browser, index: browser.index - 1 } : browser;
 }
 
-export function browserForward(browser: DockBrowser): DockBrowser {
+export function browserForward(browser: BrowserHistory): BrowserHistory {
   return canGoForward(browser) ? { ...browser, index: browser.index + 1 } : browser;
 }
 
-export function sanitizeDockBrowser(raw: unknown): DockBrowser {
-  if (!raw || typeof raw !== "object") return EMPTY_DOCK_BROWSER;
+export function sanitizeBrowserHistory(raw: unknown): BrowserHistory {
+  if (!raw || typeof raw !== "object") return EMPTY_BROWSER_HISTORY;
   const value = raw as Record<string, unknown>;
-  if (!Array.isArray(value.entries)) return EMPTY_DOCK_BROWSER;
+  if (!Array.isArray(value.entries)) return EMPTY_BROWSER_HISTORY;
   const entries: string[] = [];
   for (const entry of value.entries) {
     const url = typeof entry === "string" ? normalizeBrowserUrl(entry) : null;
     if (url) entries.push(url);
   }
-  if (entries.length === 0) return EMPTY_DOCK_BROWSER;
+  if (entries.length === 0) return EMPTY_BROWSER_HISTORY;
   const capped = entries.slice(Math.max(0, entries.length - HISTORY_LIMIT));
   const rawIndex = Number(value.index);
   const index = Number.isInteger(rawIndex)

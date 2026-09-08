@@ -11,7 +11,7 @@ import {
   newTerminalFile,
 } from "@/lib/workspace/layout";
 import { createProjectDock } from "@/lib/terminal/projectTerminal";
-import { EMPTY_DOCK_BROWSER } from "@/lib/workspace/dockBrowser";
+import { EMPTY_BROWSER_HISTORY } from "@/lib/workspace/browserHistory";
 import { newSession, type Session } from "@/lib/session";
 import {
   collectWorkspaceSnapshot,
@@ -382,6 +382,20 @@ describe("hydrateWorkspaceSnapshot", () => {
     expect(workspace?.projectTerminals?.[0]?.pane.files).toEqual([]);
   });
 
+  it("keeps the page of a panel whose terminals did not survive the restart", () => {
+    const term = newTerminalFile("/tmp/a");
+    const dock = {
+      ...createProjectDock("/tmp/a", { file: term }),
+      browser: { entries: ["http://localhost:5173/"], index: 0 },
+    };
+    const snapshot = collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a", [
+      { ...dock, pane: { ...dock.pane, files: [], activeFileId: "" } },
+    ]);
+    const restored = hydrateWorkspaceSnapshot(snapshot, new Map())?.projectTerminals?.[0];
+    expect(restored?.browser.entries).toEqual(["http://localhost:5173/"]);
+    expect(restored?.open).toBe(false);
+  });
+
   it("drops a terminal panel whose terminals did not survive the restart", () => {
     const snapshot = collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a", [
       createProjectDock("/tmp/a", { surface: "terminal" as const }),
@@ -406,7 +420,7 @@ describe("hydrateWorkspaceSnapshot", () => {
       new Map(),
     );
     expect(workspace?.projectTerminals?.[0]?.surface).toBe("terminal");
-    expect(workspace?.projectTerminals?.[0]?.browser).toEqual(EMPTY_DOCK_BROWSER);
+    expect(workspace?.projectTerminals?.[0]?.browser).toEqual(EMPTY_BROWSER_HISTORY);
   });
 });
 

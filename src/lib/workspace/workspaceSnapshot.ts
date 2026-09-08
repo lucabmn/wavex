@@ -19,7 +19,7 @@ import {
   isDockSurface,
   type ProjectTerminalDock,
 } from "../terminal/projectTerminal";
-import { sanitizeDockBrowser } from "./dockBrowser";
+import { sanitizeBrowserHistory } from "./browserHistory";
 import { normalizeProjectPath } from "../recents";
 import { DEFAULT_APP_MODE, sanitizeAppMode, type AppMode } from "./appMode";
 import {
@@ -444,9 +444,13 @@ function sanitizeProjectTerminal(raw: unknown): ProjectTerminalDock | null {
   const surface = isDockSurface(value.surface) ? value.surface : "terminal";
   const pane = sanitizePane(value.pane);
   const files = pane ? pane.files.filter(isTerminalTab) : [];
-  // Terminals do not survive a restart on their own, so a dock that has lost
-  // them is only worth keeping for the page, tree, or diff it also holds.
-  if (files.length === 0 && surface === "terminal") return null;
+  const browser = sanitizeBrowserHistory(value.browser);
+  // Terminals do not survive a restart on their own, so a dock reduced to a
+  // terminal surface with nothing in it is worth keeping only for the page it
+  // was also holding — and it comes back closed, since there is no terminal
+  // behind the surface it would open on.
+  const empty = files.length === 0 && surface === "terminal";
+  if (empty && browser.entries.length === 0) return null;
   const activeFileId = files.some((file) => file.id === pane?.activeFileId)
     ? (pane?.activeFileId ?? "")
     : (files[0]?.id ?? "");
@@ -455,9 +459,9 @@ function sanitizeProjectTerminal(raw: unknown): ProjectTerminalDock | null {
     pane: { ...(pane ?? emptyDockPane()), files, activeFileId },
     side: value.side,
     size: clampDockSize(value.side, Number(value.size)),
-    open: value.open !== false,
+    open: value.open !== false && !empty,
     surface,
-    browser: sanitizeDockBrowser(value.browser),
+    browser,
   };
 }
 

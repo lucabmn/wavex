@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  EMPTY_DOCK_BROWSER,
+  EMPTY_BROWSER_HISTORY,
   browserBack,
   browserForward,
   browserVisit,
   canGoBack,
   canGoForward,
-  dockBrowserUrl,
+  browserHistoryUrl,
   normalizeBrowserUrl,
-  sanitizeDockBrowser,
-} from "@/lib/workspace/dockBrowser";
+  sanitizeBrowserHistory,
+} from "@/lib/workspace/browserHistory";
 
 describe("normalizeBrowserUrl", () => {
   it("keeps an explicit http(s) origin", () => {
@@ -49,28 +49,28 @@ describe("normalizeBrowserUrl", () => {
 
 describe("dock browser history", () => {
   it("starts empty", () => {
-    expect(dockBrowserUrl(EMPTY_DOCK_BROWSER)).toBeNull();
-    expect(canGoBack(EMPTY_DOCK_BROWSER)).toBe(false);
-    expect(canGoForward(EMPTY_DOCK_BROWSER)).toBe(false);
+    expect(browserHistoryUrl(EMPTY_BROWSER_HISTORY)).toBeNull();
+    expect(canGoBack(EMPTY_BROWSER_HISTORY)).toBe(false);
+    expect(canGoForward(EMPTY_BROWSER_HISTORY)).toBe(false);
   });
 
   it("pushes visits and walks back and forward", () => {
-    let state = browserVisit(EMPTY_DOCK_BROWSER, "example.com");
+    let state = browserVisit(EMPTY_BROWSER_HISTORY, "example.com");
     state = browserVisit(state, "localhost:3000");
-    expect(dockBrowserUrl(state)).toBe("http://localhost:3000/");
+    expect(browserHistoryUrl(state)).toBe("http://localhost:3000/");
     expect(canGoBack(state)).toBe(true);
     expect(canGoForward(state)).toBe(false);
 
     state = browserBack(state);
-    expect(dockBrowserUrl(state)).toBe("https://example.com/");
+    expect(browserHistoryUrl(state)).toBe("https://example.com/");
     expect(canGoForward(state)).toBe(true);
 
     state = browserForward(state);
-    expect(dockBrowserUrl(state)).toBe("http://localhost:3000/");
+    expect(browserHistoryUrl(state)).toBe("http://localhost:3000/");
   });
 
   it("drops the forward trail on a new visit", () => {
-    let state = browserVisit(EMPTY_DOCK_BROWSER, "a.com");
+    let state = browserVisit(EMPTY_BROWSER_HISTORY, "a.com");
     state = browserVisit(state, "b.com");
     state = browserBack(state);
     state = browserVisit(state, "c.com");
@@ -79,19 +79,19 @@ describe("dock browser history", () => {
   });
 
   it("ignores a visit it cannot normalize and re-visiting the current page", () => {
-    const first = browserVisit(EMPTY_DOCK_BROWSER, "a.com");
+    const first = browserVisit(EMPTY_BROWSER_HISTORY, "a.com");
     expect(browserVisit(first, "not a url")).toBe(first);
     expect(browserVisit(first, "https://a.com/")).toBe(first);
   });
 
   it("stays put when there is nowhere to walk to", () => {
-    const state = browserVisit(EMPTY_DOCK_BROWSER, "a.com");
+    const state = browserVisit(EMPTY_BROWSER_HISTORY, "a.com");
     expect(browserBack(state)).toBe(state);
     expect(browserForward(state)).toBe(state);
   });
 
   it("caps the history so a long session cannot grow without bound", () => {
-    let state = EMPTY_DOCK_BROWSER;
+    let state = EMPTY_BROWSER_HISTORY;
     for (let index = 0; index < 120; index++) {
       state = browserVisit(state, `host${index}.com`);
     }
@@ -101,10 +101,10 @@ describe("dock browser history", () => {
   });
 });
 
-describe("sanitizeDockBrowser", () => {
+describe("sanitizeBrowserHistory", () => {
   it("keeps a well-formed persisted browser", () => {
     expect(
-      sanitizeDockBrowser({
+      sanitizeBrowserHistory({
         entries: ["https://a.com/", "http://localhost:3000/"],
         index: 1,
       }),
@@ -115,14 +115,16 @@ describe("sanitizeDockBrowser", () => {
   });
 
   it("falls back to empty for anything else", () => {
-    expect(sanitizeDockBrowser(undefined)).toEqual(EMPTY_DOCK_BROWSER);
-    expect(sanitizeDockBrowser({ entries: "nope" })).toEqual(EMPTY_DOCK_BROWSER);
-    expect(sanitizeDockBrowser({ entries: ["file:///x"], index: 0 })).toEqual(EMPTY_DOCK_BROWSER);
+    expect(sanitizeBrowserHistory(undefined)).toEqual(EMPTY_BROWSER_HISTORY);
+    expect(sanitizeBrowserHistory({ entries: "nope" })).toEqual(EMPTY_BROWSER_HISTORY);
+    expect(sanitizeBrowserHistory({ entries: ["file:///x"], index: 0 })).toEqual(
+      EMPTY_BROWSER_HISTORY,
+    );
   });
 
   it("clamps an index that no longer points at an entry", () => {
-    const state = sanitizeDockBrowser({ entries: ["https://a.com/"], index: 9 });
+    const state = sanitizeBrowserHistory({ entries: ["https://a.com/"], index: 9 });
     expect(state.index).toBe(0);
-    expect(dockBrowserUrl(state)).toBe("https://a.com/");
+    expect(browserHistoryUrl(state)).toBe("https://a.com/");
   });
 });

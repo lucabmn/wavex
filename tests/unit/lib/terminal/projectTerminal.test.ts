@@ -4,6 +4,7 @@ import {
   addTerminalToDock,
   applyDockGridStyle,
   clampDockSize,
+  clampDocksToViewport,
   closeTerminalInDock,
   createProjectDock,
   dockGridStyle,
@@ -18,7 +19,7 @@ import {
   withDockSide,
   withDockSurface,
 } from "@/lib/terminal/projectTerminal";
-import { EMPTY_DOCK_BROWSER } from "@/lib/workspace/dockBrowser";
+import { EMPTY_BROWSER_HISTORY } from "@/lib/workspace/browserHistory";
 import type { Session } from "@/lib/session";
 
 function chat(id: string, cwd: string): Session {
@@ -35,7 +36,7 @@ function chat(id: string, cwd: string): Session {
   };
 }
 
-describe("createProjectTerminal", () => {
+describe("createProjectDock", () => {
   it("opens a bottom dock with the first terminal focused", () => {
     const file = newTerminalFile("/tmp/a");
     const dock = createProjectDock("/tmp/a/", { file });
@@ -93,7 +94,7 @@ describe("dock surfaces", () => {
     expect(dock.surface).toBe("browser");
     expect(dock.side).toBe("right");
     expect(dock.pane.files).toEqual([]);
-    expect(dock.browser).toEqual(EMPTY_DOCK_BROWSER);
+    expect(dock.browser).toEqual(EMPTY_BROWSER_HISTORY);
   });
 
   it("keeps a terminal at the bottom, where it has always been", () => {
@@ -182,6 +183,21 @@ describe("withDockSide", () => {
     const dock = { ...createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") }), size: 200 };
     expect(withDockSide(dock, "top").size).toBe(200);
     expect(withDockSide(dock, "top").side).toBe("top");
+  });
+});
+
+describe("clampDocksToViewport", () => {
+  it("gives size back only from the docks a smaller window no longer fits", () => {
+    const wide = { ...createProjectDock("/tmp/a", { surface: "browser" as const }), size: 600 };
+    const narrow = { ...createProjectDock("/tmp/b", { surface: "browser" as const }), size: 200 };
+    const next = clampDocksToViewport([wide, narrow], { width: 800, height: 600 });
+    expect(next[0]?.size).toBe(560);
+    expect(next[1]).toBe(narrow);
+  });
+
+  it("leaves the docks alone when they all still fit", () => {
+    const docks = [createProjectDock("/tmp/a", { surface: "browser" as const })];
+    expect(clampDocksToViewport(docks, { width: 1600, height: 1000 })).toBe(docks);
   });
 });
 

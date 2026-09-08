@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { EMPTY_DOCK_BROWSER, type DockBrowser } from "../workspace/dockBrowser";
+import { EMPTY_BROWSER_HISTORY, type BrowserHistory } from "../workspace/browserHistory";
 import {
   newEditorPane,
   nextTerminalTitleFromFiles,
@@ -37,7 +37,7 @@ export type ProjectTerminalDock = {
   size: number;
   open: boolean;
   surface: DockSurface;
-  browser: DockBrowser;
+  browser: BrowserHistory;
 };
 
 export const DOCK_SIZE_DEFAULT = {
@@ -107,10 +107,10 @@ export function emptyDockPane(): EditorPane {
 
 export function createProjectDock(
   projectPath: string,
-  options: { file?: FilePaneTab; surface?: DockSurface; side?: DockSide } = {},
+  options: { file?: FilePaneTab; surface?: DockSurface } = {},
 ): ProjectTerminalDock {
   const surface = options.surface ?? (options.file ? "terminal" : "browser");
-  const side = options.side ?? defaultDockSide(surface);
+  const side = defaultDockSide(surface);
   return {
     projectPath: normalizeProjectPath(projectPath),
     pane: options.file ? newEditorPane(options.file) : emptyDockPane(),
@@ -118,7 +118,7 @@ export function createProjectDock(
     size: defaultDockSize(side),
     open: true,
     surface,
-    browser: EMPTY_DOCK_BROWSER,
+    browser: EMPTY_BROWSER_HISTORY,
   };
 }
 
@@ -243,7 +243,7 @@ export function withDockSurface(
 
 export function withDockBrowser(
   dock: ProjectTerminalDock,
-  browser: DockBrowser,
+  browser: BrowserHistory,
 ): ProjectTerminalDock {
   return dock.browser === browser ? dock : { ...dock, browser };
 }
@@ -268,6 +268,24 @@ export function withDockSize(
 ): ProjectTerminalDock {
   const next = clampDockSize(dock.side, size, viewport);
   return next === dock.size ? dock : { ...dock, size: next };
+}
+
+/**
+ * Give width or height back after the window shrank past what the docks were
+ * holding. A dock keeps the size the user dragged it to whenever it still fits.
+ */
+export function clampDocksToViewport(
+  docks: ProjectTerminalDock[],
+  viewport: { width: number; height: number },
+): ProjectTerminalDock[] {
+  let changed = false;
+  const next = docks.map((dock) => {
+    const size = clampDockSize(dock.side, dock.size, viewport);
+    if (size === dock.size) return dock;
+    changed = true;
+    return { ...dock, size };
+  });
+  return changed ? next : docks;
 }
 
 export function projectTerminalFileIds(docks: ProjectTerminalDock[]): string[] {

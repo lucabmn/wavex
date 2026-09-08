@@ -7,15 +7,16 @@ import {
   browserVisit,
   canGoBack,
   canGoForward,
-  dockBrowserUrl,
+  browserHistoryUrl,
   normalizeBrowserUrl,
-  type DockBrowser as DockBrowserState,
-} from "../lib/workspace/dockBrowser";
+  type BrowserHistory,
+} from "../lib/workspace/browserHistory";
 import { openUrl } from "../lib/native";
+import { PlaceholderButton, SurfacePlaceholder } from "../chrome/SurfacePlaceholder";
 
 type Props = {
-  browser: DockBrowserState;
-  onChange: (browser: DockBrowserState) => void;
+  browser: BrowserHistory;
+  onChange: (browser: BrowserHistory) => void;
 };
 
 /** Ports a dev server is reached on often enough to be worth one click. */
@@ -39,8 +40,8 @@ export function DockBrowser({ browser, onChange }: Props) {
   // pointing `src` at the address it already holds would do nothing.
   const [reloads, setReloads] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [refused, setRefused] = useState(false);
-  const url = dockBrowserUrl(browser);
+  const [blank, setBlank] = useState(false);
+  const url = browserHistoryUrl(browser);
   const back = canGoBack(browser);
   const forward = canGoForward(browser);
   // The address being typed is this field's, not the panel's: a keystroke that
@@ -53,7 +54,7 @@ export function DockBrowser({ browser, onChange }: Props) {
 
   useEffect(() => {
     setLoading(!!url);
-    setRefused(false);
+    setBlank(false);
   }, [url, reloads]);
 
   const openExternally = useCallback(() => {
@@ -132,13 +133,13 @@ export function DockBrowser({ browser, onChange }: Props) {
             // itself and keep its own origin's storage; it may not steer the
             // window it is inside, which is what leaving out
             // `allow-top-navigation` buys.
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
             referrerPolicy="strict-origin-when-cross-origin"
             allow=""
             className="absolute inset-0 h-full w-full border-0 bg-white"
             onLoad={() => {
               setLoading(false);
-              setRefused(frameRefusedToLoad(frame.current));
+              setBlank(frameLoadedNothing(frame.current));
             }}
           />
         ) : (
@@ -150,21 +151,29 @@ export function DockBrowser({ browser, onChange }: Props) {
             className="pointer-events-none absolute inset-x-0 top-0 h-0.5 animate-pulse bg-accent/70"
           />
         ) : null}
-        {refused ? <Refused url={url ?? ""} onOpen={openExternally} /> : null}
+        {blank ? (
+          <NothingLoaded
+            url={url ?? ""}
+            onOpen={openExternally}
+            onRetry={() => setReloads((count) => count + 1)}
+          />
+        ) : null}
       </div>
     </div>
   );
 }
 
 /**
- * Whether the frame was refused rather than rendered.
+ * Whether the frame ended up with no page in it.
  *
- * A frame blocked by `X-Frame-Options` or `frame-ancestors` still fires `load`,
+ * A frame that was blocked, or whose server never answered, still fires `load`,
  * so the event alone says nothing. It is left sitting on `about:blank`, which
  * is the one document this window may read across the boundary — a page that
- * really loaded throws instead, and the throw is the success.
+ * really loaded throws instead, and the throw is the success. What it cannot
+ * say is *why* nothing loaded, so the message that follows names both reasons
+ * rather than guessing between them.
  */
-function frameRefusedToLoad(frame: HTMLIFrameElement | null): boolean {
+function frameLoadedNothing(frame: HTMLIFrameElement | null): boolean {
   if (!frame) return false;
   try {
     return frame.contentWindow?.location.href === "about:blank";
@@ -175,12 +184,11 @@ function frameRefusedToLoad(frame: HTMLIFrameElement | null): boolean {
 
 function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-      <Globe className="size-6 text-content/25" strokeWidth={1.5} />
-      <p className="max-w-64 text-[12px] leading-relaxed text-content/50">
-        Open a development server or a page beside this project.
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-1">
+    <div className="absolute inset-0">
+      <SurfacePlaceholder
+        icon={Globe}
+        description="Open a development server or a page beside this project."
+      >
         {SUGGESTIONS.map((suggestion) => (
           <button
             key={suggestion}
@@ -191,26 +199,30 @@ function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
             {suggestion}
           </button>
         ))}
-      </div>
+      </SurfacePlaceholder>
     </div>
   );
 }
 
-function Refused({ url, onOpen }: { url: string; onOpen: () => void }) {
+function NothingLoaded({
+  url,
+  onOpen,
+  onRetry,
+}: {
+  url: string;
+  onOpen: () => void;
+  onRetry: () => void;
+}) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background-base px-6 text-center">
-      <p className="text-[12px] font-medium text-content">This site will not open inside an app</p>
-      <p className="max-w-72 text-[12px] leading-relaxed text-content/50">
-        {hostOf(url)} asks browsers not to embed it. Development servers and most documentation
-        sites do not.
-      </p>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="rounded-md bg-content/10 px-2.5 py-1 text-[12px] text-content transition-colors hover:bg-content/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    <div className="absolute inset-0 bg-background-base">
+      <SurfacePlaceholder
+        icon={Globe}
+        title={`Nothing loaded from ${hostOf(url)}`}
+        description="Either the server is not running yet, or the site asks browsers not to embed it. Opening it in a browser tells you which."
       >
-        Open in Browser
-      </button>
+        <PlaceholderButton onClick={onRetry}>Try Again</PlaceholderButton>
+        <PlaceholderButton onClick={onOpen}>Open in Browser</PlaceholderButton>
+      </SurfacePlaceholder>
     </div>
   );
 }

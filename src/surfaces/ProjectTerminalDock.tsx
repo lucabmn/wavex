@@ -26,6 +26,7 @@ import { ExplorerMenu } from "../chrome/ExplorerMenu";
 import { FileTree } from "../chrome/FileTree";
 import { SourceControl } from "../chrome/SourceControl";
 import { SurfaceTabs } from "../chrome/SurfaceTabs";
+import { PlaceholderButton, SurfacePlaceholder } from "../chrome/SurfacePlaceholder";
 import { IconButton } from "../chrome/TitleBar";
 import { useGitFileStatuses } from "../hooks/useGitFileStatuses";
 import type { GitHistoryCommit } from "../lib/fs";
@@ -39,7 +40,7 @@ import {
   type DockSurface,
   type ProjectTerminalDock,
 } from "../lib/terminal/projectTerminal";
-import type { DockBrowser as DockBrowserState } from "../lib/workspace/dockBrowser";
+import type { BrowserHistory } from "../lib/workspace/browserHistory";
 import { MOD } from "../lib/platform";
 import type { HarnessId } from "../lib/session";
 import type { TerminalMetaPatch } from "../lib/terminal/terminalTab";
@@ -64,12 +65,14 @@ export type DockProject = {
 type Props = {
   dock: ProjectTerminalDock;
   focused: boolean;
+  /** Whether this dock's project is the one the window is showing. */
+  visible: boolean;
   project: DockProject;
   onFocus: () => void;
   onHide: () => void;
   onSideChange: (side: DockSide) => void;
   onSurfaceChange: (surface: DockSurface) => void;
-  onBrowserChange: (browser: DockBrowserState) => void;
+  onBrowserChange: (browser: BrowserHistory) => void;
   onSizePaint: (size: number) => void;
   onSizeCommit: (size: number) => void;
   onAddTerminal: () => void;
@@ -123,6 +126,7 @@ function hideIcon(side: DockSide) {
 export function ProjectTerminalDock({
   dock,
   focused,
+  visible,
   project,
   onFocus,
   onHide,
@@ -148,8 +152,11 @@ export function ProjectTerminalDock({
   const frame = useRef<number | null>(null);
   const SideIcon = sideIcon(dock.side);
   const HideIcon = hideIcon(dock.side);
-  const opened = useOpenedSurfaces(dock.surface);
-  const gitStatuses = useGitFileStatuses(project.gitCwd, dock.open && dock.surface === "files");
+  const opened = useOpenedSurfaces(visible ? dock.surface : null);
+  const gitStatuses = useGitFileStatuses(
+    project.gitCwd,
+    visible && dock.open && dock.surface === "files",
+  );
 
   useEffect(() => {
     if (!dragging) return;
@@ -331,7 +338,7 @@ export function ProjectTerminalDock({
             )}
           </div>
         </Surface>
-        <Surface show={dock.surface === "files"} mounted={opened.has("files")}>
+        <Surface show={dock.surface === "files"} mounted={visible && opened.has("files")}>
           <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
             <FileTree
               cwd={project.gitCwd}
@@ -346,10 +353,10 @@ export function ProjectTerminalDock({
             />
           </div>
         </Surface>
-        <Surface show={dock.surface === "review"} mounted={opened.has("review")}>
+        <Surface show={dock.surface === "review"} mounted={visible && opened.has("review")}>
           <SourceControl
             cwd={project.gitCwd}
-            enabled={dock.open && dock.surface === "review"}
+            enabled={visible && dock.open && dock.surface === "review"}
             textHarness={project.textHarness}
             selectedPath={project.selectedDiffPath}
             selectedSha={project.selectedCommitSha}
@@ -385,10 +392,12 @@ export function ProjectTerminalDock({
 /**
  * Which surfaces have been shown at least once, so the panel can keep their
  * state without paying for a file tree and a git poll the user never asked for.
+ * A dock whose project is not the one on screen has shown nothing.
  */
-function useOpenedSurfaces(surface: DockSurface): Set<DockSurface> {
-  const [opened, setOpened] = useState<Set<DockSurface>>(() => new Set([surface]));
+function useOpenedSurfaces(surface: DockSurface | null): Set<DockSurface> {
+  const [opened, setOpened] = useState<Set<DockSurface>>(() => new Set(surface ? [surface] : []));
   useEffect(() => {
+    if (!surface) return;
     setOpened((prev) => (prev.has(surface) ? prev : new Set(prev).add(surface)));
   }, [surface]);
   return opened;
@@ -480,17 +489,9 @@ function DockSurfaceSwitch({
 
 function NoTerminals({ onAddTerminal }: { onAddTerminal: () => void }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-      <Terminal className="size-6 text-content/25" strokeWidth={1.5} />
-      <p className="text-[12px] text-content/50">No terminal is running in this project.</p>
-      <button
-        type="button"
-        onClick={onAddTerminal}
-        className="rounded-md bg-content/10 px-2.5 py-1 text-[12px] text-content transition-colors hover:bg-content/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      >
-        New Terminal
-      </button>
-    </div>
+    <SurfacePlaceholder icon={Terminal} description="No terminal is running in this project.">
+      <PlaceholderButton onClick={onAddTerminal}>New Terminal</PlaceholderButton>
+    </SurfacePlaceholder>
   );
 }
 

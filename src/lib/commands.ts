@@ -48,7 +48,7 @@ export type CommandId =
   | "pane.focusDown"
   | "terminal.new"
   | "terminal.newTab"
-  | "terminal.toggleDock"
+  | "panel.toggle"
   | "panel.showBrowser"
   | "panel.showTerminal"
   | "panel.showFiles"
@@ -157,7 +157,7 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "pane.focusDown", label: "Pane: Focus Down", keys: `${MOD}${ALT}↓`, when: "Always" },
   { id: "terminal.new", label: "Terminal: New", keys: `${MOD}\``, when: "Always" },
   { id: "terminal.newTab", label: "Terminal: New Tab", keys: `${MOD}${SHIFT}\``, when: "Always" },
-  { id: "terminal.toggleDock", label: "Panel: Toggle", keys: `${MOD}J`, when: "Always" },
+  { id: "panel.toggle", label: "Panel: Toggle", keys: `${MOD}J`, when: "Always" },
   { id: "panel.showBrowser", label: "Panel: Show Browser", when: "Always" },
   { id: "panel.showTerminal", label: "Panel: Show Terminal", when: "Always" },
   { id: "panel.showFiles", label: "Panel: Show Files", when: "Always" },

@@ -116,7 +116,7 @@ import { orderByIds } from "./lib/reorder";
 import {
   addTerminalToDock,
   applyDockGridStyle,
-  clampDockSize,
+  clampDocksToViewport,
   closeTerminalInDock,
   createProjectDock,
   findProjectTerminal,
@@ -134,7 +134,7 @@ import {
   type DockSurface,
   type ProjectTerminalDock as ProjectTerminal,
 } from "./lib/terminal/projectTerminal";
-import type { DockBrowser } from "./lib/workspace/dockBrowser";
+import type { BrowserHistory } from "./lib/workspace/browserHistory";
 import {
   applyGroupedReorder,
   insertTabBesideActive,
@@ -1635,7 +1635,7 @@ export default function App({
     );
   }, []);
 
-  const onDockBrowserChange = useCallback((browser: DockBrowser) => {
+  const onDockBrowserChange = useCallback((browser: BrowserHistory) => {
     setProjectTerminals((prev) =>
       mapProjectTerminal(prev, projectCwdRef.current, (dock) => withDockBrowser(dock, browser)),
     );
@@ -4530,7 +4530,7 @@ export default function App({
         runInWorkspace("focus-down", () => actions.current.onFocusDir("down")),
       "terminal.new": () => runInWorkspace("new-terminal", actions.current.onNewTerminal),
       "terminal.newTab": () => runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
-      "terminal.toggleDock": () =>
+      "panel.toggle": () =>
         runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
       "panel.showBrowser": () =>
         runInWorkspace("panel-browser", () => actions.current.onShowDockSurface("browser")),
@@ -4866,23 +4866,24 @@ export default function App({
   );
 
   // A window narrowed past the panel's share of it leaves no room for the
-  // workspace, so the panel gives the width back rather than keeping it.
+  // workspace, so the panel gives the width back rather than keeping it. A drag
+  // of the window edge fires this per frame, so the clamp runs once per paint.
   useEffect(() => {
+    let frame: number | null = null;
     const onResize = () => {
-      setProjectTerminals((prev) => {
-        const viewport = { width: window.innerWidth, height: window.innerHeight };
-        let changed = false;
-        const next = prev.map((dock) => {
-          const size = clampDockSize(dock.side, dock.size, viewport);
-          if (size === dock.size) return dock;
-          changed = true;
-          return { ...dock, size };
-        });
-        return changed ? next : prev;
+      if (frame != null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        setProjectTerminals((prev) =>
+          clampDocksToViewport(prev, { width: window.innerWidth, height: window.innerHeight }),
+        );
       });
     };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (frame != null) cancelAnimationFrame(frame);
+    };
   }, []);
 
   const paintDockSize = useCallback((size: number) => {
@@ -5147,6 +5148,7 @@ export default function App({
                     <ProjectTerminalDock
                       dock={dock}
                       focused={show && projectTerminalFocused}
+                      visible={show}
                       project={dockProject}
                       onFocus={focusProjectTerminal}
                       onHide={onHideProjectTerminal}
