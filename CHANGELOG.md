@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.13.0] - 2026-09-08
+
+- Schedule recurring agent tasks from the new Automations surface. Each run
+  produces an ordinary persisted session and inherits the harness's normal
+  approval behaviour.
+- Browse in a sandboxed page inside the project panel, alongside terminals,
+  files, and the working tree. Pages that refuse framing open in the real
+  browser instead.
+- Pick the workspace model from Settings.
+- Swap the Nord and wavex appearance themes and replace the empty-sessions
+  artwork with the new 8-bit logo.
+
 ## [0.12.0] - 2026-09-08
 
 - Manage installed project skills from Settings and include relevant Git
