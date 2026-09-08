@@ -51,6 +51,7 @@ import {
 } from "../lib/session";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
+import { useNow } from "../lib/motion";
 import { useTranscriptLayout } from "../hooks/useTranscriptLayout";
 import { useTranscriptAnchor } from "../hooks/useTranscriptAnchor";
 import { useTranscriptSelection } from "../hooks/useTranscriptSelection";
@@ -72,6 +73,8 @@ import {
   isProseBlock,
   needsApproval,
   nestedScrollAbsorbsWheel,
+  liveReasoningCut,
+  liveReasoningStart,
   proseSummary,
   subagentLatestActivity,
   subagentStatus,
@@ -1371,6 +1374,7 @@ const ActivityPhaseGroup = memo(function ActivityPhaseGroup({
       ? phase.headline
       : undefined;
   const inert = phase.steps.length === 0 && !headlineHasMore(phase.headline);
+  const headlineText = useLiveReasoning(headline?.text ?? "", !!headline?.streaming, !!headline);
 
   // A lone call the agent never introduced is not a group: a header repeating
   // the single row under it says nothing twice.
@@ -1448,7 +1452,7 @@ const ActivityPhaseGroup = memo(function ActivityPhaseGroup({
                 <div className="zen-phase-step py-1">
                   <AgentMarkdown
                     className={headline.role === "reasoning" ? "agent-reasoning" : undefined}
-                    text={headline.text}
+                    text={headlineText}
                     cwd={cwd}
                     onOpenFile={onOpenFile}
                   />
@@ -1549,6 +1553,25 @@ function ActivityRow({
 }
 
 /**
+ * The tail of a thought that is still being written, sliding with hysteresis so
+ * most commits re-render the same window rather than re-cutting it. A settled
+ * thought is returned whole — the bound only exists to keep a streaming one
+ * from pricing every commit at the length of the whole trace.
+ */
+function useLiveReasoning(text: string, streaming: boolean, open: boolean): string {
+  // The start and the cut it resolves to are kept together, because finding the
+  // cut is the one O(text) step here and the hysteresis makes a slide rare. A
+  // folded thought is not rendered at all, so it does no work either.
+  const window = useRef({ start: -1, cut: 0 });
+  if (!open) return "";
+  const start = liveReasoningStart(text.length, streaming, Math.max(0, window.current.start));
+  if (start !== window.current.start) {
+    window.current = { start, cut: liveReasoningCut(text, start) };
+  }
+  return window.current.cut === 0 ? text : text.slice(window.current.cut);
+}
+
+/**
  * The line that keeps a long think from reading as a stall. Opening the fold
  * around it does not open the thought itself — reasoning is only ever read on
  * purpose, one line until you ask for it.
@@ -1567,6 +1590,7 @@ function ActivityThinkingRow({
   onOpenFile?: (path: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const liveText = useLiveReasoning(block.text, !!block.streaming, open);
   const text = proseSummary(block.text) || "Thinking";
   // In a group the rail is the bullet, so there is nothing to breathe while
   // reasoning streams in — the line itself does.
@@ -1613,7 +1637,7 @@ function ActivityThinkingRow({
         <div className={`min-w-0 pb-2 ${bare ? "" : "pl-5"}`}>
           <AgentMarkdown
             className="agent-reasoning"
-            text={block.text}
+            text={liveText}
             cwd={cwd}
             onOpenFile={onOpenFile}
           />
@@ -1908,6 +1932,12 @@ function ToolCallStatusIcon({ state }: { state: ToolCallState }) {
   return null;
 }
 
+/**
+ * A live turn mounts one of these per running row, so the second hand comes off
+ * the shared wall clock instead of an interval each. All the rows then advance
+ * inside one notification — one React commit for the transcript rather than one
+ * per row — and a paused row holds no timer and no state at all.
+ */
 function useElapsedFrom(startedAt: number | undefined, paused: boolean): number | null {
   const fallback = useRef<number | null>(null);
   const pausedMs = useRef(0);
@@ -1922,25 +1952,24 @@ function useElapsedFrom(startedAt: number | undefined, paused: boolean): number 
   }
 
   const origin = startedAt ?? (fallback.current ??= Date.now());
-  const [elapsedMs, setElapsedMs] = useState(() => Math.max(0, Date.now() - origin));
+  const now = useNow(!paused);
 
   useEffect(() => {
-    const start = startedAt ?? (fallback.current ??= Date.now());
     if (paused) {
-      if (pauseStarted.current == null) pauseStarted.current = Date.now();
+      pauseStarted.current ??= Date.now();
       return;
     }
     if (pauseStarted.current != null) {
       pausedMs.current += Date.now() - pauseStarted.current;
       pauseStarted.current = null;
     }
-    const tick = () => setElapsedMs(Math.max(0, Date.now() - start - pausedMs.current));
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [startedAt, paused]);
+  }, [paused]);
 
-  return elapsedMs;
+  // While paused the reading freezes at the moment the pause began, so the
+  // clock the row shows is the one it stopped on rather than one that kept
+  // running behind the fold.
+  const at = paused ? (pauseStarted.current ?? now) : now;
+  return Math.max(0, at - origin - pausedMs.current);
 }
 
 function formatWorkingDuration(

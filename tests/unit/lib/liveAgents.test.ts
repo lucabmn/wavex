@@ -141,6 +141,19 @@ describe("liveAgentsFromSessions", () => {
     expect(agent?.activity).toBe("Read b.ts");
   });
 
+  it("does not report a finished turn's tool as this turn's activity", () => {
+    const fresh = chat("/tmp/c", {
+      busy: true,
+      blocks: [
+        { id: "u1", role: "user", text: "first", startedAt: 1_000 },
+        { id: "t1", role: "tool", text: "Read a.ts", tool: { kind: "read", title: "Read a.ts" } },
+        { id: "a1", role: "assistant", text: "done" },
+        { id: "u2", role: "user", text: "second", startedAt: 2_000 },
+      ],
+    });
+    expect(liveAgentsFromSessions([fresh])[0]?.activity).toBe("Working");
+  });
+
   it("refuses to offer a blind answer for an approval it cannot summarize", () => {
     const nameless = chat("/tmp/b", {
       busy: true,

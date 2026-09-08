@@ -14,6 +14,7 @@ import {
   subscribeGitChanged,
 } from "../lib/fs";
 import { isInFlightSession } from "../lib/inFlight";
+import { useNow } from "../lib/motion";
 import { formatLiveElapsed } from "../lib/liveAgents";
 import {
   RACE_STATUS_LABEL,
@@ -58,7 +59,7 @@ const STATUS_TONE: Record<RaceRunnerStatus, string> = {
  */
 export function RaceCompare({ race, sessions, onStopOne, onStopAll, onClose }: Props) {
   const runners = raceSessions(race, sessions);
-  const [now, setNow] = useState(() => Date.now());
+
   const [states, setStates] = useState<Map<string, RunnerFiles>>(new Map());
   const [busyId, setBusyId] = useState<string | null>(null);
   const runnerKey = race.runnerIds.join("\n");
@@ -67,11 +68,7 @@ export function RaceCompare({ race, sessions, onStopOne, onStopAll, onClose }: P
   // runner is actually in flight.
   const live = runners.some((session) => session != null && isInFlightSession(session));
 
-  useEffect(() => {
-    if (!live) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [live]);
+  const now = useNow(live);
 
   const load = useCallback(async () => {
     const ids = runnerKey.split("\n");

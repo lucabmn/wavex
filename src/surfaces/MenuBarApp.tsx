@@ -16,6 +16,7 @@ import {
   unblockedAgents,
   type MenuBarRequest,
 } from "../lib/menuBar";
+import { useNow } from "../lib/motion";
 import { projectName } from "../lib/paths";
 import { HARNESS_LABEL } from "../lib/session";
 import { formatCount, formatTokens, formatUsd } from "../lib/usage/usageFormat";
@@ -228,16 +229,11 @@ function MenuTabButton({
 }
 
 function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean }) {
-  const [now, setNow] = useState(() => Date.now());
   const ticking = focused && agents.some((agent) => !agent.done && agent.startedAt != null);
   const waiting = pendingRequests(agents);
   const idle = unblockedAgents(agents);
 
-  useEffect(() => {
-    if (!ticking) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
-  }, [ticking]);
+  const now = useNow(ticking);
 
   return (
     <section

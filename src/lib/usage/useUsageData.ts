@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CLOCK_STRIDE_COARSE, useNow } from "../motion";
 import { fetchModelRates, fetchUsageSummary, type ModelRatesSnapshot } from "./usageFetch";
 import { loadingPlanLimits, PLAN_LIMIT_PROVIDERS, type PlanLimits } from "./planLimits";
 import { fetchClaudePlanLimits, fetchCodexPlanLimits } from "./planLimitsFetch";
@@ -29,7 +30,6 @@ export function useUsageData(days: UsageWindowDays, active = true) {
   const [planLimits, setPlanLimits] = useState<PlanLimits[]>(() =>
     PLAN_LIMIT_PROVIDERS.map(loadingPlanLimits),
   );
-  const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(active);
   const requestId = useRef(0);
@@ -58,11 +58,7 @@ export function useUsageData(days: UsageWindowDays, active = true) {
     if (active && !planLimitsLoaded.current) loadPlanLimits();
   }, [active, loadPlanLimits]);
 
-  useEffect(() => {
-    if (!active) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(timer);
-  }, [active]);
+  const now = useNow(active, CLOCK_STRIDE_COARSE);
 
   const load = useCallback(async (next: UsageWindow) => {
     const id = (requestId.current += 1);
