@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] - 2026-09-08
+
+- Manage installed project skills from Settings and include relevant Git
+  writing skills in generated commit, PR, and branch prompts.
+- Choose the provider and model used for Git writings, with live model catalogs
+  and searchable model lists.
+- Rebuild Settings into focused pages, including expanded appearance controls,
+  profiles, language servers, archive, and provider settings.
+- Open projects in installed editors and terminals, with platform-aware
+  application detection and icons.
+- Improve workspace mode transitions and surface motion.
+
 ## [0.11.1] - 2026-09-08
 
 - Start a race from the composer's send control instead of a separate dialog.
