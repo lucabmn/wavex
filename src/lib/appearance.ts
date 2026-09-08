@@ -1036,9 +1036,9 @@ export type TranscriptSpacing = "tight" | "normal" | "relaxed";
 export const TRANSCRIPT_SPACING_DEFAULT: TranscriptSpacing = "normal";
 
 const TRANSCRIPT_GAPS: Record<TranscriptSpacing, string> = {
-  tight: "0rem",
-  normal: "0.25rem",
-  relaxed: "1rem",
+  tight: "0.25rem",
+  normal: "1rem",
+  relaxed: "2rem",
 };
 
 function isTranscriptSpacing(value: unknown): value is TranscriptSpacing {

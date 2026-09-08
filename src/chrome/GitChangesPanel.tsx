@@ -942,7 +942,7 @@ function statusLetter(status: string): string {
 }
 
 function statusColor(status: string): string {
-  if (status === "untracked") return "text-sky-400";
+  if (status === "untracked") return "text-accent";
   if (status === "added") return "text-emerald-400";
   if (status === "deleted") return "text-red-400";
   return "text-amber-400";

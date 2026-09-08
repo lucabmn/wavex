@@ -80,7 +80,7 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
         {filePath && onOpenFile ? (
           <button
             type="button"
-            className="min-w-0 flex-1 truncate text-left font-mono text-[12.5px] font-medium text-content/85 hover:text-sky-300 hover:underline"
+            className="min-w-0 flex-1 truncate text-left font-mono text-[12.5px] font-medium text-content/85 hover:text-accent hover:underline"
             title={path}
             onClick={() => onOpenFile(filePath)}
           >

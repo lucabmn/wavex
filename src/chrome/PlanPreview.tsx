@@ -27,7 +27,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
           {onOpen ? (
             <button
               type="button"
-              className="block w-full truncate text-left font-mono text-[12.5px] font-medium text-content/85 hover:text-sky-300 hover:underline"
+              className="block w-full truncate text-left font-mono text-[12.5px] font-medium text-content/85 hover:text-accent hover:underline"
               title={title}
               onClick={onOpen}
             >

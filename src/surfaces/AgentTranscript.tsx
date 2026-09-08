@@ -1097,7 +1097,7 @@ function UserMessageBlock({
     return (
       <div className={chat ? "flex justify-end pt-1.5 pr-4 pb-4 pl-14" : "p-1.5 pb-3"}>
         <div
-          className={`ui-prompt min-w-0 px-3 py-2 font-sans text-content ${
+          className={`ui-prompt min-w-0 px-4 py-3 text-content ${
             chat ? "w-full max-w-xl rounded-xl" : "w-full rounded-lg"
           }`}
         >
@@ -1166,7 +1166,7 @@ function UserMessageBlock({
         </button>
       ) : null}
       <div
-        className={`ui-prompt min-w-0 px-3 py-2 font-sans text-content ${
+        className={`ui-prompt min-w-0 px-4 py-3 text-content ${
           chat ? `w-fit max-w-xl ${singleLine ? "rounded-full" : "rounded-xl"}` : "rounded-lg"
         }`}
         style={{ zIndex: stickyIndex }}
@@ -2187,7 +2187,7 @@ function ToolCallSummary({
         canOpen ? (
           <button
             type="button"
-            className={`-my-0.5 flex min-w-0 cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-left hover:text-sky-300 ${
+            className={`-my-0.5 flex min-w-0 cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-left hover:text-accent ${
               chip
                 ? `max-w-full bg-content/6 hover:bg-hover ${targetTone}`
                 : `flex-1 hover:underline ${targetTone}`

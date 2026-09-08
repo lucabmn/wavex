@@ -103,7 +103,7 @@
 
   --editor-font-size: 13px;
   --transcript-width: 56rem;
-  --transcript-font-size: 13.5px;
+  --transcript-font-size: 14px;
   --transcript-gap: 0.25rem;
   --link-color: hsl(var(--accent-hue) 60% 72%);
   --color-skill: #d3b06b;
@@ -1499,6 +1499,23 @@ samp,
 .cm-editor,
 [data-streamdown="code-block-body"] {
   letter-spacing: normal;
+}
+
+/*
+ * The transcript is prose. Its markdown therefore runs in the UI face like
+ * everything else, and only the things that are genuinely code — fenced
+ * blocks, inline spans, tables — keep the monospace metrics that make them
+ * legible as code.
+ */
+.agent-markdown {
+  font-family: var(--font-sans);
+}
+
+.agent-markdown code,
+.agent-markdown pre,
+.agent-markdown [data-streamdown="code-block-body"],
+.agent-markdown [data-streamdown="table"] {
+  font-family: var(--font-mono);
 }
 
 ::selection {

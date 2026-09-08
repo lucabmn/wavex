@@ -93,7 +93,7 @@ function MediaFallback({ src, alt }: { src: string; alt?: string }) {
   return (
     <a
       href={src}
-      className="text-sky-400/90 hover:text-sky-300 hover:underline"
+      className="text-accent hover:text-accent hover:underline"
       onClick={(event) => {
         event.preventDefault();
         void openUrl(src);

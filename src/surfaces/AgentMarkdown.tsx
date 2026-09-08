@@ -154,7 +154,7 @@ function MarkdownLink({
   return (
     <a
       href={href}
-      className={`text-sky-400/90 hover:text-sky-300 hover:underline ${className ?? ""}`}
+      className={`text-accent hover:text-accent hover:underline ${className ?? ""}`}
       {...props}
       onClick={(event) => {
         onClick?.(event);
@@ -189,7 +189,7 @@ function MarkdownCode({ children, className, node, ...props }: MarkdownCodeProps
       <code
         {...props}
         className={`inline-flex items-center gap-1 rounded-md bg-content/8 px-1.5 h-6 align-baseline font-mono text-[0.8em] text-content ${
-          open ? "cursor-pointer hover:text-sky-300 hover:underline" : ""
+          open ? "cursor-pointer hover:text-accent hover:underline" : ""
         } ${className ?? ""}`}
         role={open ? "link" : undefined}
         tabIndex={open ? 0 : undefined}

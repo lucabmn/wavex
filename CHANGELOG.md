@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Every hairline, hover and selected state in the app resolves to one shared
   token, and the type scale steps up so the hierarchy is carried by size and
   weight rather than by borders.
+- Read the transcript as prose. It ran monospace throughout, which made a
+  conversation read as a log; it now runs in the interface face at a larger
+  size with real space between turns, and only the parts that are genuinely
+  code keep monospace metrics. Links take the accent instead of a hard-coded
+  blue.
 - Add two appearance rules: Depth, which sets how far raised surfaces stand off
   the ones behind them, and Separators, which sets how strongly every hairline
   in the app is drawn.
