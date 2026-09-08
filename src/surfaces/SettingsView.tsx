@@ -18,6 +18,7 @@ import { KeybindingsPage } from "./settings/KeybindingsPage";
 import { LanguageServersPage } from "./settings/LanguageServersPage";
 import { ProfilesPage } from "./settings/ProfilesPage";
 import { ProvidersPage } from "./settings/ProvidersPage";
+import { SkillsPage } from "./settings/SkillsPage";
 
 type Props = {
   section: SettingsSectionId;
@@ -60,6 +61,9 @@ export function SettingsView({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      // A dialog opened from a settings page answers Escape first; closing the
+      // whole surface out from under it would lose whatever it was asking.
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       event.preventDefault();
       event.stopPropagation();
       onCloseRef.current();
@@ -101,32 +105,38 @@ export function SettingsView({
         {IS_MAC ? null : <WindowControls />}
       </div>
 
-      <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
-        <div className="mx-auto w-full max-w-3xl px-8 py-8">
-          <PageHeader
-            title={settingsSectionLabel(section)}
-            description={settingsSectionDescription(section)}
-          />
-          {section === "general" ? <GeneralPage onOpenWhatsNew={onOpenWhatsNew} /> : null}
-          {section === "profiles" ? <ProfilesPage onSwitchProfile={onSwitchProfile} /> : null}
-          {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
-          {section === "keybindings" ? <KeybindingsPage /> : null}
-          {section === "providers" ? <ProvidersPage /> : null}
-          {section === "connections" ? <ConnectionsPage /> : null}
-          {section === "language-servers" ? <LanguageServersPage /> : null}
-          {section === "archive" ? (
-            <ArchivePage
-              cwd={cwd}
-              sessions={sessions}
-              onOpenSession={onOpenSession}
-              onArchiveSession={onArchiveSession}
-              onDeleteSession={onDeleteSession}
-              onRestoreProject={onRestoreProject}
-              onDeleteProject={onDeleteProject}
+      {/* Skills is a list beside a detail, so it takes the whole surface
+          instead of the centered column every other page shares. */}
+      {section === "skills" ? (
+        <SkillsPage cwd={cwd} />
+      ) : (
+        <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
+          <div className="mx-auto w-full max-w-3xl px-8 py-8">
+            <PageHeader
+              title={settingsSectionLabel(section)}
+              description={settingsSectionDescription(section)}
             />
-          ) : null}
+            {section === "general" ? <GeneralPage onOpenWhatsNew={onOpenWhatsNew} /> : null}
+            {section === "profiles" ? <ProfilesPage onSwitchProfile={onSwitchProfile} /> : null}
+            {section === "appearance" ? <AppearancePage appearance={appearance} /> : null}
+            {section === "keybindings" ? <KeybindingsPage /> : null}
+            {section === "providers" ? <ProvidersPage /> : null}
+            {section === "connections" ? <ConnectionsPage /> : null}
+            {section === "language-servers" ? <LanguageServersPage /> : null}
+            {section === "archive" ? (
+              <ArchivePage
+                cwd={cwd}
+                sessions={sessions}
+                onOpenSession={onOpenSession}
+                onArchiveSession={onArchiveSession}
+                onDeleteSession={onDeleteSession}
+                onRestoreProject={onRestoreProject}
+                onDeleteProject={onDeleteProject}
+              />
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
