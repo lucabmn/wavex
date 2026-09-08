@@ -103,9 +103,17 @@ function compareLiveAgents(a: LiveAgent, b: LiveAgent): number {
   return (a.startedAt ?? Number.MAX_SAFE_INTEGER) - (b.startedAt ?? Number.MAX_SAFE_INTEGER);
 }
 
+/**
+ * The line describes what this turn is doing, so the walk stops at the user
+ * block that opened it. It used to run to the start of the transcript whenever
+ * the current turn had reached no tool yet — a full scan of the history, per
+ * in-flight session, on every stream commit — and answered with a tool from a
+ * turn that had already finished.
+ */
 function lastActivityBlock(blocks: Block[]): Block | undefined {
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i];
+    if (block.role === "user") return undefined;
     if (block.role === "tool" || block.role === "approval") return block;
     if (block.role === "handoff" && block.handoff?.status === "preparing") {
       return block;
