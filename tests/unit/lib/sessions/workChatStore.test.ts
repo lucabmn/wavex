@@ -71,16 +71,29 @@ vi.mock("@/lib/harness", async () => {
   };
 });
 
-// Node has no `document`, and the batching itself is `scheduleHarnessFlush`'s
-// concern, not the store's. Apply each batch on a macrotask instead.
+// The commit window is the pump's concern, not the store's — these assert what
+// a batch turns into, not how long it waited. Apply each batch on a macrotask.
 vi.mock("@/lib/harness/flush", () => ({
-  cancelScheduledFlush: (handle: { id: number } | null) => {
-    if (handle) clearTimeout(handle.id);
+  createStreamPump: (drain: () => void) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const cancel = () => {
+      if (timer != null) clearTimeout(timer);
+      timer = null;
+    };
+    return {
+      schedule: () => {
+        timer ??= setTimeout(() => {
+          timer = null;
+          drain();
+        }, 0);
+      },
+      flushNow: () => {
+        cancel();
+        drain();
+      },
+      cancel,
+    };
   },
-  scheduleHarnessFlush: (run: () => void) => ({
-    kind: "timeout" as const,
-    id: Number(setTimeout(run, 0)),
-  }),
 }));
 
 vi.mock("@/lib/fs", async () => {
