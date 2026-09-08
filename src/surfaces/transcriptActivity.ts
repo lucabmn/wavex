@@ -170,6 +170,74 @@ export function formatElapsed(elapsedMs: number | null): string | null {
 }
 
 /**
+ * A live thought is rendered as markdown on every commit, and markdown costs
+ * what its source costs — a wall-of-text think is one giant paragraph and a
+ * bulleted one is a giant list, so capping blocks bounds neither. While the
+ * thought is still streaming the open fold shows a window on its tail instead;
+ * the whole trace renders once the turn settles and stops costing anything per
+ * commit.
+ */
+export const LIVE_REASONING_WINDOW = 4096;
+
+/**
+ * How far past the window the tail may grow before it slides. Rebuilding on
+ * every commit would re-cut, re-parse and relayout the whole window each time,
+ * so the start only moves once — and fast reasoning appends kilobytes per
+ * commit, which is why the slack is this wide rather than a few hundred bytes.
+ */
+export const LIVE_REASONING_WINDOW_MAX = 12_288;
+
+/**
+ * Where the visible tail of a streaming thought begins. `previous` is the start
+ * this block was last rendered at; returning it unchanged is the common case
+ * and the reason the window is cheap.
+ */
+export function liveReasoningStart(length: number, streaming: boolean, previous: number): number {
+  if (!streaming || length <= LIVE_REASONING_WINDOW) return 0;
+  const start = previous > length ? 0 : previous;
+  if (length - start <= LIVE_REASONING_WINDOW_MAX) return start;
+  return length - LIVE_REASONING_WINDOW;
+}
+
+/**
+ * Where the window really begins: a line break, so a slide never lands mid-word
+ * or mid-table-row — and never inside a code fence, which would open the window
+ * on a stray closing fence and render the thought as one long code block. An
+ * odd number of fence markers behind the cut means it fell inside one, so the
+ * cut moves down to where that fence ends.
+ *
+ * The parity walk is O(text), so this belongs once per slide, cached beside the
+ * start. Running it per render would put back exactly the whole-text cost the
+ * window exists to remove.
+ */
+export function liveReasoningCut(text: string, start: number): number {
+  if (start <= 0) return 0;
+  // A think with no break left after the start is one long line; cutting at the
+  // start shows a partial word, which still beats showing nothing.
+  const line = text.indexOf("\n", start);
+  const cut = line === -1 ? start : line + 1;
+  if (fenceMarkersBefore(text, cut) % 2 === 0) return cut;
+  const close = text.indexOf("```", cut);
+  if (close === -1) return text.length;
+  const after = text.indexOf("\n", close);
+  return after === -1 ? text.length : after + 1;
+}
+
+/** The windowed tail itself. */
+export function liveReasoningTail(text: string, start: number): string {
+  return start <= 0 ? text : text.slice(liveReasoningCut(text, start));
+}
+
+function fenceMarkersBefore(text: string, cut: number): number {
+  let count = 0;
+  for (let index = text.indexOf("```"); index !== -1 && index < cut;) {
+    count += 1;
+    index = text.indexOf("```", index + 3);
+  }
+  return count;
+}
+
+/**
  * How much of a block this summary is allowed to read. Every caller renders the
  * result as one truncated line, so the first paragraph is the whole answer and
  * a window an order of magnitude wider than any line that can fit cannot change

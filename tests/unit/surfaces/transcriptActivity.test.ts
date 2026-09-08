@@ -9,6 +9,10 @@ import {
   groupTurnItems,
   groupTurns,
   hasRunningSubagent,
+  liveReasoningStart,
+  liveReasoningTail,
+  LIVE_REASONING_WINDOW,
+  LIVE_REASONING_WINDOW_MAX,
   lastActivityIndex,
   nestedScrollAbsorbsWheel,
   proseSummary,
@@ -625,5 +629,59 @@ describe("proseSummary", () => {
   it("is unchanged by text past the window", () => {
     const head = "First thought.\n\n";
     expect(proseSummary(head + "x".repeat(500_000))).toBe(proseSummary(head));
+  });
+});
+
+describe("live reasoning window", () => {
+  it("shows a settled thought whole", () => {
+    const length = LIVE_REASONING_WINDOW_MAX * 4;
+    expect(liveReasoningStart(length, false, 9999)).toBe(0);
+  });
+
+  it("shows a short streaming thought whole", () => {
+    expect(liveReasoningStart(LIVE_REASONING_WINDOW, true, 0)).toBe(0);
+  });
+
+  it("holds the start still until the tail outgrows the slack", () => {
+    const start = LIVE_REASONING_WINDOW_MAX;
+    const held = start + LIVE_REASONING_WINDOW_MAX;
+    expect(liveReasoningStart(held, true, start)).toBe(start);
+    expect(liveReasoningStart(held + 1, true, start)).toBe(held + 1 - LIVE_REASONING_WINDOW);
+  });
+
+  it("slides at most once per growth of the slack", () => {
+    let start = 0;
+    let slides = 0;
+    // A fast think appending 2 KB per commit for 400 KB.
+    for (let length = 0; length <= 400_000; length += 2048) {
+      const next = liveReasoningStart(length, true, start);
+      if (next !== start) slides += 1;
+      start = next;
+    }
+    expect(slides).toBeLessThanOrEqual(Math.ceil(400_000 / LIVE_REASONING_WINDOW) + 1);
+  });
+
+  it("restarts when the text is replaced by a shorter one", () => {
+    expect(liveReasoningStart(10, true, 5000)).toBe(0);
+  });
+
+  it("cuts the tail at a line break", () => {
+    const text = "alpha\nbravo\ncharlie";
+    expect(liveReasoningTail(text, 7)).toBe("charlie");
+    expect(liveReasoningTail(text, 0)).toBe(text);
+  });
+
+  it("keeps the tail when there is no break left to cut on", () => {
+    expect(liveReasoningTail("abcdef", 2)).toBe("cdef");
+  });
+
+  it("never opens the window inside a code fence", () => {
+    const text = "intro\n```ts\nconst a = 1;\nconst b = 2;\n```\nafter\nmore";
+    expect(liveReasoningTail(text, text.indexOf("const b"))).toBe("after\nmore");
+  });
+
+  it("shows nothing rather than a stray closing fence", () => {
+    const text = "intro\n```ts\nconst a = 1;\nconst b = 2;";
+    expect(liveReasoningTail(text, text.indexOf("const b"))).toBe("");
   });
 });
