@@ -335,9 +335,9 @@ function AgentTranscriptComponent({
   return (
     <div
       ref={setScroller}
-      className="agent-transcript h-full overflow-y-auto overscroll-none [overflow-anchor:none] font-mono text-[13px] leading-5"
+      className="agent-transcript h-full overflow-y-auto overscroll-none [overflow-anchor:none] font-mono text-[length:var(--transcript-font-size)] leading-[1.54]"
     >
-      <div className="mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-1 pb-1">
+      <div className="mx-auto flex w-full min-w-0 max-w-[var(--transcript-width)] flex-col gap-[var(--transcript-gap)] pb-1">
         {firstVisibleTurn > 0 ? (
           <div className="flex justify-center px-4 py-3">
             <button

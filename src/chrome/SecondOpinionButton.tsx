@@ -20,7 +20,7 @@ import {
   getModelSnapshot,
   getPickerVisibilitySnapshot,
   isPickerProviderVisible,
-  modelsFor,
+  enabledModelsFor,
   preferredModelId,
   subscribeModels,
   subscribePickerVisibility,
@@ -105,7 +105,7 @@ export function SecondOpinionButton({
   const activeHarness = targets[active];
   const models = useMemo(() => {
     void catalogVersion;
-    return activeHarness ? modelsFor(activeHarness) : [];
+    return activeHarness ? enabledModelsFor(activeHarness) : [];
   }, [activeHarness, catalogVersion]);
   const preferred = activeHarness != null ? preferredModelId(activeHarness) : undefined;
 
@@ -262,7 +262,7 @@ export function SecondOpinionButton({
                     ref={highlighted ? activeRow : undefined}
                     type="button"
                     role="menuitem"
-                    aria-haspopup={modelsFor(harness).length > 0 ? "menu" : undefined}
+                    aria-haspopup={enabledModelsFor(harness).length > 0 ? "menu" : undefined}
                     aria-expanded={highlighted && models.length > 0}
                     disabled={!available && probed}
                     onMouseDown={(event) => event.preventDefault()}
@@ -284,7 +284,7 @@ export function SecondOpinionButton({
                   >
                     <HarnessIcon harness={harness} className="size-3.5" />
                     <span className="min-w-0 flex-1 truncate">{HARNESS_TITLE[harness]}</span>
-                    {modelsFor(harness).length > 0 ? (
+                    {enabledModelsFor(harness).length > 0 ? (
                       <ChevronRight
                         className="size-3.5 shrink-0 text-content/40"
                         strokeWidth={1.75}

@@ -11,7 +11,7 @@ import {
   type IconComponent,
 } from "./icons";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
-import { SETTINGS_SECTIONS, type SettingsSectionId } from "../lib/settings";
+import { SETTINGS_GROUPS, settingsSectionsInGroup, type SettingsSectionId } from "../lib/settings";
 
 const SECTION_ICONS: Record<SettingsSectionId, IconComponent> = {
   general: SlidersHorizontal,
@@ -39,17 +39,28 @@ export function SettingsNav({ section, onSelect, onClose }: Props) {
       <div
         ref={lockOverscroll}
         aria-label="Settings"
-        className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto overscroll-none px-2 pb-2"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none px-2 pb-2"
       >
-        {SETTINGS_SECTIONS.map((item) => (
-          <NavRow
-            key={item.id}
-            label={item.label}
-            icon={SECTION_ICONS[item.id]}
-            active={item.id === section}
-            onClick={() => onSelect(item.id)}
-          />
-        ))}
+        {SETTINGS_GROUPS.map((group) => {
+          const sections = settingsSectionsInGroup(group.id);
+          if (sections.length === 0) return null;
+          return (
+            <div key={group.id} className="flex flex-col gap-px pt-3 first:pt-0">
+              <h2 className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-content/30">
+                {group.label}
+              </h2>
+              {sections.map((item) => (
+                <NavRow
+                  key={item.id}
+                  label={item.label}
+                  icon={SECTION_ICONS[item.id]}
+                  active={item.id === section}
+                  onClick={() => onSelect(item.id)}
+                />
+              ))}
+            </div>
+          );
+        })}
       </div>
       <div className="flex shrink-0 flex-col gap-px p-2">
         <NavRow label="Back" icon={ArrowLeft} onClick={onClose} />
@@ -74,7 +85,7 @@ function NavRow({
       type="button"
       onClick={onClick}
       aria-current={active ? "true" : undefined}
-      className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left ${
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${
         active
           ? "bg-content/10 text-content"
           : "text-content/50 hover:bg-content/5 hover:text-content"
