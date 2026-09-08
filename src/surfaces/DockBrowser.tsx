@@ -19,6 +19,9 @@ type Props = {
   onChange: (browser: BrowserHistory) => void;
 };
 
+/** How long a page gets before a blank frame is called a failure. */
+const LOAD_GRACE_MS = 6000;
+
 /** Ports a dev server is reached on often enough to be worth one click. */
 const SUGGESTIONS = ["localhost:3000", "localhost:5173", "localhost:8080"];
 
@@ -41,6 +44,7 @@ export function DockBrowser({ browser, onChange }: Props) {
   const [reloads, setReloads] = useState(0);
   const [loading, setLoading] = useState(false);
   const [blank, setBlank] = useState(false);
+  const settled = useRef(false);
   const url = browserHistoryUrl(browser);
   const back = canGoBack(browser);
   const forward = canGoForward(browser);
@@ -52,9 +56,21 @@ export function DockBrowser({ browser, onChange }: Props) {
     setDraft(url ?? "");
   }, [url]);
 
+  // A frame that is refused, or whose server is not listening, does not
+  // reliably fire `load` — WebKit in particular leaves the element silent — so
+  // a page that has not arrived by now is reported rather than left as a white
+  // rectangle. A slow page that does arrive clears this again on its `load`.
   useEffect(() => {
+    settled.current = false;
     setLoading(!!url);
     setBlank(false);
+    if (!url) return;
+    const timer = window.setTimeout(() => {
+      if (settled.current) return;
+      setLoading(false);
+      setBlank(true);
+    }, LOAD_GRACE_MS);
+    return () => window.clearTimeout(timer);
   }, [url, reloads]);
 
   const openExternally = useCallback(() => {
@@ -138,6 +154,7 @@ export function DockBrowser({ browser, onChange }: Props) {
             allow=""
             className="absolute inset-0 h-full w-full border-0 bg-white"
             onLoad={() => {
+              settled.current = true;
               setLoading(false);
               setBlank(frameLoadedNothing(frame.current));
             }}

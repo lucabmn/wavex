@@ -413,15 +413,10 @@ function Surface({
   children: ReactNode;
 }) {
   if (!mounted) return null;
-  return (
-    <div
-      aria-hidden={!show}
-      inert={!show || undefined}
-      className={show ? "absolute inset-0 h-full" : "hidden"}
-    >
-      {children}
-    </div>
-  );
+  // `hidden` is the whole guard: a display:none subtree is already unreachable
+  // by pointer, focus, and the accessibility tree, and adding `inert` on top
+  // risks marking the surface that *is* showing.
+  return <div className={show ? "absolute inset-0 h-full" : "hidden"}>{children}</div>;
 }
 
 /**
