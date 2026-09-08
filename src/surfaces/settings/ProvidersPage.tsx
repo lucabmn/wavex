@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ChevronDown } from "../../chrome/icons";
 import { HarnessIcon } from "../../chrome/HarnessIcon";
+import { ModelMenu } from "../../chrome/ModelMenu";
+import { Popover } from "../../chrome/Popover";
 import { Row, SecondaryButton, Select, Toggle } from "../../chrome/SettingsRow";
 import {
   getHarnessAvailabilitySnapshot,
@@ -13,19 +15,20 @@ import { refreshHarnessCatalogs } from "../../lib/harness/registry";
 import {
   defaultModelId,
   enabledModelsFor,
-  filterModels,
   getModelSnapshot,
   getPickerVisibilitySnapshot,
   gitWritingChoice,
   isModelEnabled,
   isPickerProviderVisible,
   loadDefaultModels,
+  loadFavoriteModels,
   loadGitWritingChoice,
   loadLastModelChoice,
   modelsFor,
   preferredModelId,
   resolveModel,
   saveDefaultModel,
+  saveFavoriteModels,
   saveGitWritingChoice,
   saveLastModelChoice,
   savePickerProviderVisible,
@@ -33,6 +36,7 @@ import {
   subscribeGitWritingChoice,
   subscribeModels,
   subscribePickerVisibility,
+  type AgentModel,
 } from "../../lib/models";
 import { HARNESSES, HARNESS_TITLE, type HarnessId } from "../../lib/session";
 
@@ -130,6 +134,11 @@ export function ProvidersPage() {
   );
 }
 
+/** The ids in a menu's list that are turned off, so the rows can say so. */
+function offModelIds(models: AgentModel[]): string[] {
+  return models.filter((model) => !isModelEnabled(model.id)).map((model) => model.id);
+}
+
 function GitWritingsRow({
   harness,
   model,
@@ -142,12 +151,21 @@ function GitWritingsRow({
   onModelChange: (model: string) => void;
 }) {
   const models = modelsFor(harness);
+  const enabled = enabledModelsFor(harness);
   const current = models.length > 0 ? resolveModel(harness, model) : null;
 
   useEffect(() => {
     if (!isHarnessAvailable(harness) || models.length > 0) return;
     void refreshHarnessCatalogs([harness]);
   }, [harness, models.length]);
+
+  // A model turned off stays listed while it is the saved choice, marked, the
+  // same way the provider cards below list theirs.
+  const options = useMemo(
+    () =>
+      current && !enabled.some((item) => item.id === current.id) ? [current, ...enabled] : enabled,
+    [current, enabled],
+  );
 
   return (
     <div className="mb-4 overflow-hidden rounded-xl border border-content/10 bg-content/[0.025]">
@@ -165,14 +183,12 @@ function GitWritingsRow({
           }))}
         />
         {current ? (
-          <Select
+          <ModelChoice
             label="Git writings model"
-            value={current.id}
+            models={options}
+            current={current}
+            offIds={offModelIds(options)}
             onChange={onModelChange}
-            options={models.map((item) => ({
-              value: item.id,
-              label: item.name,
-            }))}
           />
         ) : (
           <span className="text-[12px] text-content/45">
@@ -206,7 +222,6 @@ function ProviderCard({
   const available = isHarnessAvailable(harness);
   const current = models.length > 0 ? resolveModel(harness, selectedModel) : null;
   const [showModels, setShowModels] = useState(false);
-  const [modelQuery, setModelQuery] = useState("");
   const inPicker = isPickerProviderVisible(harness);
 
   useEffect(() => {
@@ -215,24 +230,15 @@ function ProviderCard({
   }, [available, harness, models.length]);
 
   // The saved default can be a model that was turned off later. It stays in the
-  // list, marked, rather than the select rendering blank against a value it
-  // does not carry.
-  const options = enabled.map((model) => ({ value: model.id, label: model.name }));
-  if (current && !options.some((option) => option.value === current.id)) {
-    options.unshift({ value: current.id, label: `${current.name} (off)` });
-  }
-  const filteredOptions = useMemo(
-    () =>
-      filterModels(
-        options.map((option) => ({
-          id: option.value,
-          harness,
-          name: option.label,
-        })),
-        modelQuery,
-      ).map((model) => ({ value: model.id, label: model.name })),
-    [harness, modelQuery, options],
-  );
+  // list, marked off, rather than the menu showing nothing for the value it
+  // carries.
+  const options = useMemo(() => {
+    if (current && !enabled.some((model) => model.id === current.id)) {
+      return [current, ...enabled];
+    }
+    return enabled;
+  }, [current, enabled]);
+  const offIds = useMemo(() => offModelIds(options), [options]);
 
   return (
     <section className="mb-4 overflow-hidden rounded-xl border border-content/10 bg-content/[0.025]">
@@ -262,25 +268,19 @@ function ProviderCard({
       </header>
 
       <Row label="Model for new conversations" description="Used whenever this provider is picked.">
-        <div className="flex min-w-0 flex-col items-end gap-1.5">
-          {current ? (
-            <input
-              type="search"
-              value={modelQuery}
-              aria-label={`Search ${HARNESS_TITLE[harness]} models`}
-              placeholder="Search models"
-              onChange={(event) => setModelQuery(event.target.value)}
-              className="w-52 rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[12px] text-content outline-none placeholder:text-content/40 focus:border-content/25"
-            />
-          ) : null}
-          <Select
+        {current ? (
+          <ModelChoice
             label={`${HARNESS_TITLE[harness]} model`}
-            value={current?.id ?? ""}
-            disabled={!current}
-            options={current ? filteredOptions : [{ value: "", label: "No models" }]}
+            models={options}
+            current={current}
+            offIds={offIds}
             onChange={(next) => onModelChange(harness, next)}
           />
-        </div>
+        ) : (
+          <span className="text-[12px] text-content/45">
+            {available ? "Loading models…" : (harnessUnavailableHint(harness) ?? "No models")}
+          </span>
+        )}
       </Row>
 
       {available ? (
@@ -354,5 +354,93 @@ function ProviderCard({
         </div>
       ) : null}
     </section>
+  );
+}
+
+const MENU_WIDTH = 300;
+const MENU_MIN_HEIGHT = 180;
+const MENU_MAX_HEIGHT = 340;
+
+/**
+ * The same menu the composer's model picker opens, minus its provider tabs:
+ * a settings row already names the provider it is choosing a model for.
+ */
+function ModelChoice({
+  label,
+  models,
+  current,
+  offIds,
+  onChange,
+}: {
+  label: string;
+  models: AgentModel[];
+  current: AgentModel;
+  offIds?: string[];
+  onChange: (model: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [favorites, setFavorites] = useState(loadFavoriteModels);
+  const root = useRef<HTMLDivElement>(null);
+
+  // Another card's stars may have moved since this one mounted.
+  useEffect(() => {
+    if (open) setFavorites(loadFavoriteModels());
+  }, [open]);
+
+  const toggleFavorite = (id: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+      saveFavoriteModels(next);
+      return next;
+    });
+  };
+
+  return (
+    <div ref={root} className="relative">
+      <button
+        type="button"
+        aria-label={`${label}: ${current.name}`}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((value) => !value)}
+        className="flex max-w-52 items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[12px] text-content hover:border-content/20"
+      >
+        <HarnessIcon harness={current.harness} className="size-3.5 shrink-0" />
+        <span className="min-w-0 truncate">{current.name}</span>
+        <ChevronDown
+          className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
+          strokeWidth={1.75}
+        />
+      </button>
+      {open ? (
+        <Popover
+          anchor={root}
+          side="bottom"
+          align="end"
+          width={MENU_WIDTH}
+          minHeight={MENU_MIN_HEIGHT}
+          maxHeight={MENU_MAX_HEIGHT}
+          onDismiss={() => setOpen(false)}
+          role="dialog"
+          aria-label={label}
+          data-model-picker
+          className="flex flex-col overflow-hidden"
+        >
+          <ModelMenu
+            models={models}
+            currentId={current.id}
+            favorites={favorites}
+            offIds={offIds}
+            requireInstalled={false}
+            emptyLabel={() => "No matching models"}
+            onPick={(model) => {
+              onChange(model.id);
+              setOpen(false);
+            }}
+            onToggleFavorite={toggleFavorite}
+          />
+        </Popover>
+      ) : null}
+    </div>
   );
 }

@@ -1,16 +1,7 @@
-import { ChevronDown, Search, Star } from "./icons";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-} from "react";
+import { ChevronDown, Star } from "./icons";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   coerceModelPickerTab,
-  filterModels,
   findModel,
   getModelSnapshot,
   getPickerVisibilitySnapshot,
@@ -37,9 +28,9 @@ import {
   getHarnessAvailabilitySnapshot,
 } from "../lib/harness/availability";
 import { refreshHarnessCatalogs } from "../lib/harness/registry";
-import { HARNESSES, HARNESS_LABEL, HARNESS_TITLE, type HarnessId } from "../lib/session";
-import { useLockOverscroll } from "../hooks/useLockOverscroll";
+import { HARNESSES, HARNESS_TITLE, type HarnessId } from "../lib/session";
 import { HarnessIcon } from "./HarnessIcon";
+import { ModelMenu } from "./ModelMenu";
 import { Popover } from "./Popover";
 import { MOD } from "../lib/platform";
 
@@ -69,11 +60,8 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
   );
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<ModelPickerTab>(() => loadModelPickerTab());
-  const [query, setQuery] = useState("");
-  const [active, setActive] = useState(0);
   const [favorites, setFavorites] = useState(loadFavoriteModels);
   const root = useRef<HTMLDivElement>(null);
-  const search = useRef<HTMLInputElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const current = resolveModel(harness, model);
@@ -121,7 +109,6 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
     if (!open) return;
     void probeHarnessAvailability();
     setTab(coerceModelPickerTab(loadModelPickerTab(), shownInPicker));
-    setQuery("");
   }, [open]);
 
   useEffect(() => {
@@ -179,10 +166,6 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
     };
   }, [hotkeys]);
 
-  useEffect(() => {
-    if (open) search.current?.focus();
-  }, [open]);
-
   const visible = useMemo(() => {
     const pool =
       visibleTab === "favorites"
@@ -193,20 +176,10 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
                 item != null && shownInPicker(item.harness) && isModelEnabled(item.id),
             )
         : enabledModelsFor(visibleTab);
-    return filterModels(pool, query);
+    return pool;
     // Catalog, install probes, and picker-visibility all feed this list:
     // catalogs land after mount, and hiding a provider must drop its favorites.
-  }, [visibleTab, query, favorites, catalogVersion, availabilityVersion, visibilityVersion]);
-
-  useEffect(() => {
-    if (!open) return;
-    const index = visible.findIndex((item) => item.id === current.id);
-    setActive(index >= 0 ? index : 0);
-  }, [open, visibleTab, query, current.id]);
-
-  useEffect(() => {
-    setActive((i) => (visible.length === 0 ? 0 : Math.min(i, visible.length - 1)));
-  }, [visible.length]);
+  }, [visibleTab, favorites, catalogVersion, availabilityVersion, visibilityVersion]);
 
   const pick = (item: AgentModel) => {
     if (!isHarnessAvailable(item.harness)) return;
@@ -220,31 +193,6 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
       saveFavoriteModels(next);
       return next;
     });
-  };
-
-  const onSearchKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((i) => Math.min(visible.length - 1, i + 1));
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => Math.max(0, i - 1));
-      return;
-    }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const item = visible[active];
-      if (item && isHarnessAvailable(item.harness)) pick(item);
-      return;
-    }
-    const mod = e.metaKey || e.ctrlKey;
-    if (mod && !e.altKey && !e.shiftKey && e.key >= "1" && e.key <= "9") {
-      e.preventDefault();
-      const item = visible[Number(e.key) - 1];
-      if (item && isHarnessAvailable(item.harness)) pick(item);
-    }
   };
 
   return (
@@ -319,41 +267,22 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
             ))}
           </nav>
 
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="pb-1.5">
-              <label className="flex items-center gap-2 border-b border-content/10 px-2 py-2.5 text-content/50">
-                <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
-                <input
-                  ref={search}
-                  type="text"
-                  value={query}
-                  placeholder="Search models..."
-                  aria-label="Search models"
-                  className="min-w-0 flex-1 bg-transparent text-[12px] text-content outline-none placeholder:text-content/40"
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={onSearchKey}
-                />
-              </label>
-            </div>
-            <ModelList
-              models={visible}
-              active={active}
-              currentId={current.id}
-              favorites={favorites}
-              emptyLabel={
-                visibleTab === "favorites" && !query.trim()
-                  ? "No favorite models"
-                  : visibleTab !== "favorites" && !isHarnessAvailable(visibleTab)
-                    ? harnessUnavailableHint(visibleTab)
-                    : visibleTab === "codex" && !query.trim()
-                      ? "Loading Codex models…"
-                      : "No matching models"
-              }
-              onActive={setActive}
-              onPick={pick}
-              onToggleFavorite={toggleFavorite}
-            />
-          </div>
+          <ModelMenu
+            models={visible}
+            currentId={current.id}
+            favorites={favorites}
+            emptyLabel={(query) =>
+              visibleTab === "favorites" && !query.trim()
+                ? "No favorite models"
+                : visibleTab !== "favorites" && !isHarnessAvailable(visibleTab)
+                  ? harnessUnavailableHint(visibleTab)
+                  : visibleTab === "codex" && !query.trim()
+                    ? "Loading Codex models…"
+                    : "No matching models"
+            }
+            onPick={pick}
+            onToggleFavorite={toggleFavorite}
+          />
         </Popover>
       ) : null}
     </div>
@@ -400,135 +329,5 @@ function ProviderTabButton({
         <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-content" />
       ) : null}
     </button>
-  );
-}
-
-function ModelList({
-  models,
-  active,
-  currentId,
-  favorites,
-  emptyLabel,
-  onActive,
-  onPick,
-  onToggleFavorite,
-}: {
-  models: AgentModel[];
-  active: number;
-  currentId: string;
-  favorites: string[];
-  emptyLabel: string;
-  onActive: (index: number) => void;
-  onPick: (model: AgentModel) => void;
-  onToggleFavorite: (id: string) => void;
-}) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const lockOverscroll = useLockOverscroll<HTMLDivElement>();
-  const activeRef = useRef<HTMLDivElement>(null);
-
-  const setListRef = (el: HTMLDivElement | null) => {
-    listRef.current = el;
-    lockOverscroll(el);
-  };
-
-  useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "nearest" });
-  }, [active]);
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.stopPropagation();
-      if (el.scrollHeight <= el.clientHeight + 1) return;
-      el.scrollTop += e.deltaY;
-      e.preventDefault();
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [models.length]);
-
-  if (models.length === 0) {
-    return <div className="px-3 py-4 text-[12px] text-content/50">{emptyLabel}</div>;
-  }
-
-  return (
-    <div
-      ref={setListRef}
-      role="listbox"
-      aria-label="Models"
-      className="min-h-0 flex-1 overflow-y-auto overscroll-none px-1.5 pb-1.5"
-    >
-      {models.map((item, index) => {
-        const selected = item.id === currentId;
-        const highlighted = index === active;
-        const favorited = favorites.includes(item.id);
-        const disabled = !isHarnessAvailable(item.harness);
-        const shortcut = index < 9 && !disabled ? `${MOD}${index + 1}` : null;
-        return (
-          <div
-            key={item.id}
-            ref={highlighted ? activeRef : undefined}
-            onMouseEnter={() => onActive(index)}
-            className={`flex w-full items-center gap-1 rounded-lg px-1 ${
-              disabled ? "" : highlighted || selected ? "bg-content/10" : "hover:bg-content/5"
-            }`}
-          >
-            <button
-              type="button"
-              role="option"
-              aria-selected={selected}
-              aria-disabled={disabled}
-              disabled={disabled}
-              title={disabled ? harnessUnavailableHint(item.harness) : undefined}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                if (disabled) return;
-                onPick(item);
-              }}
-              className={`flex min-w-0 flex-1 items-center gap-2 px-1.5 py-2 text-left ${
-                disabled ? "cursor-not-allowed text-content/35" : "text-content"
-              }`}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-medium leading-5">
-                  {item.name}
-                </span>
-                <span className="mt-0.5 flex items-center gap-1 text-[11px] leading-4 text-content/50">
-                  <HarnessIcon harness={item.harness} className="size-3 shrink-0 opacity-80" />
-                  <span className="truncate">
-                    {HARNESS_TITLE[item.harness]} · {HARNESS_LABEL[item.harness]}
-                  </span>
-                </span>
-              </span>
-              {shortcut ? (
-                <span className="shrink-0 rounded-md bg-content/10 px-1.5 py-0.5 font-mono text-[10px] text-content/50">
-                  {shortcut}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              title={favorited ? "Remove from favorites" : "Add to favorites"}
-              aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite(item.id);
-              }}
-              className={`grid size-6 shrink-0 place-items-center rounded-md ${
-                favorited ? "text-content" : "text-content/30 hover:text-content/70"
-              }`}
-            >
-              <Star
-                className="size-3.5"
-                strokeWidth={1.75}
-                fill={favorited ? "currentColor" : "none"}
-              />
-            </button>
-          </div>
-        );
-      })}
-    </div>
   );
 }
