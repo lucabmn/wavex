@@ -289,7 +289,12 @@ export function DockPanel({
         <Surface show={dock.surface === "browser"} mounted={opened.has("browser")}>
           <DockBrowser browser={dock.browser} onChange={onBrowserChange} />
         </Surface>
-        <Surface show={dock.surface === "terminal"} mounted={opened.has("terminal")}>
+        {/* Terminals are never taken down by surface bookkeeping: a running
+            process must outlive a look at the browser or the file tree. */}
+        <Surface
+          show={dock.surface === "terminal"}
+          mounted={opened.has("terminal") || dock.pane.files.length > 0}
+        >
           <div className="flex h-full min-h-0 min-w-0 flex-col">
             {dock.pane.files.length > 0 ? (
               <>

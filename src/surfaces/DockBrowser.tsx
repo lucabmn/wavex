@@ -151,7 +151,6 @@ export function DockBrowser({ browser, onChange }: Props) {
             // `allow-top-navigation` buys.
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
             referrerPolicy="strict-origin-when-cross-origin"
-            allow=""
             className="absolute inset-0 h-full w-full border-0 bg-white"
             onLoad={() => {
               settled.current = true;
