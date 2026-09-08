@@ -199,10 +199,10 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
         className="absolute left-1/2 top-[6%] flex max-h-[88vh] w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col rounded-lg border border-edge bg-content/5 shadow-xl backdrop-blur-xl"
       >
         <header className="shrink-0 px-4 pb-3 pt-4">
-          <h2 className="text-[13px] font-medium leading-tight text-content">
+          <h2 className="text-[13.5px] font-medium leading-tight text-content">
             {existing ? "Edit automation" : "New automation"}
           </h2>
-          <p className="mt-0.5 text-[12px] leading-snug text-content/55">
+          <p className="mt-0.5 text-[12.5px] leading-snug text-content/55">
             A prompt wavex runs on a schedule. Each run is an ordinary session you can open.
           </p>
         </header>
@@ -230,7 +230,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
               placeholder="Check for outdated dependencies and open an issue for anything with a security advisory."
               onChange={(event) => patch({ prompt: event.target.value })}
               onBlur={() => touch("prompt")}
-              className="max-h-[30vh] min-h-24 w-full resize-y rounded-md bg-content/10 px-2 py-1.5 font-mono text-[12px] leading-5 text-content outline-none placeholder:text-content/40"
+              className="max-h-[30vh] min-h-24 w-full resize-y rounded-md bg-content/10 px-2 py-1.5 font-mono text-[12.5px] leading-5 text-content outline-none placeholder:text-content/40"
             />
           </Field>
 
@@ -250,7 +250,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
                 </option>
               ))}
             </select>
-            <p className="truncate text-[11px] leading-tight text-content/45">
+            <p className="truncate text-[11.5px] leading-tight text-content/45">
               {prettyCwd(form.cwd)}
               {host ? ` · ${host.name}` : ""}
             </p>
@@ -327,7 +327,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
             type="button"
             aria-expanded={advanced}
             onClick={() => setAdvanced((open) => !open)}
-            className="self-start rounded-md px-1 py-0.5 text-[12px] text-content/55 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="self-start rounded-md px-1 py-0.5 text-[12.5px] text-content/55 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {advanced ? "Hide options" : "More options"}
           </button>
@@ -396,7 +396,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
                     }
                     className={`${CONTROL} w-24`}
                   />
-                  <span className="text-[12px] text-content/45">or on</span>
+                  <span className="text-[12.5px] text-content/45">or on</span>
                   <input
                     type="date"
                     value={form.endAtMs ? isoDate(form.endAtMs, form.timeZone) : ""}
@@ -417,7 +417,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
                 </div>
               </Field>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-[12px] text-content/70">
+                <span className="text-[12.5px] text-content/70">
                   Play a sound when a run finishes
                 </span>
                 <Toggle
@@ -431,7 +431,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
           ) : null}
 
           <div className="rounded-md border border-edge bg-content/5 px-3 py-2.5">
-            <p className="text-[12px] font-medium text-content">
+            <p className="text-[12.5px] font-medium text-content">
               {describeSchedule(form.schedule, form.timeZone)}
             </p>
             {upcoming.length > 0 ? (
@@ -447,7 +447,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
                 Finish the form to see when this would run.
               </p>
             )}
-            <p className="mt-2 text-[11px] leading-snug text-content/45">
+            <p className="mt-2 text-[11.5px] leading-snug text-content/45">
               Schedules run only while this wavex is open
               {host ? `, with ${host.name} reachable` : ""}. There is no background service: an
               occurrence that comes due while it is closed follows the missed-run setting.
@@ -455,9 +455,9 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
           </div>
 
           <div className="flex items-start justify-between gap-4 pb-2">
-            <span className="min-w-0 text-[12px] text-content/70">
+            <span className="min-w-0 text-[12.5px] text-content/70">
               Run on this schedule
-              <span className="block text-[11px] leading-tight text-content/45">
+              <span className="block text-[11.5px] leading-tight text-content/45">
                 You will confirm the resolved schedule and target before it starts.
               </span>
             </span>
@@ -474,14 +474,14 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
         </div>
 
         {error ? (
-          <p className="shrink-0 border-t border-edge px-4 py-2 text-[12px] leading-4 text-red-400/90">
+          <p className="shrink-0 border-t border-edge px-4 py-2 text-[12.5px] leading-4 text-red-400/90">
             {error}
           </p>
         ) : null}
 
         {confirming ? (
           <div className="shrink-0 border-t border-edge bg-content/5 px-4 py-3">
-            <p className="text-[12px] font-medium text-content">Enable this automation?</p>
+            <p className="text-[12.5px] font-medium text-content">Enable this automation?</p>
             <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11.5px] leading-tight">
               <Fact label="Runs">{describeSchedule(form.schedule, form.timeZone)}</Fact>
               <Fact label="First run">
@@ -507,14 +507,14 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
             type="button"
             disabled={busy}
             onClick={() => (confirming ? setConfirming(false) : onClose())}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
           >
             {confirming ? "Back" : "Cancel"}
           </button>
           <button
             type="submit"
             disabled={busy}
-            className="ui-fill ui-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40"
+            className="ui-fill ui-focus rounded-lg px-3.5 py-1.5 text-[12.5px] font-medium disabled:opacity-40"
           >
             {busy
               ? "Saving…"
@@ -538,7 +538,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
  * `w-24` a sized control adds, and which one won came down to stylesheet order.
  */
 const CONTROL =
-  "h-8 rounded-md bg-content/10 px-2 text-[13px] text-content outline-none placeholder:text-content/40";
+  "h-8 rounded-md bg-content/10 px-2 text-[13.5px] text-content outline-none placeholder:text-content/40";
 const FIELD = `${CONTROL} w-full`;
 
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
@@ -600,7 +600,7 @@ function Choice<T extends string>({
         ))}
       </select>
       {selected ? (
-        <p className="text-[11px] leading-snug text-content/45">{selected.hint}</p>
+        <p className="text-[11.5px] leading-snug text-content/45">{selected.hint}</p>
       ) : null}
     </Field>
   );
@@ -617,7 +617,7 @@ function IntervalFields({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[12px] text-content/45">Every</span>
+      <span className="text-[12.5px] text-content/45">Every</span>
       <input
         type="number"
         min={minEvery(schedule.unit)}
@@ -676,7 +676,7 @@ function WeeklyFields({
               onClick={() => toggle(day)}
               className={`rounded-md px-2 py-1 text-[11.5px] transition-colors ${
                 on
-                  ? "bg-accent/14 text-content"
+                  ? "bg-selected text-content"
                   : "text-content/45 hover:bg-hover hover:text-content/75"
               }`}
             >
@@ -702,7 +702,7 @@ function WeeklyFields({
         >
           Weekdays
         </button>
-        <span className="ml-auto text-[12px] text-content/45">at</span>
+        <span className="ml-auto text-[12.5px] text-content/45">at</span>
         <input
           type="time"
           value={schedule.time}
@@ -745,7 +745,7 @@ function OnceFields({
         onChange={(event) => move(event.target.value, time)}
         className={`${CONTROL} w-44`}
       />
-      <span className="text-[12px] text-content/45">at</span>
+      <span className="text-[12.5px] text-content/45">at</span>
       <input
         type="time"
         value={time}

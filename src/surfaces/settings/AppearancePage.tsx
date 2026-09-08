@@ -523,7 +523,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
                 key={preset.id}
                 type="button"
                 onClick={() => appearance.onPreset(preset)}
-                className="ui-focus flex items-center gap-2 rounded-md border border-edge bg-surface-raised px-2.5 py-2 text-left text-[12px] text-content/70 hover:border-edge-strong hover:text-content"
+                className="ui-focus flex items-center gap-2 rounded-md border border-edge bg-surface-raised px-2.5 py-2 text-left text-[12.5px] text-content/70 hover:border-edge-strong hover:text-content"
               >
                 <span
                   aria-hidden

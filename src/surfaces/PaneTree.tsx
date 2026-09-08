@@ -439,8 +439,8 @@ function Sash({
       }}
       className={
         row
-          ? "absolute z-10 w-px bg-content/10 focus-visible:bg-accent focus-visible:outline-none"
-          : "absolute z-10 h-px bg-content/10 focus-visible:bg-accent focus-visible:outline-none"
+          ? "absolute z-10 w-px bg-edge focus-visible:bg-accent focus-visible:outline-none"
+          : "absolute z-10 h-px bg-edge focus-visible:bg-accent focus-visible:outline-none"
       }
       style={
         row

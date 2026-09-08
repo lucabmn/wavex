@@ -48,7 +48,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
             <div key={label} className="flex flex-1 items-center gap-1.5">
               <div className="flex flex-1 flex-col gap-1">
                 <span
-                  className={`text-[11px] font-medium ${
+                  className={`text-[11.5px] font-medium ${
                     index === step ? "text-content" : "text-content/35"
                   }`}
                 >
@@ -73,13 +73,13 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t border-edge px-5 py-3">
-          <span className="text-[11px] text-content/35">Step {step + 1} of 3</span>
+          <span className="text-[11.5px] text-content/35">Step {step + 1} of 3</span>
           <div className="flex gap-2">
             {step > 0 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
               >
                 Back
               </button>
@@ -88,7 +88,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
-                className="rounded-md ui-fill px-3 py-1.5 text-[12px] font-medium"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12.5px] font-medium"
               >
                 {step === 0 && !project ? "Continue without a project" : "Continue"}
               </button>
@@ -98,7 +98,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
                 // oxlint-disable-next-line jsx-a11y/no-autofocus -- the dialog exists to finish setup
                 autoFocus
                 onClick={onComplete}
-                className="rounded-md ui-fill px-3 py-1.5 text-[12px] font-medium"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12.5px] font-medium"
               >
                 Start working
               </button>
@@ -180,7 +180,7 @@ function AgentsStep() {
               .catch(() => undefined)
               .finally(() => setProbing(false));
           }}
-          className="shrink-0 text-[12px] text-content/55 hover:text-content disabled:opacity-50"
+          className="shrink-0 text-[12.5px] text-content/55 hover:text-content disabled:opacity-50"
         >
           {probing ? "Scanning…" : "Rescan"}
         </button>
@@ -203,7 +203,7 @@ function AgentsStep() {
                   {HARNESS_TITLE[id]}
                 </span>
                 {!available && hasProbedHarnessAvailability() ? (
-                  <span className="block truncate font-mono text-[11px] text-content/45">
+                  <span className="block truncate font-mono text-[11.5px] text-content/45">
                     {harnessUnavailableHint(id)}
                   </span>
                 ) : null}

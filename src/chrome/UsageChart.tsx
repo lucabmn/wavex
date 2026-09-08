@@ -76,7 +76,7 @@ export function UsageChart({
       {providers.length > 0 ? (
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           {providers.map((provider) => (
-            <span key={provider} className="inline-flex items-center gap-1.5 text-[11px]">
+            <span key={provider} className="inline-flex items-center gap-1.5 text-[11.5px]">
               <span
                 aria-hidden
                 className="size-2 shrink-0 rounded-[2px]"
@@ -160,7 +160,7 @@ function Tooltip({
 
   return (
     <div
-      className="pointer-events-none absolute bottom-full z-10 mb-2 w-max max-w-[15rem] rounded-lg border border-edge bg-[var(--color-background-base)] px-2.5 py-2 text-[11px] shadow-lg"
+      className="pointer-events-none absolute bottom-full z-10 mb-2 w-max max-w-[15rem] rounded-lg border border-edge bg-[var(--color-background-base)] px-2.5 py-2 text-[11.5px] shadow-lg"
       style={{ left: `${centre}%`, transform: `translateX(${shift})` }}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-3">

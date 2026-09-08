@@ -74,7 +74,7 @@ export function QueueStrip({
         data-message-queue-card
       >
         {paused ? (
-          <div className="flex h-7 items-center gap-2 border-b border-edge text-[12px]">
+          <div className="flex h-7 items-center gap-2 border-b border-edge text-[12.5px]">
             <Pause className="size-3.5" />
             <span className="min-w-0 flex-1 truncate">Queue paused because you interrupted</span>
             <button
@@ -98,7 +98,7 @@ export function QueueStrip({
           return (
             <div
               key={prompt.id}
-              className={`flex min-h-7 items-center gap-2 text-[12px] ${
+              className={`flex min-h-7 items-center gap-2 text-[12.5px] ${
                 index > 0 ? "border-t border-edge" : ""
               }`}
             >
@@ -120,7 +120,7 @@ export function QueueStrip({
                         saveEdit(prompt);
                       }
                     }}
-                    className="min-h-6 min-w-0 flex-1 resize-none rounded-md border border-edge-strong bg-content/5 px-1.5 py-0.5 text-[12px] text-content outline-none focus:border-edge-strong"
+                    className="min-h-6 min-w-0 flex-1 resize-none rounded-md border border-edge-strong bg-content/5 px-1.5 py-0.5 text-[12.5px] text-content outline-none focus:border-edge-strong"
                   />
                   <button
                     type="button"

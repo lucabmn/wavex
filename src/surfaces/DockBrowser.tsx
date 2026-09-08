@@ -218,7 +218,7 @@ export function DockBrowser({ browser, active, onChange }: Props) {
           autoCapitalize="off"
           aria-label="Address"
           placeholder="localhost:3000 or example.com"
-          className="mx-1 h-6 min-w-0 flex-1 rounded-md bg-content/5 px-2 text-[12px] text-content placeholder:text-content/35 focus:bg-content/8 focus:outline-none focus:ring-1 focus:ring-accent/60"
+          className="mx-1 h-6 min-w-0 flex-1 rounded-md bg-content/5 px-2 text-[12.5px] text-content placeholder:text-content/35 focus:bg-content/8 focus:outline-none focus:ring-1 focus:ring-accent/60"
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== "Escape") return;
@@ -292,7 +292,7 @@ function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
             key={suggestion}
             type="button"
             onClick={() => onPick(suggestion)}
-            className="rounded-md bg-content/5 px-2 py-1 text-[11px] text-content/60 transition-colors hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="rounded-md bg-content/5 px-2 py-1 text-[11.5px] text-content/60 transition-colors hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {suggestion}
           </button>

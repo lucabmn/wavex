@@ -173,7 +173,7 @@ export function ActivityView({
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
         {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <span className="shrink-0 text-content/45">Activity</span>
           <span aria-hidden className="shrink-0 text-content/25">
             /
@@ -242,7 +242,7 @@ export function ActivityView({
           </div>
         ) : null}
         {error ? (
-          <p className="flex items-center gap-2 px-4 pt-3 text-[12px] text-amber-300">
+          <p className="flex items-center gap-2 px-4 pt-3 text-[12.5px] text-amber-300">
             <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
             {error}
           </p>
@@ -263,12 +263,12 @@ export function ActivityView({
             onStop={(card) => card.live && stop(card.live)}
           />
         ) : agents.length === 0 ? (
-          <p className="px-4 py-6 text-[13px] text-content/45">
+          <p className="px-4 py-6 text-[13.5px] text-content/45">
             No agent is working right now. Turns from every window show up here while they run.
           </p>
         ) : filteredAgents.length === 0 ? (
           <div className="flex flex-col items-start gap-2 px-4 py-6">
-            <p className="text-[13px] text-content/45">Nothing matches this filter.</p>
+            <p className="text-[13.5px] text-content/45">Nothing matches this filter.</p>
             <button
               type="button"
               onClick={() => setFilter("all")}
@@ -281,7 +281,7 @@ export function ActivityView({
           <div className="flex flex-col gap-4 p-3">
             {projects.map(([cwd, rows]) => (
               <section key={cwd} className="flex flex-col gap-1">
-                <h2 className="px-1 text-[11px] font-medium tracking-wide text-content/40 uppercase">
+                <h2 className="px-1 text-[11.5px] font-medium tracking-wide text-content/40 uppercase">
                   {projectName(cwd)}
                 </h2>
                 {rows.map((agent) => (
@@ -332,18 +332,18 @@ function AgentRow({
       >
         <HarnessIcon harness={agent.harness} className="size-4 shrink-0" />
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[13px] text-content">{agent.title}</span>
-          <span className="truncate text-[12px] text-content/45">{agent.activity}</span>
+          <span className="truncate text-[13.5px] text-content">{agent.title}</span>
+          <span className="truncate text-[12.5px] text-content/45">{agent.activity}</span>
         </span>
       </button>
       {waiting > 0 ? (
-        <span className="shrink-0 rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] text-amber-300">
+        <span className="shrink-0 rounded-full bg-amber-400/15 px-2 py-0.5 text-[11.5px] text-amber-300">
           {waiting === 1 ? "1 needs you" : `${waiting} need you`}
         </span>
       ) : null}
-      <span className="shrink-0 text-[11px] text-content/35">{HARNESS_LABEL[agent.harness]}</span>
+      <span className="shrink-0 text-[11.5px] text-content/35">{HARNESS_LABEL[agent.harness]}</span>
       {elapsed ? (
-        <span className="w-12 shrink-0 text-right font-mono text-[11px] tabular-nums text-content/40">
+        <span className="w-12 shrink-0 text-right font-mono text-[11.5px] tabular-nums text-content/40">
           {elapsed}
         </span>
       ) : null}

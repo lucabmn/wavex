@@ -345,7 +345,7 @@ function AgentTranscriptComponent({
           <div className="flex justify-center px-4 py-3">
             <button
               type="button"
-              className="rounded-md bg-content/8 px-2.5 py-1.5 font-sans text-[12px] text-content/60 hover:bg-hover hover:text-content"
+              className="rounded-md bg-content/8 px-2.5 py-1.5 font-sans text-[12.5px] text-content/60 hover:bg-hover hover:text-content"
               onClick={loadEarlier}
             >
               Load earlier messages
@@ -997,13 +997,13 @@ function ResponseImage({ file }: { file: Attachment }) {
       >
         <img src={src} alt={file.name} className="max-h-96 max-w-full object-contain" />
       </button>
-      <div className="mt-1 flex items-center gap-2 text-[11px] text-content/45">
+      <div className="mt-1 flex items-center gap-2 text-[11.5px] text-content/45">
         <span className="min-w-0 truncate">{file.name}</span>
         <button type="button" onClick={onSave} className="shrink-0 hover:text-content">
           Save…
         </button>
       </div>
-      {error ? <p className="mt-1 text-[11px] text-red-400/90">{error}</p> : null}
+      {error ? <p className="mt-1 text-[11.5px] text-red-400/90">{error}</p> : null}
       {open ? (
         <Modal onClose={() => setOpen(false)} title={file.name}>
           <div className="flex flex-col gap-3">
@@ -1012,7 +1012,7 @@ function ResponseImage({ file }: { file: Attachment }) {
               <button
                 type="button"
                 onClick={onSave}
-                className="rounded-md ui-fill px-3 py-1.5 text-[12px]"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12.5px]"
               >
                 Save to disk
               </button>
@@ -1122,7 +1122,7 @@ function UserMessageBlock({
               }
             }}
           />
-          <div className="mt-1 flex justify-end gap-2 text-[11px]">
+          <div className="mt-1 flex justify-end gap-2 text-[11.5px]">
             <button
               type="button"
               className="rounded px-2 py-0.5 text-content/50 hover:text-content"
@@ -2097,7 +2097,7 @@ function ToolCall({
         </div>
       )}
       {open && expandable ? (
-        <pre className="mt-1.5 min-w-0 whitespace-pre-wrap break-words px-2.5 font-mono text-[12px] leading-5 text-content/55">
+        <pre className="mt-1.5 min-w-0 whitespace-pre-wrap break-words px-2.5 font-mono text-[12.5px] leading-5 text-content/55">
           {expanded}
         </pre>
       ) : null}
@@ -2158,7 +2158,7 @@ function ToolCallSummary({
   if (!action || !target) {
     return (
       <span
-        className={`min-w-0 flex-1 truncate font-mono text-[13px] ${
+        className={`min-w-0 flex-1 truncate font-mono text-[13.5px] ${
           failed ? "text-red-400" : chip ? "text-content/65" : "text-content/80"
         }`}
       >
@@ -2181,7 +2181,7 @@ function ToolCallSummary({
   const targetTone = failed ? "text-red-400" : chip ? "text-content/70" : "text-content/85";
 
   return (
-    <span className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[13px]">
+    <span className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[13.5px]">
       <span className={`shrink-0 font-sans text-sm ${actionTone}`}>{action}</span>
       {isFile ? (
         canOpen ? (
@@ -2247,14 +2247,14 @@ function ApprovalControls({
     <div className="mt-1.5 flex gap-2">
       <button
         type="button"
-        className="rounded-md ui-fill px-2.5 py-0.5 text-[11px]"
+        className="rounded-md ui-fill px-2.5 py-0.5 text-[11.5px]"
         onClick={() => onApproval?.(approval.requestId, "allow")}
       >
         Allow
       </button>
       <button
         type="button"
-        className="rounded-md bg-content/10 px-2.5 py-0.5 text-[11px] text-content/70 hover:bg-hover"
+        className="rounded-md bg-content/10 px-2.5 py-0.5 text-[11.5px] text-content/70 hover:bg-hover"
         onClick={() => onApproval?.(approval.requestId, "deny")}
       >
         Deny
@@ -2281,11 +2281,11 @@ function HandoffDivider({ block }: { block: Block }) {
               ? `Preparing a handoff to ${HARNESS_TITLE[meta.to]}`
               : `Continued with ${label}`
           }
-          className="flex max-w-[min(100%,20rem)] items-center gap-1.5 px-1.5 font-sans text-[12px] text-content/55"
+          className="flex max-w-[min(100%,20rem)] items-center gap-1.5 px-1.5 font-sans text-[12.5px] text-content/55"
         >
           {preparing ? (
             <>
-              <TerminalSpinner className="inline-block w-3.5 shrink-0 select-none text-center text-[11px] leading-none text-content/45" />
+              <TerminalSpinner className="inline-block w-3.5 shrink-0 select-none text-center text-[11.5px] leading-none text-content/45" />
               <Shimmer duration={1.4}>{label}</Shimmer>
             </>
           ) : (

@@ -79,7 +79,7 @@ export function ModalPanel({
             {description ? (
               <p
                 id={descriptionId}
-                className="mt-1 truncate text-[12px] leading-snug text-content/45"
+                className="mt-1 truncate text-[12.5px] leading-snug text-content/45"
               >
                 {description}
               </p>

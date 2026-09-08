@@ -115,7 +115,7 @@ export function RaceCompare({ race, sessions, onStopOne, onStopAll, onClose }: P
       className="h-[min(760px,calc(100vh-96px))]"
     >
       <div className="flex items-center gap-2 px-4 pb-2 pt-1">
-        <p className="min-w-0 flex-1 text-[12px] leading-snug text-content/45">
+        <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-content/45">
           Runners share one checkout. Accept stages into the git index; Undo restores the pre-race
           snapshot. Neither touches your commits.
         </p>
@@ -123,7 +123,7 @@ export function RaceCompare({ race, sessions, onStopOne, onStopAll, onClose }: P
           <button
             type="button"
             onClick={onStopAll}
-            className="flex shrink-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+            className="flex shrink-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
           >
             <Square className="size-2.5 fill-current" strokeWidth={0} />
             Stop all
@@ -229,14 +229,14 @@ function RunnerColumn({
     <section className="flex h-96 flex-col bg-background-base">
       <header className="flex shrink-0 items-center gap-2 border-b border-edge px-2.5 py-2">
         <HarnessIcon harness={harness} className="size-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-[13px] text-content">
+        <span className="min-w-0 flex-1 truncate text-[13.5px] text-content">
           {HARNESS_TITLE[harness]}
         </span>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${STATUS_TONE[status]}`}>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11.5px] ${STATUS_TONE[status]}`}>
           {RACE_STATUS_LABEL[status]}
         </span>
         {elapsed != null ? (
-          <span className="shrink-0 font-mono text-[11px] tabular-nums text-content/40">
+          <span className="shrink-0 font-mono text-[11.5px] tabular-nums text-content/40">
             {formatLiveElapsed(0, elapsed)}
           </span>
         ) : null}
@@ -265,13 +265,13 @@ function RunnerColumn({
           </button>
         )}
       </header>
-      <p className="shrink-0 truncate px-2.5 pt-1.5 font-mono text-[11px] text-content/40">
+      <p className="shrink-0 truncate px-2.5 pt-1.5 font-mono text-[11.5px] text-content/40">
         {session?.model ?? choice?.model ?? ""}
         {status === "waiting" ? " · waiting on approval in its pane" : ""}
       </p>
       <div className="min-h-0 flex-1">
         {models.length === 0 ? (
-          <p className="px-3 py-4 text-[12px] text-content/45">
+          <p className="px-3 py-4 text-[12.5px] text-content/45">
             {running ? "No changes yet — still working." : "No changes against the race baseline."}
           </p>
         ) : (

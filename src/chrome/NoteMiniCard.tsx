@@ -40,15 +40,15 @@ export function NoteMiniCard({ card, onDismiss, embedded = false }: Props) {
       <div className="flex w-full flex-col text-left">
         <span className="flex min-w-0 items-center gap-1.5">
           <File className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
-          <span className="min-w-0 truncate text-[11px] text-content/50">
+          <span className="min-w-0 truncate text-[11.5px] text-content/50">
             Note{!embedded && card.slug ? ` · ${card.slug}` : ""}
           </span>
         </span>
-        <span className="mt-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
+        <span className="mt-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
           {card.title || "Untitled"}
         </span>
         {!embedded && project ? (
-          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-content/45">
+          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11.5px] text-content/45">
             {logoPath ? (
               <ProjectLogoIcon
                 path={logoPath}

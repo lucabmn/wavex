@@ -187,7 +187,7 @@ function TabHarnesses({
           }`}
         >
           {busy.has(harness) ? (
-            <TerminalSpinner className="inline-block w-3.5 select-none text-center text-[11px] leading-none text-accent" />
+            <TerminalSpinner className="inline-block w-3.5 select-none text-center text-[11.5px] leading-none text-accent" />
           ) : (
             <HarnessIcon harness={harness} className="size-3.5 shrink-0" />
           )}
@@ -304,8 +304,8 @@ function TitleTabItem({
             <span
               className={`min-w-0 truncate leading-none ${
                 meta
-                  ? "text-[13px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
-                  : "text-[13px]"
+                  ? "text-[13.5px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
+                  : "text-[13.5px]"
               }`}
             >
               {headline}

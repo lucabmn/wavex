@@ -54,7 +54,7 @@ export function ProfileSwitchConfirm({
                 <span className="block truncate text-[12.5px] text-content">
                   {sessionDisplayTitle(session.title, session.harness)}
                 </span>
-                <span className="block truncate text-[11px] text-content/45">
+                <span className="block truncate text-[11.5px] text-content/45">
                   {sessionState(session)} · {basename(session.cwd)}
                 </span>
               </span>
@@ -62,7 +62,7 @@ export function ProfileSwitchConfirm({
           ))}
         </ul>
         {terminalCount > 0 ? (
-          <p className="text-[12px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-content/55">
             {terminalCount} open terminal{terminalCount === 1 ? "" : "s"} will also stop.
           </p>
         ) : null}
@@ -70,7 +70,7 @@ export function ProfileSwitchConfirm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
           >
             Stay here
           </button>
@@ -79,7 +79,7 @@ export function ProfileSwitchConfirm({
             // oxlint-disable-next-line jsx-a11y/no-autofocus -- the dialog exists to decide this
             autoFocus
             onClick={onConfirm}
-            className="rounded-md ui-fill px-3 py-1.5 text-[12px] font-medium"
+            className="rounded-md ui-fill px-3 py-1.5 text-[12.5px] font-medium"
           >
             Switch to {target.name}
           </button>

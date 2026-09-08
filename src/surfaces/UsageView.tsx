@@ -124,7 +124,7 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
         {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <span className="shrink-0 text-content/45">Usage</span>
           <span aria-hidden className="shrink-0 text-content/25">
             /
@@ -225,8 +225,8 @@ function Card({
     <section className="rounded-xl border border-edge p-4">
       {title ? (
         <header className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="text-[12px] font-medium text-content/70">{title}</h2>
-          {hint ? <span className="text-[11px] text-content/35">{hint}</span> : null}
+          <h2 className="text-[12.5px] font-medium text-content/70">{title}</h2>
+          {hint ? <span className="text-[11.5px] text-content/35">{hint}</span> : null}
         </header>
       ) : null}
       {children}
@@ -279,11 +279,11 @@ function SummaryCards({ report }: { report: UsageReport }) {
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-edge px-3.5 py-3">
-      <div className="text-[11px] text-content/45">{label}</div>
+      <div className="text-[11.5px] text-content/45">{label}</div>
       <div className="mt-1 truncate text-[19px] font-medium tabular-nums leading-tight">
         {value}
       </div>
-      <div className="mt-0.5 h-4 truncate text-[11px] text-content/35">{hint ?? ""}</div>
+      <div className="mt-0.5 h-4 truncate text-[11.5px] text-content/35">{hint ?? ""}</div>
     </div>
   );
 }
@@ -307,17 +307,17 @@ function ProviderTable({
         const share = total > 0 ? value / total : 0;
         return (
           <li key={entry.provider} className="flex flex-col gap-1.5">
-            <div className="flex items-baseline justify-between gap-3 text-[12px]">
+            <div className="flex items-baseline justify-between gap-3 text-[12.5px]">
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 <HarnessIcon harness={entry.provider} className="size-3.5 shrink-0" />
                 <span className="truncate">{HARNESS_LABEL[entry.provider]}</span>
-                <span className="shrink-0 text-[11px] text-content/30">
+                <span className="shrink-0 text-[11.5px] text-content/30">
                   {formatCount(entry.sessions)} sessions
                 </span>
               </span>
               <span className="shrink-0 tabular-nums">
                 {format(value)}
-                <span className="ml-1.5 text-[11px] text-content/35">{formatShare(share)}</span>
+                <span className="ml-1.5 text-[11.5px] text-content/35">{formatShare(share)}</span>
               </span>
             </div>
             <ShareBar share={share} color={USAGE_PROVIDER_COLOR[entry.provider]} />
@@ -352,10 +352,10 @@ function ModelTable({
         const partial = metric === "cost" && entry.costSource === "unpriced" && value > 0;
         return (
           <li key={`${entry.provider} ${entry.model}`} className="flex flex-col gap-1.5">
-            <div className="flex items-baseline justify-between gap-3 text-[12px]">
+            <div className="flex items-baseline justify-between gap-3 text-[12.5px]">
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 <HarnessIcon harness={entry.provider} className="size-3.5 shrink-0 opacity-60" />
-                <span className="truncate font-mono text-[11px]">{entry.model}</span>
+                <span className="truncate font-mono text-[11.5px]">{entry.model}</span>
               </span>
               <span className="shrink-0 tabular-nums">
                 {unpriced ? (
@@ -373,7 +373,9 @@ function ModelTable({
                         +
                       </span>
                     ) : null}
-                    <span className="ml-1.5 text-[11px] text-content/35">{formatShare(share)}</span>
+                    <span className="ml-1.5 text-[11.5px] text-content/35">
+                      {formatShare(share)}
+                    </span>
                   </>
                 )}
               </span>
@@ -383,7 +385,7 @@ function ModelTable({
         );
       })}
       {entries.length > 12 ? (
-        <li className="text-[11px] text-content/35">+{entries.length - 12} more</li>
+        <li className="text-[11.5px] text-content/35">+{entries.length - 12} more</li>
       ) : null}
     </ul>
   );
@@ -458,7 +460,7 @@ function Footnotes({
   }
 
   return (
-    <footer className="flex flex-col gap-1 pb-4 text-[11px] leading-relaxed text-content/35">
+    <footer className="flex flex-col gap-1 pb-4 text-[11.5px] leading-relaxed text-content/35">
       {notes.map((note) => (
         <p key={note}>{note}</p>
       ))}
@@ -477,7 +479,7 @@ function Notice({ children }: { children: React.ReactNode }) {
   return (
     <div
       role="alert"
-      className="rounded-xl border border-red-400/30 px-4 py-3 text-[12px] text-red-400"
+      className="rounded-xl border border-red-400/30 px-4 py-3 text-[12.5px] text-red-400"
     >
       {children}
     </div>
@@ -487,8 +489,8 @@ function Notice({ children }: { children: React.ReactNode }) {
 function EmptyState({ quiet }: { quiet: number }) {
   return (
     <div className="flex flex-col items-center gap-2 py-24 text-center">
-      <p className="text-[13px] text-content/60">No usage in this window</p>
-      <p className="max-w-sm text-[12px] text-content/35">
+      <p className="text-[13.5px] text-content/60">No usage in this window</p>
+      <p className="max-w-sm text-[12.5px] text-content/35">
         {quiet > 0
           ? "Usage is read from each CLI's own session transcripts. Run a turn with one of them, or widen the window."
           : "Widen the window, or run a turn with one of the installed agents."}
@@ -501,7 +503,7 @@ function Skeleton() {
   return (
     <div className="flex flex-col items-center gap-2 py-24 text-content/35">
       <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} aria-hidden />
-      <span className="text-[12px]">Reading local transcripts…</span>
+      <span className="text-[12.5px]">Reading local transcripts…</span>
     </div>
   );
 }

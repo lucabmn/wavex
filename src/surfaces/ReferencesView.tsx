@@ -73,7 +73,7 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
   if (references.targets.length === 0) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
-        <p className="text-[13px] text-content/70">
+        <p className="text-[13.5px] text-content/70">
           No references to <span className="font-mono">{references.symbol}</span>
         </p>
       </div>
@@ -121,8 +121,8 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
                     type="button"
                     data-selected={index === selected}
                     onClick={() => open(target, index)}
-                    className={`flex w-full items-center gap-2 py-0.5 pr-2 pl-7 text-left font-mono text-[11px] hover:bg-hover ${
-                      index === selected ? "bg-accent/14 text-content" : "text-content/60"
+                    className={`flex w-full items-center gap-2 py-0.5 pr-2 pl-7 text-left font-mono text-[11.5px] hover:bg-hover ${
+                      index === selected ? "bg-selected text-content" : "text-content/60"
                     }`}
                   >
                     <span className="w-9 shrink-0 text-right tabular-nums text-content/35">

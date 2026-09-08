@@ -54,7 +54,7 @@ export function LanguageServersPage() {
 
   return (
     <>
-      <p className="pb-5 text-[12px] leading-relaxed text-content/45">
+      <p className="pb-5 text-[12.5px] leading-relaxed text-content/45">
         wavex uses the language servers you already have installed and never downloads one. None run
         until you turn them on — the editor offers one the first time you open a file it covers. A
         server starts with the first such file, and stops when you close the project, switch

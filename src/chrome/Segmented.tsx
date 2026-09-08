@@ -40,7 +40,7 @@ export function Segmented<T extends string | number>({
             title={Icon ? option.label : undefined}
             onClick={() => onSelect(option.value)}
             data-selected={option.value === value ? "true" : undefined}
-            className={`ui-segment ui-focus flex items-center justify-center rounded text-[11px] font-medium leading-none text-content/55 ${
+            className={`ui-segment ui-focus flex items-center justify-center rounded text-[11.5px] font-medium leading-none text-content/55 ${
               Icon ? "size-[22px]" : "px-2.5 py-[4px]"
             }`}
           >

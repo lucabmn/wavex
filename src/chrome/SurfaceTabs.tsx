@@ -229,7 +229,7 @@ export function SurfaceTabs({
                   if (sortable.consumeClick()) return;
                   onSelectFile(file.id);
                 }}
-                className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
+                className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                   canDrag ? "cursor-grab active:cursor-grabbing" : ""
                 } ${active ? "font-medium" : ""}`}
               >

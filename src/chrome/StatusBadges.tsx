@@ -25,11 +25,11 @@ export function AgentStatusBadge({
   if (status === "working") {
     return (
       <span
-        className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-accent"
+        className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-accent"
         title="Agent is working"
         aria-label="Agent is working"
       >
-        <TerminalSpinner className="inline-block w-3 select-none text-center text-[11px] leading-none text-accent" />
+        <TerminalSpinner className="inline-block w-3 select-none text-center text-[11.5px] leading-none text-accent" />
         {compact ? null : <span>Working…</span>}
       </span>
     );
@@ -37,7 +37,7 @@ export function AgentStatusBadge({
   if (status === "needs-approval") {
     return (
       <span
-        className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-amber-400"
+        className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-amber-400"
         title="Agent needs approval to continue"
         aria-label="Agent needs approval to continue"
       >
@@ -48,7 +48,7 @@ export function AgentStatusBadge({
   }
   return (
     <span
-      className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-emerald-400"
+      className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-emerald-400"
       title="Agent finished — new reply to read"
       aria-label="Agent finished, new reply to read"
     >
@@ -82,7 +82,7 @@ export function GitStatusBadge({
     .join(" · ");
   return (
     <span
-      className="flex min-w-0 flex-1 items-center gap-1 text-[11px] text-content/45"
+      className="flex min-w-0 flex-1 items-center gap-1 text-[11.5px] text-content/45"
       title={title}
       aria-label={title}
     >
@@ -114,7 +114,7 @@ export function CheckBadge({ errors }: { errors: number }) {
   const label = checkLabel(errors);
   return (
     <span
-      className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-red-400"
+      className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-red-400"
       title={`${label} in open files`}
       aria-label={`${label} in open files`}
     >

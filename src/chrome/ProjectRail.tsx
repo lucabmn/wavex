@@ -424,7 +424,7 @@ export function ProjectRail({
     <nav
       ref={resize.setPaneRef}
       aria-label="Projects"
-      className="sidebar-glass ui-rule-r relative flex shrink-0 flex-col"
+      className="sidebar-glass relative flex shrink-0 flex-col"
     >
       <div
         className="flex h-10 shrink-0 select-none items-center pr-1.5"
@@ -723,7 +723,7 @@ function LiveAgentsPreview({
         >
           <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-accent animate-pulse" />
           <span className="min-w-0 flex-1 truncate text-xs text-content/50">Working</span>
-          <span className="text-[11px] tabular-nums text-content/40">{agents.length}</span>
+          <span className="text-[11.5px] tabular-nums text-content/40">{agents.length}</span>
           {collapsed ? (
             <ChevronDown className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
           ) : (
@@ -757,7 +757,7 @@ function LiveAgentsPreview({
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setExpanded((open) => !open)}
-                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11px] text-content/50 hover:bg-hover hover:text-content"
+                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11.5px] text-content/50 hover:bg-hover hover:text-content"
               >
                 {expanded ? (
                   <ChevronUp className="size-3" strokeWidth={1.75} />
@@ -821,9 +821,7 @@ function LiveAgentCard({
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect?.(agent.id)}
       data-selected={selected ? "true" : undefined}
-      className={`ui-row ui-focus relative flex w-full flex-col rounded-lg px-2 py-1.5 text-left transition-colors ${
-        selected ? "" : "hover:bg-hover"
-      }`}
+      className="ui-row ui-focus relative flex w-full flex-col rounded-md px-2 py-1.5 text-left"
     >
       <span className="flex min-w-0 items-center gap-2">
         <ProjectMascot
@@ -834,17 +832,17 @@ function LiveAgentCard({
           active={live}
         />
         {live ? (
-          <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug">
+          <p className="min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug">
             {agent.title}
           </p>
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug">
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug">
             {agent.title}
           </span>
         )}
       </span>
       <span
-        className={`mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11px] leading-tight ${
+        className={`mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight ${
           agent.needsApproval
             ? "text-amber-400"
             : agent.done
@@ -857,11 +855,11 @@ function LiveAgentCard({
         ) : agent.done ? (
           <Check className="size-3 shrink-0" strokeWidth={2.25} />
         ) : (
-          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11px] leading-none" />
+          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11.5px] leading-none" />
         )}
         <span className="min-w-0 truncate">{activity}</span>
       </span>
-      <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11px] leading-tight text-content/45">
+      <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight text-content/45">
         <HarnessIcon harness={agent.harness} className="size-3 shrink-0" />
         <span className="min-w-0 flex-1 truncate">
           {project}
@@ -936,7 +934,7 @@ function ProjectSection({
         ) : null}
       </div>
       {items.length === 0 && emptyLabel ? (
-        <p className="px-4 pb-1 text-[11px] leading-tight text-content/40">{emptyLabel}</p>
+        <p className="px-4 pb-1 text-[11.5px] leading-tight text-content/40">{emptyLabel}</p>
       ) : null}
       <div className="flex flex-col gap-px px-2">
         {items.map((item, index) => (
@@ -1036,12 +1034,8 @@ function ProjectCard({
     <div
       ref={(el) => sortable.setItemRef(item.path, el)}
       data-selected={selected ? "true" : undefined}
-      className={`ui-row group relative flex h-8 touch-none items-stretch rounded-lg px-2 transition-colors ${
-        selected
-          ? "text-content"
-          : expanded
-            ? "text-content hover:bg-hover"
-            : "opacity-60 hover:bg-hover hover:text-content"
+      className={`ui-row group relative flex h-8 touch-none items-stretch rounded-md px-2 ${
+        expanded || selected ? "" : "opacity-75"
       } ${dragging ? "opacity-40" : ""} cursor-default`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -1060,10 +1054,10 @@ function ProjectCard({
       onContextMenu={(event) => onContextMenu(item.path, event)}
     >
       {showStart ? (
-        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 bg-accent" />
       ) : null}
       {showEnd ? (
-        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 bg-accent" />
       ) : null}
       <button
         type="button"
@@ -1177,7 +1171,7 @@ function ProjectDiffStat({
     <span
       title={`${label} uncommitted`}
       aria-label={`${label} uncommitted`}
-      className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[11px] font-semibold tabular-nums"
+      className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[11.5px] font-semibold tabular-nums"
     >
       {files > 0 ? (
         <span className="truncate font-sans font-medium text-content/55">{files} changed</span>

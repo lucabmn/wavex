@@ -59,14 +59,14 @@ export function RenameSymbolDialog({ symbol, onCancel, onRename }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="h-7 rounded-md px-2.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+            className="h-7 rounded-md px-2.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!trimmed || trimmed === symbol}
-            className="ui-fill ui-focus h-7 rounded-lg px-3 text-[12px] font-medium disabled:opacity-40"
+            className="ui-fill ui-focus h-7 rounded-lg px-3 text-[12.5px] font-medium disabled:opacity-40"
           >
             Rename
           </button>

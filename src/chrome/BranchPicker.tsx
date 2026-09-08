@@ -254,7 +254,7 @@ export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }:
           }
         >
           <GitBranch className="size-3.5 shrink-0" strokeWidth={1.5} />
-          <span className="relative truncate font-mono text-[12px]">
+          <span className="relative truncate font-mono text-[12.5px]">
             {awaitingBranch ? (
               <>
                 {/*
@@ -323,7 +323,7 @@ export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }:
                 autoCorrect="off"
                 autoCapitalize="off"
                 disabled={busy}
-                className="min-w-0 flex-1 bg-transparent text-[12px] text-content outline-none placeholder:text-content/40 disabled:opacity-60"
+                className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content/40 disabled:opacity-60"
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setActive(0);
@@ -341,7 +341,7 @@ export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }:
               onPick={pick}
             />
             {error ? (
-              <p className="max-h-16 shrink-0 overflow-y-auto whitespace-pre-wrap border-t border-edge px-2.5 py-2 text-[11px] leading-4 text-red-400/90">
+              <p className="max-h-16 shrink-0 overflow-y-auto whitespace-pre-wrap border-t border-edge px-2.5 py-2 text-[11.5px] leading-4 text-red-400/90">
                 {error}
               </p>
             ) : null}
@@ -375,7 +375,7 @@ function BranchList({
   }, [active]);
 
   if (rows.length === 0) {
-    return <div className="px-3 py-4 text-[12px] text-content/50">{emptyLabel}</div>;
+    return <div className="px-3 py-4 text-[12.5px] text-content/50">{emptyLabel}</div>;
   }
 
   return (
@@ -407,12 +407,12 @@ function BranchList({
               row.kind === "create"
                 ? `mb-1 flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left disabled:opacity-60 ${
                     highlighted
-                      ? "bg-accent/14 text-content"
+                      ? "bg-selected text-content"
                       : "bg-content/10 text-content hover:bg-hover"
                   }`
                 : `flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left disabled:opacity-60 ${
                     highlighted || selected
-                      ? "bg-accent/14 text-content"
+                      ? "bg-selected text-content"
                       : "text-content hover:bg-hover"
                   }`
             }
@@ -420,7 +420,9 @@ function BranchList({
             {row.kind === "create" ? (
               <>
                 <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="min-w-0 truncate text-[12px]">Create and checkout {row.name}</span>
+                <span className="min-w-0 truncate text-[12.5px]">
+                  Create and checkout {row.name}
+                </span>
               </>
             ) : (
               <>
@@ -429,7 +431,7 @@ function BranchList({
                 ) : (
                   <GitBranch className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
                 )}
-                <span className="min-w-0 flex-1 truncate font-mono text-[12px]">
+                <span className="min-w-0 flex-1 truncate font-mono text-[12.5px]">
                   {row.branch.name}
                 </span>
                 {row.branch.remote ? (

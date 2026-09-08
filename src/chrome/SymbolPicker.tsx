@@ -174,14 +174,14 @@ export function SymbolPicker({ open, cwd, path, onOpenFile, onClose }: Props) {
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-content outline-none placeholder:text-content/40"
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none placeholder:text-content/40"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={onSearchKey}
             />
           </label>
         </div>
         {results.length === 0 ? (
-          <p className="px-3 pt-1 pb-3 text-[12px] text-content/50">
+          <p className="px-3 pt-1 pb-3 text-[12.5px] text-content/50">
             {emptyLabel({ loading, workspaceMode, hasFile: !!path, term })}
           </p>
         ) : (
@@ -261,7 +261,7 @@ function SymbolList({
             onMouseEnter={() => onActive(index)}
             onClick={() => onPick(symbol)}
             className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm leading-none ${
-              highlighted ? "bg-accent/14 text-content" : "text-content"
+              highlighted ? "bg-selected text-content" : "text-content"
             }`}
           >
             <span className="w-16 shrink-0 truncate font-mono text-[10.5px] text-content/40">
@@ -274,7 +274,7 @@ function SymbolList({
                 active={symbol.positions.length > 0}
               />
             </span>
-            <span className="min-w-0 max-w-[45%] truncate font-mono text-[11px] text-content/40">
+            <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-content/40">
               {showPath ? displayPath(symbol.path, cwd) : symbol.container}
             </span>
           </button>

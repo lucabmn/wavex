@@ -109,7 +109,7 @@ export function ModelMenu({
             value={query}
             placeholder="Search models..."
             aria-label="Search models"
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-content outline-none placeholder:text-content/40"
+            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content/40"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onSearchKey}
           />
@@ -181,7 +181,7 @@ function ModelList({
   }, [models.length]);
 
   if (models.length === 0) {
-    return <div className="px-3 py-4 text-[12px] text-content/50">{emptyLabel}</div>;
+    return <div className="px-3 py-4 text-[12.5px] text-content/50">{emptyLabel}</div>;
   }
 
   return (
@@ -226,7 +226,7 @@ function ModelList({
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
                   <span
-                    className={`min-w-0 truncate text-[13px] font-medium leading-5 ${
+                    className={`min-w-0 truncate text-[13.5px] font-medium leading-5 ${
                       off ? "text-content/45" : ""
                     }`}
                   >
@@ -238,7 +238,7 @@ function ModelList({
                     </span>
                   ) : null}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1 text-[11px] leading-4 text-content/50">
+                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] leading-4 text-content/50">
                   <HarnessIcon harness={item.harness} className="size-3 shrink-0 opacity-80" />
                   <span className="truncate">
                     {HARNESS_TITLE[item.harness]} · {HARNESS_LABEL[item.harness]}

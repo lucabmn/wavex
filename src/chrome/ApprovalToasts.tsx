@@ -63,29 +63,29 @@ function ApprovalToastCard({
       >
         <span className="flex items-center gap-2">
           <HarnessIcon harness={session.harness} className="size-4 shrink-0" />
-          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug text-content">
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug text-content">
             {title}
           </span>
-          <span className="flex shrink-0 items-center gap-1 text-[11px] text-amber-400">
+          <span className="flex shrink-0 items-center gap-1 text-[11.5px] text-amber-400">
             <CircleAlert className="size-3.5" strokeWidth={1.75} />
             <span>{notice.kind === "question" ? "Question" : "Approval"}</span>
           </span>
         </span>
-        <span className="line-clamp-3 text-[12px] leading-relaxed text-content/70">{label}</span>
-        <span className="text-[11px] text-content/40">{harness}</span>
+        <span className="line-clamp-3 text-[12.5px] leading-relaxed text-content/70">{label}</span>
+        <span className="text-[11.5px] text-content/40">{harness}</span>
       </button>
       {notice.kind === "question" ? null : (
         <div className="flex gap-2 border-t border-edge px-3.5 py-2.5">
           <button
             type="button"
-            className="flex-1 rounded-md ui-fill px-2.5 py-1 text-[11px] font-medium"
+            className="flex-1 rounded-md ui-fill px-2.5 py-1 text-[11.5px] font-medium"
             onClick={() => onApproval(session.id, requestId, "allow")}
           >
             Allow
           </button>
           <button
             type="button"
-            className="flex-1 rounded-md bg-content/10 px-2.5 py-1 text-[11px] font-medium text-content/70 hover:bg-hover"
+            className="flex-1 rounded-md bg-content/10 px-2.5 py-1 text-[11.5px] font-medium text-content/70 hover:bg-hover"
             onClick={() => onApproval(session.id, requestId, "deny")}
           >
             Deny

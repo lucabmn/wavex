@@ -73,8 +73,8 @@ export function ContextMeter({ usage }: { usage?: ContextUsage }) {
           align="end"
           className="pointer-events-none w-max px-2.5 py-1.5"
         >
-          <div className="text-[12px] leading-4 text-content">{headline}</div>
-          <div className="text-[11px] leading-4 text-content/50">{detail}</div>
+          <div className="text-[12.5px] leading-4 text-content">{headline}</div>
+          <div className="text-[11.5px] leading-4 text-content/50">{detail}</div>
         </Popover>
       ) : null}
     </div>

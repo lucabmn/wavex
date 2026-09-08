@@ -228,7 +228,7 @@ export function ColorPickerPopover({ value, onChange }: Props) {
           spellCheck={false}
           aria-label="Hex color"
           onChange={(e) => onHexInput(e.target.value)}
-          className="min-w-0 flex-1 rounded-md border border-edge bg-content/5 px-2 py-1 font-mono text-[12px] text-content outline-none ring-accent/40 focus:ring-1"
+          className="min-w-0 flex-1 rounded-md border border-edge bg-content/5 px-2 py-1 font-mono text-[12.5px] text-content outline-none ring-accent/40 focus:ring-1"
         />
       </div>
     </div>

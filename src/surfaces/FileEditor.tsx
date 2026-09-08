@@ -370,7 +370,7 @@ export function FileEditor({
 
   if (loadState.status === "loading") {
     return (
-      <div className="grid h-full place-items-center text-[12px] text-content/45">
+      <div className="grid h-full place-items-center text-[12.5px] text-content/45">
         Opening {basename(path)}…
       </div>
     );
@@ -381,12 +381,12 @@ export function FileEditor({
       <div className="grid h-full place-items-center p-6">
         <div className="max-w-md text-center">
           <AlertCircle className="mx-auto mb-3 size-5 text-red-400" />
-          <p className="text-[13px] text-content">Couldn’t open {basename(path)}</p>
-          <p className="mt-1 text-[12px] leading-5 text-content/50">{loadState.message}</p>
+          <p className="text-[13.5px] text-content">Couldn’t open {basename(path)}</p>
+          <p className="mt-1 text-[12.5px] leading-5 text-content/50">{loadState.message}</p>
           <button
             type="button"
             onClick={() => setReloadKey((value) => value + 1)}
-            className="mx-auto mt-4 flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12px] text-content hover:bg-hover"
+            className="mx-auto mt-4 flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12.5px] text-content hover:bg-hover"
           >
             <RotateCcw className="size-3" strokeWidth={1.75} />
             Retry
@@ -1041,7 +1041,7 @@ function DiffChunkStat({ additions, deletions }: { additions: number; deletions:
     return <span className="min-w-0 flex-1" />;
   }
   return (
-    <span className="flex min-w-0 shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums">
+    <span className="flex min-w-0 shrink-0 items-center gap-1.5 font-mono text-[11.5px] font-semibold tabular-nums">
       {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
       {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
     </span>

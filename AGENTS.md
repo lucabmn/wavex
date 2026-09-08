@@ -280,38 +280,46 @@ deep-imports Hugeicons deliberately so the full catalog is not bundled.
 `src/index.css` is the whole design system; components spend its tokens rather
 than inventing colors, shadows, or corners of their own.
 
-The window is planes of colour separated by space, not boxes drawn with rules.
-Every surface comes off one ladder derived from the single background lightness
-the user controls — `--surface-0` sunken, `--surface-1` the panel plane,
-`--surface-2` raised, `--surface-3` overlay — reachable as `bg-surface-sunken`,
-`bg-surface`, `bg-surface-raised`, `bg-surface-overlay`. A step between two
-rungs is what says one thing sits on another. A hairline is the exception, for
-a genuine input and the edge of something that floats; use `border-edge` and
-`border-edge-strong`, never a hand-picked `border-content/N`, because the
-Separators setting scales all of them through one `--rule` number.
+The window is nearly colourless, and that is the point: colour that appears
+everywhere stops meaning anything, and in a tool that is mostly text the job of
+the surface is to disappear. Four planes come off the one background lightness
+the user controls — `--surface-0` sunken, `--surface-1` the page, `--surface-2`
+raised, `--surface-3` overlay — as `bg-surface-sunken`, `bg-surface`,
+`bg-surface-raised`, `bg-surface-overlay`. The ladder is shallow on purpose:
+separating everything by shade leaves the window looking quilted, so most of
+the app sits on one plane and a step is spent only on the sidebar behind the
+work, a card above the page, and an overlay above everything. On paper the
+ladder inverts — the page is white and the sidebar is greyer — because
+lightness has no headroom above white to raise anything into.
 
-Nothing in the chrome uses a gradient and nothing glows. Shadows
-(`shadow-raise`, `shadow-float`, `shadow-cast`) are for things that genuinely
-float. Hover is `bg-hover` everywhere, so a row in the file tree answers the
-pointer exactly like a row in a menu.
+Hairlines are `border-edge` and `border-edge-strong`, never a hand-picked
+`border-content/N`: the Separators setting scales all of them through one
+`--rule`. Hover is `bg-hover` and selection `bg-selected`, one tone each for
+the whole app, so a row in the file tree answers the pointer exactly like a row
+in a menu. Nothing in the chrome uses a gradient and nothing glows; shadows
+(`shadow-raise`, `shadow-float`, `shadow-cast`) are for things that float.
 
-The accent is the only saturated thing on screen, which is what makes it
-readable at a glance in a window full of text. It marks what is selected and
-what is about to happen, and nothing else. Selection is `ui-row` with
-`data-selected="true"` — a flat step up plus a clay rule down the leading edge.
-Exclusive choices are `ui-tab` with the same attribute: flush, no chip, named
-by a rule along the bottom edge; `ui-segment` is the variant for a boxed track,
-where there is no strip edge for a rule to sit on. The one filled action a
-surface is allowed is `ui-fill`; its quieter sibling is `ui-tint`. Overlays
-take `ui-overlay`, section cards `ui-pane`, focus `ui-focus`, group headings
-`ui-label`, the user's own turn in a transcript `ui-prompt`, and a seam between
-two strips of chrome `ui-rule-b` / `ui-rule-r`.
+The accent is not the colour of the app, it is the colour of "this one". It
+appears on the icon of the selected row, a primary button, focus, and a link,
+and nowhere else. Selection is therefore `ui-row` with `data-selected="true"`:
+a flat step and full-strength text, with the accent spent on the row's icon —
+one glyph rather than a band of colour, which is what a list of forty can
+afford. Exclusive choices are `ui-tab` with the same attribute (flush, named by
+a rule along the bottom edge); `ui-segment` is the variant for a boxed track.
+`ui-fill` is the one filled action a surface is allowed, `ui-tint` its quieter
+sibling. Overlays take `ui-overlay`, cards `ui-pane`, focus `ui-focus`, group
+headings `ui-label`, the user's own turn in a transcript `ui-prompt`, and a
+seam between two strips of chrome `ui-rule-b` / `ui-rule-r`.
 
-Corners are deliberately tight — the app is mostly rows of text, and it reads
-as an instrument when the corners are barely there. `Corners` and `Depth` and
-`Separators` in Settings scale the language rather than bolting a second one
-beside it, which only holds while radius, shadow, and rule strength each stay
-a single token.
+The project rail and the workspace panel are one sidebar, not two: one rule
+band across both, no seam between them, and the same row idiom throughout — a
+nav column and a list column, with the body beyond. Keep it that way; the
+duplicate header each of them used to carry is what made the window read as a
+stack of panels.
+
+Corners, Depth and Separators in Settings scale the language rather than
+bolting a second one beside it, which only holds while radius, shadow and rule
+strength each stay a single token.
 
 Long transcripts, file lists, and live streaming are performance-sensitive.
 Avoid unbounded rendering, unnecessary global subscriptions, continuously

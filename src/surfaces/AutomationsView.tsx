@@ -238,7 +238,7 @@ export function AutomationsView({
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
         {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <span className="shrink-0 text-content/45">Automations</span>
           <span aria-hidden className="shrink-0 text-content/25">
             /
@@ -289,7 +289,7 @@ export function AutomationsView({
                 aria-label="Filter automations"
                 spellCheck={false}
                 autoComplete="off"
-                className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12px] text-content outline-none placeholder:text-content/40"
+                className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-content/40"
               />
             </div>
             <button
@@ -346,13 +346,13 @@ export function AutomationsView({
                 <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
               </div>
             ) : empty ? (
-              <p className="px-3 py-2 text-[12px] text-content/50">
+              <p className="px-3 py-2 text-[12.5px] text-content/50">
                 {projects.length > 0
                   ? "No automations yet. An automation is a prompt, a project, and a schedule."
                   : "No automations yet. Open a project first — an automation runs in a real checkout."}
               </p>
             ) : visible.length === 0 ? (
-              <p className="px-3 py-2 text-[12px] text-content/50">No matching automations</p>
+              <p className="px-3 py-2 text-[12.5px] text-content/50">No matching automations</p>
             ) : (
               <ul className="flex flex-col gap-0.5 p-1.5">
                 {visible.map((automation) => (
@@ -399,7 +399,7 @@ export function AutomationsView({
           ) : (
             <div className="flex h-full min-w-0 flex-1 flex-col items-center justify-center px-6 text-center">
               <Clock className="mb-3 size-6 text-content/30" strokeWidth={1.75} />
-              <p className="text-[13px] text-content/45">Select an automation</p>
+              <p className="text-[13.5px] text-content/45">Select an automation</p>
             </div>
           )}
         </div>
@@ -438,7 +438,7 @@ function AutomationCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-accent/14 text-content"
+          ? "border-transparent bg-selected text-content"
           : "border-transparent text-content/80 hover:bg-hover hover:text-content"
       }`}
     >
@@ -447,10 +447,10 @@ function AutomationCard({
         <span className="min-w-0 flex-1 truncate text-[12.5px]">{automation.name}</span>
         <HarnessIcon harness={automation.harness} className="size-3 shrink-0" />
       </span>
-      <span className="mt-0.5 truncate text-[11px] leading-tight text-content/45">
+      <span className="mt-0.5 truncate text-[11.5px] leading-tight text-content/45">
         {projectName(automation.cwd)} · {scheduleLine(automation)}
       </span>
-      <span className="truncate text-[11px] leading-tight text-content/35">
+      <span className="truncate text-[11.5px] leading-tight text-content/35">
         {nextRunLine(automation, status, now)}
       </span>
     </button>
@@ -502,7 +502,7 @@ function Detail({
           <h2 className="truncate text-[15px] font-medium leading-tight text-content">
             {automation.name}
           </h2>
-          <p className="mt-0.5 text-[12px] leading-snug text-content/55">
+          <p className="mt-0.5 text-[12.5px] leading-snug text-content/55">
             {scheduleLine(automation)}
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] leading-snug text-content/40">
@@ -554,7 +554,7 @@ function Detail({
         </p>
       ) : null}
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-[12px] leading-tight">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-[12.5px] leading-tight">
         <Row label="Runs in">{prettyCwd(automation.cwd)}</Row>
         <Row label="On">{host ? host.name : "This device"}</Row>
         <Row label="Agent">
@@ -589,7 +589,7 @@ function Detail({
 
       <Section title="History">
         {runs.length === 0 ? (
-          <p className="text-[12px] text-content/45">
+          <p className="text-[12.5px] text-content/45">
             This automation has not run yet. Use Run now to try it before it goes on the schedule.
           </p>
         ) : (
@@ -607,7 +607,7 @@ function Detail({
                     {formatMoment(run.startedAt, automation.timeZone)} · {runDurationText(run, now)}
                   </span>
                   {run.error || run.summary ? (
-                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-content/40">
+                    <span className="mt-0.5 line-clamp-2 block text-[11.5px] leading-snug text-content/40">
                       {run.error ?? run.summary}
                     </span>
                   ) : null}
@@ -616,7 +616,7 @@ function Detail({
                   <button
                     type="button"
                     onClick={onRunNow}
-                    className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] text-content/50 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <RefreshCw className="size-3" strokeWidth={1.75} />
                     Retry
@@ -626,7 +626,7 @@ function Detail({
                   <button
                     type="button"
                     onClick={() => onOpenSession(run.sessionId!, automation.hostId)}
-                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] text-content/50 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     Open
                   </button>
@@ -643,7 +643,7 @@ function Detail({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="pb-2 text-[13px] font-semibold uppercase tracking-[0.07em] text-content/50">
+      <h3 className="pb-2 text-[13.5px] font-semibold uppercase tracking-[0.07em] text-content/50">
         {title}
       </h3>
       {children}

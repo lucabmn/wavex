@@ -99,7 +99,7 @@ export function WorktreeList({
         className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-hover hover:text-content"
       >
         <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
-        <span className="min-w-0 flex-1 truncate text-[12px] leading-tight">New worktree</span>
+        <span className="min-w-0 flex-1 truncate text-[12.5px] leading-tight">New worktree</span>
       </button>
 
       {stale > 0 ? (
@@ -110,7 +110,7 @@ export function WorktreeList({
           className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
         >
           <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
-          <span className="min-w-0 flex-1 truncate text-[12px] leading-tight">
+          <span className="min-w-0 flex-1 truncate text-[12.5px] leading-tight">
             {stale === 1 ? "Clean up 1 missing worktree" : `Clean up ${stale} missing worktrees`}
           </span>
         </button>
@@ -200,7 +200,7 @@ function WorktreeRow({
   return (
     <div
       className={`group relative flex h-7 items-stretch rounded-md px-2 ${
-        selected ? "bg-accent/14 text-content" : "opacity-65 hover:bg-hover hover:text-content"
+        selected ? "bg-selected text-content" : "opacity-65 hover:bg-hover hover:text-content"
       }`}
       onContextMenu={onOpenMenu}
     >
@@ -284,4 +284,4 @@ function WorktreeRow({
 
 // A floor, so the badges to its right can never squeeze the label to zero
 // width — a zero-width `truncate` renders nothing, not an ellipsis.
-const labelClassName = "min-w-14 flex-1 truncate font-mono text-[12px] leading-tight";
+const labelClassName = "min-w-14 flex-1 truncate font-mono text-[12.5px] leading-tight";

@@ -116,7 +116,7 @@ export function UsageFooter({
   return (
     <footer
       aria-label={ariaLabel}
-      className="flex h-7 shrink-0 items-center gap-3 overflow-x-auto border-t border-edge px-3 text-[11px] text-content/55"
+      className="flex h-7 shrink-0 items-center gap-3 overflow-x-auto border-t border-edge px-3 text-[11.5px] text-content/55"
     >
       {showUsage ? (
         <>
@@ -248,12 +248,12 @@ function RunningTerminalChip({
               key={terminal.id}
               type="button"
               role="menuitem"
-              className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[12px] leading-none text-content hover:bg-hover"
+              className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[12.5px] leading-none text-content hover:bg-hover"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => toggle(terminal.id)}
             >
               <span className="min-w-0 flex-1 truncate">{terminal.process}</span>
-              <span className="max-w-[7rem] shrink-0 truncate text-[11px] text-content/40">
+              <span className="max-w-[7rem] shrink-0 truncate text-[11.5px] text-content/40">
                 {terminal.label}
               </span>
             </button>

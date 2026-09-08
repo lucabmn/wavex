@@ -9,7 +9,7 @@ const FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "
  * the spinner has always turned at.
  */
 export function TerminalSpinner({
-  className = "inline-block w-3.5 select-none text-center text-[11px] leading-none",
+  className = "inline-block w-3.5 select-none text-center text-[11.5px] leading-none",
 }: {
   className?: string;
 }) {

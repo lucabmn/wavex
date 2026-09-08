@@ -968,7 +968,7 @@ export function Composer({
           className={`ui-composer relative z-10 rounded-xl ${fileDrag ? "border-accent" : ""}`}
         >
           {fileDrag ? (
-            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-xl bg-accent/10 text-[12px] text-content/70">
+            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-xl bg-accent/10 text-[12.5px] text-content/70">
               Drop files to attach
             </div>
           ) : null}

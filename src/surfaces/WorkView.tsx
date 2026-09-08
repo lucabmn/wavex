@@ -349,7 +349,7 @@ export function WorkView({
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={`Search chats (${MOD}F)`}
                   aria-label="Search chats"
-                  className="h-full min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-content/35"
+                  className="h-full min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-content/35"
                 />
                 {query ? (
                   <button
@@ -392,11 +392,11 @@ export function WorkView({
           }`}
         >
           {state.loading && items.length === 0 ? (
-            <p className="px-1 py-2 text-[12px] text-content/45">Loading…</p>
+            <p className="px-1 py-2 text-[12.5px] text-content/45">Loading…</p>
           ) : null}
           {state.error ? (
             <div role="alert" className="mx-1 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
-              <span className="flex items-start gap-2 text-[12px] leading-snug text-red-300">
+              <span className="flex items-start gap-2 text-[12.5px] leading-snug text-red-300">
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.75} />
                 <span className="min-w-0 flex-1 break-words">{state.error}</span>
               </span>
@@ -411,7 +411,7 @@ export function WorkView({
             </div>
           ) : null}
           {!state.loading && entries.length === 0 ? (
-            <p className="px-1 py-2 text-[12px] text-content/45">
+            <p className="px-1 py-2 text-[12.5px] text-content/45">
               {query ? "No chats match." : "No chats yet."}
             </p>
           ) : null}
@@ -486,7 +486,7 @@ export function WorkView({
               <ModeSwitch mode={mode} onChange={onModeChange} />
             </>
           )}
-          <span className="min-w-0 flex-1 truncate text-[13px] text-content/70">
+          <span className="min-w-0 flex-1 truncate text-[13.5px] text-content/70">
             {active ? active.title : "Work"}
           </span>
           {IS_MAC ? null : <WindowControls />}
@@ -540,13 +540,13 @@ export function WorkView({
           ) : (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
               <MessageSquare className="size-6 text-content/25" strokeWidth={1.5} />
-              <p className="text-[13px] text-content/50">
+              <p className="text-[13.5px] text-content/50">
                 Thinking, drafting, questions — work that is not code.
               </p>
               <button
                 type="button"
                 onClick={() => onNewChat()}
-                className="rounded-md ui-fill px-3 py-1.5 text-[12px]"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12.5px]"
               >
                 New chat
               </button>
@@ -567,7 +567,7 @@ export function WorkView({
           closeDisabled={deleting}
         >
           <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-            <p className="text-[12px] leading-relaxed text-content/60">
+            <p className="text-[12.5px] leading-relaxed text-content/60">
               This permanently removes the conversation and its provider thread. This action cannot
               be undone.
             </p>
@@ -587,7 +587,7 @@ export function WorkView({
                 type="button"
                 disabled={deleting}
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
               >
                 Cancel
               </button>
@@ -595,7 +595,7 @@ export function WorkView({
                 type="button"
                 disabled={deleting}
                 onClick={() => void confirmDelete()}
-                className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-[12.5px] font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
               >
                 {deleting ? <Loader className="size-3.5 animate-spin" strokeWidth={1.75} /> : null}
                 {deleteTarget.busy ? "Stop & delete" : "Delete chat"}
@@ -614,7 +614,7 @@ export function WorkView({
           initialFocusRef={folderDeleteCancelRef}
         >
           <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-            <p className="text-[12px] leading-relaxed text-content/60">
+            <p className="text-[12.5px] leading-relaxed text-content/60">
               The chats stay in your list, but the project and its shared brief are permanently
               removed.
             </p>
@@ -623,7 +623,7 @@ export function WorkView({
                 ref={folderDeleteCancelRef}
                 type="button"
                 onClick={() => setFolderDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
               >
                 Cancel
               </button>
@@ -633,7 +633,7 @@ export function WorkView({
                   deleteChatFolder(folderDeleteTarget.id);
                   setFolderDeleteTarget(null);
                 }}
-                className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30"
+                className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12.5px] font-medium text-red-300 hover:bg-red-500/30"
               >
                 Delete project
               </button>
@@ -751,7 +751,7 @@ function FolderSection({
             {folder.prompt ? (
               <StickyNote className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
             ) : null}
-            <span className="shrink-0 text-[11px] tabular-nums text-content/40">{count}</span>
+            <span className="shrink-0 text-[11.5px] tabular-nums text-content/40">{count}</span>
           </button>
           <button
             type="button"
@@ -800,7 +800,7 @@ function FolderPromptDialog({
   return (
     <Modal title="Project brief" description={folder.name} size="md" onClose={onClose}>
       <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-        <p className="text-[12px] leading-snug text-content/55">
+        <p className="text-[12.5px] leading-snug text-content/55">
           Sent ahead of every message from a chat in this project, so each agent knows what it is
           working on.
         </p>
@@ -817,14 +817,14 @@ function FolderPromptDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onSave(draft)}
-            className="rounded-md ui-fill px-3 py-1.5 text-[12px]"
+            className="rounded-md ui-fill px-3 py-1.5 text-[12.5px]"
           >
             Save
           </button>
@@ -1035,7 +1035,7 @@ function ChatRow({
           dropTarget
             ? "bg-accent/20 text-content"
             : active
-              ? "bg-accent/14 text-content"
+              ? "bg-selected text-content"
               : "text-content/75 hover:bg-hover"
         } ${dragging ? "opacity-40" : ""} ${archived ? "opacity-60" : ""}`}
       >

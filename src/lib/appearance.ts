@@ -40,11 +40,11 @@ const DEFAULT_SIDEBAR_TAB_ORDER: SidebarTabId[] = ["sessions", "inbox", "files",
 
 export const THEME_HUE_MIN = 0;
 export const THEME_HUE_MAX = 360;
-export const THEME_HUE_DEFAULT = 28;
+export const THEME_HUE_DEFAULT = 220;
 
 export const THEME_SATURATION_MIN = 0;
 export const THEME_SATURATION_MAX = 100;
-export const THEME_SATURATION_DEFAULT = 7;
+export const THEME_SATURATION_DEFAULT = 6;
 
 export const SIDEBAR_OPACITY_MIN = 0.15;
 export const SIDEBAR_OPACITY_MAX = 1;
@@ -403,20 +403,20 @@ export function subscribeAppearance(onStoreChange: () => void) {
 
 export const ACCENT_HUE_MIN = 0;
 export const ACCENT_HUE_MAX = 360;
-export const ACCENT_HUE_DEFAULT = 16;
+export const ACCENT_HUE_DEFAULT = 232;
 
 /** Named stops on the accent wheel, so the common choice is one click. */
 export const ACCENT_PRESETS: { hue: number; label: string }[] = [
-  { hue: 16, label: "Clay" },
-  { hue: 32, label: "Amber" },
-  { hue: 48, label: "Brass" },
+  { hue: 232, label: "Indigo" },
+  { hue: 262, label: "Violet" },
+  { hue: 300, label: "Mauve" },
+  { hue: 338, label: "Rose" },
+  { hue: 12, label: "Clay" },
+  { hue: 38, label: "Amber" },
   { hue: 88, label: "Olive" },
-  { hue: 150, label: "Fern" },
-  { hue: 178, label: "Verdigris" },
-  { hue: 202, label: "Denim" },
-  { hue: 236, label: "Ink" },
-  { hue: 282, label: "Plum" },
-  { hue: 342, label: "Rust" },
+  { hue: 152, label: "Green" },
+  { hue: 182, label: "Teal" },
+  { hue: 204, label: "Blue" },
 ];
 
 export function loadAccentHue(): number {
@@ -636,9 +636,9 @@ export type CornerRadius = "sharp" | "soft" | "round";
 export const CORNER_RADIUS_DEFAULT: CornerRadius = "soft";
 
 const RADIUS_SCALE: Record<CornerRadius, number> = {
-  sharp: 0.35,
+  sharp: 0.3,
   soft: 1,
-  round: 2.2,
+  round: 1.9,
 };
 
 /**
@@ -646,21 +646,18 @@ const RADIUS_SCALE: Record<CornerRadius, number> = {
  * factor moves every corner in the app rather than a hand-picked few.
  * `rounded-full` is a literal 9999px and stays a pill.
  *
- * The scale is deliberately tight. A window that is mostly rows of text reads
- * as an instrument when its corners are barely there and as a consumer app
- * when they are not, and the rest of the chrome — flush tabs, rules instead of
- * boxes — is pulling in the first direction. `round` is there for anyone who
- * disagrees, and takes it more than twice as far.
+ * The steps grow faster than Tailwind's so a row, a card and a dialog read as
+ * three sizes of thing rather than three boxes with nearly the same corner.
  */
 const RADIUS_TOKENS: [token: string, rem: number][] = [
-  ["--radius-xs", 0.0625],
-  ["--radius-sm", 0.125],
-  ["--radius-md", 0.1875],
-  ["--radius-lg", 0.25],
-  ["--radius-xl", 0.375],
-  ["--radius-2xl", 0.5],
-  ["--radius-3xl", 0.75],
-  ["--radius-4xl", 1],
+  ["--radius-xs", 0.125],
+  ["--radius-sm", 0.25],
+  ["--radius-md", 0.375],
+  ["--radius-lg", 0.5625],
+  ["--radius-xl", 0.75],
+  ["--radius-2xl", 1],
+  ["--radius-3xl", 1.25],
+  ["--radius-4xl", 1.5],
 ];
 
 function isCornerRadius(value: unknown): value is CornerRadius {
@@ -813,8 +810,8 @@ export const SURFACE_RANGE: Record<
   ColorScheme,
   { background: [min: number, max: number, fallback: number]; content: [number, number, number] }
 > = {
-  dark: { background: [2, 22, 9], content: [70, 100, 92] },
-  light: { background: [86, 100, 96], content: [0, 42, 18] },
+  dark: { background: [2, 22, 5], content: [70, 100, 97] },
+  light: { background: [86, 100, 100], content: [0, 42, 12] },
 };
 
 function schemeKey(key: string, scheme: ColorScheme) {
@@ -888,62 +885,62 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: THEME_HUE_DEFAULT,
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
-    dark: { background: 9, content: 92 },
-    light: { background: 96, content: 18 },
+    dark: { background: 5, content: 97 },
+    light: { background: 100, content: 12 },
+  },
+  {
+    id: "midnight",
+    label: "Midnight",
+    themeHue: 232,
+    themeSaturation: 14,
+    accentHue: 214,
+    dark: { background: 7, content: 96 },
+    light: { background: 100, content: 14 },
+  },
+  {
+    id: "carbon",
+    label: "Carbon",
+    themeHue: 0,
+    themeSaturation: 0,
+    accentHue: 232,
+    dark: { background: 4, content: 96 },
+    light: { background: 100, content: 12 },
   },
   {
     id: "linen",
     label: "Linen",
-    themeHue: 40,
-    themeSaturation: 10,
-    accentHue: 32,
-    dark: { background: 10, content: 91 },
-    light: { background: 97, content: 20 },
-  },
-  {
-    id: "slate",
-    label: "Slate",
-    themeHue: 216,
+    themeHue: 36,
     themeSaturation: 8,
-    accentHue: 202,
-    dark: { background: 9, content: 92 },
-    light: { background: 96, content: 18 },
+    accentHue: 24,
+    dark: { background: 7, content: 95 },
+    light: { background: 99, content: 16 },
   },
   {
     id: "moss",
     label: "Moss",
-    themeHue: 110,
+    themeHue: 150,
     themeSaturation: 7,
-    accentHue: 150,
-    dark: { background: 9, content: 91 },
-    light: { background: 96, content: 19 },
+    accentHue: 152,
+    dark: { background: 6, content: 95 },
+    light: { background: 100, content: 14 },
   },
   {
-    id: "ash",
-    label: "Ash",
-    themeHue: 0,
-    themeSaturation: 0,
-    accentHue: 202,
-    dark: { background: 8, content: 92 },
-    light: { background: 97, content: 17 },
+    id: "plum",
+    label: "Plum",
+    themeHue: 282,
+    themeSaturation: 9,
+    accentHue: 288,
+    dark: { background: 6, content: 96 },
+    light: { background: 100, content: 14 },
   },
   {
-    id: "iron",
-    label: "Iron",
-    themeHue: 250,
-    themeSaturation: 6,
-    accentHue: 282,
-    dark: { background: 8, content: 92 },
-    light: { background: 96, content: 19 },
-  },
-  {
-    id: "oxide",
-    label: "Oxide",
-    themeHue: 12,
-    themeSaturation: 12,
-    accentHue: 342,
-    dark: { background: 10, content: 90 },
-    light: { background: 96, content: 20 },
+    id: "harbor",
+    label: "Harbor",
+    themeHue: 200,
+    themeSaturation: 10,
+    accentHue: 188,
+    dark: { background: 6, content: 95 },
+    light: { background: 100, content: 14 },
   },
 ];
 

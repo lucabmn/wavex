@@ -192,7 +192,7 @@ export function CwdPicker({
         className={
           buttonClassName
             ? `${buttonClassName} ${
-                open ? "bg-accent/14 text-content" : "hover:bg-hover"
+                open ? "bg-selected text-content" : "hover:bg-hover"
               } disabled:opacity-40`
             : `flex min-w-0 items-center gap-1.5 ${
                 open ? "text-content" : "text-content/50 hover:text-content"
@@ -202,7 +202,7 @@ export function CwdPicker({
         {children ?? (
           <>
             <ProjectLogoIcon path={projectLogoPath} fallbackStrokeWidth={1.5} />
-            <span className="truncate font-mono text-[12px]">{label}</span>
+            <span className="truncate font-mono text-[12.5px]">{label}</span>
           </>
         )}
         {chevron ? (
@@ -230,8 +230,8 @@ export function CwdPicker({
               <>
                 <p className="px-2.5 pb-1 pt-2 ui-label">Current project</p>
                 <div className="px-2.5 py-1.5 text-content/50">
-                  <p className="truncate text-[13px] text-content">{basename(cwd)}</p>
-                  <p className="truncate font-mono text-[11px]">{prettyParent(cwd)}</p>
+                  <p className="truncate text-[13.5px] text-content">{basename(cwd)}</p>
+                  <p className="truncate font-mono text-[11.5px]">{prettyParent(cwd)}</p>
                 </div>
               </>
             ) : null}
@@ -252,12 +252,12 @@ export function CwdPicker({
                     onClick={() => pick({ kind: "recent", path: item.path })}
                     className={`flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left ${
                       active === index
-                        ? "bg-accent/14 text-content"
+                        ? "bg-selected text-content"
                         : "text-content/80 hover:bg-hover"
                     }`}
                   >
-                    <span className="min-w-0 truncate text-[13px]">{basename(item.path)}</span>
-                    <span className="max-w-28 shrink-0 truncate font-mono text-[11px] text-content/45">
+                    <span className="min-w-0 truncate text-[13.5px]">{basename(item.path)}</span>
+                    <span className="max-w-28 shrink-0 truncate font-mono text-[11.5px] text-content/45">
                       {prettyParent(item.path)}
                     </span>
                   </button>
@@ -283,11 +283,11 @@ export function CwdPicker({
                 }}
                 className={`flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left ${
                   active === moreIndex || moreOpen
-                    ? "bg-accent/14 text-content"
+                    ? "bg-selected text-content"
                     : "text-content/80 hover:bg-hover"
                 }`}
               >
-                <span className="text-[13px]">More Projects</span>
+                <span className="text-[13.5px]">More Projects</span>
                 <ChevronRight className="size-3.5 shrink-0" strokeWidth={1.75} />
               </button>
             ) : null}
@@ -305,12 +305,12 @@ export function CwdPicker({
                 onClick={() => pick({ kind: "new-terminal" })}
                 className={`flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left ${
                   active === newTerminalIndex
-                    ? "bg-accent/14 text-content"
+                    ? "bg-selected text-content"
                     : "text-content/80 hover:bg-hover"
                 }`}
               >
-                <span className="text-[13px]">New terminal</span>
-                <span className="shrink-0 font-mono text-[11px] text-content/45">{MOD}`</span>
+                <span className="text-[13.5px]">New terminal</span>
+                <span className="shrink-0 font-mono text-[11.5px] text-content/45">{MOD}`</span>
               </button>
             </div>
           ) : null}
@@ -341,8 +341,8 @@ export function CwdPicker({
               onClick={() => pick({ kind: "recent", path: item.path })}
               className="flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left text-content/80 hover:bg-hover hover:text-content"
             >
-              <span className="min-w-0 truncate text-[13px]">{basename(item.path)}</span>
-              <span className="max-w-28 shrink-0 truncate font-mono text-[11px] text-content/45">
+              <span className="min-w-0 truncate text-[13.5px]">{basename(item.path)}</span>
+              <span className="max-w-28 shrink-0 truncate font-mono text-[11.5px] text-content/45">
                 {prettyParent(item.path)}
               </span>
             </button>

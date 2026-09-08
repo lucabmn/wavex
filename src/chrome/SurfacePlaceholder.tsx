@@ -16,8 +16,8 @@ export function SurfacePlaceholder({ icon: Icon, title, description, children }:
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 px-6 text-center">
       <Icon className="size-6 text-content/25" strokeWidth={1.5} />
-      {title ? <p className="text-[12px] font-medium text-content">{title}</p> : null}
-      <p className="max-w-72 text-[12px] leading-relaxed text-content/50">{description}</p>
+      {title ? <p className="text-[12.5px] font-medium text-content">{title}</p> : null}
+      <p className="max-w-72 text-[12.5px] leading-relaxed text-content/50">{description}</p>
       {children ? (
         <div className="flex flex-wrap items-center justify-center gap-1">{children}</div>
       ) : null}
@@ -36,7 +36,7 @@ export function PlaceholderButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-md bg-content/10 px-2.5 py-1 text-[12px] text-content transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      className="rounded-md bg-content/10 px-2.5 py-1 text-[12.5px] text-content transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       {children}
     </button>

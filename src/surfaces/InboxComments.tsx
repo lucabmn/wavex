@@ -62,7 +62,7 @@ export function InboxComments({
   }
   if (!thread) {
     if (error) {
-      return <p className="text-[12px] text-content/45">{error}</p>;
+      return <p className="text-[12.5px] text-content/45">{error}</p>;
     }
     if (loading) return <CommentsPending />;
     return null;
@@ -74,14 +74,14 @@ export function InboxComments({
 
   return (
     <section className="flex flex-col gap-3 border-t border-edge pt-5">
-      <div className="flex items-center gap-2 text-[12px] text-content/50">
+      <div className="flex items-center gap-2 text-[12.5px] text-content/50">
         <h2 className="text-content/70">{label}</h2>
         {thread.truncated ? <span>Latest comments · more on {moreOn}</span> : null}
         {loading ? (
           <LoaderCircle className="size-3 animate-spin text-content/35" strokeWidth={1.75} />
         ) : null}
       </div>
-      {error ? <p className="text-[12px] text-content/45">{error}</p> : null}
+      {error ? <p className="text-[12.5px] text-content/45">{error}</p> : null}
       <ol className="flex flex-col gap-2">
         {thread.comments.map((comment) => (
           <li key={comment.id}>
@@ -153,7 +153,7 @@ export function InboxCommentForm({
   return (
     <form onSubmit={onFormSubmit} className="flex flex-col gap-2 border-t border-edge pt-5">
       {replyTo ? (
-        <div className="flex items-center gap-2 text-[12px] text-content/50">
+        <div className="flex items-center gap-2 text-[12.5px] text-content/50">
           <span className="min-w-0 truncate">Replying to {replyTo.author || "comment"}</span>
           <button
             type="button"
@@ -175,26 +175,26 @@ export function InboxCommentForm({
           placeholder={replyTo ? `Write a reply (${MOD}↩)` : `Leave a comment (${MOD}↩)`}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
-          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent px-3 py-2 text-[13px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
+          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent px-3 py-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
         />
         <div className="flex items-center justify-end px-2 pb-2">
           <button
             type="submit"
             disabled={!canPost}
-            className="inline-flex h-7 items-center rounded-md ui-fill px-3 text-[12px] disabled:cursor-default disabled:opacity-40"
+            className="inline-flex h-7 items-center rounded-md ui-fill px-3 text-[12.5px] disabled:cursor-default disabled:opacity-40"
           >
             {posting ? "Posting..." : replyTo ? "Reply" : "Comment"}
           </button>
         </div>
       </div>
-      {error ? <p className="text-[12px] text-red-400/90">{error}</p> : null}
+      {error ? <p className="text-[12.5px] text-red-400/90">{error}</p> : null}
     </form>
   );
 }
 
 function CommentsPending() {
   return (
-    <div className="flex items-center gap-2 border-t border-edge pt-5 text-[12px] text-content/45">
+    <div className="flex items-center gap-2 border-t border-edge pt-5 text-[12.5px] text-content/45">
       <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
       Loading comments
     </div>
@@ -232,7 +232,7 @@ function InboxComment({
   const inner = (
     <>
       <header
-        className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-content/50 ${
+        className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-content/50 ${
           nested ? "" : "px-3 py-2"
         } ${!nested && (hasBody || hasReplies) ? "border-b border-edge" : ""}`}
       >

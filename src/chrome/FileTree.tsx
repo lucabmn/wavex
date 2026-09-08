@@ -650,14 +650,14 @@ export function FileTree({
                 <ChevronRight className="size-3.5" strokeWidth={1.75} />
               )}
             </span>
-            <span className="min-w-0 truncate text-[11px] font-semibold tracking-[0.08em] text-content/50 uppercase">
+            <span className="min-w-0 truncate text-[11.5px] font-semibold tracking-[0.08em] text-content/50 uppercase">
               {name}
             </span>
           </button>
         </div>
         <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
           {opError ? (
-            <p className="px-3 py-1 text-[12px] leading-4 text-red-400">{opError}</p>
+            <p className="px-3 py-1 text-[12.5px] leading-4 text-red-400">{opError}</p>
           ) : null}
           {rootOpen ? (
             <div role="tree" aria-label={`${name} files`}>
@@ -709,7 +709,7 @@ function HeaderIcon({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active ? "bg-accent/14 text-content" : "text-content/50 hover:bg-hover hover:text-content"
+        active ? "bg-selected text-content" : "text-content/50 hover:bg-hover hover:text-content"
       }`}
     >
       {children}
@@ -754,7 +754,7 @@ function FileTreeDiffButton({
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={`relative flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active ? "bg-accent/14 text-content" : "text-content/50 hover:bg-hover hover:text-content"
+        active ? "bg-selected text-content" : "text-content/50 hover:bg-hover hover:text-content"
       }`}
     >
       <span className="relative">
@@ -803,13 +803,13 @@ function TreeChildren({
   return (
     <>
       {error ? (
-        <p className="truncate pr-2 text-[12px] text-content/50" style={pad}>
+        <p className="truncate pr-2 text-[12.5px] text-content/50" style={pad}>
           {error}
         </p>
       ) : null}
       {show && ctx.creating?.isDir ? row : null}
       {loading && !error ? (
-        <p className="pr-2 text-[12px] text-content/50" style={pad}>
+        <p className="pr-2 text-[12.5px] text-content/50" style={pad}>
           …
         </p>
       ) : null}
@@ -911,7 +911,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
           onContextMenu={(e) => onItemContextMenu(entry, e)}
           style={{ paddingLeft: 8 + depth * 12 }}
           className={`flex h-7.5 w-full cursor-default items-center gap-1 pr-2 text-left text-[14px] leading-none ${
-            selected ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
+            selected ? "bg-selected text-content" : "text-content hover:bg-hover"
           } ${cutPath === entry.path ? "opacity-50" : ""}`}
         >
           <span className="grid size-4 shrink-0 place-items-center text-content/50">
@@ -1105,7 +1105,7 @@ function NameIssueView({
   const error = Boolean(fallback) || !issue || issue.severity === "error";
   return (
     <p
-      className={`pr-2 pb-1 text-[12px] leading-4 ${error ? "text-red-400" : "text-amber-400"}`}
+      className={`pr-2 pb-1 text-[12.5px] leading-4 ${error ? "text-red-400" : "text-amber-400"}`}
       style={{ paddingLeft: 28 + depth * 12 }}
     >
       {body}

@@ -80,7 +80,7 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
         {filePath && onOpenFile ? (
           <button
             type="button"
-            className="min-w-0 flex-1 truncate text-left font-mono text-[12px] font-medium text-content/85 hover:text-sky-300 hover:underline"
+            className="min-w-0 flex-1 truncate text-left font-mono text-[12.5px] font-medium text-content/85 hover:text-sky-300 hover:underline"
             title={path}
             onClick={() => onOpenFile(filePath)}
           >
@@ -88,14 +88,14 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
           </button>
         ) : (
           <span
-            className="min-w-0 flex-1 truncate font-mono text-[12px] font-medium text-content/85"
+            className="min-w-0 flex-1 truncate font-mono text-[12.5px] font-medium text-content/85"
             title={path}
           >
             {label}
           </span>
         )}
         {added > 0 || deleted > 0 ? (
-          <span className="shrink-0 font-mono text-[11px] font-semibold">
+          <span className="shrink-0 font-mono text-[11.5px] font-semibold">
             {added > 0 ? <span className="text-emerald-400">+{added}</span> : null}
             {added > 0 && deleted > 0 ? " " : null}
             {deleted > 0 ? <span className="text-red-400">-{deleted}</span> : null}
@@ -145,7 +145,7 @@ function PreviewLine({ line, showGutter }: { line: ToolPreviewLine; showGutter: 
           {mark}
         </span>
       ) : null}
-      <span className="min-w-0 flex-1 truncate pr-2 font-mono text-[11px] leading-4.5">
+      <span className="min-w-0 flex-1 truncate pr-2 font-mono text-[11.5px] leading-4.5">
         {highlight(line.text, line.kind === "context")}
       </span>
     </div>

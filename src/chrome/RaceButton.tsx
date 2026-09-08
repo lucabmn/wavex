@@ -272,14 +272,14 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
             className="p-1 font-sans"
           >
             <div className="px-1.5 pb-2 pt-1.5">
-              <p className="text-[11px] leading-3 text-content/50 text-balance">
+              <p className="text-[11.5px] leading-3 text-content/50 text-balance">
                 Send this prompt to {RACE_MIN_RUNNERS}–{RACE_MAX_RUNNERS} agents at once, then keep
                 the changes you like.
               </p>
             </div>
-            <div className="mx-1 mb-1 h-px bg-content/10" />
+            <div className="mx-1 mb-1 h-px bg-edge" />
             {targets.length === 0 ? (
-              <div className="px-2.5 py-2 text-[12px] leading-4 text-content/50">
+              <div className="px-2.5 py-2 text-[12.5px] leading-4 text-content/50">
                 No agent CLI found. Install one and restart wavex.
               </div>
             ) : (
@@ -302,8 +302,8 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                       setInSubmenu(false);
                     }}
                     onClick={() => toggle(harness)}
-                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none disabled:opacity-40 ${
-                      highlighted ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
+                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none disabled:opacity-40 ${
+                      highlighted ? "bg-selected text-content" : "text-content hover:bg-hover"
                     }`}
                   >
                     <span
@@ -317,7 +317,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                     <HarnessIcon harness={harness} className="size-3.5 shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{HARNESS_TITLE[harness]}</span>
                     {on && model ? (
-                      <span className="max-w-24 shrink-0 truncate text-[11px] text-content/45">
+                      <span className="max-w-24 shrink-0 truncate text-[11.5px] text-content/45">
                         {enabledModelsFor(harness).find((entry) => entry.id === model)?.name ??
                           model}
                       </span>
@@ -332,7 +332,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                 );
               })
             )}
-            <div className="mx-1 my-1 h-px bg-content/10" />
+            <div className="mx-1 my-1 h-px bg-edge" />
             <button
               ref={onStartRow ? activeRow : undefined}
               type="button"
@@ -344,8 +344,8 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                 setInSubmenu(false);
               }}
               onClick={start}
-              className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none disabled:text-content/35 ${
-                onStartRow && !error ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
+              className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none disabled:text-content/35 ${
+                onStartRow && !error ? "bg-selected text-content" : "text-content hover:bg-hover"
               } ${error ? "hover:bg-transparent" : ""}`}
             >
               <span className="min-w-0 flex-1 truncate">
@@ -388,8 +388,8 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                       toggle(activeHarness, model.id);
                       setInSubmenu(false);
                     }}
-                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
+                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none ${
+                      highlighted ? "bg-selected text-content" : "text-content hover:bg-hover"
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate">{model.name}</span>

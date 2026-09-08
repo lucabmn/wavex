@@ -14,17 +14,17 @@ export function SecondOpinionCard({ card }: Props) {
 
   return (
     <div className="min-w-0 font-sans">
-      <div className="text-[13px] font-medium leading-snug text-content">
+      <div className="text-[13.5px] font-medium leading-snug text-content">
         {card.kind === "handoff" ? "Handoff" : "Second opinion"}
       </div>
-      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-content/50">
+      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11.5px] leading-4 text-content/50">
         <HarnessIcon harness={card.from} className="size-3 shrink-0" />
         <span className="truncate">{HARNESS_TITLE[card.from]}</span>
         <ChevronRight className="size-3 shrink-0 text-content/35" strokeWidth={1.75} />
         <HarnessIcon harness={card.to} className="size-3 shrink-0" />
         <span className="truncate">{HARNESS_TITLE[card.to]}</span>
       </div>
-      {files ? <div className="mt-1 text-[11px] leading-4 text-content/45">{files}</div> : null}
+      {files ? <div className="mt-1 text-[11.5px] leading-4 text-content/45">{files}</div> : null}
     </div>
   );
 }

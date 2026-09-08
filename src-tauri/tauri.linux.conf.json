@@ -11,7 +11,7 @@
         "minHeight": 520,
         "decorations": false,
         "transparent": false,
-        "backgroundColor": "#191715",
+        "backgroundColor": "#0c0c0e",
         "backgroundThrottling": "throttle",
         "shadow": true
       }

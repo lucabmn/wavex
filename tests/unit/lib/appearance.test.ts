@@ -200,9 +200,9 @@ describe("theme preference setting", () => {
 describe("accent hue setting", () => {
   beforeEach(mockLocalStorage);
 
-  it("defaults to the shipped clay", () => {
-    expect(ACCENT_HUE_DEFAULT).toBe(16);
-    expect(loadAccentHue()).toBe(16);
+  it("defaults to the shipped indigo", () => {
+    expect(ACCENT_HUE_DEFAULT).toBe(232);
+    expect(loadAccentHue()).toBe(232);
   });
 
   it("clamps and rounds what it stores", () => {

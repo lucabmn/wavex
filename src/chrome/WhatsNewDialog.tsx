@@ -20,7 +20,7 @@ export function WhatsNewBody({ version }: { version: string }) {
       {notes?.markdown ? (
         <AgentMarkdown className="whats-new-md" text={notes.markdown} streaming={false} />
       ) : (
-        <p className="text-[13px] text-content/60">
+        <p className="text-[13.5px] text-content/60">
           Release notes for this version are not available in this build.
         </p>
       )}

@@ -108,13 +108,13 @@ export function SessionFiltersMenu({ x, y, harnesses, filters, onChange, onClose
 
       {hasActiveSessionFilters(filters) ? (
         <>
-          <div role="separator" className="my-1 h-px bg-content/10" />
+          <div role="separator" className="my-1 h-px bg-edge" />
           <button
             type="button"
             role="menuitem"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onChange(DEFAULT_SESSION_SIDEBAR_FILTERS)}
-            className="flex h-7 w-full items-center rounded-lg px-2 text-left text-[13px] leading-none text-content/70 hover:bg-hover hover:text-content"
+            className="flex h-7 w-full items-center rounded-lg px-2 text-left text-[13.5px] leading-none text-content/70 hover:bg-hover hover:text-content"
           >
             Clear filters
           </button>
@@ -146,7 +146,7 @@ function FilterItem({
       aria-checked={checked}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none text-content hover:bg-hover"
+      className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none text-content hover:bg-hover"
     >
       {icon}
       <span className="min-w-0 flex-1 truncate">{label}</span>

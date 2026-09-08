@@ -103,7 +103,7 @@ export function GitChangesPanel({
   }, [graphHeight]);
 
   if (!cwd || cwd === "~") {
-    return <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>;
+    return <p className="px-3 py-2 text-[12.5px] text-content/50">No project folder</p>;
   }
 
   return (
@@ -112,10 +112,10 @@ export function GitChangesPanel({
         {(index?.additions ?? 0) > 0 || (index?.deletions ?? 0) > 0 ? (
           <DiffCounts additions={index?.additions ?? 0} deletions={index?.deletions ?? 0} />
         ) : (
-          <span className="text-[12px] font-medium text-content">Changes</span>
+          <span className="text-[12.5px] font-medium text-content">Changes</span>
         )}
         {index?.branch ? (
-          <span className="ml-auto flex min-w-0 items-center gap-1 text-[11px] text-content/50">
+          <span className="ml-auto flex min-w-0 items-center gap-1 text-[11.5px] text-content/50">
             <GitBranch className="size-3 shrink-0" strokeWidth={1.75} />
             <span className="min-w-0 truncate">{index.branch}</span>
             {index.ahead > 0 ? (
@@ -416,7 +416,7 @@ function ChangedFiles({
                 void commit(false);
               }
             }}
-            className="max-h-40 w-full resize-none overflow-y-auto rounded-md bg-content/10 py-1 pr-8 pl-2 text-[13px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
+            className="max-h-40 w-full resize-none overflow-y-auto rounded-md bg-content/10 py-1 pr-8 pl-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
           />
           <button
             type="button"
@@ -438,7 +438,7 @@ function ChangedFiles({
             type="button"
             disabled={!canCommit}
             onClick={() => void commit(false)}
-            className="flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-l-md ui-fill text-[12px] font-medium disabled:opacity-40"
+            className="flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-l-md ui-fill text-[12.5px] font-medium disabled:opacity-40"
           >
             <Check className="size-3.5" strokeWidth={2} />
             Commit
@@ -460,7 +460,7 @@ function ChangedFiles({
                 type="button"
                 disabled={!canCommitPush}
                 onClick={() => void commit(true)}
-                className="flex h-7 w-full items-center px-3 text-left text-[12px] text-content hover:bg-hover disabled:opacity-40"
+                className="flex h-7 w-full items-center px-3 text-left text-[12.5px] text-content hover:bg-hover disabled:opacity-40"
               >
                 Commit & Push
               </button>
@@ -468,7 +468,7 @@ function ChangedFiles({
                 type="button"
                 disabled={!canCommitPushPr}
                 onClick={() => void commit(true, true)}
-                className="flex h-7 w-full items-center px-3 text-left text-[12px] text-content hover:bg-hover disabled:opacity-40"
+                className="flex h-7 w-full items-center px-3 text-left text-[12.5px] text-content hover:bg-hover disabled:opacity-40"
               >
                 Commit, Push & Create PR
               </button>
@@ -497,7 +497,7 @@ function ChangedFiles({
       </div>
       <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none py-1">
         {files.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-content/45">
+          <p className="px-3 py-2 text-[12.5px] text-content/45">
             {index
               ? index.ahead > 0 || index.behind > 0
                 ? syncStatusLabel(index)
@@ -687,7 +687,7 @@ function GitSyncActions({
     : "Create pull request";
   const viewTitle = pr?.title ? `View PR #${pr.number}: ${pr.title}` : "View pull request";
   const btn =
-    "flex h-7 w-full min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-[12px] font-medium disabled:opacity-40";
+    "flex h-7 w-full min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-[12.5px] font-medium disabled:opacity-40";
   const secondary = `${btn} bg-content/10 text-content hover:bg-hover`;
   const showCreatePr = !hasOpenPr && !onDefault;
   const showViewPr = hasOpenPr;
@@ -835,7 +835,7 @@ function ChangeRow({
     <li>
       <div
         className={`group flex h-7 w-full items-center gap-1 px-2 leading-none ${
-          active ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
+          active ? "bg-selected text-content" : "text-content hover:bg-hover"
         }`}
       >
         <button
@@ -848,8 +848,8 @@ function ChangeRow({
         >
           <FileTypeIcon name={name} isDir={false} size={16} />
           <span className="min-w-0 flex-1 truncate">
-            <span className="text-[13px] font-medium">{name}</span>
-            {dir ? <span className="ml-1.5 text-[11px] text-content/40">{dir}</span> : null}
+            <span className="text-[13.5px] font-medium">{name}</span>
+            {dir ? <span className="ml-1.5 text-[11.5px] text-content/40">{dir}</span> : null}
           </span>
         </button>
         <div
@@ -885,7 +885,7 @@ function ChangeRow({
           )}
         </div>
         <span
-          className={`w-3.5 shrink-0 text-right font-mono text-[11px] font-semibold ${statusColor(file.status)}`}
+          className={`w-3.5 shrink-0 text-right font-mono text-[11.5px] font-semibold ${statusColor(file.status)}`}
         >
           {statusLetter(file.status)}
         </span>
@@ -922,7 +922,7 @@ function IconAction({
 function DiffCounts({ additions, deletions }: { additions: number; deletions: number }) {
   if (additions <= 0 && deletions <= 0) return null;
   return (
-    <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums">
+    <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11.5px] font-semibold tabular-nums">
       {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
       {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
     </span>

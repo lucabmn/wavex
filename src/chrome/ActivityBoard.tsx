@@ -140,7 +140,7 @@ export function ActivityBoard({
 
   if (cards.length === 0) {
     return (
-      <p className="px-4 py-6 text-[13px] text-content/45">
+      <p className="px-4 py-6 text-[13.5px] text-content/45">
         No saved session matches the sidebar filters.
       </p>
     );
@@ -169,7 +169,7 @@ export function ActivityBoard({
               <h2 className="min-w-0 truncate text-[11.5px] font-medium text-content/70">
                 {ACTIVITY_BOARD_LANE_LABEL[lane]}
               </h2>
-              <span className="ml-auto shrink-0 text-[11px] tabular-nums text-content/35">
+              <span className="ml-auto shrink-0 text-[11.5px] tabular-nums text-content/35">
                 {total}
               </span>
             </header>
@@ -199,7 +199,7 @@ export function ActivityBoard({
                 ))
               )}
               {hidden > 0 ? (
-                <span className="px-1 pt-1 text-[11px] text-content/30">
+                <span className="px-1 pt-1 text-[11.5px] text-content/30">
                   {`${hidden} more in the list`}
                 </span>
               ) : null}
@@ -289,7 +289,7 @@ function BoardCard({
             {card.session.title}
           </span>
         </span>
-        <span className="flex w-full min-w-0 items-center gap-1.5 text-[11px] text-content/40">
+        <span className="flex w-full min-w-0 items-center gap-1.5 text-[11.5px] text-content/40">
           {showProject ? (
             <>
               <span className="max-w-24 shrink-0 truncate">{card.projectLabel}</span>

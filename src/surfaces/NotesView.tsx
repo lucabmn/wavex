@@ -196,7 +196,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
             aria-label="Filter notes"
             spellCheck={false}
             autoComplete="off"
-            className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12px] text-content outline-none placeholder:text-content/40"
+            className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-content/40"
           />
         </div>
         <button
@@ -216,13 +216,13 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
       </div>
       <div ref={listLock} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
         {error && notes.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-content/50">{error}</p>
+          <p className="px-3 py-2 text-[12.5px] text-content/50">{error}</p>
         ) : loading && notes.length === 0 ? (
           <div className="flex justify-center py-10 text-content/40">
             <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
           </div>
         ) : visible.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-content/50">
+          <p className="px-3 py-2 text-[12.5px] text-content/50">
             {query.trim()
               ? "No matching notes"
               : "No notes yet. Save a turn from the transcript, or create one here."}
@@ -271,7 +271,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
         {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <File className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
           <span className="min-w-0 truncate text-content">Notes</span>
         </div>
@@ -347,7 +347,7 @@ function NoteDetailTab({
       role="tab"
       aria-selected={selected}
       onClick={onSelect}
-      className={`relative flex h-9 items-center text-[12px] leading-none ${
+      className={`relative flex h-9 items-center text-[12.5px] leading-none ${
         selected ? "text-content" : "text-content/50 hover:text-content"
       }`}
     >
@@ -382,13 +382,13 @@ function NoteCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-accent/14 text-content"
+          ? "border-transparent bg-selected text-content"
           : "border-transparent text-content/80 hover:bg-hover hover:text-content"
       }`}
     >
       <span className="flex items-center gap-2">
         {project ? (
-          <span className="min-w-0 flex-1 text-[11px] text-content/50">
+          <span className="min-w-0 flex-1 text-[11.5px] text-content/50">
             <NoteProjectMark
               project={project}
               logos={logos}
@@ -401,14 +401,14 @@ function NoteCard({
           <span className="min-w-0 flex-1" />
         )}
         {time ? (
-          <span className="shrink-0 text-[11px] tabular-nums text-content/45">{time}</span>
+          <span className="shrink-0 text-[11.5px] tabular-nums text-content/45">{time}</span>
         ) : null}
       </span>
-      <span className="mt-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
+      <span className="mt-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
         {note.title}
       </span>
       {preview ? (
-        <span className="mt-1 line-clamp-1 text-[12px] leading-snug text-content/45">
+        <span className="mt-1 line-clamp-1 text-[12.5px] leading-snug text-content/45">
           {preview}
         </span>
       ) : null}
@@ -435,7 +435,7 @@ function NoteDetail({
     return (
       <div className="flex h-full min-w-0 flex-1 flex-col items-center justify-center px-6 text-center">
         <File className="mb-3 size-6 text-content/30" strokeWidth={1.75} />
-        <p className="text-[13px] text-content/45">Select a note</p>
+        <p className="text-[13.5px] text-content/45">Select a note</p>
       </div>
     );
   }
@@ -549,7 +549,7 @@ function NoteEditor({
     <div ref={lockOverscroll} className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-none">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-8 py-8">
         <header className="flex flex-col gap-3">
-          <div className="flex min-w-0 items-center gap-2 text-[12px] text-content/50">
+          <div className="flex min-w-0 items-center gap-2 text-[12.5px] text-content/50">
             <File className="size-3.5 shrink-0" strokeWidth={1.75} />
             <span>Note</span>
             {note.slug ? <span className="min-w-0 truncate">{note.slug}</span> : null}
@@ -579,13 +579,13 @@ function NoteEditor({
             className="w-full border-0 bg-transparent p-0 text-[20px] font-semibold leading-tight text-content outline-none placeholder:text-content/35"
             placeholder="Untitled"
           />
-          {time ? <div className="text-[12px] text-content/50">Updated {time}</div> : null}
+          {time ? <div className="text-[12.5px] text-content/50">Updated {time}</div> : null}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
               disabled={!canAddToChat}
               onClick={() => onAddToChat(draft)}
-              className="inline-flex items-center gap-1 rounded-md ui-fill px-3 h-6.5 text-[12px] disabled:cursor-default disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-md ui-fill px-3 h-6.5 text-[12.5px] disabled:cursor-default disabled:opacity-40"
             >
               Add to chat
             </button>
@@ -596,13 +596,13 @@ function NoteEditor({
                 if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
                 void onDelete(note.id);
               }}
-              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-hover hover:text-red-400"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12.5px] text-content/70 hover:bg-hover hover:text-red-400"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
               Delete
             </button>
           </div>
-          {saveError ? <p className="text-[12px] text-red-400/90">{saveError}</p> : null}
+          {saveError ? <p className="text-[12.5px] text-red-400/90">{saveError}</p> : null}
         </header>
         <div
           role="tablist"
@@ -632,7 +632,7 @@ function NoteEditor({
         ) : body.trim() ? (
           <AgentMarkdown text={body} cwd={note.sourceCwd} />
         ) : (
-          <p className="text-[13px] text-content/45">No description</p>
+          <p className="text-[13.5px] text-content/45">No description</p>
         )}
       </div>
     </div>
@@ -656,7 +656,7 @@ function NoteSource({
     <div className="relative min-h-[448px]">
       <div
         aria-hidden
-        className="pointer-events-none grid font-mono text-[13px] leading-5 text-content/85"
+        className="pointer-events-none grid font-mono text-[13.5px] leading-5 text-content/85"
         style={{
           gridTemplateColumns: `${gutterWidth} minmax(0, 1fr)`,
         }}
@@ -674,7 +674,7 @@ function NoteSource({
       </div>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 w-px bg-content/10"
+        className="pointer-events-none absolute inset-y-0 w-px bg-edge"
         style={{ left: gutterWidth }}
       />
       <textarea
@@ -683,7 +683,7 @@ function NoteSource({
         onChange={(event) => onChange(event.target.value)}
         spellCheck={false}
         placeholder="Write markdown…"
-        className="markdown-source-field absolute inset-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent py-0 pr-0 font-mono text-[13px] leading-5 whitespace-pre-wrap wrap-break-word outline-none"
+        className="markdown-source-field absolute inset-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent py-0 pr-0 font-mono text-[13.5px] leading-5 whitespace-pre-wrap wrap-break-word outline-none"
         style={{ paddingLeft: textOffset }}
       />
     </div>

@@ -245,11 +245,11 @@ export function SecondOpinionButton({
             className="p-1 font-sans"
           >
             <div className="px-1.5 pb-2 pt-1.5">
-              <p className="text-[11px] leading-3 text-content/50 text-balance">{description}</p>
+              <p className="text-[11.5px] leading-3 text-content/50 text-balance">{description}</p>
             </div>
-            <div className="mx-1 mb-1 h-px bg-content/10" />
+            <div className="mx-1 mb-1 h-px bg-edge" />
             {targets.length === 0 ? (
-              <div className="px-2.5 py-2 text-[12px] leading-4 text-content/50">
+              <div className="px-2.5 py-2 text-[12.5px] leading-4 text-content/50">
                 {disabledTitle}
               </div>
             ) : (
@@ -274,11 +274,11 @@ export function SecondOpinionButton({
                       if (!available && probed) return;
                       pickPreferred(harness);
                     }}
-                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
+                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none ${
                       !available && probed
                         ? "text-content/30"
                         : highlighted
-                          ? "bg-accent/14 text-content"
+                          ? "bg-selected text-content"
                           : "text-content hover:bg-hover"
                     }`}
                   >
@@ -325,8 +325,8 @@ export function SecondOpinionButton({
                       setModelActive(index);
                     }}
                     onClick={() => pick(activeHarness, model.id)}
-                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
+                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none ${
+                      highlighted ? "bg-selected text-content" : "text-content hover:bg-hover"
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate">{model.name}</span>

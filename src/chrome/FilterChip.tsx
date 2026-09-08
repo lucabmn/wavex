@@ -29,7 +29,7 @@ export function FilterChip({
         active
           ? attention
             ? "bg-amber-400/15 text-amber-300"
-            : "bg-accent/14 text-content"
+            : "bg-selected text-content"
           : attention
             ? "text-amber-300/80 hover:bg-amber-400/10 hover:text-amber-300"
             : "text-content/45 hover:bg-hover hover:text-content/75"

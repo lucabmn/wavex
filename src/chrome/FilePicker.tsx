@@ -158,7 +158,7 @@ export function FilePicker({ open, cwd, openPaths = [], onOpenFile, onClose }: P
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-content outline-none placeholder:text-content/40"
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none placeholder:text-content/40"
               onChange={(e) => {
                 setQuery(e.target.value);
                 setActive(0);
@@ -168,7 +168,7 @@ export function FilePicker({ open, cwd, openPaths = [], onOpenFile, onClose }: P
           </label>
         </div>
         {empty ? (
-          <p className="px-3 pb-3 pt-1 text-[12px] text-content/50">{empty}</p>
+          <p className="px-3 pb-3 pt-1 text-[12.5px] text-content/50">{empty}</p>
         ) : (
           <FileList
             files={results}
@@ -277,7 +277,7 @@ function FileList({
             onMouseEnter={() => onRowEnter(index)}
             onClick={() => onPick(file)}
             className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm leading-none ${
-              highlighted ? "bg-accent/14 text-content" : "text-content"
+              highlighted ? "bg-selected text-content" : "text-content"
             }`}
           >
             <span className="shrink-0">
@@ -293,7 +293,7 @@ function FileList({
               />
             </span>
             {dir ? (
-              <span className="min-w-0 max-w-[45%] truncate font-mono text-[11px] text-content/40">
+              <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-content/40">
                 <MatchText
                   text={dir}
                   positions={file.positions.filter((pos) => pos < slash)}

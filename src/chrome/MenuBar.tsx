@@ -271,7 +271,7 @@ export function MenuBar({
   return (
     <div
       ref={barRef}
-      className="flex h-7 shrink-0 items-center gap-0.5 border-b border-edge bg-content/5 px-2 text-[12px]"
+      className="flex h-7 shrink-0 items-center gap-0.5 border-b border-edge bg-content/5 px-2 text-[12.5px]"
       data-tauri-drag-region="false"
     >
       {MENUS.map(({ key, label }) => {
@@ -295,7 +295,7 @@ export function MenuBar({
             }}
             className={`rounded px-2 py-0.5 transition-colors ${
               isActive
-                ? "bg-accent/14 text-content"
+                ? "bg-selected text-content"
                 : "text-content/70 hover:bg-hover hover:text-content"
             }`}
           >

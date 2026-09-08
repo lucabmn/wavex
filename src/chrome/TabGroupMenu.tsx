@@ -165,7 +165,7 @@ export function TabGroupMenu({
         onChange={(e) => setName(e.target.value)}
         onBlur={commitName}
         aria-label="Group name"
-        className="mb-2 w-full rounded-lg border border-edge bg-content/5 px-2.5 py-1.5 text-[13px] text-content outline-none ring-accent/40 focus:ring-1"
+        className="mb-2 w-full rounded-lg border border-edge bg-content/5 px-2.5 py-1.5 text-[13.5px] text-content outline-none ring-accent/40 focus:ring-1"
       />
 
       {logoProject ? (
@@ -198,8 +198,8 @@ export function TabGroupMenu({
             />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-content/50">Project logo</p>
-            <p className="truncate text-[12px] text-content/70">
+            <p className="text-[11.5px] text-content/50">Project logo</p>
+            <p className="truncate text-[12.5px] text-content/70">
               {logoPath ? "Shown in tabs and composer" : "Optional — replaces folder icon"}
             </p>
           </div>
@@ -242,7 +242,7 @@ export function TabGroupMenu({
       ) : null}
 
       <div className="mb-2 px-0.5">
-        <p className="mb-1 text-[11px] text-content/50">Mascot</p>
+        <p className="mb-1 text-[11.5px] text-content/50">Mascot</p>
         <div className="flex items-center justify-between gap-1">
           {PROJECT_MASCOTS.map((mascot) => (
             <MascotSwatch
@@ -263,7 +263,7 @@ export function TabGroupMenu({
 
       {showActions ? (
         <>
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
 
           {ITEMS.slice(0, 2).map((item) => (
             <MenuRow
@@ -273,7 +273,7 @@ export function TabGroupMenu({
             />
           ))}
 
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
 
           {ITEMS.slice(2, 4).map((item) => (
             <MenuRow
@@ -283,7 +283,7 @@ export function TabGroupMenu({
             />
           ))}
 
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
 
           {ITEMS.slice(4).map((item) => (
             <MenuRow
@@ -297,10 +297,10 @@ export function TabGroupMenu({
 
       {extraItems && extraItems.length > 0 ? (
         <>
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
           {extraItems.map((item) => (
             <Fragment key={item.id}>
-              {item.sepBefore ? <div role="separator" className="my-1 h-px bg-content/10" /> : null}
+              {item.sepBefore ? <div role="separator" className="my-1 h-px bg-edge" /> : null}
               <MenuRow
                 item={item}
                 onPick={() => {
@@ -352,14 +352,14 @@ function MenuRow({ item, onPick }: { item: MenuItem; onPick: () => void }) {
       role="menuitem"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPick}
-      className={`flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] leading-none ${
+      className={`flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13.5px] leading-none ${
         item.danger ? "text-red-300/90 hover:bg-red-500/15" : "text-content hover:bg-hover"
       }`}
     >
       <Icon className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.shortcut ? (
-        <span className="shrink-0 text-[11px] text-content/40">{item.shortcut}</span>
+        <span className="shrink-0 text-[11.5px] text-content/40">{item.shortcut}</span>
       ) : null}
     </button>
   );

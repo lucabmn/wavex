@@ -49,7 +49,7 @@ export function TranscriptSelectionMenu({ selection, onAddToChat, onDismiss }: P
           window.getSelection()?.removeAllRanges();
           onDismiss();
         }}
-        className="flex h-7 items-center gap-1.5 rounded-lg px-2 font-sans text-[13px] leading-none text-content outline-none ring-accent/40 hover:bg-hover focus-visible:ring-2"
+        className="flex h-7 items-center gap-1.5 rounded-lg px-2 font-sans text-[13.5px] leading-none text-content outline-none ring-accent/40 hover:bg-hover focus-visible:ring-2"
       >
         <MessageSquarePlus aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
         Add to chat

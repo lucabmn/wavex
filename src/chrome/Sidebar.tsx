@@ -799,7 +799,7 @@ function SidebarComponent({
           setSearchQuery("");
         }
       }}
-      className="h-full w-full min-w-0 rounded-md bg-transparent py-0 pl-7 pr-2 text-[12px] text-content outline-none placeholder:text-content/35"
+      className="h-full w-full min-w-0 rounded-md bg-transparent py-0 pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-content/35"
     />
   );
 
@@ -887,7 +887,7 @@ function SidebarComponent({
             onTabPick(itemId);
           }}
           data-selected={active ? "true" : undefined}
-          className={`ui-tab ui-focus flex h-full min-w-0 flex-1 items-center justify-center overflow-hidden px-2 text-[12px] font-medium leading-none ${
+          className={`ui-tab ui-focus flex h-full min-w-0 flex-1 items-center justify-center overflow-hidden px-2 text-[12.5px] font-medium leading-none ${
             canDragTabs ? "cursor-grab active:cursor-grabbing" : ""
           }`}
         >
@@ -912,23 +912,29 @@ function SidebarComponent({
       className="sidebar-glass ui-rule-r relative flex h-full min-h-0 shrink-0 flex-col"
     >
       {railVisible ? (
-        <>
-          <div
-            className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-1 pl-3 pr-1.5"
-            data-tauri-drag-region="deep"
-          >
-            <span className="ui-label min-w-0 flex-1 truncate leading-tight">Workspace</span>
-            <WorkspaceTitleActions onSearch={onGoToFile} onNew={onNew} />
-          </div>
+        /*
+         * One band across the whole sidebar. The rail's own top row is the
+         * left half of it, so the tab strip stands at the same height with no
+         * "Workspace" title above it: the rail and this panel are one sidebar
+         * with a nav column and a list column, not two stacked panels each
+         * with a header of its own.
+         */
+        <div
+          className="ui-rule-b flex h-10 shrink-0 items-stretch pr-1.5"
+          data-tauri-drag-region="deep"
+        >
           <div
             role="tablist"
             aria-label="Workspace"
-            className="ui-rule-b flex h-9 shrink-0 items-center gap-0.5 px-2"
+            className="flex min-w-0 flex-1 items-stretch gap-0.5 pl-1"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
           </div>
-        </>
+          <div className="flex shrink-0 items-center">
+            <WorkspaceTitleActions onSearch={onGoToFile} onNew={onNew} />
+          </div>
+        </div>
       ) : (
         <>
           <div
@@ -1007,7 +1013,7 @@ function SidebarComponent({
               />
             </div>
           ) : (
-            <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-content/50">No project folder</p>
           )}
         </div>
         {tab === "sessions" && cwd && cwd !== "~" ? (
@@ -1037,7 +1043,7 @@ function SidebarComponent({
           }`}
         >
           {!cwd || cwd === "~" ? (
-            <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-content/50">No project folder</p>
           ) : (
             <div>
               {/*
@@ -1049,7 +1055,7 @@ function SidebarComponent({
             */}
               {pendingFirstLoad ? null : status === "error" && sessions.length === 0 ? (
                 <div role="alert" className="m-2 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
-                  <span className="flex items-center gap-2 text-[12px] text-red-300">
+                  <span className="flex items-center gap-2 text-[12.5px] text-red-300">
                     <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
                     Couldn’t load sessions
                   </span>
@@ -1068,7 +1074,7 @@ function SidebarComponent({
                 // just typed, so it stays a quiet line of text. Only the genuine
                 // "this project has nothing in it" case earns the illustration.
                 narrowedByUser ? (
-                  <p className="px-3 py-2 text-[12px] text-content/50">
+                  <p className="px-3 py-2 text-[12.5px] text-content/50">
                     {searchNarrowed ? "No matching sessions" : "No sessions match these filters"}
                   </p>
                 ) : (
@@ -1198,7 +1204,7 @@ function SidebarComponent({
                                       className="relative flex w-full items-center gap-1 rounded-md border border-transparent px-2.5 py-1.5 text-left text-content/45 hover:bg-hover hover:text-content"
                                     >
                                       <Plus className="size-3 shrink-0" strokeWidth={1.75} />
-                                      <span className="text-[13px] font-semibold leading-snug">
+                                      <span className="text-[13.5px] font-semibold leading-snug">
                                         New session
                                       </span>
                                     </button>
@@ -1435,7 +1441,7 @@ function SidebarProjectPicker({
         onCwdChange={onSelectProject}
         onNewTerminal={onNewTerminal}
         className="min-w-0 items-center"
-        buttonClassName="flex h-6.5 w-full items-center gap-1.5 rounded-md px-2 text-[12px] leading-none text-content/50 hover:text-content"
+        buttonClassName="flex h-6.5 w-full items-center gap-1.5 rounded-md px-2 text-[12.5px] leading-none text-content/50 hover:text-content"
       >
         {logoPath ? (
           <ProjectLogoIcon
@@ -1545,7 +1551,7 @@ function SessionsHeaderButton({
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
       className={`ui-focus relative z-50 grid size-6 place-items-center rounded-lg text-content/45 transition-colors hover:bg-hover hover:text-content ${
-        open || active ? "bg-accent/14 text-content" : ""
+        open || active ? "bg-selected text-content" : ""
       }`}
     >
       {children}
@@ -1685,14 +1691,14 @@ function FolderRow({
           </>
         )}
       </span>
-      <span className="relative min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug text-content">
+      <span className="relative min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug text-content">
         {folder.name}
       </span>
-      <span className="relative flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-content/45">
+      <span className="relative flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-content/45">
         {!expanded && needsApproval ? (
           <CircleAlert className="size-3 text-amber-400" strokeWidth={1.75} />
         ) : !expanded && busy ? (
-          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11px] leading-none text-accent" />
+          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11.5px] leading-none text-accent" />
         ) : !expanded && done ? (
           <Check className="size-3 text-emerald-400" strokeWidth={2.25} />
         ) : null}
@@ -1770,9 +1776,9 @@ function FolderRenameRow({
             finish(false);
           }
         }}
-        className="relative min-w-0 flex-1 rounded-md bg-surface-sunken px-2 py-0.5 text-[13px] font-semibold leading-snug text-content outline-none"
+        className="relative min-w-0 flex-1 rounded-md bg-surface-sunken px-2 py-0.5 text-[13.5px] font-semibold leading-snug text-content outline-none"
       />
-      <span className="relative shrink-0 text-[11px] tabular-nums text-content/45">
+      <span className="relative shrink-0 text-[11.5px] tabular-nums text-content/45">
         {memberCount}
       </span>
     </div>
@@ -1833,7 +1839,7 @@ function SessionCard({
   });
   const status =
     agent === "idle" ? (
-      <span className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-content/45">
+      <span className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-content/45">
         <span>{time}</span>
       </span>
     ) : (
@@ -1985,7 +1991,7 @@ function SessionCard({
         <span className="relative flex items-center gap-2">
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
             <HarnessIcon harness={session.harness} className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate text-[11px] text-content/50">{model}</span>
+            <span className="min-w-0 truncate text-[11.5px] text-content/50">{model}</span>
           </span>
           {status}
         </span>
@@ -1994,7 +2000,7 @@ function SessionCard({
         {session.pinned ? (
           <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
         ) : null}
-        <span className="min-w-0 flex-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
+        <span className="min-w-0 flex-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
           {title}
         </span>
         {compact ? status : null}
@@ -2090,7 +2096,7 @@ function SessionRenameRow({
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => finish(true)}
         onKeyDown={onKeyDown}
-        className="w-full rounded-md bg-surface-sunken px-2 py-1 text-[13px] font-semibold leading-snug text-content outline-none"
+        className="w-full rounded-md bg-surface-sunken px-2 py-1 text-[13.5px] font-semibold leading-snug text-content outline-none"
       />
     </div>
   );
@@ -2118,7 +2124,7 @@ function DiffStat({
   return (
     <span
       title={`${label} uncommitted`}
-      className="flex min-w-0 items-center gap-1.5 overflow-hidden font-mono text-[11px] font-semibold tabular-nums"
+      className="flex min-w-0 items-center gap-1.5 overflow-hidden font-mono text-[11.5px] font-semibold tabular-nums"
     >
       {files > 0 ? <span className="truncate text-content/60">{files} changed</span> : null}
       {additions > 0 ? <span className="shrink-0 text-emerald-400">+{additions}</span> : null}

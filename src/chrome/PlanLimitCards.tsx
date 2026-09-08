@@ -39,7 +39,7 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
     >
       <header className="flex items-center gap-2">
         <HarnessIcon harness={limits.provider} className="size-4 shrink-0" />
-        <span className="min-w-0 truncate text-[12px] font-medium">
+        <span className="min-w-0 truncate text-[12.5px] font-medium">
           {HARNESS_LABEL[limits.provider]}
         </span>
         {limits.plan ? (
@@ -49,7 +49,7 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
         ) : null}
         {limits.status === "ok" && tightest ? (
           <span
-            className={`ml-auto shrink-0 text-[11px] tabular-nums ${severityText(tightest.usedPercent)}`}
+            className={`ml-auto shrink-0 text-[11.5px] tabular-nums ${severityText(tightest.usedPercent)}`}
             title={`Highest window: ${tightest.label}`}
           >
             {formatPercent(tightest.usedPercent)} used
@@ -68,7 +68,7 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
           <ul className="flex flex-col gap-3">
             {limits.windows.map((window) => (
               <li key={window.id} className="flex flex-col gap-1.5">
-                <div className="flex items-baseline justify-between gap-3 text-[11px]">
+                <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
                   <span className="min-w-0 truncate text-content/60">{window.label}</span>
                   <span className="shrink-0 tabular-nums">
                     <span className={severityText(window.usedPercent)}>
@@ -116,7 +116,7 @@ function Placeholder({
   tone?: "muted" | "error";
 }) {
   return (
-    <p className={`text-[11px] ${tone === "error" ? "text-red-400/80" : "text-content/35"}`}>
+    <p className={`text-[11.5px] ${tone === "error" ? "text-red-400/80" : "text-content/35"}`}>
       {children}
     </p>
   );

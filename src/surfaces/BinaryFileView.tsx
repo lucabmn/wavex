@@ -88,7 +88,7 @@ export function BinaryFileView({ path, cwd }: Props) {
 
   if (state.status === "loading") {
     return (
-      <div className="grid h-full place-items-center text-[12px] text-content/45">
+      <div className="grid h-full place-items-center text-[12.5px] text-content/45">
         Opening {basename(path)}…
       </div>
     );
@@ -164,7 +164,7 @@ function ImageView({ url, size, mime }: { url: string; size: number; mime: strin
           }
         />
       </div>
-      <footer className="flex h-8 shrink-0 items-center gap-3 border-t border-edge px-3 text-[11px] text-content/50">
+      <footer className="flex h-8 shrink-0 items-center gap-3 border-t border-edge px-3 text-[11.5px] text-content/50">
         <span className="tabular-nums">{natural ? `${natural.w} × ${natural.h}` : "—"}</span>
         <span className="tabular-nums">{formatFileSize(size)}</span>
         <span className="uppercase">{mime.replace(/^image\//, "")}</span>
@@ -235,9 +235,9 @@ function FileCard({
     <div className="grid h-full place-items-center p-6">
       <div className="max-w-md text-center">
         {icon}
-        <p className="text-[13px] text-content">{title}</p>
-        <p className="mt-1 text-[12px] leading-5 text-content/50">{detail}</p>
-        <p className="mt-1 truncate font-mono text-[11px] text-content/35">
+        <p className="text-[13.5px] text-content">{title}</p>
+        <p className="mt-1 text-[12.5px] leading-5 text-content/50">{detail}</p>
+        <p className="mt-1 truncate font-mono text-[11.5px] text-content/35">
           {displayPath(path, cwd)}
         </p>
         <div className="mt-4 flex items-center justify-center gap-2">
@@ -267,7 +267,7 @@ function CardButton({ onClick, children }: { onClick: () => void; children: Reac
     <button
       type="button"
       onClick={onClick}
-      className="flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12px] text-content hover:bg-hover"
+      className="flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12.5px] text-content hover:bg-hover"
     >
       {children}
     </button>

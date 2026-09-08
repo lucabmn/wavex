@@ -116,7 +116,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               ) : (
                 <ChevronRight className="size-3.5 shrink-0" strokeWidth={1.75} />
               )}
-              <span className="truncate text-[12px]">{files.length} Files</span>
+              <span className="truncate text-[12.5px]">{files.length} Files</span>
             </button>
           ) : (
             <FileLabel file={first} onOpenDiff={onOpenDiff} />
@@ -127,7 +127,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               title="Undo all session changes"
               disabled={disabled}
               onClick={() => run("undo")}
-              className="h-6 rounded-md px-1.5  text-[11px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
+              className="h-6 rounded-md px-1.5  text-[11.5px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
             >
               Undo All
             </button>
@@ -136,7 +136,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               title="Keep all session changes"
               disabled={disabled}
               onClick={() => run("keep")}
-              className="h-6 rounded-md px-1.5  text-[11px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
+              className="h-6 rounded-md px-1.5  text-[11.5px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
             >
               Keep All
             </button>
@@ -144,7 +144,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               type="button"
               title="Review changes"
               onClick={() => onOpenDiff()}
-              className="h-6 rounded-md bg-content/15 px-2 text-[11px] text-content/80 hover:bg-hover hover:text-content"
+              className="h-6 rounded-md bg-content/15 px-2 text-[11.5px] text-content/80 hover:bg-hover hover:text-content"
             >
               Review
             </button>
@@ -180,7 +180,7 @@ function FileLabel({
       className="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left text-content/80 hover:text-content"
     >
       <FileTypeIcon name={name} isDir={false} size={14} />
-      <span className="min-w-0 truncate font-mono text-[12px]">{name}</span>
+      <span className="min-w-0 truncate font-mono text-[12.5px]">{name}</span>
       <DiffCounts file={file} />
     </button>
   );
@@ -202,7 +202,7 @@ function FileRow({
       className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-1 text-left text-content/80 hover:bg-hover hover:text-content"
     >
       <FileTypeIcon name={name} isDir={false} size={16} />
-      <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{name}</span>
+      <span className="min-w-0 flex-1 truncate font-mono text-[12.5px]">{name}</span>
       <DiffCounts file={file} />
     </button>
   );
@@ -211,7 +211,7 @@ function FileRow({
 function DiffCounts({ file }: { file: CheckpointFile }) {
   if (file.additions <= 0 && file.deletions <= 0) return null;
   return (
-    <span className="shrink-0 font-mono text-[11px] font-semibold">
+    <span className="shrink-0 font-mono text-[11.5px] font-semibold">
       {file.additions > 0 ? <span className="text-emerald-400">+{file.additions}</span> : null}
       {file.additions > 0 && file.deletions > 0 ? " " : null}
       {file.deletions > 0 ? <span className="text-red-400">-{file.deletions}</span> : null}

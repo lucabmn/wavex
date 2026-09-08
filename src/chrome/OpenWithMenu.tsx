@@ -109,13 +109,13 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
           className="overflow-y-auto overscroll-none p-1"
         >
           {error ? (
-            <p role="alert" className="px-2 py-1.5 text-[12px] leading-snug text-red-300">
+            <p role="alert" className="px-2 py-1.5 text-[12.5px] leading-snug text-red-300">
               {error}
             </p>
           ) : apps == null ? (
-            <p className="px-2 py-1.5 text-[12px] text-content/45">Looking for apps…</p>
+            <p className="px-2 py-1.5 text-[12.5px] text-content/45">Looking for apps…</p>
           ) : groups.length === 0 ? (
-            <p className="px-2 py-1.5 text-[12px] text-content/45">No apps found</p>
+            <p className="px-2 py-1.5 text-[12.5px] text-content/45">No apps found</p>
           ) : (
             groups.map((group) => (
               <div key={group.kind}>
@@ -127,7 +127,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
                     role="menuitem"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => launch(app)}
-                    className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none text-content hover:bg-hover"
+                    className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none text-content hover:bg-hover"
                   >
                     <AppIcon app={app} />
                     <span className="min-w-0 flex-1 truncate">{app.name}</span>

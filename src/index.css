@@ -30,9 +30,10 @@
   --color-surface-overlay: var(--surface-3);
   --color-edge: var(--edge);
   --color-edge-strong: var(--edge-strong);
-  /* One hover tone for the whole app, so a row in the file tree answers the
-     pointer exactly like a row in a menu. */
+  /* One hover tone and one selected tone for the whole app, so a row in the
+     file tree answers the pointer exactly like a row in a menu. */
   --color-hover: var(--hover);
+  --color-selected: var(--selected);
   --color-skill: #d9a441;
   --color-template: #9a8cd8;
   --color-mention: #5ba3a0;
@@ -49,69 +50,66 @@
 
 :root {
   /*
-   * A warm graphite ground. The warmth is the point: a neutral or blue-black
-   * window full of grey text is the default every tool of this kind arrives
-   * at, and a few degrees of red in the greys is what stops the app reading
-   * as a terminal with panels bolted on.
+   * Near-monochrome, a few degrees cool. The window is almost colourless on
+   * purpose: colour that appears everywhere stops meaning anything, and in a
+   * tool that is mostly text the job of the surface is to disappear.
    */
-  --theme-hue: 28;
-  --theme-saturation: 7%;
+  --theme-hue: 220;
+  --theme-saturation: 6%;
   /*
-   * Clay. Restrained on purpose — a fully saturated accent has to be rationed
-   * to stay legible, and this one is used on every selected row, so it is
-   * mixed down far enough to live next to body text all day.
+   * The accent appears on maybe a dozen pixels of a full screen — the icon of
+   * the live nav row, a primary button, focus, a link. It is not the colour of
+   * the app; it is the colour of "this one".
    */
-  --accent-hue: 14;
-  --accent-saturation: 54%;
-  --accent-lightness: 56%;
+  --accent-hue: 232;
+  --accent-saturation: 48%;
+  --accent-lightness: 62%;
   --sidebar-opacity: 0.8;
-  --background-lightness: 9%;
-  --content-lightness: 92%;
+  --background-lightness: 5%;
+  --content-lightness: 97%;
 
   /*
-   * The ladder. Steps are small — three or four percent of lightness reads as
-   * a plane and not as a patch — and saturation climbs a little with each
-   * rung so a raised surface looks warmed rather than washed toward grey.
+   * Four planes. The steps are small and the ladder is shallow: a window that
+   * separates everything by shade ends up looking quilted, so most of the app
+   * sits on one plane and the step is spent where it matters — the sidebar
+   * behind the work, a card above the page, an overlay above everything.
    */
-  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) - 2%));
+  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 2%));
   --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
   --surface-2: hsl(
-    var(--theme-hue) calc(var(--theme-saturation) + 1%) calc(var(--background-lightness) + 3.5%)
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 4.5%)
   );
   --surface-3: hsl(
-    var(--theme-hue) calc(var(--theme-saturation) + 2%) calc(var(--background-lightness) + 6.5%)
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 7.5%)
   );
 
   /*
    * `--rule` is the strength of every hairline in the app, exposed as the
-   * Separators setting. It is one number because the alternative — a hundred
-   * hand-picked border opacities — is how the chrome ended up looking like a
-   * wireframe in the first place.
+   * Separators setting. One number, because a hundred hand-picked border
+   * opacities is how chrome turns into a wireframe of itself.
    */
-  --rule: 0.09;
+  --rule: 0.1;
   --edge: color-mix(in srgb, var(--color-content) calc(100% * var(--rule)), transparent);
-  --edge-strong: color-mix(in srgb, var(--color-content) calc(190% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(180% * var(--rule)), transparent);
 
-  --hover: color-mix(in srgb, var(--color-content) 6%, transparent);
+  --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
+  /* Selection is a flat step, not a tint: the accent is busy meaning something
+     else, and a coloured row is a decoration a list of forty cannot afford. */
+  --selected: color-mix(in srgb, var(--color-content) 9%, transparent);
 
-  /*
-   * Shadows are for things that genuinely float and nothing else. Flat black
-   * at low alpha rather than a tinted or coloured drop: on a warm ground a
-   * tinted shadow reads as a smudge of the accent.
-   */
-  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.18);
-  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.22);
-  --elevation-3: 0 16px 40px rgb(0 0 0 / 0.34);
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.2);
+  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.24);
+  --elevation-3: 0 12px 32px rgb(0 0 0 / 0.36);
 
   --editor-font-size: 13px;
   --transcript-width: 56rem;
-  --transcript-font-size: 13px;
+  --transcript-font-size: 13.5px;
   --transcript-gap: 0.25rem;
-  --link-color: hsl(var(--accent-hue) 55% 68%);
-  --color-skill: #d9a441;
-  --color-template: #9a8cd8;
-  --color-mention: #5ba3a0;
-  --color-markdown-heading: #d8b48a;
+  --link-color: hsl(var(--accent-hue) 60% 72%);
+  --color-skill: #d3b06b;
+  --color-template: #9b8ede;
+  --color-mention: #6fa8c9;
+  --color-markdown-heading: #c3c8d4;
 }
 
 html {
@@ -130,39 +128,38 @@ html.depth-flat {
 }
 
 html.depth-deep {
-  --elevation-1: 0 1px 3px rgb(0 0 0 / 0.26);
-  --elevation-2: 0 8px 22px rgb(0 0 0 / 0.34);
-  --elevation-3: 0 26px 64px rgb(0 0 0 / 0.48);
+  --elevation-1: 0 1px 3px rgb(0 0 0 / 0.28);
+  --elevation-2: 0 8px 22px rgb(0 0 0 / 0.36);
+  --elevation-3: 0 24px 56px rgb(0 0 0 / 0.5);
 }
 
 html.theme-light {
-  --background-lightness: 96%;
-  --content-lightness: 18%;
-  --accent-saturation: 56%;
-  --accent-lightness: 40%;
+  --background-lightness: 100%;
+  --content-lightness: 12%;
+  --accent-saturation: 52%;
+  --accent-lightness: 52%;
   /*
-   * The upper rungs take smaller steps on paper. Lightness runs out at 100%,
-   * so the dark theme's steps would land raised and overlay on the same white
-   * and collapse the top of the ladder.
+   * Paper inverts the ladder. The page is white and the sidebar sits *below*
+   * it, because on light backgrounds a panel reads as behind the work when it
+   * is greyer, not when it is brighter — and lightness has no headroom above
+   * white to raise anything into.
    */
-  --surface-2: hsl(
-    var(--theme-hue) calc(var(--theme-saturation) + 1%) calc(var(--background-lightness) + 2%)
-  );
-  --surface-3: hsl(
-    var(--theme-hue) calc(var(--theme-saturation) + 2%) calc(var(--background-lightness) + 3.8%)
-  );
-  /* Ink on paper needs a firmer rule than light on graphite to read at all. */
-  --edge: color-mix(in srgb, var(--color-content) calc(140% * var(--rule)), transparent);
-  --edge-strong: color-mix(in srgb, var(--color-content) calc(260% * var(--rule)), transparent);
-  --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
-  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.07);
-  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.09);
-  --elevation-3: 0 16px 40px rgb(0 0 0 / 0.14);
-  --link-color: hsl(var(--accent-hue) 60% 40%);
-  --color-skill: #8a6212;
-  --color-template: #5b4bb5;
-  --color-mention: #2b7a76;
-  --color-markdown-heading: #8a5a28;
+  --surface-0: hsl(var(--theme-hue) calc(var(--theme-saturation) + 4%) 96.5%);
+  --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
+  --surface-2: hsl(var(--theme-hue) calc(var(--theme-saturation) + 3%) 98%);
+  --surface-3: hsl(var(--theme-hue) var(--theme-saturation) 100%);
+  --edge: color-mix(in srgb, var(--color-content) calc(130% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(230% * var(--rule)), transparent);
+  --hover: color-mix(in srgb, var(--color-content) 4%, transparent);
+  --selected: color-mix(in srgb, var(--color-content) 7%, transparent);
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.06);
+  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.08);
+  --elevation-3: 0 12px 32px rgb(0 0 0 / 0.12);
+  --link-color: hsl(var(--accent-hue) 60% 46%);
+  --color-skill: #8a6a1c;
+  --color-template: #5a4bc4;
+  --color-mention: #2f6f92;
+  --color-markdown-heading: #3a4152;
   color-scheme: light;
 }
 
@@ -1296,59 +1293,48 @@ header[data-tauri-drag-region] button {
  * the file tree behaving like a row in a menu.
  */
 
-/* A card inside a page: a step up from the plane behind it, and a rule only
+/* A card inside a page: a step up from the plane behind it, and a rule
    because a settings card has to hold a list of rows apart from the page. */
 .ui-pane {
   border: 1px solid var(--edge);
   background: var(--surface-2);
 }
 
-/* Something that genuinely floats: menu, popover, dialog. This is where the
-   shadow and the border earn their place. */
+/* Something that genuinely floats: menu, popover, dialog. */
 .ui-overlay {
-  border: 1px solid var(--edge-strong);
+  border: 1px solid var(--edge);
   background: var(--surface-3);
   box-shadow: var(--elevation-3);
 }
 
 /*
- * A row in a list. Hover and pressed come from the two shared tones; the
- * selected state is a flat step up plus a clay rule down the leading edge.
- * The rule is what carries selection down a long list — a fill on its own is
- * one more shade of grey among forty.
+ * A row in a list. Selected is a flat step and full-strength text — no tint
+ * and no coloured bar. The accent is spent on the row's *icon* instead, which
+ * is one glyph rather than a whole band of colour, and is enough to find the
+ * live row in a list of forty without turning the list into a chart.
  */
 .ui-row {
-  position: relative;
+  color: color-mix(in srgb, var(--color-content) 62%, transparent);
 }
 
-.ui-row::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--color-accent);
-  opacity: 0;
-}
-
-.ui-row[data-selected="true"]::before {
-  opacity: 1;
+.ui-row:hover {
+  background: var(--hover);
+  color: var(--color-content);
 }
 
 .ui-row[data-selected="true"] {
-  background: var(--surface-2);
+  background: var(--selected);
+  color: var(--color-content);
 }
 
-/* The one filled action a surface is allowed. Flat clay, no gradient: it has
-   to read as a button, not as an illustration of one. */
+.ui-row[data-selected="true"] svg {
+  color: var(--color-accent);
+}
+
+/* The one filled action a surface is allowed. */
 .ui-fill {
   background: var(--color-accent);
-  color: hsl(var(--accent-hue) 70% 8%);
-}
-
-html.theme-light .ui-fill {
-  color: hsl(var(--accent-hue) 40% 98%);
+  color: white;
 }
 
 .ui-fill:hover:not(:disabled):not([aria-disabled="true"]) {
@@ -1370,41 +1356,36 @@ html.theme-light .ui-fill {
 }
 
 /*
- * Section headings. Small, uppercase, widely tracked — the tracking is doing
- * the work a heavier weight or a rule underneath would otherwise do, which is
- * why headings here need neither.
+ * Section headings. Sentence case at the app's smallest size, not uppercase
+ * with wide tracking: a sidebar has several of these and shouting each one
+ * competes with the rows underneath, which are the thing being read.
  */
 .ui-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-content) 42%, transparent);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: color-mix(in srgb, var(--color-content) 45%, transparent);
 }
 
-/*
- * Focus. A ring inset by a pixel so it lands inside the control's own bounds
- * instead of pushing the layout around, and drawn in the accent because the
- * accent is already what "this one" means everywhere else.
- */
+/* Focus: a ring inset by a pixel so it lands inside the control's own bounds
+   instead of pushing the layout around. */
 .ui-focus:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: -1px;
 }
 
 /*
- * A tab. Flush with the strip, no fill and no border: the active one is named
- * by a clay rule along its bottom edge and by its text going to full
- * strength. This is the idiom the whole app uses for exclusive choices —
- * title-bar tabs, workspace tabs, editor tabs, the mode switch.
+ * A tab. Flush with the strip, no fill and no border: the live one is named
+ * by a rule along its bottom edge and by its text going to full strength.
  */
 .ui-tab {
   position: relative;
-  color: color-mix(in srgb, var(--color-content) 52%, transparent);
+  color: color-mix(in srgb, var(--color-content) 55%, transparent);
 }
 
 .ui-tab:hover {
-  color: color-mix(in srgb, var(--color-content) 80%, transparent);
+  color: color-mix(in srgb, var(--color-content) 85%, transparent);
 }
 
 .ui-tab[data-selected="true"] {
@@ -1417,8 +1398,8 @@ html.theme-light .ui-fill {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 2px;
-  background: var(--color-accent);
+  height: 1.5px;
+  background: var(--color-content);
   opacity: 0;
 }
 
@@ -1427,17 +1408,17 @@ html.theme-light .ui-fill {
 }
 
 /* A tab inside a boxed track — a settings segmented control — where there is
-   no strip edge for the rule to sit on, so the active one takes a fill. */
+   no strip edge for the rule to sit on, so the live one takes a fill. */
 .ui-segment[data-selected="true"] {
   background: var(--surface-3);
   color: var(--color-content);
+  box-shadow: var(--elevation-1);
 }
 
 /*
- * Rules. Two of them, both one pixel, both `--rule` strength: `ui-rule-b`
- * under a strip of chrome, `ui-rule-r` between two columns. They are drawn as
- * a pseudo-element rather than a border so a translucent window does not
- * stack a second line where two panels meet.
+ * Rules. Both one pixel at `--rule` strength, drawn as a pseudo-element
+ * rather than a border so a translucent window does not stack a second line
+ * where two panels meet.
  */
 .ui-rule-b,
 .ui-rule-r {
@@ -1466,10 +1447,8 @@ html.theme-light .ui-fill {
 }
 
 /*
- * The composer. The one place the app raises something toward the reader, and
- * it does it with a plane and a rule rather than a glow: it is where the
- * cursor lives, so it is the brightest surface on screen and everything else
- * sits back from it.
+ * The composer. A plain card on the page's own plane with a rule around it —
+ * it is where the cursor lives, so it earns an edge, and nothing more.
  */
 .ui-composer {
   border: 1px solid var(--edge-strong);
@@ -1477,7 +1456,7 @@ html.theme-light .ui-fill {
 }
 
 .ui-composer:focus-within {
-  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--edge-strong));
+  border-color: color-mix(in srgb, var(--color-content) 28%, transparent);
 }
 
 /* Scroll areas inside the chrome get the same thumb on every platform. */
@@ -1494,21 +1473,21 @@ html.theme-light .ui-fill {
   border: 2px solid transparent;
   border-radius: 9999px;
   background-clip: content-box;
-  background-color: color-mix(in srgb, var(--color-content) 18%, transparent);
+  background-color: color-mix(in srgb, var(--color-content) 16%, transparent);
 }
 
 .ui-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--color-content) 34%, transparent);
+  background-color: color-mix(in srgb, var(--color-content) 30%, transparent);
 }
 
 /*
- * Typography. The UI runs a hair tight; code and terminals keep their own
- * metrics, where tracking is alignment rather than style.
+ * Typography. The UI runs tight; code and terminals keep their own metrics,
+ * where tracking is alignment rather than style.
  */
 html,
 body,
 #root {
-  letter-spacing: -0.008em;
+  letter-spacing: -0.011em;
 }
 
 code,
@@ -1523,26 +1502,24 @@ samp,
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent);
   color: var(--color-content);
 }
 
 /*
- * The user's own turn in a transcript. A raised plane with a clay rule down
- * the leading edge, which is the same mark a selected row carries — in a long
- * scroll of agent output, what the person typed has to be findable without
- * reading, and one more grey block is not findable.
+ * The user's own turn in a transcript: a card on the raised plane, aligned
+ * with everything else in the column. It reads as a message rather than as a
+ * marked-up quotation, which is what a leading bar or a tint would make it.
  */
 .ui-prompt {
   position: relative;
+  border: 1px solid var(--edge);
   background: var(--surface-2);
-  box-shadow: inset 2px 0 0 0 var(--color-accent);
 }
 
-/* Chat layout floats the prompt as a bubble on the right, where a leading
-   rule would point away from the text; there the plane carries it alone. */
+/* Chat layout floats it as a bubble on the right. */
 .ui-prompt.rounded-xl,
 .ui-prompt.rounded-full {
-  box-shadow: none;
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--surface-2));
+  border-color: transparent;
+  background: var(--surface-3);
 }

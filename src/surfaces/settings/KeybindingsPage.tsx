@@ -13,7 +13,7 @@ export function KeybindingsPage() {
       description="Bindings come from the app menu and the workspace key handler; they aren’t customizable yet."
       action={
         <div className="flex items-center gap-3">
-          <span className="shrink-0 text-[12px] text-content/40 tabular-nums">
+          <span className="shrink-0 text-[12.5px] text-content/40 tabular-nums">
             {rows.length} {rows.length === 1 ? "binding" : "bindings"}
           </span>
           <label className="flex h-7 w-52 shrink-0 items-center gap-2 rounded-md border border-edge px-2 text-content/45 focus-within:border-edge-strong">
@@ -25,7 +25,7 @@ export function KeybindingsPage() {
               aria-label="Filter keybindings"
               spellCheck={false}
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent text-[12px] text-content outline-none placeholder:text-content/35"
+              className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content/35"
             />
           </label>
         </div>
@@ -42,11 +42,15 @@ export function KeybindingsPage() {
         rows.map((row) => (
           <div
             key={`${row.command}-${row.keys}`}
-            className="flex items-center border-b border-edge px-4 py-2 text-[12px] last:border-b-0"
+            className="flex items-center border-b border-edge px-4 py-2 text-[12.5px] last:border-b-0"
           >
             <span className="min-w-0 flex-1 truncate">{row.command}</span>
-            <span className="w-40 shrink-0 font-mono text-[12px] text-content/80">{row.keys}</span>
-            <span className="w-28 shrink-0 font-mono text-[11px] text-content/40">{row.when}</span>
+            <span className="w-40 shrink-0 font-mono text-[12.5px] text-content/80">
+              {row.keys}
+            </span>
+            <span className="w-28 shrink-0 font-mono text-[11.5px] text-content/40">
+              {row.when}
+            </span>
           </div>
         ))
       )}

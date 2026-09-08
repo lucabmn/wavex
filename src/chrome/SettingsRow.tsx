@@ -17,7 +17,9 @@ export function PageHeader({ title, description }: { title: string; description?
         {title}
       </h1>
       {description ? (
-        <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-content/45">{description}</p>
+        <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-content/45">
+          {description}
+        </p>
       ) : null}
     </header>
   );
@@ -39,9 +41,9 @@ export function Section({
     <section className="pb-7 last:pb-2">
       <div className="flex items-end justify-between gap-4 pb-2">
         <div className="min-w-0">
-          <h2 className="ui-label text-[11px] text-content/45">{title}</h2>
+          <h2 className="ui-label text-[11.5px] text-content/45">{title}</h2>
           {description ? (
-            <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-content/40">
+            <p className="mt-1 max-w-xl text-[12.5px] leading-relaxed text-content/40">
               {description}
             </p>
           ) : null}
@@ -72,9 +74,9 @@ export function Row({
 }) {
   const text = (
     <div className="min-w-0 flex-1">
-      <div className="text-[13px] font-medium text-content">{label}</div>
+      <div className="text-[13.5px] font-medium text-content">{label}</div>
       {description ? (
-        <p className="mt-1 text-[12px] leading-relaxed text-content/45">{description}</p>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-content/45">{description}</p>
       ) : null}
     </div>
   );
@@ -147,7 +149,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="grid gap-0.5 rounded-md border border-edge bg-surface-sunken p-0.5 text-[12px]"
+      className="grid gap-0.5 rounded-md border border-edge bg-surface-sunken p-0.5 text-[12.5px]"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(3.75rem, 1fr))` }}
     >
       {options.map((option) => (
@@ -225,7 +227,7 @@ export function Select({
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
-      className="ui-focus max-w-52 rounded-md border border-edge bg-surface-raised px-2.5 py-1.5 text-[12px] text-content outline-none hover:border-edge-strong disabled:opacity-40"
+      className="ui-focus max-w-52 rounded-md border border-edge bg-surface-raised px-2.5 py-1.5 text-[12.5px] text-content outline-none hover:border-edge-strong disabled:opacity-40"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -252,7 +254,7 @@ export function SecondaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`ui-focus flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-[12px] font-medium ${
+      className={`ui-focus flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-[12.5px] font-medium ${
         danger
           ? "text-red-400 hover:border-red-400/40 hover:bg-red-400/10"
           : "bg-surface-raised text-content/70 hover:border-edge-strong hover:text-content"
@@ -265,5 +267,5 @@ export function SecondaryButton({
 
 /** An empty state inside a section card, where a list would otherwise be. */
 export function EmptyNote({ children }: { children: ReactNode }) {
-  return <p className="px-4 py-3.5 text-[12px] text-content/45">{children}</p>;
+  return <p className="px-4 py-3.5 text-[12.5px] text-content/45">{children}</p>;
 }

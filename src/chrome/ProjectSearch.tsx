@@ -121,7 +121,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
   };
 
   if (!cwd || cwd === "~") {
-    return <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>;
+    return <p className="px-3 py-2 text-[12.5px] text-content/50">No project folder</p>;
   }
 
   return (
@@ -136,7 +136,9 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
         >
           <ChevronLeft className="size-4" strokeWidth={1.75} />
         </button>
-        <span className="min-w-0 flex-1 truncate text-[12px] text-content/55">Search in files</span>
+        <span className="min-w-0 flex-1 truncate text-[12.5px] text-content/55">
+          Search in files
+        </span>
       </div>
       <div className="shrink-0 space-y-2 border-b border-edge p-2">
         <div className="flex items-center gap-1 rounded-md border border-edge bg-content/5 px-2 pr-1">
@@ -148,7 +150,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
             placeholder="Search"
             aria-label="Search"
             spellCheck={false}
-            className="min-w-0 flex-1 bg-transparent py-1.5 text-[12px] text-content outline-none placeholder:text-content/35"
+            className="min-w-0 flex-1 bg-transparent py-1.5 text-[12.5px] text-content outline-none placeholder:text-content/35"
           />
           <Toggle
             label="Match case"
@@ -178,7 +180,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
           placeholder="files to include"
           aria-label="files to include"
           spellCheck={false}
-          className="w-full rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[11px] text-content outline-none placeholder:text-content/35"
+          className="w-full rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[11.5px] text-content outline-none placeholder:text-content/35"
         />
         <input
           value={exclude}
@@ -186,11 +188,11 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
           placeholder="files to exclude"
           aria-label="files to exclude"
           spellCheck={false}
-          className="w-full rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[11px] text-content outline-none placeholder:text-content/35"
+          className="w-full rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[11.5px] text-content outline-none placeholder:text-content/35"
         />
       </div>
 
-      <div className="flex min-h-8 shrink-0 items-center gap-2 px-3 py-1.5 text-[11px] text-content/45">
+      <div className="flex min-h-8 shrink-0 items-center gap-2 px-3 py-1.5 text-[11.5px] text-content/45">
         {loading ? (
           <>
             <LoaderCircle className="size-3 animate-spin" strokeWidth={1.75} />
@@ -215,7 +217,9 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
           <section key={group.path} className="border-b border-edge">
             <div className="flex items-center gap-1.5 px-2 py-1.5">
               <FileTypeIcon name={group.name} isDir={false} size={16} />
-              <span className="min-w-0 flex-1 truncate text-[12px] text-content">{group.name}</span>
+              <span className="min-w-0 flex-1 truncate text-[12.5px] text-content">
+                {group.name}
+              </span>
               <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] tabular-nums text-accent">
                 {group.matches.length}
               </span>
@@ -231,10 +235,10 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
                     onClick={() => openMatch(match)}
                     className="flex w-full items-start gap-2 px-2 py-1 text-left hover:bg-hover"
                   >
-                    <span className="w-7 shrink-0 pt-px text-right font-mono text-[11px] text-content/35 tabular-nums">
+                    <span className="w-7 shrink-0 pt-px text-right font-mono text-[11.5px] text-content/35 tabular-nums">
                       {match.line}
                     </span>
-                    <span className="min-w-0 flex-1 truncate font-mono text-[11px] leading-5 text-content/80">
+                    <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] leading-5 text-content/80">
                       <MatchPreview
                         preview={match.preview.trimEnd()}
                         query={query.trim()}
@@ -272,9 +276,7 @@ function Toggle({
       aria-pressed={active}
       onClick={onClick}
       className={`grid size-6 place-items-center rounded-sm ${
-        active
-          ? "bg-accent/14 text-content"
-          : "text-content/40 hover:bg-hover hover:text-content/70"
+        active ? "bg-selected text-content" : "text-content/40 hover:bg-hover hover:text-content/70"
       }`}
     >
       {children}

@@ -104,7 +104,7 @@ export function ProvidersPage() {
 
   return (
     <>
-      <p className="pb-5 text-[12px] leading-relaxed text-content/45">
+      <p className="pb-5 text-[12.5px] leading-relaxed text-content/45">
         A provider is listed as installed once its CLI is found on your PATH. Uninstalled CLIs stay
         listed here but are omitted from the model picker. The model beside each provider is what
         new conversations use when that provider is selected; Use by default picks the provider
@@ -191,7 +191,7 @@ function GitWritingsRow({
             onChange={onModelChange}
           />
         ) : (
-          <span className="text-[12px] text-content/45">
+          <span className="text-[12.5px] text-content/45">
             {isHarnessAvailable(harness)
               ? "Loading models…"
               : (harnessUnavailableHint(harness) ?? "Provider not installed.")}
@@ -245,7 +245,7 @@ function ProviderCard({
       <header className="flex flex-wrap items-center gap-3 border-b border-edge px-4 py-3">
         <HarnessIcon harness={harness} className="size-4 shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-content">
+          <div className="flex items-center gap-2 text-[13.5px] font-medium text-content">
             {HARNESS_TITLE[harness]}
             {isDefault ? (
               <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent">
@@ -253,7 +253,7 @@ function ProviderCard({
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-[12px] text-content/45">
+          <p className="mt-0.5 text-[12.5px] text-content/45">
             {available
               ? `${enabled.length} of ${models.length} ${models.length === 1 ? "model" : "models"} on.`
               : harnessUnavailableHint(harness)}
@@ -277,7 +277,7 @@ function ProviderCard({
             onChange={(next) => onModelChange(harness, next)}
           />
         ) : (
-          <span className="text-[12px] text-content/45">
+          <span className="text-[12.5px] text-content/45">
             {available ? "Loading models…" : (harnessUnavailableHint(harness) ?? "No models")}
           </span>
         )}
@@ -302,7 +302,7 @@ function ProviderCard({
             type="button"
             aria-expanded={showModels}
             onClick={() => setShowModels((open) => !open)}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] font-medium text-content hover:bg-hover"
+            className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13.5px] font-medium text-content hover:bg-hover"
           >
             <ChevronDown
               className={`size-3.5 shrink-0 text-content/40 transition-transform ${
@@ -311,7 +311,7 @@ function ProviderCard({
               strokeWidth={1.75}
             />
             Models
-            <span className="ml-auto text-[12px] font-normal text-content/40">
+            <span className="ml-auto text-[12.5px] font-normal text-content/40">
               {enabled.length === models.length
                 ? "All on"
                 : enabled.length === 0
@@ -321,7 +321,7 @@ function ProviderCard({
           </button>
           {showModels ? (
             <div className="border-t border-edge">
-              <p className="px-4 pt-3 text-[12px] leading-relaxed text-content/40">
+              <p className="px-4 pt-3 text-[12.5px] leading-relaxed text-content/40">
                 A model you turn off leaves the picker, racing, and second opinions. Conversations
                 already running on it keep running on it.
               </p>
@@ -403,7 +403,7 @@ function ModelChoice({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((value) => !value)}
-        className="flex max-w-52 items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2 py-1 text-[12px] text-content hover:border-edge-strong"
+        className="flex max-w-52 items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2 py-1 text-[12.5px] text-content hover:border-edge-strong"
       >
         <HarnessIcon harness={current.harness} className="size-3.5 shrink-0" />
         <span className="min-w-0 truncate">{current.name}</span>

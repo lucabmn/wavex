@@ -95,7 +95,7 @@ function ToggleSetting({
       }`}
     >
       <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
-      <span className="text-[11px]">{setting.label}</span>
+      <span className="text-[11.5px]">{setting.label}</span>
     </button>
   );
 }
@@ -179,11 +179,11 @@ function SelectSetting({
           setOpen(true);
         }}
         className={`flex h-6.5 max-w-36 items-center gap-1 rounded-md px-1.5 ${
-          open ? "bg-accent/14 text-content" : "bg-content/10 text-content hover:bg-hover"
+          open ? "bg-selected text-content" : "bg-content/10 text-content hover:bg-hover"
         }`}
       >
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
-        <span className="min-w-0 truncate text-[11px]">{current?.label ?? setting.label}</span>
+        <span className="min-w-0 truncate text-[11.5px]">{current?.label ?? setting.label}</span>
         <ChevronDown
           className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
@@ -215,9 +215,9 @@ function SelectSetting({
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setActive(index)}
                 onClick={() => pick(option.value)}
-                className={`flex w-full items-center rounded-lg px-2 py-1.5 text-left text-[13px] ${
+                className={`flex w-full items-center rounded-lg px-2 py-1.5 text-left text-[13.5px] ${
                   highlighted || selected
-                    ? "bg-accent/14 text-content"
+                    ? "bg-selected text-content"
                     : "text-content hover:bg-hover"
                 }`}
               >

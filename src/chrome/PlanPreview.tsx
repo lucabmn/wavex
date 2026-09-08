@@ -27,7 +27,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
           {onOpen ? (
             <button
               type="button"
-              className="block w-full truncate text-left font-mono text-[12px] font-medium text-content/85 hover:text-sky-300 hover:underline"
+              className="block w-full truncate text-left font-mono text-[12.5px] font-medium text-content/85 hover:text-sky-300 hover:underline"
               title={title}
               onClick={onOpen}
             >
@@ -35,25 +35,25 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
             </button>
           ) : (
             <span
-              className="block truncate font-mono text-[12px] font-medium text-content/85"
+              className="block truncate font-mono text-[12.5px] font-medium text-content/85"
               title={title}
             >
               {title}
             </span>
           )}
           {summary ? (
-            <p className="mt-0.5 line-clamp-2 font-sans text-[12px] leading-4.5 text-content/50">
+            <p className="mt-0.5 line-clamp-2 font-sans text-[12.5px] leading-4.5 text-content/50">
               {summary}
             </p>
           ) : null}
-          {meta ? <p className="mt-0.5 font-mono text-[11px] text-content/40">{meta}</p> : null}
+          {meta ? <p className="mt-0.5 font-mono text-[11.5px] text-content/40">{meta}</p> : null}
         </div>
         {onOpen ? (
           <button
             type="button"
             title="Open in pane"
             aria-label="Open plan in pane"
-            className="mt-0.5 flex h-6 shrink-0 items-center gap-1 rounded-md bg-content/10 px-2 font-mono text-[11px] text-content/70 hover:bg-hover hover:text-content"
+            className="mt-0.5 flex h-6 shrink-0 items-center gap-1 rounded-md bg-content/10 px-2 font-mono text-[11.5px] text-content/70 hover:bg-hover hover:text-content"
             onClick={onOpen}
           >
             <PanelRight className="size-3" strokeWidth={1.75} />

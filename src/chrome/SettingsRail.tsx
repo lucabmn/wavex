@@ -48,7 +48,7 @@ export function SettingsNav({ section, onSelect, onClose }: Props) {
           if (sections.length === 0) return null;
           return (
             <div key={group.id} className="flex flex-col gap-px pt-3 first:pt-0">
-              <h2 className="ui-label px-2 pb-1.5 pt-1">{group.label}</h2>
+              <h2 className="ui-label px-2 pb-1 pt-1.5">{group.label}</h2>
               {sections.map((item) => (
                 <NavRow
                   key={item.id}
@@ -86,15 +86,10 @@ function NavRow({
       onClick={onClick}
       aria-current={active ? "true" : undefined}
       data-selected={active ? "true" : undefined}
-      className={`ui-row ui-focus flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors ${
-        active ? "text-content" : "text-content/50 hover:bg-hover hover:text-content"
-      }`}
+      className="ui-row ui-focus flex h-8 w-full items-center gap-2 rounded-md px-2 text-left"
     >
-      <Icon
-        className={`size-4 shrink-0 ${active ? "opacity-100" : "opacity-65"}`}
-        strokeWidth={1.75}
-      />
-      <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-tight">{label}</span>
+      <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
+      <span className="min-w-0 flex-1 truncate text-[13.5px] leading-tight">{label}</span>
     </button>
   );
 }

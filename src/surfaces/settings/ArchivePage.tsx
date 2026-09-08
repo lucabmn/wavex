@@ -73,8 +73,8 @@ export function ArchivePage({
               className="flex items-center gap-3 border-b border-edge px-4 py-2.5 last:border-b-0"
             >
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px]">{archivedProjectLabel(project.path)}</div>
-                <div className="truncate text-[11px] text-content/40">
+                <div className="truncate text-[13.5px]">{archivedProjectLabel(project.path)}</div>
+                <div className="truncate text-[11.5px] text-content/40">
                   {prettyCwd(project.path)}
                 </div>
               </div>
@@ -110,11 +110,11 @@ export function ArchivePage({
               <button
                 type="button"
                 onClick={() => onOpenSession(session.id)}
-                className="min-w-0 flex-1 truncate text-left text-[13px] hover:text-content"
+                className="min-w-0 flex-1 truncate text-left text-[13.5px] hover:text-content"
               >
                 {sessionDisplayTitle(session.title, session.harness)}
               </button>
-              <span className="shrink-0 text-[11px] text-content/35 tabular-nums">
+              <span className="shrink-0 text-[11.5px] text-content/35 tabular-nums">
                 {formatDate(session.updatedAt)}
               </span>
               <SecondaryButton onClick={() => onArchiveSession(session.id, false)}>

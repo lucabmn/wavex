@@ -145,7 +145,7 @@ function InboxDetailTab({
       role="tab"
       aria-selected={selected}
       onClick={onSelect}
-      className={`relative flex h-9 items-center text-[12px] leading-none ${
+      className={`relative flex h-9 items-center text-[12.5px] leading-none ${
         selected ? "text-content" : "text-content/50 hover:text-content"
       }`}
     >
@@ -352,7 +352,7 @@ export function InboxView({
             aria-label="Filter inbox"
             spellCheck={false}
             autoComplete="off"
-            className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12px] text-content outline-none placeholder:text-content/40"
+            className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-content/40"
           />
         </div>
         <button
@@ -363,7 +363,7 @@ export function InboxView({
           aria-haspopup="menu"
           onClick={onFilterButtonClick}
           className={`grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content ${
-            filterMenu || filtersActive ? "bg-accent/14 text-content" : ""
+            filterMenu || filtersActive ? "bg-selected text-content" : ""
           }`}
         >
           <ListFilter className="size-3" strokeWidth={1.75} />
@@ -393,13 +393,13 @@ export function InboxView({
       </div>
       <div ref={listLock} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
         {sourceError && visibleItems.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-content/50">{sourceError}</p>
+          <p className="px-3 py-2 text-[12.5px] text-content/50">{sourceError}</p>
         ) : loading && items.length === 0 ? (
           <div className="flex justify-center py-10 text-content/40">
             <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
           </div>
         ) : visibleItems.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-content/50">
+          <p className="px-3 py-2 text-[12.5px] text-content/50">
             {narrowedByUser
               ? searchNarrowed
                 ? "No matching issues or pull requests"
@@ -477,7 +477,7 @@ export function InboxView({
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
         {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <Inbox className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
           <span className="min-w-0 truncate text-content">Inbox</span>
         </div>
@@ -510,7 +510,7 @@ function InboxDetailBody({
     return (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center">
         <Inbox className="mb-3 size-6 text-content/30" strokeWidth={1.75} />
-        <p className="text-[13px] text-content/45">Select an issue or pull request</p>
+        <p className="text-[13.5px] text-content/45">Select an issue or pull request</p>
       </div>
     );
   }
@@ -596,7 +596,7 @@ function InboxCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-accent/14 text-content"
+          ? "border-transparent bg-selected text-content"
           : "border-transparent text-content/80 hover:bg-hover hover:text-content"
       }`}
     >
@@ -604,22 +604,24 @@ function InboxCard({
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
           <InboxProviderMark provider={item.provider} className="size-3.5 shrink-0" />
           <status.Icon className={`size-3 shrink-0 ${status.className}`} strokeWidth={1.75} />
-          <span className="min-w-0 truncate text-[11px] text-content/50">
+          <span className="min-w-0 truncate text-[11.5px] text-content/50">
             {kindLabel} · {inboxItemRef(item)}
           </span>
         </span>
         {time || unseen ? (
           <span className="flex shrink-0 items-center gap-1.5">
-            {time ? <span className="text-[11px] tabular-nums text-content/45">{time}</span> : null}
+            {time ? (
+              <span className="text-[11.5px] tabular-nums text-content/45">{time}</span>
+            ) : null}
             {unseen ? <span aria-hidden className="size-1.5 rounded-full bg-accent" /> : null}
           </span>
         ) : null}
       </span>
-      <span className="mt-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
+      <span className="mt-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
         {item.title}
       </span>
       <span className="mt-1 flex min-w-0 items-center gap-2">
-        <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] text-content/45">
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[11.5px] text-content/45">
           {logoPath ? (
             <ProjectLogoIcon
               path={logoPath}
@@ -822,7 +824,7 @@ function InboxDetail({
   return (
     <div className={`mx-auto flex w-full flex-col gap-5 px-8 py-8 max-w-5xl`}>
       <header className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-[12px] text-content/50">
+        <div className="flex items-center gap-2 text-[12.5px] text-content/50">
           <InboxProviderMark provider={item.provider} className="size-3.5" />
           <span>{item.kind === "pr" ? "Pull request" : "Issue"}</span>
           <span className="tabular-nums">{inboxItemRef(item)}</span>
@@ -833,7 +835,7 @@ function InboxDetail({
           {source ? <span className="truncate">{source}</span> : null}
         </div>
         <h1 className="text-[20px] font-semibold leading-tight text-content">{item.title}</h1>
-        <div className="flex flex-wrap items-center gap-2 text-[12px] text-content/50">
+        <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-content/50">
           {authorName ? (
             <InboxPerson
               name={authorName}
@@ -913,7 +915,7 @@ function InboxDetail({
                     })
                     .finally(() => setStarting(false));
                 }}
-                className="inline-flex items-center gap-1 rounded-md ui-fill px-3 h-6.5 text-[12px] disabled:cursor-default disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-md ui-fill px-3 h-6.5 text-[12.5px] disabled:cursor-default disabled:opacity-40"
               >
                 {starting ? "Sending..." : "Send to agent"}
               </button>
@@ -924,15 +926,15 @@ function InboxDetail({
             onClick={() => void openUrl(item.url)}
             className={
               item.kind === "pr"
-                ? "inline-flex items-center gap-1.5 rounded-md ui-fill px-3 h-7 text-[12px]"
-                : "inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-hover hover:text-content"
+                ? "inline-flex items-center gap-1.5 rounded-md ui-fill px-3 h-7 text-[12.5px]"
+                : "inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
             }
           >
             <ExternalLink className="size-3.5" strokeWidth={1.75} />
             {item.kind === "pr" ? "Review on GitHub" : "Open on GitHub"}
           </button>
         </div>
-        {startError ? <p className="text-[12px] text-red-400/90">{startError}</p> : null}
+        {startError ? <p className="text-[12.5px] text-red-400/90">{startError}</p> : null}
       </header>
       {isPr ? (
         <div
@@ -956,24 +958,24 @@ function InboxDetail({
             <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
           </div>
         ) : diffError ? (
-          <p className="text-[13px] text-content/50">{diffError}</p>
+          <p className="text-[13.5px] text-content/50">{diffError}</p>
         ) : prDiff ? (
           <InboxPrDiff key={`${item.projectPath}:${item.number}:${revision}`} diff={prDiff} />
         ) : (
-          <p className="text-[13px] text-content/45">No file changes</p>
+          <p className="text-[13.5px] text-content/45">No file changes</p>
         )
       ) : loading ? (
         <div className="flex justify-center py-10 text-content/40">
           <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
         </div>
       ) : error ? (
-        <p className="text-[13px] text-content/50">{error}</p>
+        <p className="text-[13.5px] text-content/50">{error}</p>
       ) : (
         <>
           {details?.body.trim() ? (
             <AgentMarkdown text={details.body} cwd={markdownCwd} allowRemoteMedia />
           ) : (
-            <p className="text-[13px] text-content/45">No description</p>
+            <p className="text-[13.5px] text-content/45">No description</p>
           )}
           <InboxComments
             thread={thread}
@@ -1055,7 +1057,7 @@ function InboxLabel({ label, compact = false }: { label: GithubLabel; compact?: 
   return (
     <span
       className={`inline-flex min-w-0 items-center gap-1 rounded px-1.5 py-px text-content/50 bg-content/8 ${
-        compact ? "max-w-20 text-[10px]" : "text-[11px]"
+        compact ? "max-w-20 text-[10px]" : "text-[11.5px]"
       }`}
     >
       {color ? (

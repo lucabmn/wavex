@@ -249,7 +249,7 @@ export function ChatComposer({
               aria-label="Answer with an image"
               className={`grid size-6.5 place-items-center rounded-md ${
                 imageMode
-                  ? "bg-accent/14 text-content"
+                  ? "bg-selected text-content"
                   : "text-content/50 hover:bg-hover hover:text-content"
               }`}
               onClick={() => {

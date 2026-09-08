@@ -89,7 +89,7 @@ export function SkillPicker({
             />
             <FooterAction label="New skill" onClick={onStartCreate} />
             {entries[active]?.kind === "template" ? (
-              <span className="shrink-0 px-1.5 text-[11px] text-content/40">
+              <span className="shrink-0 px-1.5 text-[11.5px] text-content/40">
                 {EDIT_SHORTCUT} edit
               </span>
             ) : null}
@@ -118,7 +118,7 @@ function FooterAction({
       title={title}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="flex flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/70"
+      className="flex flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12.5px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/70"
     >
       <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
       {label}
@@ -174,7 +174,7 @@ function PickerList({
 
   if (entries.length === 0) {
     return (
-      <p className="px-3 py-2.5 text-[12px] text-content/50">
+      <p className="px-3 py-2.5 text-[12.5px] text-content/50">
         {query.trim() ? "No matching templates or skills" : "No templates or skills yet"}
       </p>
     );
@@ -224,7 +224,7 @@ function PickerList({
             >
               <span className="flex min-w-0 items-baseline gap-2 pr-6">
                 <span
-                  className={`truncate font-mono text-[13px] ${
+                  className={`truncate font-mono text-[13.5px] ${
                     highlighted
                       ? template
                         ? "font-medium text-template"
@@ -243,7 +243,7 @@ function PickerList({
                 </span>
               </span>
               {row.detail ? (
-                <span className="line-clamp-2 pr-6 text-[11px] leading-4 text-content/50">
+                <span className="line-clamp-2 pr-6 text-[11.5px] leading-4 text-content/50">
                   {row.detail}
                 </span>
               ) : null}
@@ -306,7 +306,7 @@ function CreateSkillForm({
 
   return (
     <form onSubmit={submit} className="px-2.5 py-2">
-      <p className="mb-2 text-[11px] text-content/50">Writes a starter SKILL.md you can edit.</p>
+      <p className="mb-2 text-[11.5px] text-content/50">Writes a starter SKILL.md you can edit.</p>
       <input
         ref={input}
         value={name}
@@ -320,7 +320,7 @@ function CreateSkillForm({
           e.preventDefault();
           onCancel();
         }}
-        className="mb-2 w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13px] text-content outline-none placeholder:text-content/40"
+        className="mb-2 w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13.5px] text-content outline-none placeholder:text-content/40"
       />
       <div className="mb-2 flex gap-1">
         <ScopeButton
@@ -339,9 +339,9 @@ function CreateSkillForm({
         />
       </div>
       {error ? (
-        <p className="mb-2 text-[12px] text-content/70">{error}</p>
+        <p className="mb-2 text-[12.5px] text-content/70">{error}</p>
       ) : !name.trim() || valid ? null : (
-        <p className="mb-2 text-[12px] text-content/50">
+        <p className="mb-2 text-[12.5px] text-content/50">
           Use lowercase letters, numbers, and hyphens.
         </p>
       )}
@@ -350,14 +350,14 @@ function CreateSkillForm({
           type="button"
           disabled={busy}
           onClick={onCancel}
-          className="rounded-md px-2 py-1 text-[12px] text-content/50 hover:bg-hover hover:text-content"
+          className="rounded-md px-2 py-1 text-[12.5px] text-content/50 hover:bg-hover hover:text-content"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={!valid || busy}
-          className="rounded-md bg-content/20 px-2 py-1 text-[12px] text-content disabled:opacity-40"
+          className="rounded-md bg-content/20 px-2 py-1 text-[12.5px] text-content disabled:opacity-40"
         >
           {busy ? "Creating…" : "Create"}
         </button>
@@ -388,7 +388,7 @@ function ScopeButton({
         selected ? "bg-content/20 text-content" : "bg-content/10 text-content/70"
       } disabled:opacity-40`}
     >
-      <span className="text-[12px]">{label}</span>
+      <span className="text-[12.5px]">{label}</span>
       <span className="truncate font-mono text-[10px] text-content/40">{hint}</span>
     </button>
   );
