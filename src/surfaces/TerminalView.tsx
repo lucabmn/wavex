@@ -14,7 +14,14 @@ import {
   scanOscCwd,
   type TerminalMetaPatch,
 } from "../lib/terminal/terminalTab";
-import { isLightScheme, SCHEME_CHANGE_EVENT } from "../lib/appearance";
+import {
+  APPEARANCE_CHANGE_EVENT,
+  isLightScheme,
+  loadTerminalCursor,
+  loadTerminalCursorBlink,
+  loadTerminalFontSize,
+  SCHEME_CHANGE_EVENT,
+} from "../lib/appearance";
 import {
   applyTerminalChrome,
   fitTerminal,
@@ -120,10 +127,10 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
     if (!outer || !host) return;
 
     const term = new Terminal({
-      cursorBlink: true,
-      cursorStyle: "bar",
+      cursorBlink: loadTerminalCursorBlink(),
+      cursorStyle: loadTerminalCursor(),
       fontFamily: monoFont(),
-      fontSize: 13,
+      fontSize: loadTerminalFontSize(),
       lineHeight: 1,
       letterSpacing: 0,
       scrollback: 5000,
@@ -237,6 +244,17 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
     };
     window.addEventListener(SCHEME_CHANGE_EVENT, onSchemeChange);
 
+    // The terminal reads its font and cursor once, at construction. Settings
+    // has to reach the terminals already open, not only the next one.
+    const onAppearanceChange = () => {
+      term.options.fontFamily = monoFont();
+      term.options.fontSize = loadTerminalFontSize();
+      term.options.cursorStyle = loadTerminalCursor();
+      term.options.cursorBlink = loadTerminalCursorBlink();
+      applySizeRef.current();
+    };
+    window.addEventListener(APPEARANCE_CHANGE_EVENT, onAppearanceChange);
+
     term.attachCustomWheelEventHandler(() => {
       if (term.element?.classList.contains("enable-mouse-events")) return true;
       return term.buffer.active.type !== "alternate";
@@ -306,6 +324,7 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
       host.removeEventListener("copy", onCopy);
       host.removeEventListener("paste", onPaste);
       window.removeEventListener(SCHEME_CHANGE_EVENT, onSchemeChange);
+      window.removeEventListener(APPEARANCE_CHANGE_EVENT, onAppearanceChange);
       dataSub.dispose();
       oscFg.dispose();
       oscBg.dispose();

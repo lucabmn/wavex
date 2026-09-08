@@ -15,7 +15,8 @@ import {
   getPickerVisibilitySnapshot,
   loadFavoriteModels,
   loadModelPickerTab,
-  modelsFor,
+  enabledModelsFor,
+  isModelEnabled,
   resolveModel,
   saveFavoriteModels,
   saveModelPickerTab,
@@ -187,8 +188,11 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
       visibleTab === "favorites"
         ? favorites
             .map((id) => findModel(id))
-            .filter((item): item is AgentModel => item != null && shownInPicker(item.harness))
-        : modelsFor(visibleTab);
+            .filter(
+              (item): item is AgentModel =>
+                item != null && shownInPicker(item.harness) && isModelEnabled(item.id),
+            )
+        : enabledModelsFor(visibleTab);
     if (!needle) return pool;
     return pool.filter((item) => {
       const hay =

@@ -207,7 +207,7 @@ import type { LspWorkspaceEdit } from "./lib/lsp/types";
 import { planRename } from "./lib/lsp/rename";
 import {
   mergeModelSettings,
-  modelsFor,
+  enabledModelsFor,
   preferredModelSettings,
   resolveModel,
   saveLastModelSettings,
@@ -442,7 +442,7 @@ async function quotaFallbackForSession(
         ? await fetchClaudePlanLimits(false, hostId)
         : await fetchCodexPlanLimits(false, hostId);
     const fallbackRisk = assessQuota(plan);
-    const model = modelsFor(harness)[0];
+    const model = enabledModelsFor(harness)[0];
     candidates.push({
       harness,
       model: model?.id ?? "",

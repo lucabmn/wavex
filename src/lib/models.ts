@@ -187,6 +187,7 @@ export const DEFAULT_MODEL_ID: Record<HarnessId, string> = {
 const FAVORITES_KEY = "wavex.favoriteModels";
 const MODEL_PICKER_TAB_KEY = "wavex.modelPickerTab";
 const HIDDEN_PICKER_PROVIDERS_KEY = "wavex.hiddenPickerProviders";
+const DISABLED_MODELS_KEY = "wavex.disabledModels";
 const LAST_MODEL_KEY = "wavex.lastModel";
 const LAST_MODEL_SETTINGS_KEY = "wavex.lastModelSettings";
 const DEFAULT_MODELS_KEY = "wavex.defaultModels";
@@ -221,6 +222,7 @@ function emit() {
   baseByHarness = null;
   indexById = null;
   allCache = null;
+  enabledByHarness = null;
   for (const listener of listeners) listener();
 }
 
@@ -254,6 +256,8 @@ export function hasLiveCatalog(harness: HarnessId): boolean {
 export function resetHarnessModelOverlays() {
   overlays = {};
   overlayDefaults = {};
+  disabledModels = null;
+  enabledByHarness = null;
   emit();
 }
 
@@ -450,6 +454,8 @@ const pickerVisibilityListeners = new Set<() => void>();
 
 function emitPickerVisibility() {
   pickerVisibilityVersion += 1;
+  disabledModels = null;
+  enabledByHarness = null;
   for (const listener of pickerVisibilityListeners) listener();
 }
 
@@ -490,6 +496,83 @@ export function savePickerProviderVisible(id: HarnessId, visible: boolean) {
     // private mode / quota
   }
   emitPickerVisibility();
+}
+
+/**
+ * A model the user turned off in Settings. The catalog keeps it: a session
+ * started on that model has to resume on it, and `resolveModel` has to keep
+ * finding it. Only the places a new choice is made — the picker, race, second
+ * opinion — read the filtered list.
+ */
+let disabledModels: Set<string> | null = null;
+
+export function loadDisabledModels(): Set<string> {
+  if (disabledModels) return disabledModels;
+  try {
+    const raw = profileStorage.getItem(DISABLED_MODELS_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    disabledModels = new Set(
+      Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [],
+    );
+  } catch {
+    disabledModels = new Set<string>();
+  }
+  return disabledModels;
+}
+
+export function isModelEnabled(id: string): boolean {
+  return !loadDisabledModels().has(id);
+}
+
+/**
+ * The models of one provider a new conversation may still be started on. Like
+ * `modelsFor`, this sits in render bodies — the race menu asks once per
+ * provider per render — so the filtered list is cached until the catalog or
+ * the off list moves.
+ */
+let enabledByHarness: Partial<Record<HarnessId, AgentModel[]>> | null = null;
+
+export function enabledModelsFor(harness: HarnessId): AgentModel[] {
+  const disabled = loadDisabledModels();
+  if (disabled.size === 0) return modelsFor(harness);
+  enabledByHarness ??= {};
+  return (enabledByHarness[harness] ??= modelsFor(harness).filter(
+    (model) => !disabled.has(model.id),
+  ));
+}
+
+export function setModelEnabled(id: string, enabled: boolean) {
+  const next = new Set(loadDisabledModels());
+  if (enabled) next.delete(id);
+  else next.add(id);
+  try {
+    profileStorage.setItem(DISABLED_MODELS_KEY, JSON.stringify([...next]));
+  } catch {
+    // private mode / quota
+  }
+  disabledModels = next;
+  if (!enabled) repointDefaultsAway(id, next);
+  emitPickerVisibility();
+}
+
+/**
+ * Turning off the model a provider starts with would leave that provider
+ * pointing at something the picker no longer offers, so the default moves to
+ * the first model still on. A provider with nothing left keeps its pointer and
+ * reads as having no models, the same as one whose CLI is missing.
+ */
+function repointDefaultsAway(id: string, disabled: Set<string>) {
+  const model = findModel(id);
+  if (!model) return;
+  const replacement = modelsFor(model.harness).find((entry) => !disabled.has(entry.id));
+  if (!replacement) return;
+  if (loadDefaultModels()[model.harness] === id) {
+    saveDefaultModel(model.harness, replacement.id);
+  }
+  const last = loadLastModelChoice();
+  if (last?.harness === model.harness && last.model === id) {
+    saveLastModelChoice(model.harness, replacement.id);
+  }
 }
 
 /**

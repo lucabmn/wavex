@@ -15,6 +15,10 @@ import {
   saveFollowUpBehavior,
   saveLiveAgentsEnabled,
   saveNotesEnabled,
+  isSettingsSectionId,
+  SETTINGS_GROUPS,
+  SETTINGS_SECTIONS,
+  settingsSectionsInGroup,
 } from "@/lib/settings";
 
 const KEY = "wavex.composerRunner";
@@ -151,5 +155,30 @@ describe("follow-up behavior setting", () => {
   it("ignores unknown stored values", () => {
     localStorage.setItem(FOLLOW_UP_BEHAVIOR_KEY, "interrupt");
     expect(loadFollowUpBehavior()).toBe("queue");
+  });
+});
+
+describe("settings navigation groups", () => {
+  it("puts every section in exactly one group", () => {
+    const grouped = SETTINGS_GROUPS.flatMap((group) => settingsSectionsInGroup(group.id));
+    expect(grouped.map((section) => section.id).sort()).toEqual(
+      SETTINGS_SECTIONS.map((section) => section.id).sort(),
+    );
+  });
+
+  it("still accepts every id a previous install could have persisted", () => {
+    for (const id of [
+      "general",
+      "profiles",
+      "appearance",
+      "keybindings",
+      "providers",
+      "connections",
+      "language-servers",
+      "archive",
+    ]) {
+      expect(isSettingsSectionId(id)).toBe(true);
+    }
+    expect(isSettingsSectionId("nope")).toBe(false);
   });
 });

@@ -14,49 +14,73 @@ export type SettingsSectionId =
   | "language-servers"
   | "archive";
 
+/**
+ * The rail groups sections so eight entries read as four short lists rather
+ * than one column. Ids are what `wavex.settingsSection` persists, so they stay
+ * as they were even when a section moves between groups.
+ */
+export type SettingsGroupId = "workspace" | "agents" | "machine" | "data";
+
+export const SETTINGS_GROUPS: { id: SettingsGroupId; label: string }[] = [
+  { id: "workspace", label: "Workspace" },
+  { id: "agents", label: "Agents" },
+  { id: "machine", label: "This machine" },
+  { id: "data", label: "Data" },
+];
+
 export const SETTINGS_SECTIONS: {
   id: SettingsSectionId;
+  group: SettingsGroupId;
   label: string;
   description: string;
 }[] = [
   {
     id: "general",
+    group: "workspace",
     label: "General",
     description: "App-wide behavior and the build you are running.",
   },
   {
     id: "profiles",
+    group: "machine",
     label: "Profiles",
     description: "Separate identities inside one wavex, each with its own workspace.",
   },
   {
     id: "appearance",
+    group: "workspace",
     label: "Appearance",
-    description: "Theme, translucency, and the tint applied to the chrome.",
+    description: "Theme, accent, typography, and how much of the desktop shows through the chrome.",
   },
   {
     id: "keybindings",
+    group: "workspace",
     label: "Keybindings",
     description: "Every shortcut the workspace handles, from the app menu and the key handler.",
   },
   {
     id: "providers",
+    group: "agents",
     label: "Providers",
-    description: "Agent CLIs wavex can drive, and the model new sessions start with.",
+    description:
+      "Agent CLIs wavex can drive, the model new sessions start with, and which models stay on offer.",
   },
   {
     id: "connections",
+    group: "machine",
     label: "Connections",
     description:
       "Serve this machine to another wavex, and reach the machines you have paired with.",
   },
   {
     id: "language-servers",
+    group: "agents",
     label: "Language servers",
     description: "Language servers wavex can drive in the coding view, and where each one is.",
   },
   {
     id: "archive",
+    group: "data",
     label: "Archive",
     description: "Projects and conversations you have archived.",
   },
@@ -74,6 +98,10 @@ export function settingsSectionLabel(id: SettingsSectionId): string {
 
 export function settingsSectionDescription(id: SettingsSectionId): string {
   return SETTINGS_SECTIONS.find((section) => section.id === id)?.description ?? "";
+}
+
+export function settingsSectionsInGroup(group: SettingsGroupId) {
+  return SETTINGS_SECTIONS.filter((section) => section.group === group);
 }
 
 export function loadSettingsSection(): SettingsSectionId {
