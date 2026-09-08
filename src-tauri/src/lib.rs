@@ -4,6 +4,7 @@ mod checkpoint;
 mod connect;
 mod cursor_store;
 mod frame_probe;
+mod frame_view;
 mod fs;
 mod harness;
 pub mod headless;
@@ -185,6 +186,7 @@ pub fn run(launch: headless::Launch) {
         .manage(pty::PtyHost::new())
         .manage(lsp::LspHost::new())
         .manage(window_transfer::WindowTransferState::new())
+        .manage(frame_view::FrameViewHost::default())
         .setup(move |app| {
             harness::reap_orphaned_harness_processes();
             // Profiles decide where every other store lives, so they bind first.
@@ -263,6 +265,11 @@ pub fn run(launch: headless::Launch) {
             fs::git_github_pr_diff,
             inbox_media::fetch_inbox_media,
             frame_probe::probe_frame,
+            frame_view::frame_view_show,
+            frame_view::frame_view_bounds,
+            frame_view::frame_view_hide,
+            frame_view::frame_view_close,
+            frame_view::frame_view_reload,
             fs::git_branches,
             fs::git_checkout,
             fs::git_create_branch,

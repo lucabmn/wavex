@@ -5,6 +5,7 @@ import App from "./App";
 import { handleQuitRequested, loadBootWorkspace } from "./lib/appLifecycle";
 import { bindActiveProfile, watchProfiles } from "./lib/profiles/profileStore";
 import { initSounds } from "./lib/sounds";
+import { closeFrameView } from "./lib/frameView";
 import { consumeInstalledUpdate } from "./lib/updates/updateNotice";
 
 function dismissBootSplash() {
@@ -32,6 +33,9 @@ function BootGate({ children }: { children: React.ReactNode }) {
 
 export function mountMainApp() {
   initSounds();
+  // A reload replaces the document but not the window, so a browser view from
+  // before it would be left floating over an app that has forgotten it.
+  void closeFrameView();
   void watchProfiles();
   void listen("quit_requested", () => {
     void handleQuitRequested();

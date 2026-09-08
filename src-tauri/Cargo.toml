@@ -17,6 +17,9 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [
+  # Child webviews. The panel needs one for a page that refuses to be framed,
+  # and there is no stable API for that; see `src/frame_view.rs`.
+  "unstable",
   "protocol-asset",
   "macos-private-api",
   "tray-icon",

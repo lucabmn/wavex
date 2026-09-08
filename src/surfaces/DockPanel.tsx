@@ -287,7 +287,11 @@ export function DockPanel({
       </div>
       <div className="relative min-h-0 min-w-0 flex-1">
         <Surface show={dock.surface === "browser"} mounted={opened.has("browser")}>
-          <DockBrowser browser={dock.browser} onChange={onBrowserChange} />
+          <DockBrowser
+            browser={dock.browser}
+            active={visible && dock.open && dock.surface === "browser"}
+            onChange={onBrowserChange}
+          />
         </Surface>
         {/* Terminals are never taken down by surface bookkeeping: a running
             process must outlive a look at the browser or the file tree. */}

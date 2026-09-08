@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+} from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, Globe, RefreshCw } from "../chrome/icons";
 import { IconButton } from "../chrome/TitleBar";
 import {
@@ -13,10 +20,21 @@ import {
 } from "../lib/workspace/browserHistory";
 import { openUrl } from "../lib/native";
 import { preflightFrame } from "../lib/framePreflight";
+import { overlaysOpen, subscribeOverlays } from "../lib/layers";
+import {
+  CAN_SHOW_NATIVE_PAGE,
+  closeFrameView,
+  frameBounds,
+  hideFrameView,
+  reloadFrameView,
+  showFrameView,
+} from "../lib/frameView";
 import { PlaceholderButton, SurfacePlaceholder } from "../chrome/SurfacePlaceholder";
 
 type Props = {
   browser: BrowserHistory;
+  /** Whether the panel is showing this surface right now. */
+  active: boolean;
   onChange: (browser: BrowserHistory) => void;
 };
 
@@ -36,22 +54,27 @@ const SUGGESTIONS = ["localhost:3000", "localhost:5173", "localhost:8080"];
 /**
  * A page, rendered beside the session that is changing it.
  *
- * The page lives in a frame rather than a second native web view: a native one
- * composites above the document, so it would cover every popover, menu, and
- * dialog the app draws, and it would have to be told its bounds again on every
- * frame of a dock resize. The cost is that a site sending `X-Frame-Options` or
- * `frame-ancestors` refuses to appear at all — a local development server, the
- * reason this surface exists, sends neither — so a refusal is recognised and
- * handed to the real browser instead of leaving a blank rectangle.
+ * A page is shown in a frame wherever it will allow one, because a frame is
+ * part of the document and every popover, menu, and dialog the app draws stays
+ * above it. A site sending `X-Frame-Options` or `frame-ancestors` allows no
+ * frame anywhere, so those — and only those — move to a child webview, which is
+ * a top-level browsing context with no framing ancestor to object to. That one
+ * is an operating-system view over the window, so it has to be told where the
+ * panel is and taken away whenever the document needs to draw on top; the
+ * headers say which of the two a page needs before either is shown.
  */
-export function DockBrowser({ browser, onChange }: Props) {
+export function DockBrowser({ browser, active, onChange }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const field = useRef<HTMLInputElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   // Bumped to re-mount the frame on reload: the frame keeps its own history, so
   // pointing `src` at the address it already holds would do nothing.
   const [reloads, setReloads] = useState(0);
   const [state, setState] = useState<FrameState>("idle");
   const [refusedBy, setRefusedBy] = useState<string | null>(null);
+  // Nothing the document draws can appear over a native view, so it steps
+  // aside for every menu and dialog rather than swallowing them.
+  const overlays = useSyncExternalStore(subscribeOverlays, overlaysOpen, () => false);
   const url = browserHistoryUrl(browser);
   const back = canGoBack(browser);
   const forward = canGoForward(browser);
@@ -79,7 +102,15 @@ export function DockBrowser({ browser, onChange }: Props) {
     void preflightFrame(url).then((probe) => {
       if (!current || !probe) return;
       window.clearTimeout(timer);
-      setState(!probe.reachable ? "unreachable" : probe.embeddable ? "ready" : "refused");
+      setState(
+        !probe.reachable
+          ? "unreachable"
+          : probe.embeddable
+            ? "ready"
+            : CAN_SHOW_NATIVE_PAGE
+              ? "native"
+              : "refused",
+      );
       setRefusedBy(probe.refusedBy);
     });
     return () => {
@@ -91,6 +122,49 @@ export function DockBrowser({ browser, onChange }: Props) {
   const openExternally = useCallback(() => {
     if (url) void openUrl(url);
   }, [url]);
+
+  // The native view is placed rather than laid out, so it is told where the
+  // panel is on every change that could move it, coalesced to one call a paint.
+  const showNative = state === "native" && active && !overlays && !!url;
+  useEffect(() => {
+    if (!showNative || !url) {
+      void hideFrameView();
+      return;
+    }
+    const element = body.current;
+    if (!element) return;
+    let frameRequest: number | null = null;
+    const place = () => {
+      frameRequest = null;
+      const bounds = frameBounds(element.getBoundingClientRect());
+      // A zero-sized panel is one the window has put away — behind Settings,
+      // behind the chat surface, or collapsed. The view goes with it.
+      if (!bounds) {
+        void hideFrameView();
+        return;
+      }
+      void showFrameView(url, bounds).then((shown) => {
+        // A platform that cannot give the panel a child webview leaves the card
+        // rather than an empty hole, which is what this surface does without one.
+        if (!shown) setState("refused");
+      });
+    };
+    const schedule = () => {
+      if (frameRequest == null) frameRequest = requestAnimationFrame(place);
+    };
+    place();
+    const observer = new ResizeObserver(schedule);
+    observer.observe(element);
+    window.addEventListener("resize", schedule);
+    return () => {
+      if (frameRequest != null) cancelAnimationFrame(frameRequest);
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+    };
+  }, [showNative, url]);
+
+  // The page outlives a surface switch, not the panel itself.
+  useEffect(() => () => void closeFrameView(), []);
 
   const submit = useCallback(
     (event: FormEvent) => {
@@ -124,7 +198,14 @@ export function DockBrowser({ browser, onChange }: Props) {
         >
           <ChevronRight className="size-3.5" strokeWidth={1.75} />
         </IconButton>
-        <IconButton label="Reload" disabled={!url} onClick={() => setReloads((count) => count + 1)}>
+        <IconButton
+          label="Reload"
+          disabled={!url}
+          onClick={() => {
+            if (state === "native") void reloadFrameView();
+            else setReloads((count) => count + 1);
+          }}
+        >
           <RefreshCw className="size-3.5" strokeWidth={1.75} />
         </IconButton>
         <input
@@ -151,8 +232,12 @@ export function DockBrowser({ browser, onChange }: Props) {
           <ExternalLink className="size-3.5" strokeWidth={1.75} />
         </IconButton>
       </form>
-      <div className="relative min-h-0 min-w-0 flex-1">
-        {url ? (
+      <div ref={body} className="relative min-h-0 min-w-0 flex-1">
+        {state === "native" ? (
+          // The page is out here, over the window. What stays in the document
+          // is the hole it sits in, which shows while a menu covers it.
+          <div className="absolute inset-0 bg-background-base" />
+        ) : url ? (
           <iframe
             // A new address is a new document, so the frame is replaced rather
             // than navigated: its own back stack must not outlive the page.
@@ -188,7 +273,12 @@ export function DockBrowser({ browser, onChange }: Props) {
   );
 }
 
-type FrameState = "idle" | "loading" | "ready" | "refused" | "unreachable";
+/**
+ * `native` is the page that would not be framed and is now a child webview
+ * over the window instead; `refused` is the same page where there is no native
+ * shell to put it in.
+ */
+type FrameState = "idle" | "loading" | "ready" | "native" | "refused" | "unreachable";
 
 function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
   return (
