@@ -781,8 +781,8 @@ export type ThemePreset = {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
-    id: "wavex",
-    label: "wavex",
+    id: "nord",
+    label: "Nord",
     themeHue: THEME_HUE_DEFAULT,
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
@@ -790,8 +790,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     light: { background: 97, content: 18 },
   },
   {
-    id: "nord",
-    label: "Nord",
+    id: "wavex",
+    label: "wavex",
     themeHue: 220,
     themeSaturation: 16,
     accentHue: 197,

@@ -382,6 +382,11 @@ describe("theme presets", () => {
     }
   });
 
+  it("starts with Nord and keeps the wavex palette as the second preset", () => {
+    expect(THEME_PRESETS.slice(0, 2).map((preset) => preset.label)).toEqual(["Nord", "wavex"]);
+    expect(THEME_PRESETS.slice(0, 2).map((preset) => preset.id)).toEqual(["nord", "wavex"]);
+  });
+
   it("has one id per preset", () => {
     const ids = THEME_PRESETS.map((preset) => preset.id);
     expect(new Set(ids).size).toBe(ids.length);
