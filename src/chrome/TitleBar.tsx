@@ -35,6 +35,7 @@ import { HarnessIcon } from "./HarnessIcon";
 import { nativeWindow } from "../lib/native";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { WindowControls } from "./WindowControls";
+import { OpenWithMenu } from "./OpenWithMenu";
 import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
 import { IS_MAC, MOD } from "../lib/platform";
@@ -650,6 +651,7 @@ function TitleBarComponent({
             <Terminal className="size-3.5" strokeWidth={1.75} />
           </IconButton>
         ) : null}
+        {!projectless ? <OpenWithMenu cwd={cwd} /> : null}
         {!projectRailOpen && !showCurrentProject && onOpenSettings ? (
           <IconButton label={`Settings (${MOD},)`} onClick={onOpenSettings}>
             <Settings className="size-3.5" strokeWidth={1.75} />

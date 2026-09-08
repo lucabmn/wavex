@@ -14,6 +14,7 @@ mod macos;
 mod menu;
 mod menu_bar;
 mod notes;
+mod open_with;
 mod process;
 mod profiles;
 mod project_logo;
@@ -270,6 +271,8 @@ pub fn run(launch: headless::Launch) {
             fs::copy_path,
             fs::move_path,
             fs::reveal_path,
+            open_with::list_open_with_apps,
+            open_with::open_path_with,
             fs::clone_repo,
             fs::read_file_preview,
             fs::stat_files,
