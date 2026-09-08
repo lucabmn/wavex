@@ -9,6 +9,7 @@ import {
   unwatchChild,
   watchChild,
 } from "./child";
+import { gitWritingModelNativeId } from "../models";
 import { grokAuthMethodId, grokTextSpawnArgs, TEXT_MODEL } from "./grokProtocol";
 import { mergeStream } from "./streamText";
 
@@ -184,7 +185,13 @@ async function startLive(cwd: string, hostId: HostId): Promise<LiveText> {
   );
 
   try {
-    await spawnChild(TEXT_CHILD_ID, path, grokTextSpawnArgs(), cwd, hostId);
+    await spawnChild(
+      TEXT_CHILD_ID,
+      path,
+      grokTextSpawnArgs(gitWritingModelNativeId("grok") ?? TEXT_MODEL),
+      cwd,
+      hostId,
+    );
     const init = await acp.request(
       "initialize",
       {
@@ -224,7 +231,7 @@ async function openSession(session: LiveText, cwd: string): Promise<void> {
   await session.acp
     .request(
       "session/set_model",
-      { sessionId: acpSessionId, modelId: TEXT_MODEL },
+      { sessionId: acpSessionId, modelId: gitWritingModelNativeId("grok") ?? TEXT_MODEL },
       REQUEST_TIMEOUT_MS,
     )
     .catch(() => undefined);

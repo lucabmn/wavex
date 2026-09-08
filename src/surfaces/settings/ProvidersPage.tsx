@@ -15,16 +15,21 @@ import {
   enabledModelsFor,
   getModelSnapshot,
   getPickerVisibilitySnapshot,
+  gitWritingChoice,
   isModelEnabled,
   isPickerProviderVisible,
   loadDefaultModels,
+  loadGitWritingChoice,
   loadLastModelChoice,
   modelsFor,
+  preferredModelId,
   resolveModel,
   saveDefaultModel,
+  saveGitWritingChoice,
   saveLastModelChoice,
   savePickerProviderVisible,
   setModelEnabled,
+  subscribeGitWritingChoice,
   subscribeModels,
   subscribePickerVisibility,
 } from "../../lib/models";
@@ -44,10 +49,19 @@ export function ProvidersPage() {
   );
   const [choice, setChoice] = useState(loadLastModelChoice);
   const [defaultModels, setDefaultModels] = useState(loadDefaultModels);
+  const [gitWritings, setGitWritings] = useState(gitWritingChoice);
 
   useEffect(() => {
     void probeHarnessAvailability();
   }, []);
+
+  useEffect(
+    () =>
+      subscribeGitWritingChoice(() => {
+        setGitWritings(loadGitWritingChoice() ?? gitWritingChoice());
+      }),
+    [],
+  );
 
   const onModelChange = (harness: HarnessId, model: string) => {
     saveDefaultModel(harness, model);
@@ -72,6 +86,17 @@ export function ProvidersPage() {
     setChoice(loadLastModelChoice());
   };
 
+  const onGitWritingHarness = (harness: HarnessId) => {
+    const model = preferredModelId(harness);
+    saveGitWritingChoice(harness, model);
+    setGitWritings({ harness, model });
+  };
+
+  const onGitWritingModel = (model: string) => {
+    saveGitWritingChoice(gitWritings.harness, model);
+    setGitWritings({ harness: gitWritings.harness, model });
+  };
+
   return (
     <>
       <p className="pb-5 text-[12px] leading-relaxed text-content/45">
@@ -80,6 +105,12 @@ export function ProvidersPage() {
         new conversations use when that provider is selected; Use by default picks the provider
         itself.
       </p>
+      <GitWritingsRow
+        harness={gitWritings.harness}
+        model={gitWritings.model}
+        onHarnessChange={onGitWritingHarness}
+        onModelChange={onGitWritingModel}
+      />
       {HARNESSES.map((harness) => (
         <ProviderCard
           key={harness}
@@ -95,6 +126,62 @@ export function ProvidersPage() {
         />
       ))}
     </>
+  );
+}
+
+function GitWritingsRow({
+  harness,
+  model,
+  onHarnessChange,
+  onModelChange,
+}: {
+  harness: HarnessId;
+  model: string;
+  onHarnessChange: (harness: HarnessId) => void;
+  onModelChange: (model: string) => void;
+}) {
+  const models = modelsFor(harness);
+  const current = models.length > 0 ? resolveModel(harness, model) : null;
+
+  useEffect(() => {
+    if (!isHarnessAvailable(harness) || models.length > 0) return;
+    void refreshHarnessCatalogs([harness]);
+  }, [harness, models.length]);
+
+  return (
+    <div className="mb-4 overflow-hidden rounded-xl border border-content/10 bg-content/[0.025]">
+      <Row
+        label="Git writings"
+        description="Provider and model for generated commit messages, PR content, and branch names. Project skills that read like commit, PR, or branch guidance — a commit skill, for example — are folded into those prompts."
+      >
+        <Select
+          label="Git writings provider"
+          value={harness}
+          onChange={(next) => onHarnessChange(next as HarnessId)}
+          options={HARNESSES.map((id) => ({
+            value: id,
+            label: HARNESS_TITLE[id],
+          }))}
+        />
+        {current ? (
+          <Select
+            label="Git writings model"
+            value={current.id}
+            onChange={onModelChange}
+            options={models.map((item) => ({
+              value: item.id,
+              label: item.name,
+            }))}
+          />
+        ) : (
+          <span className="text-[12px] text-content/45">
+            {isHarnessAvailable(harness)
+              ? "Loading models…"
+              : (harnessUnavailableHint(harness) ?? "Provider not installed.")}
+          </span>
+        )}
+      </Row>
+    </div>
   );
 }
 

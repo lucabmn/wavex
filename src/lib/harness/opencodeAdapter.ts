@@ -13,7 +13,7 @@ import { runOpenCodeTextPrompt, warmupOpenCodeText } from "./opencodeText";
 import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
-const gitText = createGitTextGenerators(runOpenCodeTextPrompt, "OpenCode");
+const gitText = createGitTextGenerators(runOpenCodeTextPrompt, "OpenCode", "opencode");
 
 export const openCodeAdapter: HarnessAdapter = {
   id: "opencode",

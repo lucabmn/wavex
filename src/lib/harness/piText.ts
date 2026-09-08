@@ -1,5 +1,5 @@
 import { projectKey, type HostId } from "../host";
-import { modelsFor } from "../models";
+import { gitWritingModelNativeId, modelsFor } from "../models";
 import { harnessHostId, killChild, spawnChild, unwatchChild, watchChild } from "./child";
 import { PiRpc } from "./piClient";
 import { OMP_FLAVOR, PI_FLAVOR, type PiFlavor } from "./piFlavor";
@@ -55,6 +55,8 @@ function stateFor(flavor: PiFlavor, hostId: HostId): TextState {
 }
 
 function pickTextModel(flavor: PiFlavor): string | undefined {
+  const configured = gitWritingModelNativeId(flavor.id);
+  if (configured) return configured;
   const models = modelsFor(flavor.id).filter((model) => Boolean(model.nativeId?.includes("/")));
   const cheap = models.find((model) =>
     /haiku|mini|flash|nano|lite|luna/i.test(`${model.nativeId ?? ""} ${model.name} ${model.id}`),
