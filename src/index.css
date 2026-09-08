@@ -1001,6 +1001,33 @@ header[data-tauri-drag-region] button {
   }
 }
 
+/* Switching between Chat and Workspace swaps the whole surface, so the one
+   arriving lifts in rather than appearing. Only the body moves: both surfaces
+   repeat the same top row on purpose, and animating that would slide the
+   traffic lights and the nav icons a mode switch is supposed to leave still.
+   The travel carries it — a fade over glass barely reads, the same reason the
+   popovers above translate. */
+@keyframes surface-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.surface-enter {
+  animation: surface-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surface-enter {
+    animation: none;
+  }
+}
+
 /* Status-bar mark for a running terminal: three orange bars that light
    one after another. */
 .terminal-live {

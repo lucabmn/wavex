@@ -4826,6 +4826,20 @@ export default function App({
   // rather than hiding the surface that is supposed to show it.
   const workMode = appMode === "work" && !settingsOpen;
 
+  // Coming back from Chat, the workspace body lifts in. Chat gets the same
+  // motion from mounting; the workspace never unmounts, so the class has to be
+  // added by hand and taken off again once the animation is done. A layout
+  // effect rather than an effect: the shell stops being `hidden` in the same
+  // commit, and a class applied after paint would show one frame at full
+  // opacity before snapping back to the start of the animation.
+  const [surfaceEnter, setSurfaceEnter] = useState(false);
+  const enteredMode = useRef(appMode);
+  useLayoutEffect(() => {
+    if (enteredMode.current === appMode) return;
+    enteredMode.current = appMode;
+    setSurfaceEnter(appMode === "coding");
+  }, [appMode]);
+
   /**
    * First-run setup: no stored projects, no resumed work, nothing written yet.
    * Existing installs (recents, history, a non-blank session) never see it.
@@ -5021,7 +5035,14 @@ export default function App({
             onModeChange={setAppMode}
           />
 
-          <main className="relative min-h-0 min-w-0 flex-1">
+          <main
+            className={`relative min-h-0 min-w-0 flex-1 ${surfaceEnter ? "surface-enter" : ""}`}
+            onAnimationEnd={(event) => {
+              // Everything streaming inside the workspace animates too, so only
+              // this element's own run ends the entrance.
+              if (event.target === event.currentTarget) setSurfaceEnter(false);
+            }}
+          >
             <div ref={dockGridRef} className="absolute inset-0 grid h-full min-h-0 min-w-0">
               {projectTerminals.map((dock) => {
                 const show = dock.open && sameProjectPath(dock.projectPath, projectCwd);

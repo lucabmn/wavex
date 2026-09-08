@@ -492,62 +492,67 @@ export function WorkView({
           {IS_MAC ? null : <WindowControls />}
         </div>
 
-        {active ? (
-          <>
-            <AgentTranscript
-              blocks={active.blocks}
-              busy={active.busy}
-              harness={active.harness}
-              pendingQuestion={Boolean(active.pendingQuestion)}
-              onApproval={(requestId, decision) =>
-                respondWorkChatApproval(active.id, requestId, decision)
-              }
-              onEditTurn={(blockId, text) => void resendWorkChatTurn(active.id, blockId, text)}
-              onRegenerateTurn={(blockId) => void regenerateWorkChatTurn(active.id, blockId)}
-            />
-            <ChatComposer
-              chatId={active.id}
-              handleRef={composer}
-              harness={active.harness}
-              model={active.model}
-              modelSettings={active.modelSettings}
-              busy={active.busy}
-              question={active.pendingQuestion}
-              onQuestionReply={(requestId, reply) =>
-                respondWorkChatQuestion(active.id, requestId, reply)
-              }
-              onModelChange={(harness, model) => setWorkChatModel(active.id, harness, model)}
-              onModelSettingsChange={(settings) => setWorkChatModelSettings(active.id, settings)}
-              onSubmit={(text, attachments, options) =>
-                void sendWorkChatTurn(active.id, text, attachments, options)
-              }
-              queued={queuedFor(state.queues, active.id)}
-              queuePaused={isWorkChatQueuePaused(active.id)}
-              onRemoveQueued={(promptId) => removeWorkChatQueuedPrompt(active.id, promptId)}
-              onEditQueued={(promptId, text) =>
-                updateWorkChatQueuedPrompt(active.id, promptId, text)
-              }
-              onQueuedEditingChange={(promptId) => setWorkChatQueuedEditing(active.id, promptId)}
-              onSendQueued={(promptId) => sendWorkChatQueuedPrompt(active.id, promptId)}
-              onResumeQueue={() => resumeWorkChatQueue(active.id)}
-              onStop={() => void stopWorkChat(active.id)}
-            />
-          </>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <MessageSquare className="size-6 text-content/25" strokeWidth={1.5} />
-            <p className="text-[13px] text-content/50">
-              Thinking, drafting, questions — work that is not code.
-            </p>
-            <button
-              type="button"
-              onClick={() => onNewChat()}
-              className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
-            >
-              New chat
-            </button>
-          </div>
-        )}
+        {/* Only the body lifts in on a mode switch: the row above it repeats
+            the workspace rail's row, and moving it would slide the traffic
+            lights and the nav icons a switch is supposed to leave still. */}
+        <div className="surface-enter flex min-h-0 min-w-0 flex-1 flex-col">
+          {active ? (
+            <>
+              <AgentTranscript
+                blocks={active.blocks}
+                busy={active.busy}
+                harness={active.harness}
+                pendingQuestion={Boolean(active.pendingQuestion)}
+                onApproval={(requestId, decision) =>
+                  respondWorkChatApproval(active.id, requestId, decision)
+                }
+                onEditTurn={(blockId, text) => void resendWorkChatTurn(active.id, blockId, text)}
+                onRegenerateTurn={(blockId) => void regenerateWorkChatTurn(active.id, blockId)}
+              />
+              <ChatComposer
+                chatId={active.id}
+                handleRef={composer}
+                harness={active.harness}
+                model={active.model}
+                modelSettings={active.modelSettings}
+                busy={active.busy}
+                question={active.pendingQuestion}
+                onQuestionReply={(requestId, reply) =>
+                  respondWorkChatQuestion(active.id, requestId, reply)
+                }
+                onModelChange={(harness, model) => setWorkChatModel(active.id, harness, model)}
+                onModelSettingsChange={(settings) => setWorkChatModelSettings(active.id, settings)}
+                onSubmit={(text, attachments, options) =>
+                  void sendWorkChatTurn(active.id, text, attachments, options)
+                }
+                queued={queuedFor(state.queues, active.id)}
+                queuePaused={isWorkChatQueuePaused(active.id)}
+                onRemoveQueued={(promptId) => removeWorkChatQueuedPrompt(active.id, promptId)}
+                onEditQueued={(promptId, text) =>
+                  updateWorkChatQueuedPrompt(active.id, promptId, text)
+                }
+                onQueuedEditingChange={(promptId) => setWorkChatQueuedEditing(active.id, promptId)}
+                onSendQueued={(promptId) => sendWorkChatQueuedPrompt(active.id, promptId)}
+                onResumeQueue={() => resumeWorkChatQueue(active.id)}
+                onStop={() => void stopWorkChat(active.id)}
+              />
+            </>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+              <MessageSquare className="size-6 text-content/25" strokeWidth={1.5} />
+              <p className="text-[13px] text-content/50">
+                Thinking, drafting, questions — work that is not code.
+              </p>
+              <button
+                type="button"
+                onClick={() => onNewChat()}
+                className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+              >
+                New chat
+              </button>
+            </div>
+          )}
+        </div>
       </section>
 
       {deleteTarget ? (
