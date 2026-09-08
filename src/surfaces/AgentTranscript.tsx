@@ -51,6 +51,7 @@ import {
 } from "../lib/session";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
+import { useNow } from "../lib/motion";
 import { useTranscriptLayout } from "../hooks/useTranscriptLayout";
 import { useTranscriptAnchor } from "../hooks/useTranscriptAnchor";
 import { useTranscriptSelection } from "../hooks/useTranscriptSelection";
@@ -1908,6 +1909,12 @@ function ToolCallStatusIcon({ state }: { state: ToolCallState }) {
   return null;
 }
 
+/**
+ * A live turn mounts one of these per running row, so the second hand comes off
+ * the shared wall clock instead of an interval each. All the rows then advance
+ * inside one notification — one React commit for the transcript rather than one
+ * per row — and a paused row holds no timer and no state at all.
+ */
 function useElapsedFrom(startedAt: number | undefined, paused: boolean): number | null {
   const fallback = useRef<number | null>(null);
   const pausedMs = useRef(0);
@@ -1922,25 +1929,24 @@ function useElapsedFrom(startedAt: number | undefined, paused: boolean): number 
   }
 
   const origin = startedAt ?? (fallback.current ??= Date.now());
-  const [elapsedMs, setElapsedMs] = useState(() => Math.max(0, Date.now() - origin));
+  const now = useNow(!paused);
 
   useEffect(() => {
-    const start = startedAt ?? (fallback.current ??= Date.now());
     if (paused) {
-      if (pauseStarted.current == null) pauseStarted.current = Date.now();
+      pauseStarted.current ??= Date.now();
       return;
     }
     if (pauseStarted.current != null) {
       pausedMs.current += Date.now() - pauseStarted.current;
       pauseStarted.current = null;
     }
-    const tick = () => setElapsedMs(Math.max(0, Date.now() - start - pausedMs.current));
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [startedAt, paused]);
+  }, [paused]);
 
-  return elapsedMs;
+  // While paused the reading freezes at the moment the pause began, so the
+  // clock the row shows is the one it stopped on rather than one that kept
+  // running behind the fold.
+  const at = paused ? (pauseStarted.current ?? now) : now;
+  return Math.max(0, at - origin - pausedMs.current);
 }
 
 function formatWorkingDuration(

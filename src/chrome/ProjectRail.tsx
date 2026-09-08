@@ -90,6 +90,7 @@ import { WorkspaceSidebarFooter } from "./WorkspaceSidebarFooter";
 import { SettingsNav } from "./SettingsRail";
 import { Shimmer } from "../surfaces/Shimmer";
 import { TabGroupMenu, type TabGroupMenuExtraItem } from "./TabGroupMenu";
+import { useNow } from "../lib/motion";
 import { TerminalSpinner } from "./TerminalSpinner";
 import type { SettingsSectionId } from "../lib/settings";
 
@@ -674,18 +675,14 @@ function LiveAgentsPreview({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
+
   const lockList = useLockOverscroll<HTMLDivElement>();
   const ticking =
     !collapsed &&
     agents.length >= LIVE_AGENT_MIN &&
     agents.some((agent) => !agent.done && agent.startedAt != null);
 
-  useEffect(() => {
-    if (!ticking) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [ticking]);
+  const now = useNow(ticking);
 
   if (agents.length < LIVE_AGENT_MIN) return null;
 
