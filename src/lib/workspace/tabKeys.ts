@@ -133,9 +133,9 @@ export function focusedBusyAgentSessionId(
   activeTabId: string,
   tabs: readonly EscapeFocusTab[],
   sessions: readonly EscapeFocusSession[],
-  projectTerminalFocused: boolean,
+  projectDockFocused: boolean,
 ): string | null {
-  if (projectTerminalFocused) return null;
+  if (projectDockFocused) return null;
   const tab = tabs.find((entry) => entry.id === activeTabId);
   if (!tab || tab.diffFocused) return null;
   const session = sessions.find((entry) => entry.id === tab.focusedId);

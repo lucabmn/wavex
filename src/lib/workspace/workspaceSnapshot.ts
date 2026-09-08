@@ -12,7 +12,14 @@ import {
   type WorkspaceTab,
 } from "./layout";
 import type { ReleaseNotesTabSource } from "../updates/releaseNotes";
-import { clampDockSize, isDockSide, type ProjectTerminalDock } from "../terminal/projectTerminal";
+import {
+  clampDockSize,
+  emptyDockPane,
+  isDockSide,
+  isDockSurface,
+  type ProjectDock,
+} from "./projectDock";
+import { sanitizeBrowserHistory } from "./browserHistory";
 import { normalizeProjectPath } from "../recents";
 import { DEFAULT_APP_MODE, sanitizeAppMode, type AppMode } from "./appMode";
 import {
@@ -42,7 +49,7 @@ export type WorkspaceSnapshot = {
   sessions: WorkspaceSessionStub[];
   activeTabId: string;
   projectCwd: string;
-  projectTerminals: ProjectTerminalDock[];
+  projectDocks: ProjectDock[];
   /** Which top-level surface was in front. Absent on pre-Work snapshots. */
   mode: AppMode;
 };
@@ -52,7 +59,7 @@ export function collectWorkspaceSnapshot(
   sessions: Session[],
   activeTabId: string,
   projectCwd: string,
-  projectTerminals: ProjectTerminalDock[] = [],
+  projectDocks: ProjectDock[] = [],
   mode: AppMode = DEFAULT_APP_MODE,
 ): WorkspaceSnapshot {
   return {
@@ -63,9 +70,9 @@ export function collectWorkspaceSnapshot(
       .filter((stub): stub is WorkspaceSessionStub => stub != null),
     activeTabId,
     projectCwd: projectCwd.trim() || "~",
-    projectTerminals: projectTerminals
-      .map(sanitizeProjectTerminal)
-      .filter((dock): dock is ProjectTerminalDock => dock != null),
+    projectDocks: projectDocks
+      .map(sanitizeProjectDock)
+      .filter((dock): dock is ProjectDock => dock != null),
   };
 }
 
@@ -76,6 +83,8 @@ export function parseWorkspaceSnapshot(raw: unknown): WorkspaceSnapshot | null {
     sessions?: unknown;
     activeTabId?: unknown;
     projectCwd?: unknown;
+    projectDocks?: unknown;
+    /** What the docks were called before they held anything but terminals. */
     projectTerminals?: unknown;
     mode?: unknown;
   };
@@ -92,10 +101,11 @@ export function parseWorkspaceSnapshot(raw: unknown): WorkspaceSnapshot | null {
     : tabs[0].id;
   const projectCwd =
     typeof value.projectCwd === "string" && value.projectCwd.trim() ? value.projectCwd.trim() : "~";
-  const projectTerminals = Array.isArray(value.projectTerminals)
-    ? value.projectTerminals
-        .map(sanitizeProjectTerminal)
-        .filter((dock): dock is ProjectTerminalDock => dock != null)
+  const savedDocks = Array.isArray(value.projectDocks)
+    ? value.projectDocks
+    : value.projectTerminals;
+  const projectDocks = Array.isArray(savedDocks)
+    ? savedDocks.map(sanitizeProjectDock).filter((dock): dock is ProjectDock => dock != null)
     : [];
   // Optional on purpose: a snapshot saved before the mode switch existed must
   // still restore its tabs instead of failing validation and losing them all.
@@ -104,7 +114,7 @@ export function parseWorkspaceSnapshot(raw: unknown): WorkspaceSnapshot | null {
     sessions,
     activeTabId,
     projectCwd,
-    projectTerminals,
+    projectDocks,
     mode: sanitizeAppMode(value.mode),
   };
 }
@@ -187,7 +197,7 @@ export function hydrateWorkspaceSnapshot(
     sessions: [...sessions.values()],
     activeTabId,
     projectCwd,
-    projectTerminals: parsed.projectTerminals,
+    projectDocks: parsed.projectDocks,
     mode: parsed.mode,
   };
 }
@@ -426,26 +436,35 @@ function sanitizeReleaseNotes(raw: unknown): ReleaseNotesTabSource | undefined {
   return { version: version.trim() };
 }
 
-function sanitizeProjectTerminal(raw: unknown): ProjectTerminalDock | null {
+function sanitizeProjectDock(raw: unknown): ProjectDock | null {
   if (!raw || typeof raw !== "object") return null;
   const value = raw as Record<string, unknown>;
   if (typeof value.projectPath !== "string" || !value.projectPath.trim()) {
     return null;
   }
   if (!isDockSide(value.side)) return null;
+  // A dock written before the surfaces existed only ever held terminals.
+  const surface = isDockSurface(value.surface) ? value.surface : "terminal";
   const pane = sanitizePane(value.pane);
-  if (!pane) return null;
-  const files = pane.files.filter(isTerminalTab);
-  if (files.length === 0) return null;
-  const activeFileId = files.some((file) => file.id === pane.activeFileId)
-    ? pane.activeFileId
-    : files[0].id;
+  const files = pane ? pane.files.filter(isTerminalTab) : [];
+  const browser = sanitizeBrowserHistory(value.browser);
+  // Terminals do not survive a restart on their own, so a dock reduced to a
+  // terminal surface with nothing in it is worth keeping only for the page it
+  // was also holding — and it comes back closed, since there is no terminal
+  // behind the surface it would open on.
+  const empty = files.length === 0 && surface === "terminal";
+  if (empty && browser.entries.length === 0) return null;
+  const activeFileId = files.some((file) => file.id === pane?.activeFileId)
+    ? (pane?.activeFileId ?? "")
+    : (files[0]?.id ?? "");
   return {
     projectPath: normalizeProjectPath(value.projectPath),
-    pane: { ...pane, files, activeFileId },
+    pane: { ...(pane ?? emptyDockPane()), files, activeFileId },
     side: value.side,
     size: clampDockSize(value.side, Number(value.size)),
-    open: value.open !== false,
+    open: value.open !== false && !empty,
+    surface,
+    browser,
   };
 }
 

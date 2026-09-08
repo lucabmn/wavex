@@ -3,6 +3,7 @@ import { useId, useRef, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { LAYER } from "../lib/layers";
+import { useOverlayPresence } from "../hooks/useOverlayPresence";
 import { useDialogFocus } from "../hooks/useDialogFocus";
 
 export type ModalSize = "sm" | "md" | "lg";
@@ -43,6 +44,7 @@ export function ModalPanel({
   closeDisabled = false,
   children,
 }: Props) {
+  useOverlayPresence();
   const closeRef = useRef<HTMLButtonElement>(null);
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const uid = useId();

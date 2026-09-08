@@ -132,6 +132,6 @@ describe("commandsForClient", () => {
       commandsForClient(APP_COMMANDS, true).map((command) => [command.id, command.keys]),
     );
     expect(keyed.get("app.commandPalette")).toBeTruthy();
-    expect(keyed.get("terminal.toggleDock")).toBeTruthy();
+    expect(keyed.get("panel.toggle")).toBeTruthy();
   });
 });

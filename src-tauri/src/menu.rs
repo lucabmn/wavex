@@ -88,7 +88,7 @@ fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let new_terminal_tab = MenuItemBuilder::with_id("new_terminal_tab", "New Terminal Tab")
         .accelerator("CmdOrCtrl+Shift+`")
         .build(app)?;
-    let toggle_terminal = MenuItemBuilder::with_id("toggle_terminal", "Toggle Terminal")
+    let toggle_terminal = MenuItemBuilder::with_id("toggle_terminal", "Toggle Panel")
         .accelerator("CmdOrCtrl+J")
         .build(app)?;
     let split_right = MenuItemBuilder::with_id("split_right", "Split Pane Right")

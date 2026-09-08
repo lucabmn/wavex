@@ -111,6 +111,14 @@ function oscColors() {
   return isLightScheme() ? OSC_LIGHT : OSC_DARK;
 }
 
+/**
+ * Which mount of a terminal id currently owns its PTY. A view only kills the
+ * process it is still the owner of, so a remount cannot be killed by the view
+ * it replaced.
+ */
+const ptyGenerations = new Map<string, number>();
+const ptyOwners = new Map<string, number>();
+
 export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
   const outerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -125,6 +133,10 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
     const outer = outerRef.current;
     const host = hostRef.current;
     if (!outer || !host) return;
+
+    const generation = (ptyGenerations.get(id) ?? 0) + 1;
+    ptyGenerations.set(id, generation);
+    ptyOwners.set(id, generation);
 
     const term = new Terminal({
       cursorBlink: loadTerminalCursorBlink(),
@@ -332,8 +344,19 @@ export function TerminalView({ id, cwd, active, onMetaChange }: Props) {
       renderSub.dispose();
       bufferSub.dispose();
       unsubscribe();
-      // Kill only after the spawn settles, or the PTY outlives its tab.
-      void starting.catch(() => undefined).then(() => killPty(id));
+      // Kill only after the spawn settles, or the PTY outlives its tab — and
+      // only if this view still owns it. A remount spawns the same id again
+      // while the departing view is still waiting on its own spawn, so an
+      // unguarded kill lands on the arriving terminal and leaves it drawn,
+      // silent, and deaf. React's development double-mount does exactly this
+      // on every terminal that opens.
+      void starting
+        .catch(() => undefined)
+        .then(() => {
+          if (ptyOwners.get(id) !== generation) return;
+          ptyOwners.delete(id);
+          return killPty(id);
+        });
       term.dispose();
       termRef.current = null;
       spawned.current = false;

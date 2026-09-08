@@ -8,7 +8,10 @@
 //! Absent by design: anything that draws or moves a window, the Dock badge and
 //! the menu bar, profile switching, window transfer, and the two commands that
 //! answer with raw bytes instead of JSON. A window belongs to the machine
-//! drawing it, and a remote client has none of them to act on.
+//! drawing it, and a remote client has none of them to act on. The panel's
+//! frame preflight is absent for a different reason: fetching an address a
+//! client typed would have the host reach into its own network on that
+//! client's behalf.
 
 use serde::Serialize;
 use serde_json::Value;

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { LAYER } from "../lib/layers";
+import { useOverlayPresence } from "../hooks/useOverlayPresence";
 import {
   placePopover,
   type AnchorRect,
@@ -145,6 +146,7 @@ export function Popover({
   children,
   ...rest
 }: Props) {
+  useOverlayPresence();
   const surface = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
   const anchorRef = useRef(anchor);

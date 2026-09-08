@@ -1,5 +1,5 @@
 import { leafIds, newTab, type WorkspaceTab } from "./workspace/layout";
-import type { ProjectTerminalDock } from "./terminal/projectTerminal";
+import type { ProjectDock } from "./workspace/projectDock";
 import type { AppMode } from "./workspace/appMode";
 import { sessionNeedsInput, type Session } from "./session";
 import { stopStreaming } from "./harness/apply";
@@ -18,7 +18,7 @@ export type ResumedWorkspace = {
   tabs: WorkspaceTab[];
   activeTabId: string;
   projectCwd: string;
-  projectTerminals?: ProjectTerminalDock[];
+  projectDocks?: ProjectDock[];
   /** Top-level surface to restore. Absent on a pre-Work snapshot. */
   mode?: AppMode;
 };

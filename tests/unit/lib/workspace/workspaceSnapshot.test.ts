@@ -10,7 +10,8 @@ import {
   newTab,
   newTerminalFile,
 } from "@/lib/workspace/layout";
-import { createProjectTerminal } from "@/lib/terminal/projectTerminal";
+import { createProjectDock } from "@/lib/workspace/projectDock";
+import { EMPTY_BROWSER_HISTORY } from "@/lib/workspace/browserHistory";
 import { newSession, type Session } from "@/lib/session";
 import {
   collectWorkspaceSnapshot,
@@ -47,7 +48,7 @@ describe("collectWorkspaceSnapshot", () => {
       }),
     ]);
     expect("blocks" in snapshot.sessions[0]!).toBe(false);
-    expect(snapshot.projectTerminals).toEqual([]);
+    expect(snapshot.projectDocks).toEqual([]);
   });
 
   it("round-trips a unified Changes tab", () => {
@@ -112,18 +113,18 @@ describe("collectWorkspaceSnapshot", () => {
 
   it("stores the project terminal dock", () => {
     const term = newTerminalFile("/tmp/a", "zsh");
-    const dock = createProjectTerminal("/tmp/a", term);
+    const dock = createProjectDock("/tmp/a", { file: term });
     const snapshot = collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a", [
       dock,
     ]);
-    expect(snapshot.projectTerminals).toEqual([
+    expect(snapshot.projectDocks).toEqual([
       expect.objectContaining({
         projectPath: "/tmp/a",
         side: "bottom",
         open: true,
       }),
     ]);
-    expect(snapshot.projectTerminals[0]?.pane.files[0]?.id).toBe(term.id);
+    expect(snapshot.projectDocks[0]?.pane.files[0]?.id).toBe(term.id);
   });
 });
 
@@ -341,7 +342,7 @@ describe("hydrateWorkspaceSnapshot", () => {
   it("restores a project terminal dock", () => {
     const term = { ...newTerminalFile("/tmp/a"), foreground: "vite" };
     const dock = {
-      ...createProjectTerminal("/tmp/a", term),
+      ...createProjectDock("/tmp/a", { file: term }),
       side: "left" as const,
       size: 300,
       open: false,
@@ -350,7 +351,7 @@ describe("hydrateWorkspaceSnapshot", () => {
       dock,
     ]);
     const workspace = hydrateWorkspaceSnapshot(snapshot, new Map());
-    expect(workspace?.projectTerminals).toEqual([
+    expect(workspace?.projectDocks).toEqual([
       expect.objectContaining({
         projectPath: "/tmp/a",
         side: "left",
@@ -358,8 +359,68 @@ describe("hydrateWorkspaceSnapshot", () => {
         open: false,
       }),
     ]);
-    expect(workspace?.projectTerminals?.[0]?.pane.files[0]?.terminal).toBe(true);
-    expect(workspace?.projectTerminals?.[0]?.pane.files[0]?.foreground).toBeUndefined();
+    expect(workspace?.projectDocks?.[0]?.pane.files[0]?.terminal).toBe(true);
+    expect(workspace?.projectDocks?.[0]?.pane.files[0]?.foreground).toBeUndefined();
+  });
+
+  it("restores a panel that only ever held a page", () => {
+    const dock = {
+      ...createProjectDock("/tmp/a", { surface: "browser" as const }),
+      browser: { entries: ["http://localhost:5173/"], index: 0 },
+    };
+    const snapshot = collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a", [
+      dock,
+    ]);
+    const workspace = hydrateWorkspaceSnapshot(snapshot, new Map());
+    expect(workspace?.projectDocks).toEqual([
+      expect.objectContaining({
+        projectPath: "/tmp/a",
+        surface: "browser",
+        browser: { entries: ["http://localhost:5173/"], index: 0 },
+      }),
+    ]);
+    expect(workspace?.projectDocks?.[0]?.pane.files).toEqual([]);
+  });
+
+  it("keeps the page of a panel whose terminals did not survive the restart", () => {
+    const term = newTerminalFile("/tmp/a");
+    const dock = {
+      ...createProjectDock("/tmp/a", { file: term }),
+      browser: { entries: ["http://localhost:5173/"], index: 0 },
+    };
+    const snapshot = collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a", [
+      { ...dock, pane: { ...dock.pane, files: [], activeFileId: "" } },
+    ]);
+    const restored = hydrateWorkspaceSnapshot(snapshot, new Map())?.projectDocks?.[0];
+    expect(restored?.browser.entries).toEqual(["http://localhost:5173/"]);
+    expect(restored?.open).toBe(false);
+  });
+
+  it("drops a terminal panel whose terminals did not survive the restart", () => {
+    const snapshot = collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a", [
+      createProjectDock("/tmp/a", { surface: "terminal" as const }),
+    ]);
+    expect(hydrateWorkspaceSnapshot(snapshot, new Map())?.projectDocks).toEqual([]);
+  });
+
+  it("reads a dock written under its old name before the panel had surfaces", () => {
+    const term = newTerminalFile("/tmp/a");
+    const legacy = {
+      projectPath: "/tmp/a",
+      pane: { id: "p1", files: [term], activeFileId: term.id },
+      side: "bottom",
+      size: 220,
+      open: true,
+    };
+    const workspace = hydrateWorkspaceSnapshot(
+      {
+        ...collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a"),
+        projectDocks: [legacy],
+      } as never,
+      new Map(),
+    );
+    expect(workspace?.projectDocks?.[0]?.surface).toBe("terminal");
+    expect(workspace?.projectDocks?.[0]?.browser).toEqual(EMPTY_BROWSER_HISTORY);
   });
 });
 
