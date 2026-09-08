@@ -15,6 +15,8 @@ export type OpenWithApp = {
   id: string;
   name: string;
   kind: OpenWithKind;
+  /** The application's own icon, or null where the platform hides it. */
+  icon: string | null;
 };
 
 export type OpenWithGroup = {
@@ -52,4 +54,32 @@ export function groupOpenWithApps(apps: OpenWithApp[]): OpenWithGroup[] {
     label,
     apps: apps.filter((app) => app.kind === kind),
   })).filter((group) => group.apps.length > 0);
+}
+
+/**
+ * Which application the button opens without asking.
+ *
+ * VS Code first because it is what most checkouts are opened in, then the
+ * editors built on it, then whatever else is installed. The file manager is
+ * the last resort rather than the first, since a machine with no editor on it
+ * is the unusual one.
+ */
+const DEFAULT_PREFERENCE = [
+  "vscode",
+  "cursor",
+  "windsurf",
+  "vscodium",
+  "vscode-insiders",
+  "zed",
+  "sublime",
+];
+
+export function defaultOpenWithApp(apps: OpenWithApp[]): OpenWithApp | null {
+  for (const id of DEFAULT_PREFERENCE) {
+    const preferred = apps.find((app) => app.id === id);
+    if (preferred) return preferred;
+  }
+  return (
+    apps.find((app) => app.kind === "editor") ?? apps.find((app) => app.kind === "files") ?? null
+  );
 }
