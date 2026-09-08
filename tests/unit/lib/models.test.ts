@@ -4,6 +4,7 @@ import {
   coerceModelPickerTab,
   defaultModelId,
   defaultSessionChoice,
+  filterModels,
   hasLiveCatalog,
   isPickerProviderVisible,
   loadDefaultModels,
@@ -298,5 +299,42 @@ describe("live catalog overlays", () => {
     ]);
     expect(hasLiveCatalog("pi")).toBe(true);
     expect(hasLiveCatalog("omp")).toBe(false);
+  });
+});
+
+describe("model search", () => {
+  const catalog: AgentModel[] = [
+    {
+      id: "fx:zai/glm-5.3-flash",
+      harness: "fx",
+      name: "Glm 5.3 Flash",
+      nativeId: "zai/glm-5.3-flash",
+    },
+    { id: "fx:zai/glm-4.7", harness: "fx", name: "Glm 4.7", nativeId: "zai/glm-4.7" },
+    { id: "fx:openai/gpt-5.2", harness: "fx", name: "Gpt 5.2", nativeId: "openai/gpt-5.2" },
+  ];
+
+  const ids = (query: string) => filterModels(catalog, query).map((model) => model.id);
+
+  it("keeps the whole list for an empty query", () => {
+    expect(filterModels(catalog, "  ")).toHaveLength(3);
+  });
+
+  it("matches the id the CLI prints, not just the display name", () => {
+    expect(ids("zai/glm-5.3-flash")).toEqual(["fx:zai/glm-5.3-flash"]);
+  });
+
+  it("treats slashes, dashes, and spaces as the same separator", () => {
+    expect(ids("glm 5.3")).toEqual(["fx:zai/glm-5.3-flash"]);
+    expect(ids("zai")).toEqual(["fx:zai/glm-5.3-flash", "fx:zai/glm-4.7"]);
+  });
+
+  it("requires every term, in any order", () => {
+    expect(ids("flash glm")).toEqual(["fx:zai/glm-5.3-flash"]);
+    expect(ids("glm gpt")).toEqual([]);
+  });
+
+  it("matches the provider name", () => {
+    expect(ids("fx")).toHaveLength(3);
   });
 });

@@ -1,5 +1,5 @@
 import type { HarnessId } from "./session";
-import { HARNESSES } from "./session";
+import { HARNESSES, HARNESS_LABEL, HARNESS_TITLE } from "./session";
 import { profileStorage } from "./profiles/profileStorage";
 
 export type ModelSettingChoice = {
@@ -281,6 +281,38 @@ function baseModelsFor(harness: HarnessId): AgentModel[] {
 
 export function modelsFor(harness: HarnessId): AgentModel[] {
   return overlays[harness] ?? baseModelsFor(harness);
+}
+
+/**
+ * Search text for one model. A catalog id is what a user types — fx names
+ * `zai/glm-5.3-flash` "Glm 5.3 Flash", so a name-only haystack cannot match the
+ * string the fx CLI prints. Separators collapse to spaces on both sides so
+ * `zai/glm`, `glm-5.3`, and `glm 5.3 flash` all reach the same entry.
+ */
+function modelHaystack(model: AgentModel): string {
+  return normalizeModelSearchText(
+    `${model.name} ${model.nativeId ?? ""} ${model.id} ${HARNESS_TITLE[model.harness]} ${HARNESS_LABEL[model.harness]}`,
+  );
+}
+
+function normalizeModelSearchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[\s/_-]+/g, " ")
+    .trim();
+}
+
+/** Every whitespace-separated term must appear; no fuzzy scoring. */
+export function modelMatchesQuery(model: AgentModel, query: string): boolean {
+  const needle = normalizeModelSearchText(query);
+  if (!needle) return true;
+  const hay = modelHaystack(model);
+  return needle.split(" ").every((term) => hay.includes(term));
+}
+
+export function filterModels(models: AgentModel[], query: string): AgentModel[] {
+  if (!query.trim()) return models;
+  return models.filter((model) => modelMatchesQuery(model, query));
 }
 
 export function allModels(): AgentModel[] {

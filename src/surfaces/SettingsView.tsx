@@ -1,4 +1,11 @@
-import { ArrowDownCircle, Loader, RefreshCw, RotateCcw, Search } from "../chrome/icons";
+import {
+  ArrowDownCircle,
+  ChevronDown,
+  Loader,
+  RefreshCw,
+  RotateCcw,
+  Search,
+} from "../chrome/icons";
 import {
   useCallback,
   useEffect,
@@ -6,11 +13,13 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
 import { ConnectionsPage } from "./ConnectionsPage";
 import { Heading, Row } from "../chrome/SettingsRow";
 import { HarnessIcon } from "../chrome/HarnessIcon";
+import { Popover } from "../chrome/Popover";
 import {
   getLanguageServerAvailabilitySnapshot,
   languageServerBinary,
@@ -95,7 +104,9 @@ import {
 } from "../lib/uiScale";
 import {
   defaultModelId,
+  filterModels,
   getModelSnapshot,
+  hasLiveCatalog,
   isPickerProviderVisible,
   loadDefaultModels,
   loadLastModelChoice,
@@ -105,6 +116,7 @@ import {
   saveLastModelChoice,
   savePickerProviderVisible,
   subscribeModels,
+  type AgentModel,
 } from "../lib/models";
 import { prettyCwd, projectName } from "../lib/paths";
 import { IS_MAC } from "../lib/platform";
@@ -878,11 +890,21 @@ function ProviderRow({
   const available = isHarnessAvailable(harness);
   const current = models.length > 0 ? resolveModel(harness, selectedModel) : null;
   const [inPicker, setInPicker] = useState(() => isPickerProviderVisible(harness));
+  const [listOpen, setListOpen] = useState(false);
 
   useEffect(() => {
     if (!available || models.length > 0) return;
     void refreshHarnessCatalogs([harness]);
   }, [available, harness, models.length]);
+
+  // Every provider has a row, so probing all of them on mount would spawn every
+  // installed CLI the moment Settings opens. Opening this list is the signal
+  // that this one provider's full catalog is actually wanted; the built-in
+  // fallback list is a handful of models and the CLI knows the rest.
+  useEffect(() => {
+    if (!listOpen || !available) return;
+    void refreshHarnessCatalogs([harness]);
+  }, [listOpen, available, harness]);
 
   const onPickerVisible = (visible: boolean) => {
     savePickerProviderVisible(harness, visible);
@@ -903,20 +925,21 @@ function ProviderRow({
         </span>
       }
       description={
-        available
-          ? `${models.length} ${models.length === 1 ? "model" : "models"} available.`
-          : harnessUnavailableHint(harness)
+        !available
+          ? harnessUnavailableHint(harness)
+          : hasLiveCatalog(harness)
+            ? `${models.length} ${models.length === 1 ? "model" : "models"} available.`
+            : "Open the list for every model this CLI reports."
       }
     >
       {current ? (
-        <Select
+        <ModelSelect
           label={`${HARNESS_TITLE[harness]} model`}
+          models={models}
           value={current.id}
+          open={listOpen}
+          onOpenChange={setListOpen}
           onChange={(next) => onModelChange(harness, next)}
-          options={models.map((item) => ({
-            value: item.id,
-            label: item.name,
-          }))}
         />
       ) : null}
       <SecondaryButton
@@ -1353,30 +1376,225 @@ function Toggle({
     </button>
   );
 }
-function Select({
+const MODEL_MENU_WIDTH = 280;
+const MODEL_MENU_MAX_HEIGHT = 320;
+
+/**
+ * A provider catalog is a live list, not a fixed menu: fx alone reports well
+ * past a hundred models. A native `<select>` of that length is a wall of names
+ * with no way to narrow it, so this is a combobox with a filter over the same
+ * text the CLI prints — the model id included, since that is what a user reads
+ * in the CLI and types here.
+ */
+function ModelSelect({
   label,
+  models,
   value,
-  options,
+  open,
+  onOpenChange,
   onChange,
 }: {
   label: string;
+  models: AgentModel[];
   value: string;
-  options: { value: string; label: string }[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onChange: (value: string) => void;
 }) {
+  const anchor = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const current = models.find((item) => item.id === value);
+  const visible = useMemo(() => filterModels(models, query), [models, query]);
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+    searchRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const index = visible.findIndex((item) => item.id === value);
+    setActive(index >= 0 ? index : 0);
+    // Reopening lands on the selected model, and so does the catalog arriving
+    // while the list is already open — opening it is what asks for the catalog,
+    // so the list this runs against is usually the short fallback one.
+  }, [open, query, value, visible]);
+
+  useEffect(() => {
+    setActive((index) => (visible.length === 0 ? 0 : Math.min(index, visible.length - 1)));
+  }, [visible.length]);
+
+  const pick = (id: string) => {
+    onChange(id);
+    onOpenChange(false);
+  };
+
+  const onSearchKey = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActive((index) => Math.min(visible.length - 1, index + 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive((index) => Math.max(0, index - 1));
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const item = visible[active];
+      if (item) pick(item.id);
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onOpenChange(false);
+    }
+  };
+
   return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className="max-w-52 rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[12px] text-content outline-none hover:border-content/20"
+    <>
+      <button
+        ref={anchor}
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => onOpenChange(!open)}
+        className="flex max-w-52 min-w-0 items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[12px] text-content outline-none hover:border-content/20"
+      >
+        <span className="min-w-0 truncate">{current?.name ?? "Select a model"}</span>
+        <ChevronDown
+          className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
+          strokeWidth={1.75}
+        />
+      </button>
+      {open ? (
+        <Popover
+          anchor={anchor}
+          side="bottom"
+          align="end"
+          width={MODEL_MENU_WIDTH}
+          maxHeight={MODEL_MENU_MAX_HEIGHT}
+          onDismiss={() => onOpenChange(false)}
+          role="dialog"
+          aria-label={label}
+          className="flex flex-col overflow-hidden"
+        >
+          <label className="flex items-center gap-2 border-b border-content/10 px-2 py-2.5 text-content/50">
+            <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              placeholder="Search models..."
+              aria-label="Search models"
+              className="min-w-0 flex-1 bg-transparent text-[12px] text-content outline-none placeholder:text-content/40"
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={onSearchKey}
+            />
+          </label>
+          <ModelOptions
+            models={visible}
+            active={active}
+            currentId={value}
+            onActive={setActive}
+            onPick={pick}
+          />
+        </Popover>
+      ) : null}
+    </>
+  );
+}
+
+function ModelOptions({
+  models,
+  active,
+  currentId,
+  onActive,
+  onPick,
+}: {
+  models: AgentModel[];
+  active: number;
+  currentId: string;
+  onActive: (index: number) => void;
+  onPick: (id: string) => void;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const lockOverscroll = useLockOverscroll<HTMLDivElement>();
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  const setListRef = (el: HTMLDivElement | null) => {
+    listRef.current = el;
+    lockOverscroll(el);
+  };
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+  }, [active]);
+
+  // The settings page scrolls behind this popover, and scrolling it moves the
+  // anchor out from under one. Reaching the end of the list ends the gesture.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.stopPropagation();
+      if (el.scrollHeight <= el.clientHeight + 1) return;
+      el.scrollTop += e.deltaY;
+      e.preventDefault();
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [models.length]);
+
+  if (models.length === 0) {
+    return <div className="px-3 py-4 text-[12px] text-content/50">No matching models</div>;
+  }
+
+  return (
+    <div
+      ref={setListRef}
+      role="listbox"
+      aria-label="Models"
+      className="min-h-0 flex-1 overflow-y-auto overscroll-none p-1.5"
     >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+      {models.map((item, index) => {
+        const selected = item.id === currentId;
+        const highlighted = index === active;
+        // The id is the string the CLI prints, and two catalog entries can
+        // render to the same display name; keep it visible when it adds something.
+        const detail = item.nativeId && item.nativeId !== item.name ? item.nativeId : null;
+        return (
+          <button
+            key={item.id}
+            ref={highlighted ? activeRef : undefined}
+            type="button"
+            role="option"
+            aria-selected={selected}
+            onMouseEnter={() => onActive(index)}
+            onClick={() => onPick(item.id)}
+            className={`flex w-full min-w-0 flex-col items-start rounded-lg px-2 py-1.5 text-left ${
+              highlighted || selected ? "bg-content/10" : "hover:bg-content/5"
+            }`}
+          >
+            <span className="w-full truncate text-[12.5px] leading-5 text-content">
+              {item.name}
+            </span>
+            {detail ? (
+              <span className="w-full truncate text-[11px] leading-4 text-content/45">
+                {detail}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

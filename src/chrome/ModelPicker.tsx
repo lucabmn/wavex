@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   coerceModelPickerTab,
+  filterModels,
   findModel,
   getModelSnapshot,
   getPickerVisibilitySnapshot,
@@ -182,19 +183,13 @@ export function ModelPicker({ harness, model, hotkeys = false, onChange, onClose
   }, [open]);
 
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
     const pool =
       visibleTab === "favorites"
         ? favorites
             .map((id) => findModel(id))
             .filter((item): item is AgentModel => item != null && shownInPicker(item.harness))
         : modelsFor(visibleTab);
-    if (!needle) return pool;
-    return pool.filter((item) => {
-      const hay =
-        `${item.name} ${HARNESS_TITLE[item.harness]} ${HARNESS_LABEL[item.harness]}`.toLowerCase();
-      return hay.includes(needle);
-    });
+    return filterModels(pool, query);
     // Catalog, install probes, and picker-visibility all feed this list:
     // catalogs land after mount, and hiding a provider must drop its favorites.
   }, [visibleTab, query, favorites, catalogVersion, availabilityVersion, visibilityVersion]);
