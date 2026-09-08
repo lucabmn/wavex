@@ -45,7 +45,7 @@ export function InboxMedia({ src, alt }: Props) {
   if (state.status === "loading") {
     return (
       <span
-        className="inbox-media my-2 inline-block h-32 w-full max-w-xl animate-pulse rounded-[10px] border border-content/10 bg-content/6"
+        className="inbox-media my-2 inline-block h-32 w-full max-w-xl animate-pulse rounded-[10px] border border-edge bg-content/6"
         aria-hidden
       />
     );
@@ -57,7 +57,7 @@ export function InboxMedia({ src, alt }: Props) {
 
   if (state.type.kind === "video") {
     return (
-      <span className="inbox-media my-2 inline-block w-full max-w-xl overflow-hidden rounded-[10px] border border-content/10 bg-content/6">
+      <span className="inbox-media my-2 inline-block w-full max-w-xl overflow-hidden rounded-[10px] border border-edge bg-content/6">
         <video
           src={state.url}
           controls
@@ -78,7 +78,7 @@ export function InboxMedia({ src, alt }: Props) {
       alt={alt ?? ""}
       title={label}
       draggable={false}
-      className="inbox-media my-2 inline-block max-h-[28rem] w-full max-w-xl cursor-zoom-in rounded-[10px] border border-content/10 bg-content/6 object-contain"
+      className="inbox-media my-2 inline-block max-h-[28rem] w-full max-w-xl cursor-zoom-in rounded-[10px] border border-edge bg-content/6 object-contain"
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();

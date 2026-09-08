@@ -88,7 +88,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
         aria-label={existing ? `Edit template ${existing.name}` : "New prompt template"}
         onMouseDown={(event) => event.stopPropagation()}
         onSubmit={save}
-        className="absolute left-1/2 top-[12%] flex w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[12%] flex w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-[13px] font-medium leading-tight text-content">
@@ -106,7 +106,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
         </div>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-content/45">Name</span>
+          <span className="ui-label">Name</span>
           <input
             ref={nameRef}
             value={name}
@@ -121,7 +121,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-content/45">
+          <span className="ui-label">
             Description <span className="normal-case tracking-normal">(optional)</span>
           </span>
           <input
@@ -135,7 +135,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-content/45">Prompt</span>
+          <span className="ui-label">Prompt</span>
           <textarea
             ref={bodyRef}
             value={body}
@@ -163,7 +163,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
               disabled={busy}
               onClick={remove}
               onBlur={() => setConfirmDelete(false)}
-              className="mr-auto rounded-md px-3 py-1.5 text-[12px] text-content/60 hover:bg-content/8 hover:text-content disabled:opacity-40"
+              className="mr-auto rounded-md px-3 py-1.5 text-[12px] text-content/60 hover:bg-hover hover:text-content disabled:opacity-40"
             >
               {confirmDelete ? "Click again to delete" : "Delete"}
             </button>
@@ -172,7 +172,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
             type="button"
             disabled={busy}
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             Cancel
           </button>

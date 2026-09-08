@@ -39,7 +39,7 @@ export function Section({
     <section className="pb-7 last:pb-2">
       <div className="flex items-end justify-between gap-4 pb-2">
         <div className="min-w-0">
-          <h2 className="halo-label text-[11px] text-content/45">{title}</h2>
+          <h2 className="ui-label text-[11px] text-content/45">{title}</h2>
           {description ? (
             <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-content/40">
               {description}
@@ -48,7 +48,7 @@ export function Section({
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
-      <div className="halo-pane overflow-hidden rounded-xl">{children}</div>
+      <div className="ui-pane overflow-hidden rounded-xl">{children}</div>
     </section>
   );
 }
@@ -81,7 +81,7 @@ export function Row({
 
   if (layout === "stacked") {
     return (
-      <div className="border-b border-content/8 px-4 py-3.5 last:border-b-0">
+      <div className="border-b border-edge px-4 py-3.5 last:border-b-0">
         {text}
         {children ? <div className="pt-3">{children}</div> : null}
       </div>
@@ -89,7 +89,7 @@ export function Row({
   }
 
   return (
-    <div className="flex items-start gap-6 border-b border-content/8 px-4 py-3.5 last:border-b-0">
+    <div className="flex items-start gap-6 border-b border-edge px-4 py-3.5 last:border-b-0">
       {text}
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>
     </div>
@@ -119,12 +119,12 @@ export function Toggle({
         playCue("switch");
         onChange(!on);
       }}
-      className={`halo-focus relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
-        on ? "halo-fill" : "bg-content/15 shadow-[inset_0_1px_2px_var(--shade)]"
+      className={`ui-focus relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
+        on ? "bg-accent" : "bg-content/15"
       }`}
     >
       <span
-        className={`absolute top-0.5 size-4 rounded-full bg-white shadow-lift transition-[left] ${
+        className={`absolute top-0.5 size-4 rounded-full bg-white transition-[left] ${
           on ? "left-4.5" : "left-0.5"
         }`}
       />
@@ -147,7 +147,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="grid gap-0.5 rounded-lg border border-edge bg-surface-sunken p-0.5 text-[12px]"
+      className="grid gap-0.5 rounded-md border border-edge bg-surface-sunken p-0.5 text-[12px]"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(3.75rem, 1fr))` }}
     >
       {options.map((option) => (
@@ -157,11 +157,8 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`halo-focus min-w-0 truncate rounded-md px-1.5 py-1 font-medium transition-colors ${
-            value === option.value
-              ? "bg-surface-raised text-content shadow-lift"
-              : "text-content/55 hover:bg-content/6 hover:text-content"
-          }`}
+          data-selected={value === option.value ? "true" : undefined}
+          className="ui-segment ui-focus min-w-0 truncate rounded px-1.5 py-1 font-medium text-content/55"
         >
           {option.label}
         </button>
@@ -228,7 +225,7 @@ export function Select({
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
-      className="halo-focus max-w-52 rounded-lg border border-edge bg-surface-raised px-2.5 py-1.5 text-[12px] text-content shadow-lift outline-none transition-colors hover:border-edge-strong disabled:opacity-40"
+      className="ui-focus max-w-52 rounded-md border border-edge bg-surface-raised px-2.5 py-1.5 text-[12px] text-content outline-none hover:border-edge-strong disabled:opacity-40"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -255,10 +252,10 @@ export function SecondaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`halo-focus flex shrink-0 items-center gap-1.5 rounded-lg border border-edge px-3 py-1.5 text-[12px] font-medium transition-colors ${
+      className={`ui-focus flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-[12px] font-medium ${
         danger
           ? "text-red-400 hover:border-red-400/40 hover:bg-red-400/10"
-          : "bg-surface-raised text-content/70 shadow-lift hover:border-edge-strong hover:text-content"
+          : "bg-surface-raised text-content/70 hover:border-edge-strong hover:text-content"
       } disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
     >
       {children}

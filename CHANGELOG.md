@@ -6,18 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-- Redesign the whole interface. Surfaces are drawn on a four-rung ladder with
-  tinted shadows and a lit top edge instead of one flat sheet of hairlines,
-  selection is an accent spine and wash rather than a grey fill, tabs and
-  switches are raised chips, primary actions take the accent gradient, and an
-  ambient accent wash pools in the corners of the window. Transparent mode
-  keeps working throughout.
-- Ship the Halo palette as the default: an indigo-tinted interface with a
-  derived two-stop accent, a rounder corner scale, and new theme and accent
-  presets.
-- Add two appearance rules for the new design: Depth, which sets how far
-  raised surfaces stand off the ones behind them, and Ambient glow, which
-  scales the accent wash down to nothing.
+- Redesign the whole interface. The window is now planes of colour separated by
+  space rather than boxes drawn with rules: surfaces come off a four-rung
+  ladder, every hairline and hover is one shared token, tabs are flush and
+  named by a rule under the live one instead of a filled pill, corners are
+  tight, and the accent is the only saturated thing on screen — it marks the
+  selected row, the live tab, focus, and the single filled action a surface is
+  allowed. Nothing in the chrome uses a gradient and nothing glows. Transparent
+  mode keeps working throughout.
+- Ship a warm graphite palette with a clay accent as the default, and replace
+  the theme and accent presets to match.
+- Add two appearance rules: Depth, which sets how far raised surfaces stand off
+  the ones behind them, and Separators, which sets how strongly every hairline
+  in the app is drawn.
 
 ## [0.13.0] - 2026-09-08
 

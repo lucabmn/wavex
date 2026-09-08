@@ -261,10 +261,10 @@ function TitleTabItem({
       }}
     >
       {showStart ? (
-        <div className="pointer-events-none absolute inset-y-1.5 left-0 z-20 w-0.5 rounded-full bg-gradient-to-b from-accent to-accent-2" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-accent" />
       ) : null}
       {showEnd ? (
-        <div className="pointer-events-none absolute inset-y-1.5 right-0 z-20 w-0.5 rounded-full bg-gradient-to-b from-accent to-accent-2" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-accent" />
       ) : null}
       <button
         type="button"
@@ -278,12 +278,9 @@ function TitleTabItem({
           if (sortable.consumeClick()) return;
           onSelect(tab.id);
         }}
-        className={`halo-focus relative flex h-7.5 min-w-0 flex-1 cursor-default items-center gap-1.5 self-center rounded-lg px-2.5 text-left transition-colors ${
-          closable ? "pr-7" : "pr-2.5"
-        } ${
-          active
-            ? "border border-edge bg-surface-raised text-content shadow-lift"
-            : "border border-transparent text-content/55 hover:bg-content/6 hover:text-content"
+        data-selected={active ? "true" : undefined}
+        className={`ui-tab ui-focus relative flex h-full min-w-0 flex-1 cursor-default items-center gap-1.5 px-3 text-left ${
+          closable ? "pr-7" : "pr-3"
         }`}
       >
         {tab.harnesses.length > 0 ? (
@@ -371,7 +368,7 @@ function TitleTabItem({
             e.stopPropagation();
             onClose(tab.id);
           }}
-          className="halo-focus absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-md text-content/45 opacity-0 transition-opacity hover:bg-content/10 hover:text-content group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+          className="ui-focus absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-md text-content/45 opacity-0 transition-opacity hover:bg-hover hover:text-content group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
         >
           <X className="size-3" strokeWidth={1.75} />
         </button>
@@ -391,7 +388,7 @@ function TabStripChevron({ side, onClick }: { side: "left" | "right"; onClick: (
       data-tauri-drag-region="false"
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`halo-overlay absolute top-1/2 z-40 grid size-6.5 -translate-y-1/2 place-items-center rounded-lg text-content/70 hover:text-content ${
+      className={`ui-overlay absolute top-1/2 z-40 grid size-6.5 -translate-y-1/2 place-items-center rounded-lg text-content/70 hover:text-content ${
         side === "left" ? "left-1" : "right-1"
       }`}
     >
@@ -427,14 +424,14 @@ export function IconButton({
         if (disabled) return;
         onClick?.();
       }}
-      className={`halo-focus grid size-6.5 place-items-center rounded-lg transition-colors ${
+      className={`ui-focus grid size-6.5 place-items-center rounded-lg transition-colors ${
         disabled
           ? "text-content/25"
           : accent
             ? "text-accent hover:bg-accent/12"
             : active
-              ? "bg-content/8 text-content hover:bg-content/12"
-              : "text-content/45 hover:bg-content/8 hover:text-content"
+              ? "bg-content/8 text-content hover:bg-hover"
+              : "text-content/45 hover:bg-hover hover:text-content"
       }`}
     >
       {children}
@@ -751,7 +748,7 @@ function TitleBarComponent({
   // exempts buttons, links and inputs on its own.
   return (
     <header
-      className="halo-topbar flex h-10 shrink-0 select-none items-stretch"
+      className="ui-rule-b flex h-10 shrink-0 select-none items-stretch"
       data-tauri-drag-region="deep"
     >
       {/* Both the rail and the sidebar step aside without a project, so the
@@ -769,7 +766,7 @@ function TitleBarComponent({
       {/* The rail owns the switch when it is open; this is the fallback for a
           collapsed rail, matching how Go to File and New session appear there. */}
       {railClosed && mode && onModeChange ? (
-        <div className="halo-divide-r flex shrink-0 items-center px-2">
+        <div className="ui-rule-r flex shrink-0 items-center px-2">
           <ModeSwitch mode={mode} onChange={onModeChange} />
         </div>
       ) : null}
@@ -788,7 +785,7 @@ function TitleBarComponent({
 
       <div
         className={`flex min-w-0 flex-1 items-stretch${
-          showProjectButton ? " border-l border-content/10" : ""
+          showProjectButton ? " border-l border-edge" : ""
         }`}
       >
         <div

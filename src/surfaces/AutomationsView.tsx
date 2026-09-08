@@ -233,7 +233,7 @@ export function AutomationsView({
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 select-none items-center border-b border-content/10"
+        className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
@@ -257,7 +257,7 @@ export function AutomationsView({
             className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               state.allPaused
                 ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/22"
-                : "text-content/60 hover:bg-content/8 hover:text-content"
+                : "text-content/60 hover:bg-hover hover:text-content"
             }`}
           >
             <Pause className="size-3.5" strokeWidth={1.75} />
@@ -268,20 +268,18 @@ export function AutomationsView({
       </div>
 
       {state.allPaused ? (
-        <p className="flex items-center gap-2 border-b border-content/10 bg-amber-400/8 px-4 py-1.5 text-[11.5px] text-amber-300">
+        <p className="flex items-center gap-2 border-b border-edge bg-amber-400/8 px-4 py-1.5 text-[11.5px] text-amber-300">
           <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
           Every automation is held. Nothing runs until you release the pause.
         </p>
       ) : null}
       {state.error ? (
-        <p className="border-b border-content/10 px-4 py-1.5 text-[11.5px] text-red-400">
-          {state.error}
-        </p>
+        <p className="border-b border-edge px-4 py-1.5 text-[11.5px] text-red-400">{state.error}</p>
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1">
-        <div className="flex min-h-0 w-70 shrink-0 flex-col border-r border-content/10">
-          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-2">
+        <div className="flex min-h-0 w-70 shrink-0 flex-col border-r border-edge">
+          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-2">
             <div className="relative flex h-7 min-w-0 flex-1 items-center">
               <Search className="pointer-events-none absolute left-2 size-3 shrink-0 opacity-50" />
               <input
@@ -300,7 +298,7 @@ export function AutomationsView({
               aria-label="New automation"
               disabled={projects.length === 0}
               onClick={openNew}
-              className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+              className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
             >
               <Plus className="size-3.5" strokeWidth={1.75} />
             </button>
@@ -311,7 +309,7 @@ export function AutomationsView({
               <div
                 role="group"
                 aria-label="Filter automations by state"
-                className="sticky top-0 z-10 flex flex-col gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
+                className="sticky top-0 z-10 flex flex-col gap-1 border-b border-edge bg-background-base/90 px-3 py-2 backdrop-blur-md"
               >
                 <div className="flex flex-wrap gap-1">
                   {FILTERS.map((entry) => (
@@ -330,7 +328,7 @@ export function AutomationsView({
                     value={project}
                     aria-label="Filter by project"
                     onChange={(event) => setProject(event.target.value)}
-                    className="w-full rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[11.5px] text-content outline-none hover:border-content/20"
+                    className="w-full rounded-md border border-edge bg-content/5 px-2 py-1 text-[11.5px] text-content outline-none hover:border-edge-strong"
                   >
                     <option value="">Every project</option>
                     {projectFilters.map(([key, cwd]) => (
@@ -440,8 +438,8 @@ function AutomationCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-accent/16 text-content"
-          : "border-transparent text-content/80 hover:bg-content/5 hover:text-content"
+          ? "border-transparent bg-accent/14 text-content"
+          : "border-transparent text-content/80 hover:bg-hover hover:text-content"
       }`}
     >
       <span className="flex items-center gap-2">
@@ -599,7 +597,7 @@ function Detail({
             {runs.map((run) => (
               <li
                 key={run.id}
-                className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-content/5"
+                className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-hover"
               >
                 <span className={`w-24 shrink-0 text-[11.5px] ${RUN_TONE[run.status]}`}>
                   {RUN_STATUS_LABEL[run.status]}
@@ -618,7 +616,7 @@ function Detail({
                   <button
                     type="button"
                     onClick={onRunNow}
-                    className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <RefreshCw className="size-3" strokeWidth={1.75} />
                     Retry
@@ -628,7 +626,7 @@ function Detail({
                   <button
                     type="button"
                     onClick={() => onOpenSession(run.sessionId!, automation.hostId)}
-                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     Open
                   </button>

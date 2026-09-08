@@ -53,7 +53,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
             type="button"
             title="Open in pane"
             aria-label="Open plan in pane"
-            className="mt-0.5 flex h-6 shrink-0 items-center gap-1 rounded-md bg-content/10 px-2 font-mono text-[11px] text-content/70 hover:bg-content/15 hover:text-content"
+            className="mt-0.5 flex h-6 shrink-0 items-center gap-1 rounded-md bg-content/10 px-2 font-mono text-[11px] text-content/70 hover:bg-hover hover:text-content"
             onClick={onOpen}
           >
             <PanelRight className="size-3" strokeWidth={1.75} />

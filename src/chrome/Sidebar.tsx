@@ -869,10 +869,10 @@ function SidebarComponent({
         }}
       >
         {showStart ? (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 rounded-full bg-gradient-to-b from-accent to-accent-2" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-accent" />
         ) : null}
         {showEnd ? (
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 rounded-full bg-gradient-to-b from-accent to-accent-2" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-accent" />
         ) : null}
         <button
           type="button"
@@ -886,11 +886,10 @@ function SidebarComponent({
             if (sortable.consumeClick()) return;
             onTabPick(itemId);
           }}
-          className={`halo-focus flex h-6.5 min-w-0 flex-1 items-center justify-center self-center overflow-hidden rounded-lg px-2 text-[12px] font-medium leading-none transition-colors ${
-            active
-              ? "border border-edge bg-surface-raised text-content shadow-lift"
-              : "border border-transparent text-content/55 hover:bg-content/6 hover:text-content"
-          } ${canDragTabs ? "cursor-grab active:cursor-grabbing" : ""}`}
+          data-selected={active ? "true" : undefined}
+          className={`ui-tab ui-focus flex h-full min-w-0 flex-1 items-center justify-center overflow-hidden px-2 text-[12px] font-medium leading-none ${
+            canDragTabs ? "cursor-grab active:cursor-grabbing" : ""
+          }`}
         >
           {isChangesTab && hasUncommitted ? (
             <DiffStat additions={changeAdditions} deletions={changeDeletions} files={changeFiles} />
@@ -910,21 +909,21 @@ function SidebarComponent({
   const sidebarContent = (
     <aside
       ref={resize.setPaneRef}
-      className="sidebar-glass halo-seam-right relative flex h-full min-h-0 shrink-0 flex-col"
+      className="sidebar-glass ui-rule-r relative flex h-full min-h-0 shrink-0 flex-col"
     >
       {railVisible ? (
         <>
           <div
-            className="halo-topbar flex h-10 shrink-0 select-none items-center gap-1 pl-3 pr-1.5"
+            className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-1 pl-3 pr-1.5"
             data-tauri-drag-region="deep"
           >
-            <span className="halo-label min-w-0 flex-1 truncate leading-tight">Workspace</span>
+            <span className="ui-label min-w-0 flex-1 truncate leading-tight">Workspace</span>
             <WorkspaceTitleActions onSearch={onGoToFile} onNew={onNew} />
           </div>
           <div
             role="tablist"
             aria-label="Workspace"
-            className="halo-topbar flex h-9 shrink-0 items-center gap-0.5 px-2"
+            className="ui-rule-b flex h-9 shrink-0 items-center gap-0.5 px-2"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
@@ -933,7 +932,7 @@ function SidebarComponent({
       ) : (
         <>
           <div
-            className="halo-topbar flex h-10 shrink-0 select-none items-center pr-1.5"
+            className="ui-rule-b flex h-10 shrink-0 select-none items-center pr-1.5"
             data-tauri-drag-region="deep"
           >
             {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
@@ -972,7 +971,7 @@ function SidebarComponent({
           <div
             role="tablist"
             aria-label="Workspace"
-            className="halo-topbar flex h-9 shrink-0 items-center gap-0.5 overflow-visible px-2"
+            className="ui-rule-b flex h-9 shrink-0 items-center gap-0.5 overflow-visible px-2"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
@@ -1012,7 +1011,7 @@ function SidebarComponent({
           )}
         </div>
         {tab === "sessions" && cwd && cwd !== "~" ? (
-          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-2">
+          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-2">
             <div className="relative flex h-7 min-w-0 flex-1 items-center">
               <Search className="pointer-events-none absolute left-2 size-3 shrink-0 opacity-50" />
               {sessionSearchInput}
@@ -1058,7 +1057,7 @@ function SidebarComponent({
                     <button
                       type="button"
                       onClick={onRetrySessions}
-                      className="halo-focus self-start rounded-lg border border-edge bg-surface-raised px-2.5 py-1 text-[11.5px] font-medium text-content/75 shadow-lift transition-colors hover:text-content"
+                      className="ui-focus self-start rounded-md border border-edge bg-surface-raised px-2.5 py-1 text-[11.5px] font-medium text-content/75 hover:text-content"
                     >
                       Try again
                     </button>
@@ -1188,7 +1187,7 @@ function SidebarComponent({
                                   ))}
                                 </ul>
                                 {onNew ? (
-                                  <div className="border-t border-content/10 p-1">
+                                  <div className="border-t border-edge p-1">
                                     <button
                                       type="button"
                                       data-no-drag
@@ -1196,7 +1195,7 @@ function SidebarComponent({
                                       title="New session"
                                       aria-label="New session"
                                       onClick={() => onNewInFolder(entry.folder.id)}
-                                      className="relative flex w-full items-center gap-1 rounded-md border border-transparent px-2.5 py-1.5 text-left text-content/45 hover:bg-content/10 hover:text-content"
+                                      className="relative flex w-full items-center gap-1 rounded-md border border-transparent px-2.5 py-1.5 text-left text-content/45 hover:bg-hover hover:text-content"
                                     >
                                       <Plus className="size-3 shrink-0" strokeWidth={1.75} />
                                       <span className="text-[13px] font-semibold leading-snug">
@@ -1303,7 +1302,7 @@ function SidebarComponent({
         aria-valuemin={MIN_WIDTH}
         aria-valuemax={resize.maxWidth}
         className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none focus-visible:bg-accent/60 focus-visible:outline-none ${
-          resize.dragging ? "bg-content/15" : "hover:bg-content/10"
+          resize.dragging ? "bg-content/15" : "hover:bg-hover"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
@@ -1425,7 +1424,7 @@ function SidebarProjectPicker({
 
   return (
     <div
-      className="flex h-9 items-center gap-0.5 border-b border-content/10 px-2"
+      className="flex h-9 items-center gap-0.5 border-b border-edge px-2"
       data-tauri-drag-region="deep"
     >
       <CwdPicker
@@ -1545,8 +1544,8 @@ function SessionsHeaderButton({
       aria-haspopup={hasPopup ? "menu" : undefined}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`halo-focus relative z-50 grid size-6 place-items-center rounded-lg text-content/45 transition-colors hover:bg-content/8 hover:text-content ${
-        open || active ? "bg-accent/16 text-content" : ""
+      className={`ui-focus relative z-50 grid size-6 place-items-center rounded-lg text-content/45 transition-colors hover:bg-hover hover:text-content ${
+        open || active ? "bg-accent/14 text-content" : ""
       }`}
     >
       {children}
@@ -1656,12 +1655,12 @@ function FolderRow({
         dropTarget
           ? "text-content"
           : expanded
-            ? "text-content hover:bg-content/10"
-            : "text-content/80 hover:bg-content/10 hover:text-content"
+            ? "text-content hover:bg-hover"
+            : "text-content/80 hover:bg-hover hover:text-content"
       }`}
     >
       {dropTarget ? (
-        <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/20 shadow-halo" />
+        <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/20" />
       ) : null}
       <span
         className={`relative grid size-4 shrink-0 place-items-center ${
@@ -1771,7 +1770,7 @@ function FolderRenameRow({
             finish(false);
           }
         }}
-        className="relative min-w-0 flex-1 rounded-md bg-surface-sunken px-2 py-0.5 text-[13px] font-semibold leading-snug text-content shadow-halo outline-none"
+        className="relative min-w-0 flex-1 rounded-md bg-surface-sunken px-2 py-0.5 text-[13px] font-semibold leading-snug text-content outline-none"
       />
       <span className="relative shrink-0 text-[11px] tabular-nums text-content/45">
         {memberCount}
@@ -1966,8 +1965,8 @@ function SessionCard({
       }}
       onContextMenu={onContextMenu}
       onKeyDown={onKeyDown}
-      data-halo={!dropTarget && !needsApproval && isActive ? "on" : undefined}
-      className={`halo-row relative flex w-full touch-none flex-col rounded-lg border px-2.5 text-left transition-colors ${
+      data-selected={!dropTarget && !needsApproval && isActive ? "true" : undefined}
+      className={`ui-row relative flex w-full touch-none flex-col rounded-lg border px-2.5 text-left transition-colors ${
         compact ? "py-1.5" : "py-2"
       } ${dragging ? "opacity-40" : ""} ${
         dropTarget
@@ -1976,7 +1975,7 @@ function SessionCard({
             ? "border-dashed border-amber-400/45 bg-amber-400/10 text-content"
             : isActive
               ? "border-transparent text-content"
-              : "border-transparent text-content/75 hover:bg-content/6 hover:text-content"
+              : "border-transparent text-content/75 hover:bg-hover hover:text-content"
       }`}
     >
       {dropTarget ? (
@@ -2075,8 +2074,8 @@ function SessionRenameRow({
 
   return (
     <div
-      data-halo={!needsApproval && isActive ? "on" : undefined}
-      className={`halo-row flex w-full flex-col rounded-lg px-2.5 py-2 ${
+      data-selected={!needsApproval && isActive ? "true" : undefined}
+      className={`ui-row flex w-full flex-col rounded-lg px-2.5 py-2 ${
         needsApproval
           ? "bg-amber-400/10 text-content"
           : isActive
@@ -2091,7 +2090,7 @@ function SessionRenameRow({
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => finish(true)}
         onKeyDown={onKeyDown}
-        className="w-full rounded-md bg-surface-sunken px-2 py-1 text-[13px] font-semibold leading-snug text-content shadow-halo outline-none"
+        className="w-full rounded-md bg-surface-sunken px-2 py-1 text-[13px] font-semibold leading-snug text-content outline-none"
       />
     </div>
   );

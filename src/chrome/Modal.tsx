@@ -66,7 +66,7 @@ export function ModalPanel({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onMouseDown={(event) => event.stopPropagation()}
-        className={`modal-panel halo-overlay flex flex-col overflow-hidden rounded-2xl ${className ?? ""}`}
+        className={`modal-panel ui-overlay flex flex-col overflow-hidden rounded-2xl ${className ?? ""}`}
       >
         <header className="flex shrink-0 items-start gap-2 px-5 pt-4">
           <div className="min-w-0 flex-1 pt-0.5">
@@ -91,14 +91,14 @@ export function ModalPanel({
             aria-label="Close"
             disabled={closeDisabled}
             onClick={onClose}
-            className="halo-focus grid size-7 shrink-0 place-items-center rounded-lg text-content/40 transition-colors hover:bg-content/8 hover:text-content disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
+            className="ui-focus grid size-7 shrink-0 place-items-center rounded-lg text-content/40 transition-colors hover:bg-hover hover:text-content disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <X className="size-3.5" strokeWidth={1.75} />
           </button>
         </header>
         <div
           ref={lockOverscroll}
-          className="halo-scroll min-h-0 flex-1 overflow-y-auto overscroll-none"
+          className="ui-scroll min-h-0 flex-1 overflow-y-auto overscroll-none"
         >
           {children}
         </div>
@@ -111,7 +111,7 @@ export function Modal(props: Props) {
   return createPortal(
     <div className="fixed inset-0" style={{ zIndex: LAYER.dialog }}>
       <div
-        className="modal-backdrop absolute inset-0 bg-[color-mix(in_srgb,var(--shade)_58%,transparent)] backdrop-blur-[2px]"
+        className="modal-backdrop absolute inset-0 bg-black/45"
         onMouseDown={() => {
           if (!props.closeDisabled) props.onClose();
         }}

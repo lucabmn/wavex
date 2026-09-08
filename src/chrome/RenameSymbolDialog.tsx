@@ -50,7 +50,7 @@ export function RenameSymbolDialog({ symbol, onCancel, onRename }: Props) {
           autoComplete="off"
           aria-label="New name"
           onChange={(event) => setName(event.target.value)}
-          className="h-8 w-full rounded-md border border-content/12 bg-content/5 px-2.5 font-mono text-[12.5px] text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="h-8 w-full rounded-md border border-edge bg-content/5 px-2.5 font-mono text-[12.5px] text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
         <p className="text-[11.5px] leading-snug text-content/45">
           Every reference is rewritten on disk. Save any file with unsaved changes first.
@@ -59,14 +59,14 @@ export function RenameSymbolDialog({ symbol, onCancel, onRename }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="h-7 rounded-md px-2.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="h-7 rounded-md px-2.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!trimmed || trimmed === symbol}
-            className="halo-fill halo-focus h-7 rounded-lg px-3 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
+            className="ui-fill ui-focus h-7 rounded-lg px-3 text-[12px] font-medium disabled:opacity-40"
           >
             Rename
           </button>

@@ -188,7 +188,7 @@ function ToolButton({
       className={`grid size-6.5 shrink-0 place-items-center rounded-md ${
         active
           ? "bg-content/20 text-content"
-          : "bg-content/10 text-content/50 hover:bg-content/15 hover:text-content"
+          : "bg-content/10 text-content/50 hover:bg-hover hover:text-content"
       } disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/50`}
     >
       {children}
@@ -965,11 +965,7 @@ export function Composer({
         <div
           ref={boxRef}
           data-composer-box
-          className={`halo-composer relative z-10 rounded-xl border transition-colors ${
-            fileDrag
-              ? "border-accent/60 shadow-halo"
-              : "border-edge shadow-float has-focus:border-edge-strong"
-          }`}
+          className={`ui-composer relative z-10 rounded-xl ${fileDrag ? "border-accent" : ""}`}
         >
           {fileDrag ? (
             <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-xl bg-accent/10 text-[12px] text-content/70">
@@ -1231,7 +1227,7 @@ function ComposerAction({
             title="Send"
             aria-label="Send"
             onClick={onSend}
-            className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg"
+            className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg"
           >
             <ArrowUp className="size-3.5" strokeWidth={2.25} />
           </button>
@@ -1241,7 +1237,7 @@ function ComposerAction({
           title="Stop"
           aria-label="Stop"
           onClick={onStop}
-          className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg"
+          className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>
@@ -1256,7 +1252,7 @@ function ComposerAction({
       aria-label="Send"
       disabled={!hasValue}
       onClick={onSend}
-      className="halo-fill halo-focus grid size-6.5 place-items-center rounded-lg disabled:cursor-default disabled:opacity-35 disabled:shadow-none"
+      className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg disabled:cursor-default disabled:opacity-35"
     >
       <ArrowUp className="size-3.5" strokeWidth={2.25} />
     </button>

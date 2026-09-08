@@ -70,7 +70,7 @@ export function ArchivePage({
           archivedProjects.map((project) => (
             <div
               key={project.path}
-              className="flex items-center gap-3 border-b border-content/8 px-4 py-2.5 last:border-b-0"
+              className="flex items-center gap-3 border-b border-edge px-4 py-2.5 last:border-b-0"
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13px]">{archivedProjectLabel(project.path)}</div>
@@ -104,7 +104,7 @@ export function ArchivePage({
           archived.map((session) => (
             <div
               key={session.id}
-              className="flex items-center gap-3 border-b border-content/8 px-4 py-2.5 last:border-b-0"
+              className="flex items-center gap-3 border-b border-edge px-4 py-2.5 last:border-b-0"
             >
               <HarnessIcon harness={session.harness} className="size-3.5 shrink-0" />
               <button

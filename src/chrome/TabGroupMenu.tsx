@@ -165,7 +165,7 @@ export function TabGroupMenu({
         onChange={(e) => setName(e.target.value)}
         onBlur={commitName}
         aria-label="Group name"
-        className="mb-2 w-full rounded-lg border border-content/10 bg-content/5 px-2.5 py-1.5 text-[13px] text-content outline-none ring-accent/40 focus:ring-1"
+        className="mb-2 w-full rounded-lg border border-edge bg-content/5 px-2.5 py-1.5 text-[13px] text-content outline-none ring-accent/40 focus:ring-1"
       />
 
       {logoProject ? (
@@ -187,7 +187,7 @@ export function TabGroupMenu({
                 }
               })();
             }}
-            className="grid size-9 shrink-0 place-items-center rounded-lg border border-content/10 bg-content/5 hover:bg-content/10"
+            className="grid size-9 shrink-0 place-items-center rounded-lg border border-edge bg-content/5 hover:bg-hover"
           >
             <ProjectLogoIcon
               path={logoPath}
@@ -212,7 +212,7 @@ export function TabGroupMenu({
               onClick={() => {
                 void clearProjectLogo(logoProject).then(onLogoChange);
               }}
-              className="grid size-7 shrink-0 place-items-center rounded-md text-content/50 hover:bg-content/10 hover:text-content"
+              className="grid size-7 shrink-0 place-items-center rounded-md text-content/50 hover:bg-hover hover:text-content"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
             </button>
@@ -336,7 +336,7 @@ function MascotSwatch({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPick}
       className={`grid size-5 shrink-0 place-items-center rounded-md ${
-        selected ? "bg-content/15 ring-1 ring-content/50" : "hover:bg-content/8"
+        selected ? "bg-content/15 ring-1 ring-content/50" : "hover:bg-hover"
       }`}
     >
       {children}
@@ -353,7 +353,7 @@ function MenuRow({ item, onPick }: { item: MenuItem; onPick: () => void }) {
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPick}
       className={`flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] leading-none ${
-        item.danger ? "text-red-300/90 hover:bg-red-500/15" : "text-content hover:bg-content/5"
+        item.danger ? "text-red-300/90 hover:bg-red-500/15" : "text-content hover:bg-hover"
       }`}
     >
       <Icon className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />

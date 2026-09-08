@@ -126,8 +126,8 @@ export function ExplorerMenu({
                     ? "bg-red-500/20 text-red-300"
                     : "text-red-300/90 hover:bg-red-500/15"
                   : highlighted
-                    ? "bg-accent/16 text-content"
-                    : "text-content hover:bg-content/5"
+                    ? "bg-accent/14 text-content"
+                    : "text-content hover:bg-hover"
             }`}
           >
             <span className="min-w-0 flex-1 truncate">{item.label}</span>

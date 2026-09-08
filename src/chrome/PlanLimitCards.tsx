@@ -34,7 +34,7 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
 
   return (
     <section
-      className="flex flex-col rounded-xl border border-content/10 px-4 py-3.5"
+      className="flex flex-col rounded-xl border border-edge px-4 py-3.5"
       aria-label={`${HARNESS_LABEL[limits.provider]} plan limits`}
     >
       <header className="flex items-center gap-2">

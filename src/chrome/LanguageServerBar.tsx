@@ -109,7 +109,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
 
 function Bar({ children }: { children: ReactNode }) {
   return (
-    <header className="flex h-8 shrink-0 items-center gap-2 border-b border-content/10 px-3 text-[11.5px]">
+    <header className="flex h-8 shrink-0 items-center gap-2 border-b border-edge px-3 text-[11.5px]">
       {children}
     </header>
   );
@@ -120,7 +120,7 @@ function BarButton({ onClick, children }: { onClick: () => void; children: React
     <button
       type="button"
       onClick={onClick}
-      className="halo-fill halo-focus h-6 shrink-0 rounded-lg px-2.5 text-[11.5px] font-medium"
+      className="ui-fill ui-focus h-6 shrink-0 rounded-lg px-2.5 text-[11.5px] font-medium"
     >
       {children}
     </button>
@@ -142,7 +142,7 @@ function BarDismiss({
       onClick={onClick}
       aria-label={label}
       title={title}
-      className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/8 hover:text-content"
+      className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
     >
       <X className="size-3" strokeWidth={1.75} />
     </button>

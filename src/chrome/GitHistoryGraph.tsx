@@ -48,7 +48,7 @@ export function GitHistoryGraph({
         onClick={onToggleExpanded}
         aria-expanded={expanded}
         aria-label={expanded ? "Collapse graph" : "Expand graph"}
-        className={`flex w-full shrink-0 items-center gap-1 px-3 text-left leading-none hover:bg-content/5 ${
+        className={`flex w-full shrink-0 items-center gap-1 px-3 text-left leading-none hover:bg-hover ${
           expanded ? "h-7" : "h-full"
         }`}
       >
@@ -115,7 +115,7 @@ function HistoryRow({
         aria-pressed={active}
         className={`git-history-item flex h-[22px] min-w-0 w-full items-stretch overflow-visible pr-2 text-left ${
           row.kind === "HEAD" ? "is-head" : ""
-        } ${active ? "is-selected bg-accent/16 text-content" : "text-content hover:bg-content/5"}`}
+        } ${active ? "is-selected bg-accent/14 text-content" : "text-content hover:bg-hover"}`}
       >
         <svg
           aria-hidden
@@ -345,7 +345,7 @@ export function GraphResizeSash({
       aria-label="Resize graph"
       aria-valuenow={height}
       className={`z-10 h-1.5 shrink-0 cursor-row-resize touch-none ${
-        dragging ? "bg-content/15" : "hover:bg-content/10"
+        dragging ? "bg-content/15" : "hover:bg-hover"
       }`}
       onPointerDown={onPointerDown}
       onDoubleClick={() => commitRef.current(clamp(GRAPH_PANEL_DEFAULT))}

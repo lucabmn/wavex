@@ -248,7 +248,7 @@ export function DockPanel({
             : dock.side === "left"
               ? "border-r"
               : "border-l"
-      } border-content/10`}
+      } border-edge`}
       onMouseDown={onFocus}
     >
       <div
@@ -256,7 +256,7 @@ export function DockPanel({
         aria-orientation={vertical ? "horizontal" : "vertical"}
         aria-label="Resize panel"
         aria-valuenow={dock.size}
-        className={`${sash} ${dragging ? "bg-content/15" : "hover:bg-content/10"}`}
+        className={`${sash} ${dragging ? "bg-content/15" : "hover:bg-hover"}`}
         onPointerDown={onResizePointerDown}
         onPointerMove={onResizePointerMove}
         onPointerUp={onResizePointerUp}
@@ -266,7 +266,7 @@ export function DockPanel({
           commit();
         }}
       />
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-1.5">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-1.5">
         <DockSurfaceSwitch surface={dock.surface} onChange={onSurfaceChange} />
         <div className="min-w-0 flex-1" />
         <div ref={sideButton} className="shrink-0">
@@ -312,7 +312,7 @@ export function DockPanel({
                   onCloseFile={onCloseTerminal}
                   onReorder={onReorderTerminals}
                   trailing={
-                    <div className="flex shrink-0 items-center gap-0.5 border-l border-content/10 px-1">
+                    <div className="flex shrink-0 items-center gap-0.5 border-l border-edge px-1">
                       <IconButton label={`New Terminal (${MOD}\`)`} onClick={onAddTerminal}>
                         <Plus className="size-3.5" strokeWidth={1.75} />
                       </IconButton>
@@ -476,8 +476,8 @@ function DockSurfaceSwitch({
             aria-label={DOCK_SURFACE_LABEL[value]}
             className={`flex h-6 shrink-0 items-center gap-1.5 rounded-md px-2 text-[12px] leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               selected
-                ? "bg-accent/16 text-content"
-                : "text-content/50 hover:bg-content/5 hover:text-content"
+                ? "bg-accent/14 text-content"
+                : "text-content/50 hover:bg-hover hover:text-content"
             }`}
             onClick={() => onChange(value)}
           >

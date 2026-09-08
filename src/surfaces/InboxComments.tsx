@@ -73,7 +73,7 @@ export function InboxComments({
   const moreOn = "GitHub";
 
   return (
-    <section className="flex flex-col gap-3 border-t border-content/10 pt-5">
+    <section className="flex flex-col gap-3 border-t border-edge pt-5">
       <div className="flex items-center gap-2 text-[12px] text-content/50">
         <h2 className="text-content/70">{label}</h2>
         {thread.truncated ? <span>Latest comments · more on {moreOn}</span> : null}
@@ -151,7 +151,7 @@ export function InboxCommentForm({
   };
 
   return (
-    <form onSubmit={onFormSubmit} className="flex flex-col gap-2 border-t border-content/10 pt-5">
+    <form onSubmit={onFormSubmit} className="flex flex-col gap-2 border-t border-edge pt-5">
       {replyTo ? (
         <div className="flex items-center gap-2 text-[12px] text-content/50">
           <span className="min-w-0 truncate">Replying to {replyTo.author || "comment"}</span>
@@ -160,13 +160,13 @@ export function InboxCommentForm({
             title="Cancel reply"
             aria-label="Cancel reply"
             onClick={onCancelReply}
-            className="grid size-5 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content"
+            className="grid size-5 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
           >
             <X className="size-3" strokeWidth={1.75} />
           </button>
         </div>
       ) : null}
-      <div className="rounded-md border border-content/10 bg-content/5 focus-within:border-content/20">
+      <div className="rounded-md border border-edge bg-content/5 focus-within:border-edge-strong">
         <textarea
           ref={field}
           rows={2}
@@ -181,7 +181,7 @@ export function InboxCommentForm({
           <button
             type="submit"
             disabled={!canPost}
-            className="inline-flex h-7 items-center rounded-md bg-content px-3 text-[12px] text-background-base hover:bg-content/80 disabled:cursor-default disabled:opacity-40"
+            className="inline-flex h-7 items-center rounded-md ui-fill px-3 text-[12px] disabled:cursor-default disabled:opacity-40"
           >
             {posting ? "Posting..." : replyTo ? "Reply" : "Comment"}
           </button>
@@ -194,7 +194,7 @@ export function InboxCommentForm({
 
 function CommentsPending() {
   return (
-    <div className="flex items-center gap-2 border-t border-content/10 pt-5 text-[12px] text-content/45">
+    <div className="flex items-center gap-2 border-t border-edge pt-5 text-[12px] text-content/45">
       <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
       Loading comments
     </div>
@@ -234,7 +234,7 @@ function InboxComment({
       <header
         className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-content/50 ${
           nested ? "" : "px-3 py-2"
-        } ${!nested && (hasBody || hasReplies) ? "border-b border-content/10" : ""}`}
+        } ${!nested && (hasBody || hasReplies) ? "border-b border-edge" : ""}`}
       >
         <InboxCommentPerson
           name={comment.author || "ghost"}
@@ -299,12 +299,9 @@ function InboxComment({
         </div>
       ) : null}
       {hasReplies ? (
-        <div className="border-t border-content/10 px-3">
+        <div className="border-t border-edge px-3">
           {comment.replies.map((reply, index) => (
-            <div
-              key={reply.id}
-              className={`py-2.5 ${index > 0 ? "border-t border-content/10" : ""}`}
-            >
+            <div key={reply.id} className={`py-2.5 ${index > 0 ? "border-t border-edge" : ""}`}>
               <InboxComment
                 comment={reply}
                 cwd={cwd}
@@ -322,7 +319,7 @@ function InboxComment({
 
   if (nested) return <article>{inner}</article>;
   return (
-    <article className="overflow-hidden rounded-md border border-content/10 bg-content/5">
+    <article className="overflow-hidden rounded-md border border-edge bg-content/5">
       {inner}
     </article>
   );

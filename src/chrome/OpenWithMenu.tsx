@@ -77,7 +77,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
             title={`Open project in ${primary.name}`}
             aria-label={`Open project in ${primary.name}`}
             onClick={() => launch(primary)}
-            className="grid size-6.5 place-items-center rounded-l-md text-content/50 hover:bg-content/10 hover:text-content"
+            className="grid size-6.5 place-items-center rounded-l-md text-content/50 hover:bg-hover hover:text-content"
           >
             <AppIcon app={primary} />
           </button>
@@ -91,7 +91,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
           onClick={() => setOpen((value) => !value)}
           className={`grid h-6.5 place-items-center ${
             primary ? "w-4 rounded-r-md" : "w-6.5 rounded-md"
-          } ${open ? "text-content" : "text-content/50 hover:bg-content/10 hover:text-content"}`}
+          } ${open ? "text-content" : "text-content/50 hover:bg-hover hover:text-content"}`}
         >
           <ChevronDown className="size-3" strokeWidth={2} />
         </button>
@@ -119,9 +119,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
           ) : (
             groups.map((group) => (
               <div key={group.kind}>
-                <div className="px-2 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-content/40">
-                  {group.label}
-                </div>
+                <div className="px-2 pb-0.5 pt-2 ui-label">{group.label}</div>
                 {group.apps.map((app) => (
                   <button
                     key={app.id}
@@ -129,7 +127,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
                     role="menuitem"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => launch(app)}
-                    className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none text-content hover:bg-content/5"
+                    className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none text-content hover:bg-hover"
                   >
                     <AppIcon app={app} />
                     <span className="min-w-0 flex-1 truncate">{app.name}</span>

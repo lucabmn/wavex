@@ -37,9 +37,7 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
         aria-label={`Profile ${active.name}, switch profile (${shortcut})`}
         onClick={() => onOpenChange(!open)}
         className={`flex w-full items-center gap-2 rounded-md px-2 h-8 text-left ${
-          open
-            ? "bg-accent/16 text-content"
-            : "text-content/50 hover:bg-content/10 hover:text-content"
+          open ? "bg-accent/14 text-content" : "text-content/50 hover:bg-hover hover:text-content"
         }`}
       >
         <ProfileAvatar profile={active} />
@@ -71,7 +69,7 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
                   onOpenChange(false);
                   if (profile.id !== active.id) onSwitch(profile.id);
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-content/80 hover:bg-content/10 hover:text-content"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-content/80 hover:bg-hover hover:text-content"
               >
                 <ProfileAvatar profile={profile} />
                 <span className="min-w-0 flex-1 truncate text-[13px]">{profile.name}</span>
@@ -142,7 +140,7 @@ function MenuAction({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-content/70 hover:bg-content/10 hover:text-content"
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-content/70 hover:bg-hover hover:text-content"
     >
       {children}
       <span className="min-w-0 flex-1 truncate">{label}</span>

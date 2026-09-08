@@ -328,9 +328,7 @@ export function UnifiedDiffView({
       data-diff-review
       className={fill ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden" : "flex flex-col"}
     >
-      <div
-        className={`flex h-8 shrink-0 items-center gap-3 border-b border-content/10 px-3 text-[12px]`}
-      >
+      <div className={`flex h-8 shrink-0 items-center gap-3 border-b border-edge px-3 text-[12px]`}>
         <span className="text-content/70">{fileLabel}</span>
         <DiffCounts additions={additions} deletions={deletions} />
         <span className="ml-auto flex items-center gap-0.5">
@@ -339,7 +337,7 @@ export function UnifiedDiffView({
             title="Expand all files"
             aria-label="Expand all files"
             onClick={() => setOpen(new Set(files.map((file) => file.id)))}
-            className="grid size-7 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content"
+            className="grid size-7 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
           >
             <UnfoldVertical className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -349,7 +347,7 @@ export function UnifiedDiffView({
             aria-label="Collapse all files"
             disabled={open.size === 0}
             onClick={() => setOpen(new Set())}
-            className="grid size-7 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+            className="grid size-7 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <FoldVertical className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -513,7 +511,7 @@ const FileSection = memo(function FileSection({
       className={focused ? "bg-content/[0.03]" : undefined}
     >
       <header
-        className={`sticky top-0 z-30 flex items-center gap-2 border-b border-content/10 bg-content/2 px-3 py-1.5 backdrop-blur-xl ${
+        className={`sticky top-0 z-30 flex items-center gap-2 border-b border-edge bg-content/2 px-3 py-1.5 backdrop-blur-xl ${
           active ? "shadow-[inset_2px_0_0_0_var(--color-content)]" : ""
         }`}
       >
@@ -550,7 +548,7 @@ const FileSection = memo(function FileSection({
             aria-label="Stage file"
             disabled={busy}
             onClick={() => onStageFile(file.id)}
-            className="grid size-4 place-items-center rounded-[3px] bg-content text-background-base hover:opacity-80 disabled:opacity-40"
+            className="grid size-4 place-items-center rounded-[3px] ui-fill hover:opacity-80 disabled:opacity-40"
           >
             <Check className="size-2.5" strokeWidth={2.5} />
           </button>
@@ -898,7 +896,7 @@ function FoldBar({
         title="Expand upward"
         aria-label="Expand unmodified lines upward"
         onClick={() => onReveal("up")}
-        className="grid size-5 place-items-center rounded text-content/40 hover:bg-content/10 hover:text-content"
+        className="grid size-5 place-items-center rounded text-content/40 hover:bg-hover hover:text-content"
       >
         <ChevronUp className="size-3" strokeWidth={2} />
       </button>
@@ -907,7 +905,7 @@ function FoldBar({
         title="Expand downward"
         aria-label="Expand unmodified lines downward"
         onClick={() => onReveal("down")}
-        className="grid size-5 place-items-center rounded text-content/40 hover:bg-content/10 hover:text-content"
+        className="grid size-5 place-items-center rounded text-content/40 hover:bg-hover hover:text-content"
       >
         <ChevronDown className="size-3" strokeWidth={2} />
       </button>
@@ -1047,7 +1045,7 @@ function IconButton({
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-6 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+      className="grid size-6 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
     >
       {children}
     </button>

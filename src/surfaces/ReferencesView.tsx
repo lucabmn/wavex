@@ -87,7 +87,7 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-8 shrink-0 items-center gap-2 border-b border-content/10 px-3 text-[11.5px] text-content/55">
+      <header className="flex h-8 shrink-0 items-center gap-2 border-b border-edge px-3 text-[11.5px] text-content/55">
         <span className="truncate font-mono text-content">{references.symbol}</span>
         <span className="tabular-nums">
           {plural(references.targets.length, "result")} in {plural(groups.length, "file")}
@@ -100,7 +100,7 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
               type="button"
               onClick={() => setCollapsed((current) => toggle(current, group.path))}
               aria-expanded={!collapsed.has(group.path)}
-              className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11.5px] hover:bg-content/5"
+              className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11.5px] hover:bg-hover"
             >
               {collapsed.has(group.path) ? (
                 <ChevronRight className="size-3 shrink-0 text-content/50" strokeWidth={1.75} />
@@ -121,8 +121,8 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
                     type="button"
                     data-selected={index === selected}
                     onClick={() => open(target, index)}
-                    className={`flex w-full items-center gap-2 py-0.5 pr-2 pl-7 text-left font-mono text-[11px] hover:bg-content/5 ${
-                      index === selected ? "bg-accent/16 text-content" : "text-content/60"
+                    className={`flex w-full items-center gap-2 py-0.5 pr-2 pl-7 text-left font-mono text-[11px] hover:bg-hover ${
+                      index === selected ? "bg-accent/14 text-content" : "text-content/60"
                     }`}
                   >
                     <span className="w-9 shrink-0 text-right tabular-nums text-content/35">

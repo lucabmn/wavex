@@ -184,9 +184,9 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
   const list = (
     <div
       ref={resize.setPaneRef}
-      className="relative flex h-full min-h-0 shrink-0 flex-col border-r border-content/10"
+      className="relative flex h-full min-h-0 shrink-0 flex-col border-r border-edge"
     >
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-2">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-2">
         <div className="relative flex h-7 min-w-0 flex-1 items-center">
           <Search className="pointer-events-none absolute left-2 size-3 shrink-0 opacity-50" />
           <input
@@ -205,7 +205,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
           aria-label="New note"
           disabled={creating}
           onClick={() => void onCreate()}
-          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
         >
           {creating ? (
             <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -250,7 +250,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
         aria-orientation="vertical"
         aria-label="Resize notes list"
         className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none ${
-          resize.dragging ? "bg-content/15" : "hover:bg-content/10"
+          resize.dragging ? "bg-content/15" : "hover:bg-hover"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
@@ -266,7 +266,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 select-none items-center border-b border-content/10"
+        className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
@@ -382,8 +382,8 @@ function NoteCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-accent/16 text-content"
-          : "border-transparent text-content/80 hover:bg-content/5 hover:text-content"
+          ? "border-transparent bg-accent/14 text-content"
+          : "border-transparent text-content/80 hover:bg-hover hover:text-content"
       }`}
     >
       <span className="flex items-center gap-2">
@@ -585,7 +585,7 @@ function NoteEditor({
               type="button"
               disabled={!canAddToChat}
               onClick={() => onAddToChat(draft)}
-              className="inline-flex items-center gap-1 rounded-md bg-content px-3 h-6.5 text-[12px] text-background-base hover:bg-content/80 disabled:cursor-default disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-md ui-fill px-3 h-6.5 text-[12px] disabled:cursor-default disabled:opacity-40"
             >
               Add to chat
             </button>
@@ -596,7 +596,7 @@ function NoteEditor({
                 if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
                 void onDelete(note.id);
               }}
-              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-content/10 hover:text-red-400"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-hover hover:text-red-400"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
               Delete
@@ -607,7 +607,7 @@ function NoteEditor({
         <div
           role="tablist"
           aria-label="Note sections"
-          className="flex h-9 items-stretch gap-4 border-b border-content/10"
+          className="flex h-9 items-stretch gap-4 border-b border-edge"
         >
           <NoteDetailTab
             label="Preview"

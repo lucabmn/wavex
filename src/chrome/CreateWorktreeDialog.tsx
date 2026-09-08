@@ -107,7 +107,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
         aria-busy={Boolean(busy)}
         aria-label="New worktree"
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute left-1/2 top-[22%] flex w-[min(460px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[22%] flex w-[min(460px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-[13px] font-medium leading-tight text-content">New worktree</h2>
@@ -154,7 +154,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             aria-haspopup="listbox"
             aria-expanded={baseOpen}
             onClick={() => setBaseOpen((open) => !open)}
-            className="flex min-w-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-content/80 hover:bg-content/15 hover:text-content disabled:opacity-40"
+            className="flex min-w-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-content/80 hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <GitBranch className="size-3.5 shrink-0" strokeWidth={1.5} />
             <span className="min-w-0 truncate font-mono text-[12px]">
@@ -176,7 +176,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             <button
               type="button"
               onClick={() => onOpenWorktree(existing.path)}
-              className="shrink-0 rounded-md bg-content/10 px-2 py-1 text-[11px] font-medium text-content hover:bg-content/20"
+              className="shrink-0 rounded-md bg-content/10 px-2 py-1 text-[11px] font-medium text-content hover:bg-hover"
             >
               Open it
             </button>
@@ -192,7 +192,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
               <button
                 type="button"
                 onClick={() => onOpenWorktree(conflict)}
-                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11px] font-medium text-content hover:bg-content/20"
+                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11px] font-medium text-content hover:bg-hover"
               >
                 Open {prettyCwd(conflict)}
               </button>
@@ -205,7 +205,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             type="button"
             disabled={Boolean(busy)}
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content disabled:opacity-40"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
           >
             Cancel
           </button>
@@ -213,7 +213,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             type="button"
             disabled={!canSubmit}
             onClick={() => void create(false)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-content/10 px-3 py-1.5 text-[12px] font-medium text-content hover:bg-content/15 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md bg-content/10 px-3 py-1.5 text-[12px] font-medium text-content hover:bg-hover disabled:opacity-40"
           >
             {busy === "create" ? (
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -225,7 +225,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             title="↩"
             disabled={!canSubmit}
             onClick={() => void create(true)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-content px-3 py-1.5 text-[12px] font-medium text-background-base hover:bg-content/80 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md ui-fill px-3 py-1.5 text-[12px] font-medium disabled:opacity-40"
           >
             {busy === "open" ? (
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -299,7 +299,7 @@ function BaseBranchMenu({
       aria-label="Base branch"
       className="flex flex-col overflow-hidden"
     >
-      <label className="flex shrink-0 items-center gap-2 border-b border-content/10 px-2 py-2.5 text-content/50">
+      <label className="flex shrink-0 items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
         <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
         <input
           ref={search}
@@ -334,7 +334,7 @@ function BaseBranchMenu({
                 aria-selected={selected}
                 onClick={() => onPick(value)}
                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left ${
-                  selected ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
+                  selected ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
                 }`}
               >
                 {selected ? (

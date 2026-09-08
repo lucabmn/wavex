@@ -102,7 +102,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
         aria-modal="true"
         aria-label="Add a skill"
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute left-1/2 top-[14%] flex w-[min(560px,calc(100vw-24px))] flex-col gap-4 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[14%] flex w-[min(560px,calc(100vw-24px))] flex-col gap-4 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-[13px] font-medium leading-tight text-content">Add a skill</h2>
@@ -122,7 +122,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
             autoCapitalize="off"
             autoCorrect="off"
             placeholder="owner/repo or a GitHub URL"
-            className="rounded-md border border-content/10 bg-content/5 px-2 py-1.5 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-content/25"
+            className="rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-edge-strong"
           />
         </label>
 
@@ -141,7 +141,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
                   className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] ${
                     on
                       ? "border-accent/40 bg-accent/15 text-content"
-                      : "border-content/10 bg-content/5 text-content/55 hover:text-content"
+                      : "border-edge bg-content/5 text-content/55 hover:text-content"
                   }`}
                 >
                   <HarnessIcon harness={agent.harness} className="size-3.5" />
@@ -161,7 +161,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
             autoCapitalize="off"
             autoCorrect="off"
             placeholder="Every skill in the package"
-            className="rounded-md border border-content/10 bg-content/5 px-2 py-1.5 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-content/25"
+            className="rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-edge-strong"
           />
         </label>
 
@@ -214,7 +214,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             {result?.ok ? "Done" : "Cancel"}
           </button>
@@ -255,7 +255,7 @@ function ScopeButton({
       className={`flex min-w-0 flex-1 flex-col items-start gap-0.5 rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${
         on
           ? "border-accent/40 bg-accent/15 text-content"
-          : "border-content/10 bg-content/5 text-content/55 enabled:hover:text-content"
+          : "border-edge bg-content/5 text-content/55 enabled:hover:text-content"
       }`}
     >
       <span className="text-[12px] font-medium">{label}</span>

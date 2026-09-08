@@ -55,7 +55,7 @@ type Props = Omit<ComponentPropsWithoutRef<"div">, "style"> & {
   ref?: Ref<HTMLDivElement>;
 };
 
-const SURFACE = "halo-overlay rounded-xl outline-none";
+const SURFACE = "ui-overlay rounded-xl outline-none";
 
 /** Which corner the open animation grows from, so it reads as anchored. */
 function origin(side: PopoverSide, align: PopoverAlign): string {

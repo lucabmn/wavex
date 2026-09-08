@@ -101,10 +101,10 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
         aria-label="Command Palette"
         data-command-palette
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute top-[12%] left-1/2 flex w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col overflow-hidden rounded-lg border border-content/10 bg-content/5 backdrop-blur-xl"
+        className="absolute top-[12%] left-1/2 flex w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col overflow-hidden rounded-lg border border-edge bg-content/5 backdrop-blur-xl"
       >
         <div className="pb-1.5">
-          <label className="flex items-center gap-2 border-b border-content/10 px-2 py-2.5 text-content/50">
+          <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
             <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
             <ModeBadge mode={mode} />
             <input
@@ -148,7 +148,7 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
 function ModeBadge({ mode }: { mode: PaletteMode }) {
   if (mode === "commands") return null;
   return (
-    <span className="shrink-0 rounded border border-content/15 bg-content/10 px-1.5 py-0.5 font-mono text-[11px] text-content/70">
+    <span className="shrink-0 rounded border border-edge-strong bg-content/10 px-1.5 py-0.5 font-mono text-[11px] text-content/70">
       {PALETTE_MODES[mode].prefix}
     </span>
   );
@@ -222,7 +222,7 @@ function CommandList({
             onMouseMove={() => onActive(index)}
             onClick={() => onRun(entry)}
             className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${
-              index === active ? "bg-content/10" : "hover:bg-content/5"
+              index === active ? "bg-content/10" : "hover:bg-hover"
             } ${runnable ? "" : "opacity-70"}`}
           >
             <span className="shrink-0 text-[12px] text-content/40">{group}</span>

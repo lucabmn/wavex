@@ -119,7 +119,7 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 select-none items-center border-b border-content/10"
+        className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
@@ -156,7 +156,7 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
             title="Refresh usage"
             disabled={busy}
             onClick={refresh}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <RefreshCw
               className={`size-3.5 ${busy ? "animate-spin" : ""}`}
@@ -222,7 +222,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-content/10 p-4">
+    <section className="rounded-xl border border-edge p-4">
       {title ? (
         <header className="mb-3 flex items-baseline justify-between gap-3">
           <h2 className="text-[12px] font-medium text-content/70">{title}</h2>
@@ -278,7 +278,7 @@ function SummaryCards({ report }: { report: UsageReport }) {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-content/10 px-3.5 py-3">
+    <div className="rounded-xl border border-edge px-3.5 py-3">
       <div className="text-[11px] text-content/45">{label}</div>
       <div className="mt-1 truncate text-[19px] font-medium tabular-nums leading-tight">
         {value}

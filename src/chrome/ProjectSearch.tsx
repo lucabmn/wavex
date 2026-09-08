@@ -126,20 +126,20 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-1 border-b border-content/10 px-1.5 py-1">
+      <div className="flex shrink-0 items-center gap-1 border-b border-edge px-1.5 py-1">
         <button
           type="button"
           onClick={onClose}
           title="Back to files"
           aria-label="Back to files"
-          className="grid size-7 shrink-0 place-items-center rounded-md text-content/50 hover:bg-content/10 hover:text-content"
+          className="grid size-7 shrink-0 place-items-center rounded-md text-content/50 hover:bg-hover hover:text-content"
         >
           <ChevronLeft className="size-4" strokeWidth={1.75} />
         </button>
         <span className="min-w-0 flex-1 truncate text-[12px] text-content/55">Search in files</span>
       </div>
-      <div className="shrink-0 space-y-2 border-b border-content/10 p-2">
-        <div className="flex items-center gap-1 rounded-md border border-content/10 bg-content/5 px-2 pr-1">
+      <div className="shrink-0 space-y-2 border-b border-edge p-2">
+        <div className="flex items-center gap-1 rounded-md border border-edge bg-content/5 px-2 pr-1">
           <input
             ref={inputRef}
             value={query}
@@ -178,7 +178,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
           placeholder="files to include"
           aria-label="files to include"
           spellCheck={false}
-          className="w-full rounded-md border border-content/10 bg-content/5 px-2 py-1.5 text-[11px] text-content outline-none placeholder:text-content/35"
+          className="w-full rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[11px] text-content outline-none placeholder:text-content/35"
         />
         <input
           value={exclude}
@@ -186,7 +186,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
           placeholder="files to exclude"
           aria-label="files to exclude"
           spellCheck={false}
-          className="w-full rounded-md border border-content/10 bg-content/5 px-2 py-1.5 text-[11px] text-content outline-none placeholder:text-content/35"
+          className="w-full rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[11px] text-content outline-none placeholder:text-content/35"
         />
       </div>
 
@@ -212,7 +212,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-none">
         {groups.map((group) => (
-          <section key={group.path} className="border-b border-content/8">
+          <section key={group.path} className="border-b border-edge">
             <div className="flex items-center gap-1.5 px-2 py-1.5">
               <FileTypeIcon name={group.name} isDir={false} size={16} />
               <span className="min-w-0 flex-1 truncate text-[12px] text-content">{group.name}</span>
@@ -229,7 +229,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
                   <button
                     type="button"
                     onClick={() => openMatch(match)}
-                    className="flex w-full items-start gap-2 px-2 py-1 text-left hover:bg-content/5"
+                    className="flex w-full items-start gap-2 px-2 py-1 text-left hover:bg-hover"
                   >
                     <span className="w-7 shrink-0 pt-px text-right font-mono text-[11px] text-content/35 tabular-nums">
                       {match.line}
@@ -273,8 +273,8 @@ function Toggle({
       onClick={onClick}
       className={`grid size-6 place-items-center rounded-sm ${
         active
-          ? "bg-accent/16 text-content"
-          : "text-content/40 hover:bg-content/10 hover:text-content/70"
+          ? "bg-accent/14 text-content"
+          : "text-content/40 hover:bg-hover hover:text-content/70"
       }`}
     >
       {children}

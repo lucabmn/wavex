@@ -340,9 +340,9 @@ export function InboxView({
   const list = (
     <div
       ref={resize.setPaneRef}
-      className="relative flex h-full min-h-0 shrink-0 flex-col border-r border-content/10"
+      className="relative flex h-full min-h-0 shrink-0 flex-col border-r border-edge"
     >
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-2">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-2">
         <div className="relative flex h-7 min-w-0 flex-1 items-center">
           <Search className="pointer-events-none absolute left-2 size-3 shrink-0 opacity-50" />
           <input
@@ -362,8 +362,8 @@ export function InboxView({
           aria-expanded={!!filterMenu}
           aria-haspopup="menu"
           onClick={onFilterButtonClick}
-          className={`grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content ${
-            filterMenu || filtersActive ? "bg-accent/16 text-content" : ""
+          className={`grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content ${
+            filterMenu || filtersActive ? "bg-accent/14 text-content" : ""
           }`}
         >
           <ListFilter className="size-3" strokeWidth={1.75} />
@@ -374,7 +374,7 @@ export function InboxView({
           aria-label="Mark all as read"
           disabled={!hasUnseen}
           onClick={() => markInboxItemsSeen(seenEntries)}
-          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-content/45"
+          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-content/45"
         >
           <CheckCheck className="size-3.5" strokeWidth={1.75} />
         </button>
@@ -382,7 +382,7 @@ export function InboxView({
           type="button"
           aria-label="Refresh"
           onClick={() => setRefresh((value) => value + 1)}
-          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content"
+          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
         >
           {loading || revalidating ? (
             <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -445,7 +445,7 @@ export function InboxView({
         aria-orientation="vertical"
         aria-label="Resize inbox list"
         className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none ${
-          resize.dragging ? "bg-content/15" : "hover:bg-content/10"
+          resize.dragging ? "bg-content/15" : "hover:bg-hover"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
@@ -472,7 +472,7 @@ export function InboxView({
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 select-none items-center border-b border-content/10"
+        className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
@@ -596,8 +596,8 @@ function InboxCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-accent/16 text-content"
-          : "border-transparent text-content/80 hover:bg-content/5 hover:text-content"
+          ? "border-transparent bg-accent/14 text-content"
+          : "border-transparent text-content/80 hover:bg-hover hover:text-content"
       }`}
     >
       <span className="flex items-center gap-2">
@@ -913,7 +913,7 @@ function InboxDetail({
                     })
                     .finally(() => setStarting(false));
                 }}
-                className="inline-flex items-center gap-1 rounded-md bg-content px-3 h-6.5 text-[12px] text-background-base hover:bg-content/80 disabled:cursor-default disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-md ui-fill px-3 h-6.5 text-[12px] disabled:cursor-default disabled:opacity-40"
               >
                 {starting ? "Sending..." : "Send to agent"}
               </button>
@@ -924,8 +924,8 @@ function InboxDetail({
             onClick={() => void openUrl(item.url)}
             className={
               item.kind === "pr"
-                ? "inline-flex items-center gap-1.5 rounded-md bg-content px-3 h-7 text-[12px] text-background-base hover:bg-content/80"
-                : "inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-content/10 hover:text-content"
+                ? "inline-flex items-center gap-1.5 rounded-md ui-fill px-3 h-7 text-[12px]"
+                : "inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-hover hover:text-content"
             }
           >
             <ExternalLink className="size-3.5" strokeWidth={1.75} />
@@ -938,7 +938,7 @@ function InboxDetail({
         <div
           role="tablist"
           aria-label="Pull request sections"
-          className="flex h-9 gap-4 items-stretch border-b border-content/10"
+          className="flex h-9 gap-4 items-stretch border-b border-edge"
         >
           <InboxDetailTab
             label="Summary"
@@ -948,7 +948,7 @@ function InboxDetail({
           <InboxDetailTab label="Code" selected={tab === "code"} onSelect={() => setTab("code")} />
         </div>
       ) : (
-        <div className="border-t border-content/10" />
+        <div className="border-t border-edge" />
       )}
       {isPr && tab === "code" ? (
         diffLoading ? (

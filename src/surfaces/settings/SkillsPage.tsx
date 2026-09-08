@@ -141,9 +141,9 @@ function SkillList({
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
 
   return (
-    <div className="flex w-64 shrink-0 flex-col border-r border-content/10">
+    <div className="flex w-64 shrink-0 flex-col border-r border-edge">
       <div className="flex shrink-0 flex-col gap-2 p-2">
-        <div className="flex items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2 py-1.5 focus-within:border-content/25">
+        <div className="flex items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2 py-1.5 focus-within:border-edge-strong">
           <Search className="size-3.5 shrink-0 text-content/35" strokeWidth={1.75} />
           <input
             value={query}
@@ -159,7 +159,7 @@ function SkillList({
             aria-label="Filter skills"
             value={filterValue}
             onChange={(event) => onFilter(event.target.value)}
-            className="h-7 min-w-0 flex-1 rounded-md border border-content/10 bg-content/5 px-2 text-[12px] text-content outline-none hover:border-content/20"
+            className="h-7 min-w-0 flex-1 rounded-md border border-edge bg-content/5 px-2 text-[12px] text-content outline-none hover:border-edge-strong"
           >
             {filterOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -172,7 +172,7 @@ function SkillList({
             onClick={onAdd}
             aria-label="Add a skill"
             title="Add a skill"
-            className="flex size-7 shrink-0 items-center justify-center rounded-md border border-content/10 bg-content/5 text-content/60 hover:text-content"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md border border-edge bg-content/5 text-content/60 hover:text-content"
           >
             <Plus className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -198,7 +198,7 @@ function SkillList({
                 aria-current={skill.name === selectedName ? "true" : undefined}
                 onClick={() => onSelect(skill.name)}
                 className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${
-                  skill.name === selectedName ? "bg-content/10" : "hover:bg-content/5"
+                  skill.name === selectedName ? "bg-content/10" : "hover:bg-hover"
                 }`}
               >
                 <Cube
@@ -223,7 +223,7 @@ function SkillList({
         ))}
       </div>
 
-      <div className="shrink-0 border-t border-content/10 px-3 py-2 text-center text-[11px] text-content/35">
+      <div className="shrink-0 border-t border-edge px-3 py-2 text-center text-[11px] text-content/35">
         {loading ? "Reading…" : count === 1 ? "1 skill" : `${count} skills`}
       </div>
     </div>
@@ -358,7 +358,7 @@ function SkillDetailPane({
         </dl>
 
         {managedBy ? (
-          <p className="rounded-md border border-content/10 bg-content/5 px-3 py-2 text-[12px] leading-snug text-content/50">
+          <p className="rounded-md border border-edge bg-content/5 px-3 py-2 text-[12px] leading-snug text-content/50">
             {managedBy} wavex lists it so you can see what your agents load; add, update, or remove
             it with the CLI that installed it.
           </p>
@@ -396,8 +396,8 @@ function SkillDetailPane({
 
         {error ? <p className="text-[12px] leading-snug text-red-300">{error}</p> : null}
 
-        <div className="flex flex-col gap-2 border-t border-content/10 pt-4">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-content/30">
+        <div className="flex flex-col gap-2 border-t border-edge pt-4">
+          <span className="font-mono ui-label">
             {source ? source.path.split("/").pop() : "SKILL.md"}
           </span>
           {draft !== null ? (
@@ -406,7 +406,7 @@ function SkillDetailPane({
               onChange={(event) => setDraft(event.target.value)}
               spellCheck={false}
               aria-label={`${skill.name} SKILL.md`}
-              className="min-h-96 w-full resize-y rounded-md border border-content/10 bg-content/5 p-3 font-mono text-[12px] leading-relaxed text-content outline-none focus:border-content/25"
+              className="min-h-96 w-full resize-y rounded-md border border-edge bg-content/5 p-3 font-mono text-[12px] leading-relaxed text-content outline-none focus:border-edge-strong"
             />
           ) : body === null ? (
             <span className="flex items-center gap-1.5 text-[12px] text-content/40">
@@ -440,7 +440,7 @@ function DetailRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline gap-4 border-b border-content/5 py-2 last:border-b-0">
+    <div className="flex items-baseline gap-4 border-b border-edge py-2 last:border-b-0">
       <dt className="w-24 shrink-0 text-[12px] text-content/40">{label}</dt>
       <dd className="min-w-0 flex-1 truncate text-[12px] text-content/70" title={title}>
         {children}
@@ -470,7 +470,7 @@ function Action({
       className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] disabled:opacity-40 ${
         danger
           ? "border-red-500/25 text-red-300 enabled:hover:bg-red-500/15"
-          : "border-content/10 bg-content/5 text-content/70 enabled:hover:text-content"
+          : "border-edge bg-content/5 text-content/70 enabled:hover:text-content"
       }`}
     >
       {Icon ? <Icon className="size-3.5" strokeWidth={1.75} /> : null}
@@ -504,7 +504,7 @@ function DeleteSkillDialog({
         aria-modal="true"
         aria-label={`Delete ${skill.name}`}
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute left-1/2 top-[22%] flex w-[min(420px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[22%] flex w-[min(420px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-[13px] font-medium leading-tight text-content">
@@ -531,7 +531,7 @@ function DeleteSkillDialog({
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             Cancel
           </button>

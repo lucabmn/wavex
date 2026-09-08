@@ -123,14 +123,14 @@ export function RaceCompare({ race, sessions, onStopOne, onStopAll, onClose }: P
           <button
             type="button"
             onClick={onStopAll}
-            className="flex shrink-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-[12px] text-content/70 hover:bg-content/15 hover:text-content"
+            className="flex shrink-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             <Square className="size-2.5 fill-current" strokeWidth={0} />
             Stop all
           </button>
         ) : null}
       </div>
-      <div className="grid grid-cols-1 gap-px border-t border-content/10 bg-content/10 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-px border-t border-edge bg-content/10 lg:grid-cols-2 xl:grid-cols-3">
         {race.runnerIds.map((id, index) => (
           <RunnerColumn
             key={id}
@@ -227,7 +227,7 @@ function RunnerColumn({
     // only vertical scroller, so a long diff has to scroll inside its own
     // column instead of dragging every other column down with it.
     <section className="flex h-96 flex-col bg-background-base">
-      <header className="flex shrink-0 items-center gap-2 border-b border-content/10 px-2.5 py-2">
+      <header className="flex shrink-0 items-center gap-2 border-b border-edge px-2.5 py-2">
         <HarnessIcon harness={harness} className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate text-[13px] text-content">
           {HARNESS_TITLE[harness]}
@@ -246,7 +246,7 @@ function RunnerColumn({
             title="Stop this runner"
             aria-label="Stop this runner"
             onClick={onStop}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
           >
             <Square className="size-2.5 fill-current" strokeWidth={0} />
           </button>
@@ -259,7 +259,7 @@ function RunnerColumn({
             onClick={() => {
               if (session) void run(session.id, () => undoSessionChanges(session.id, cwd));
             }}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <Undo2 className="size-3.5" strokeWidth={1.75} />
           </button>

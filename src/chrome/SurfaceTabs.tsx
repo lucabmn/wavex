@@ -134,7 +134,7 @@ export function SurfaceTabs({
   }, [activeFileId, sortable.draggingId]);
 
   return (
-    <div className="halo-topbar flex h-9 min-w-0 shrink-0 bg-surface-sunken">
+    <div className="ui-rule-b flex h-9 min-w-0 shrink-0 bg-surface-sunken">
       <div
         ref={lockOverscroll}
         role="tablist"
@@ -159,7 +159,7 @@ export function SurfaceTabs({
             title="Drag to reorder pane"
             aria-label="Drag to reorder pane"
             tabIndex={-1}
-            className="grid h-full w-5 shrink-0 cursor-grab place-items-center text-content/35 hover:bg-content/5 hover:text-content/70 active:cursor-grabbing touch-none"
+            className="grid h-full w-5 shrink-0 cursor-grab place-items-center text-content/35 hover:bg-hover hover:text-content/70 active:cursor-grabbing touch-none"
             onPointerDown={(event) => {
               if (event.button !== 0) return;
               event.preventDefault();
@@ -198,9 +198,9 @@ export function SurfaceTabs({
                 sortable.setItemRef(file.id, el);
                 if (el && file.id === activeFileId) activeTabRef.current = el;
               }}
-              data-halo={active ? "on" : undefined}
-              className={`halo-row halo-tab group relative flex w-52 min-w-28 shrink touch-none items-stretch transition-colors ${
-                active ? "bg-surface-raised" : "hover:bg-content/5"
+              data-selected={active ? "true" : undefined}
+              className={`ui-tab group relative flex w-52 min-w-28 shrink touch-none items-stretch ${
+                active ? "" : "hover:bg-hover"
               } ${dragging ? "opacity-40" : ""} ${
                 canDrag ? "cursor-grab active:cursor-grabbing" : ""
               }`}
@@ -214,10 +214,10 @@ export function SurfaceTabs({
               }}
             >
               {showStart ? (
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-gradient-to-b from-accent to-accent-2" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-accent" />
               ) : null}
               {showEnd ? (
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-gradient-to-b from-accent to-accent-2" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-accent" />
               ) : null}
               <button
                 type="button"
@@ -231,7 +231,7 @@ export function SurfaceTabs({
                 }}
                 className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                   canDrag ? "cursor-grab active:cursor-grabbing" : ""
-                } ${active ? "font-medium text-content" : "text-content/50 hover:text-content"}`}
+                } ${active ? "font-medium" : ""}`}
               >
                 {terminal ? (
                   <Terminal className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -290,7 +290,7 @@ export function SurfaceTabs({
                   event.stopPropagation();
                   onCloseFile(file.id);
                 }}
-                className={`absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 hover:bg-content/10 hover:text-content ${
+                className={`absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 hover:bg-hover hover:text-content ${
                   active
                     ? "opacity-100"
                     : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"

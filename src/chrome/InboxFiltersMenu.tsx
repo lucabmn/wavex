@@ -168,7 +168,7 @@ export function InboxFiltersMenu({ x, y, projects, filters, onChange, onClose }:
             role="menuitem"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onChange(DEFAULT_INBOX_FILTERS)}
-            className="flex h-7 w-full items-center rounded-lg px-2 text-left text-[13px] leading-none text-content/70 hover:bg-content/5 hover:text-content"
+            className="flex h-7 w-full items-center rounded-lg px-2 text-left text-[13px] leading-none text-content/70 hover:bg-hover hover:text-content"
           >
             Clear filters
           </button>
@@ -179,11 +179,7 @@ export function InboxFiltersMenu({ x, y, projects, filters, onChange, onClose }:
 }
 
 function SectionLabel({ children }: { children: string }) {
-  return (
-    <div className="px-2 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-content/40">
-      {children}
-    </div>
-  );
+  return <div className="px-2 pb-0.5 pt-2 ui-label">{children}</div>;
 }
 
 function FilterItem({
@@ -204,7 +200,7 @@ function FilterItem({
       aria-checked={checked}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none text-content hover:bg-content/5"
+      className="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none text-content hover:bg-hover"
     >
       {icon}
       <span className="min-w-0 flex-1 truncate">{label}</span>

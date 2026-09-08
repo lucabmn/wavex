@@ -164,7 +164,7 @@ function ImageView({ url, size, mime }: { url: string; size: number; mime: strin
           }
         />
       </div>
-      <footer className="flex h-8 shrink-0 items-center gap-3 border-t border-content/10 px-3 text-[11px] text-content/50">
+      <footer className="flex h-8 shrink-0 items-center gap-3 border-t border-edge px-3 text-[11px] text-content/50">
         <span className="tabular-nums">{natural ? `${natural.w} × ${natural.h}` : "—"}</span>
         <span className="tabular-nums">{formatFileSize(size)}</span>
         <span className="uppercase">{mime.replace(/^image\//, "")}</span>
@@ -209,7 +209,7 @@ function ZoomButton({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="grid size-5 place-items-center rounded hover:bg-content/10 hover:text-content"
+      className="grid size-5 place-items-center rounded hover:bg-hover hover:text-content"
     >
       {children}
     </button>
@@ -267,7 +267,7 @@ function CardButton({ onClick, children }: { onClick: () => void; children: Reac
     <button
       type="button"
       onClick={onClick}
-      className="flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12px] text-content hover:bg-content/15"
+      className="flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12px] text-content hover:bg-hover"
     >
       {children}
     </button>

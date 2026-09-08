@@ -442,14 +442,12 @@ function MermaidBlock({ code, incomplete }: { code: string; incomplete: boolean 
   }
 
   if (!svg) {
-    return (
-      <div className="h-32 animate-pulse rounded-[10px] border border-content/10 bg-content/6" />
-    );
+    return <div className="h-32 animate-pulse rounded-[10px] border border-edge bg-content/6" />;
   }
 
   return (
     <div
-      className="mermaid-block overflow-x-auto rounded-[10px] border border-content/10 bg-content/6 p-3"
+      className="mermaid-block overflow-x-auto rounded-[10px] border border-edge bg-content/6 p-3"
       data-streamdown="mermaid-block"
       dangerouslySetInnerHTML={{ __html: svg }}
     />

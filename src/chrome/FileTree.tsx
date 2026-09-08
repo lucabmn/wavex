@@ -593,7 +593,7 @@ export function FileTree({
         onContextMenu={onBackgroundMenu}
       >
         <div
-          className="flex h-9 shrink-0 items-center gap-px overflow-visible border-b border-content/10 px-2"
+          className="flex h-9 shrink-0 items-center gap-px overflow-visible border-b border-edge px-2"
           onContextMenu={(e) => e.stopPropagation()}
         >
           <HeaderIcon label="New File" onClick={() => startCreate(false)}>
@@ -709,9 +709,7 @@ function HeaderIcon({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active
-          ? "bg-accent/16 text-content"
-          : "text-content/50 hover:bg-content/5 hover:text-content"
+        active ? "bg-accent/14 text-content" : "text-content/50 hover:bg-hover hover:text-content"
       }`}
     >
       {children}
@@ -756,15 +754,13 @@ function FileTreeDiffButton({
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={`relative flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active
-          ? "bg-accent/16 text-content"
-          : "text-content/50 hover:bg-content/5 hover:text-content"
+        active ? "bg-accent/14 text-content" : "text-content/50 hover:bg-hover hover:text-content"
       }`}
     >
       <span className="relative">
         <GitCompare className="size-3.5" strokeWidth={1.75} />
         {files > 0 ? (
-          <span className="halo-fill pointer-events-none absolute -top-1.5 -right-2 grid min-h-3.5 min-w-3.5 place-items-center rounded-full px-0.5 text-[7px] font-semibold leading-none tabular-nums">
+          <span className="ui-fill pointer-events-none absolute -top-1.5 -right-2 grid min-h-3.5 min-w-3.5 place-items-center rounded-full px-0.5 text-[7px] font-semibold leading-none tabular-nums">
             {badge}
           </span>
         ) : null}
@@ -915,7 +911,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
           onContextMenu={(e) => onItemContextMenu(entry, e)}
           style={{ paddingLeft: 8 + depth * 12 }}
           className={`flex h-7.5 w-full cursor-default items-center gap-1 pr-2 text-left text-[14px] leading-none ${
-            selected ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
+            selected ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
           } ${cutPath === entry.path ? "opacity-50" : ""}`}
         >
           <span className="grid size-4 shrink-0 place-items-center text-content/50">

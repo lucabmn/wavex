@@ -41,7 +41,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"
-        className="flex w-[min(480px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-content/10 bg-background-base shadow-2xl"
+        className="flex w-[min(480px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-edge bg-background-base shadow-2xl"
       >
         <div className="flex items-center gap-1.5 px-5 pt-4">
           {STEPS.map((label, index) => (
@@ -72,14 +72,14 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-content/10 px-5 py-3">
+        <div className="flex items-center justify-between gap-2 border-t border-edge px-5 py-3">
           <span className="text-[11px] text-content/35">Step {step + 1} of 3</span>
           <div className="flex gap-2">
             {step > 0 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
               >
                 Back
               </button>
@@ -88,7 +88,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
-                className="rounded-md bg-content px-3 py-1.5 text-[12px] font-medium text-background-base hover:bg-content/80"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12px] font-medium"
               >
                 {step === 0 && !project ? "Continue without a project" : "Continue"}
               </button>
@@ -98,7 +98,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
                 // oxlint-disable-next-line jsx-a11y/no-autofocus -- the dialog exists to finish setup
                 autoFocus
                 onClick={onComplete}
-                className="rounded-md bg-content px-3 py-1.5 text-[12px] font-medium text-background-base hover:bg-content/80"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12px] font-medium"
               >
                 Start working
               </button>
@@ -129,7 +129,7 @@ function ProjectStep({
       <button
         type="button"
         onClick={onPickProject}
-        className="flex items-center justify-between rounded-lg border border-content/15 bg-content/5 px-3 py-2.5 text-left hover:bg-content/10"
+        className="flex items-center justify-between rounded-lg border border-edge-strong bg-content/5 px-3 py-2.5 text-left hover:bg-hover"
       >
         <span className="min-w-0">
           <span className="block text-[12.5px] font-medium text-content">
@@ -195,7 +195,7 @@ function AgentsStep() {
           return (
             <li
               key={id}
-              className="flex items-center gap-2 rounded-md border border-content/10 bg-content/5 px-2.5 py-1.5"
+              className="flex items-center gap-2 rounded-md border border-edge bg-content/5 px-2.5 py-1.5"
             >
               <HarnessIcon harness={id} className="size-4 shrink-0" />
               <span className="min-w-0 flex-1">

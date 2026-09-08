@@ -67,11 +67,11 @@ pub fn enable_window_glass(window: WebviewWindow) {
     }
 }
 
-/// The dark theme's own background, `hsl(234 14% 8%)`. The shade painted over
-/// a profile switch has to match what the document paints on the far side of
-/// the reload, or the swap flashes a lighter or greyer frame.
+/// The dark theme's own background, `hsl(28 7% 9%)`. The shade painted over a
+/// profile switch has to match what the document paints on the far side of the
+/// reload, or the swap flashes a lighter or cooler frame.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-const OPAQUE_SHADE: Color = Color(18, 18, 23, 255);
+const OPAQUE_SHADE: Color = Color(25, 23, 21, 255);
 
 /// Paints the window opaque again for the length of a profile switch. The
 /// reload tears the document down, and a transparent window over that gap

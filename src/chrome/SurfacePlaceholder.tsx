@@ -36,7 +36,7 @@ export function PlaceholderButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-md bg-content/10 px-2.5 py-1 text-[12px] text-content transition-colors hover:bg-content/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      className="rounded-md bg-content/10 px-2.5 py-1 text-[12px] text-content transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       {children}
     </button>

@@ -386,7 +386,7 @@ export function FileEditor({
           <button
             type="button"
             onClick={() => setReloadKey((value) => value + 1)}
-            className="mx-auto mt-4 flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12px] text-content hover:bg-content/15"
+            className="mx-auto mt-4 flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12px] text-content hover:bg-hover"
           >
             <RotateCcw className="size-3" strokeWidth={1.75} />
             Retry
@@ -447,7 +447,7 @@ export function FileEditor({
           lspCommands={lspCommands}
         />
       )}
-      <footer className="flex h-6 shrink-0 items-center border-t border-content/10 px-2.5 font-mono text-[10.5px] text-content/40">
+      <footer className="flex h-6 shrink-0 items-center border-t border-edge px-2.5 font-mono text-[10.5px] text-content/40">
         <span className="min-w-0 flex-1 truncate" title={path}>
           {relativePath}
         </span>
@@ -1000,7 +1000,7 @@ function DiffChunkNav({
 }) {
   return (
     <header
-      className="flex h-8 shrink-0 items-center justify-between gap-3 border-b border-content/10 px-3 pr-1"
+      className="flex h-8 shrink-0 items-center justify-between gap-3 border-b border-edge px-3 pr-1"
       role="toolbar"
       aria-label="Jump between changes"
     >
@@ -1013,7 +1013,7 @@ function DiffChunkNav({
           disabled={total === 0 || index <= 0}
           onMouseDown={(event) => event.preventDefault()}
           onClick={onPrev}
-          className="grid size-6 place-items-center rounded text-content/70 hover:bg-content/10 hover:text-content disabled:opacity-35"
+          className="grid size-6 place-items-center rounded text-content/70 hover:bg-hover hover:text-content disabled:opacity-35"
         >
           <ChevronUp className="size-3.5" strokeWidth={1.75} />
         </button>
@@ -1027,7 +1027,7 @@ function DiffChunkNav({
           disabled={total === 0 || index >= total - 1}
           onMouseDown={(event) => event.preventDefault()}
           onClick={onNext}
-          className="grid size-6 place-items-center rounded text-content/70 hover:bg-content/10 hover:text-content disabled:opacity-35"
+          className="grid size-6 place-items-center rounded text-content/70 hover:bg-hover hover:text-content disabled:opacity-35"
         >
           <ChevronDown className="size-3.5" strokeWidth={1.75} />
         </button>

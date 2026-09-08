@@ -122,7 +122,7 @@ export function ConnectionsPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => void run(async () => copyText(await hostPairingCode()))}
-                className="flex items-center gap-1.5 rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15"
+                className="flex items-center gap-1.5 rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-hover"
               >
                 <Copy className="size-3.5" strokeWidth={1.75} />
                 Copy connection code
@@ -184,7 +184,7 @@ export function ConnectionsPage() {
                   type="button"
                   disabled={busy}
                   onClick={() => void run(() => connectSavedHost(host.hostId))}
-                  className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15"
+                  className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-hover"
                 >
                   Connect
                 </button>
@@ -195,7 +195,7 @@ export function ConnectionsPage() {
                     disconnectSavedHost(host.hostId);
                     void refreshConnect();
                   }}
-                  className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+                  className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
                 >
                   Disconnect
                 </button>
@@ -238,7 +238,7 @@ export function ConnectionsPage() {
                 setCode("");
               })
             }
-            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15 disabled:cursor-default disabled:text-content/25"
+            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-hover disabled:cursor-default disabled:text-content/25"
           >
             Add
           </button>

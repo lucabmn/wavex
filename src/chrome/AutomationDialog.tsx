@@ -196,7 +196,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
           event.preventDefault();
           submit();
         }}
-        className="absolute left-1/2 top-[6%] flex max-h-[88vh] w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col rounded-lg border border-content/10 bg-content/5 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[6%] flex max-h-[88vh] w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col rounded-lg border border-edge bg-content/5 shadow-xl backdrop-blur-xl"
       >
         <header className="shrink-0 px-4 pb-3 pt-4">
           <h2 className="text-[13px] font-medium leading-tight text-content">
@@ -333,7 +333,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
           </button>
 
           {advanced ? (
-            <div className="flex flex-col gap-3 border-l border-content/10 pl-3">
+            <div className="flex flex-col gap-3 border-l border-edge pl-3">
               <Choice
                 label="Permissions"
                 value={form.runtimeMode}
@@ -430,7 +430,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
             </div>
           ) : null}
 
-          <div className="rounded-md border border-content/10 bg-content/5 px-3 py-2.5">
+          <div className="rounded-md border border-edge bg-content/5 px-3 py-2.5">
             <p className="text-[12px] font-medium text-content">
               {describeSchedule(form.schedule, form.timeZone)}
             </p>
@@ -474,13 +474,13 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
         </div>
 
         {error ? (
-          <p className="shrink-0 border-t border-content/10 px-4 py-2 text-[12px] leading-4 text-red-400/90">
+          <p className="shrink-0 border-t border-edge px-4 py-2 text-[12px] leading-4 text-red-400/90">
             {error}
           </p>
         ) : null}
 
         {confirming ? (
-          <div className="shrink-0 border-t border-content/10 bg-content/5 px-4 py-3">
+          <div className="shrink-0 border-t border-edge bg-content/5 px-4 py-3">
             <p className="text-[12px] font-medium text-content">Enable this automation?</p>
             <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11.5px] leading-tight">
               <Fact label="Runs">{describeSchedule(form.schedule, form.timeZone)}</Fact>
@@ -502,19 +502,19 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
           </div>
         ) : null}
 
-        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-content/10 px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-edge px-4 py-3">
           <button
             type="button"
             disabled={busy}
             onClick={() => (confirming ? setConfirming(false) : onClose())}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             {confirming ? "Back" : "Cancel"}
           </button>
           <button
             type="submit"
             disabled={busy}
-            className="halo-fill halo-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
+            className="ui-fill ui-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40"
           >
             {busy
               ? "Saving…"
@@ -544,7 +544,7 @@ const FIELD = `${CONTROL} w-full`;
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-[11px] uppercase tracking-wide text-content/45">{label}</span>
+      <span className="ui-label">{label}</span>
       {children}
       {error ? <p className="text-[11.5px] leading-snug text-red-400/90">{error}</p> : null}
     </div>
@@ -676,8 +676,8 @@ function WeeklyFields({
               onClick={() => toggle(day)}
               className={`rounded-md px-2 py-1 text-[11.5px] transition-colors ${
                 on
-                  ? "bg-accent/16 text-content"
-                  : "text-content/45 hover:bg-content/8 hover:text-content/75"
+                  ? "bg-accent/14 text-content"
+                  : "text-content/45 hover:bg-hover hover:text-content/75"
               }`}
             >
               {name}
@@ -690,7 +690,7 @@ function WeeklyFields({
           type="button"
           disabled={disabled}
           onClick={() => onChange({ ...schedule, days: [...EVERY_DAY] })}
-          className="rounded-md px-2 py-1 text-[11.5px] text-content/45 hover:bg-content/8 hover:text-content/75"
+          className="rounded-md px-2 py-1 text-[11.5px] text-content/45 hover:bg-hover hover:text-content/75"
         >
           Every day
         </button>
@@ -698,7 +698,7 @@ function WeeklyFields({
           type="button"
           disabled={disabled}
           onClick={() => onChange({ ...schedule, days: [...WEEKDAY_SET] })}
-          className="rounded-md px-2 py-1 text-[11.5px] text-content/45 hover:bg-content/8 hover:text-content/75"
+          className="rounded-md px-2 py-1 text-[11.5px] text-content/45 hover:bg-hover hover:text-content/75"
         >
           Weekdays
         </button>

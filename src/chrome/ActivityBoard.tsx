@@ -161,7 +161,7 @@ export function ActivityBoard({
             ref={(el) => sortable.setGroupDropRef(lane, el)}
             aria-label={`${ACTIVITY_BOARD_LANE_LABEL[lane]}, ${total} sessions`}
             className={`flex min-w-60 flex-1 flex-col rounded-xl border transition-colors ${
-              over ? "border-content/25 bg-content/[0.06]" : "border-content/10 bg-content/[0.02]"
+              over ? "border-edge-strong bg-content/[0.06]" : "border-edge bg-content/[0.02]"
             } ${dragging && !accepts ? "opacity-40" : ""}`}
           >
             <header className="flex items-center gap-2 px-3 py-2.5">
@@ -255,7 +255,7 @@ function BoardCard({
     <div
       ref={(el) => setItemRef(card.key, el)}
       onPointerDown={movable ? onPointerDown : undefined}
-      className={`group flex min-w-0 items-start gap-1.5 rounded-lg border border-content/10 bg-background-base px-2 py-2 transition-colors hover:border-content/20 ${
+      className={`group flex min-w-0 items-start gap-1.5 rounded-lg border border-edge bg-background-base px-2 py-2 transition-colors hover:border-edge-strong ${
         dragging ? "opacity-40" : ""
       } ${movable ? "cursor-grab" : ""}`}
       title={sessionStatusTooltip({
@@ -309,7 +309,7 @@ function BoardCard({
           title="Stop this turn"
           aria-label="Stop this turn"
           onClick={onStop}
-          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content"
+          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>

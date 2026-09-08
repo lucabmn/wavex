@@ -231,12 +231,12 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
         aria-haspopup={racing ? undefined : "menu"}
         aria-expanded={racing ? undefined : open}
         disabled={blocked}
-        className={`flex h-6.5 shrink-0 items-center gap-1 rounded-md disabled:opacity-40 disabled:hover:bg-content/10 disabled:hover:text-content/50 ${
+        className={`flex h-6.5 shrink-0 items-center gap-1 rounded-md disabled:opacity-40 disabled:hover:bg-hover disabled:hover:text-content/50 ${
           racing ? "px-1.5" : "w-6.5 justify-center"
         } ${
           open || racing
             ? "bg-content/20 text-content"
-            : "bg-content/10 text-content/50 hover:bg-content/15 hover:text-content"
+            : "bg-content/10 text-content/50 hover:bg-hover hover:text-content"
         }`}
         onClick={() => {
           if (racing) {
@@ -303,13 +303,13 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                     }}
                     onClick={() => toggle(harness)}
                     className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none disabled:opacity-40 ${
-                      highlighted ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
+                      highlighted ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
                     }`}
                   >
                     <span
                       aria-hidden
                       className={`grid size-4 shrink-0 place-items-center rounded border ${
-                        on ? "border-accent bg-accent text-white" : "border-content/25"
+                        on ? "border-accent bg-accent text-white" : "border-edge-strong"
                       }`}
                     >
                       {on ? <Check className="size-2.5" strokeWidth={2.5} /> : null}
@@ -345,9 +345,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
               }}
               onClick={start}
               className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none disabled:text-content/35 ${
-                onStartRow && !error
-                  ? "bg-accent/16 text-content"
-                  : "text-content hover:bg-content/5"
+                onStartRow && !error ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
               } ${error ? "hover:bg-transparent" : ""}`}
             >
               <span className="min-w-0 flex-1 truncate">
@@ -391,7 +389,7 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
                       setInSubmenu(false);
                     }}
                     className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
+                      highlighted ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate">{model.name}</span>

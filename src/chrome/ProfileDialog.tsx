@@ -54,7 +54,7 @@ export function ProfileDialog({
             maxLength={PROFILE_NAME_MAX}
             placeholder="Work"
             onChange={(event) => setName(event.target.value)}
-            className="h-9 rounded-lg border border-content/10 bg-content/5 px-3 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-accent/60"
+            className="h-9 rounded-lg border border-edge bg-content/5 px-3 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-accent/60"
           />
         </label>
 
@@ -83,14 +83,14 @@ export function ProfileDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!clean}
-            className="halo-fill halo-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
+            className="ui-fill ui-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40"
           >
             {confirmLabel}
           </button>

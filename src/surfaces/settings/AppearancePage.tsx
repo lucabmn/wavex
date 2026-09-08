@@ -5,10 +5,7 @@ import {
   ACCENT_PRESETS,
   applyAccentHue,
   applyBodyGlass,
-  AMBIENT_DEFAULT,
-  AMBIENT_MAX,
-  AMBIENT_MIN,
-  applyAmbient,
+  applySeparators,
   applyCornerRadius,
   applyEditorFontSize,
   applyMonoFont,
@@ -33,7 +30,7 @@ import {
   loadBackgroundLightness,
   loadBodyGlass,
   loadContentLightness,
-  loadAmbient,
+  loadSeparators,
   loadCornerRadius,
   EDITOR_CHROME_DEFAULT,
   loadEditorChrome,
@@ -63,7 +60,7 @@ import {
   saveBackgroundLightness,
   saveBodyGlass,
   saveContentLightness,
-  saveAmbient,
+  saveSeparators,
   saveCornerRadius,
   saveEditorChrome,
   saveEditorFontSize,
@@ -91,6 +88,7 @@ import {
   SIDEBAR_OPACITY_DEFAULT,
   SIDEBAR_OPACITY_MAX,
   SIDEBAR_OPACITY_MIN,
+  SEPARATORS_DEFAULT,
   SURFACE_DEPTH_DEFAULT,
   SURFACE_RANGE,
   TERMINAL_CURSOR_BLINK_DEFAULT,
@@ -119,6 +117,7 @@ import {
   type ColorScheme,
   type CornerRadius,
   type EditorChromeSettings,
+  type Separators,
   type SurfaceDepth,
   type ThemePreset,
   type TranscriptSpacing,
@@ -169,7 +168,7 @@ export function useAppearanceSettings() {
   const [terminalCursorBlink, setTerminalCursorBlink] = useState(loadTerminalCursorBlink);
   const [cornerRadius, setCornerRadius] = useState<CornerRadius>(loadCornerRadius);
   const [surfaceDepth, setSurfaceDepth] = useState<SurfaceDepth>(loadSurfaceDepth);
-  const [ambient, setAmbient] = useState(loadAmbient);
+  const [separators, setSeparators] = useState<Separators>(loadSeparators);
   const [reduceMotion, setReduceMotion] = useState(loadReduceMotion);
   const [transcriptLayout, setTranscriptLayout] = useState<TranscriptLayout>(loadTranscriptLayout);
   const [transcriptAnchor, setTranscriptAnchor] = useState(loadTranscriptAnchor);
@@ -303,10 +302,10 @@ export function useAppearanceSettings() {
     setSurfaceDepth(next);
   }, []);
 
-  const onAmbient = useCallback((value: number) => {
-    const next = applyAmbient(value);
-    saveAmbient(next);
-    setAmbient(next);
+  const onSeparators = useCallback((value: Separators) => {
+    const next = applySeparators(value);
+    saveSeparators(next);
+    setSeparators(next);
   }, []);
 
   const onReduceMotion = useCallback((value: boolean) => {
@@ -401,7 +400,7 @@ export function useAppearanceSettings() {
     onTerminalCursorBlink(TERMINAL_CURSOR_BLINK_DEFAULT);
     onCornerRadius(CORNER_RADIUS_DEFAULT);
     onSurfaceDepth(SURFACE_DEPTH_DEFAULT);
-    onAmbient(AMBIENT_DEFAULT);
+    onSeparators(SEPARATORS_DEFAULT);
     onReduceMotion(REDUCE_MOTION_DEFAULT);
     onTranscriptLayout(TRANSCRIPT_LAYOUT_DEFAULT);
     onTranscriptAnchor(TRANSCRIPT_ANCHOR_DEFAULT);
@@ -422,7 +421,6 @@ export function useAppearanceSettings() {
     setSurface(applySurfaceLightness(resolveColorScheme(THEME_PREFERENCE_DEFAULT)));
   }, [
     onAccentHue,
-    onAmbient,
     onBlur,
     onBodyGlass,
     onComposerRunner,
@@ -432,6 +430,7 @@ export function useAppearanceSettings() {
     onMonoFont,
     onOpacity,
     onReduceMotion,
+    onSeparators,
     onSurfaceDepth,
     onTerminalCursor,
     onTerminalCursorBlink,
@@ -465,7 +464,7 @@ export function useAppearanceSettings() {
     terminalCursorBlink,
     cornerRadius,
     surfaceDepth,
-    ambient,
+    separators,
     reduceMotion,
     transcriptLayout,
     transcriptAnchor,
@@ -490,7 +489,7 @@ export function useAppearanceSettings() {
     onTerminalCursorBlink,
     onCornerRadius,
     onSurfaceDepth,
-    onAmbient,
+    onSeparators,
     onReduceMotion,
     onBackgroundLightness,
     onContentLightness,
@@ -515,7 +514,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
     <>
       <Section
         title="Presets"
-        description="A starting point: one click writes the interface hue, the accent pair, and the depth of both themes. Everything below stays free to move afterwards."
+        description="A starting point: one click writes the interface hue, the accent, and the depth of both themes. Everything below stays free to move afterwards."
       >
         <Row label="Palette" layout="stacked">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -524,13 +523,13 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
                 key={preset.id}
                 type="button"
                 onClick={() => appearance.onPreset(preset)}
-                className="halo-focus flex items-center gap-2 rounded-lg border border-edge bg-surface-raised px-2.5 py-2 text-left text-[12px] text-content/70 shadow-lift transition-colors hover:border-edge-strong hover:text-content"
+                className="ui-focus flex items-center gap-2 rounded-md border border-edge bg-surface-raised px-2.5 py-2 text-left text-[12px] text-content/70 hover:border-edge-strong hover:text-content"
               >
                 <span
                   aria-hidden
-                  className="size-4 shrink-0 rounded-full border border-content/15"
+                  className="size-4 shrink-0 rounded-full border border-edge-strong"
                   style={{
-                    background: `linear-gradient(135deg, hsl(${preset.accentHue} 88% 66%) 0%, hsl(${preset.accentHue + 42} 88% 71%) 45%, hsl(${preset.themeHue} ${preset.themeSaturation}% ${preset.dark.background}%) 100%)`,
+                    background: `linear-gradient(to right, hsl(${preset.accentHue} 62% 58%) 0 50%, hsl(${preset.themeHue} ${preset.themeSaturation}% ${preset.dark.background + 4}%) 50% 100%)`,
                   }}
                 />
                 <span className="min-w-0 truncate">{preset.label}</span>
@@ -561,7 +560,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
         </Row>
         <Row
           label="Accent"
-          description="Drives the whole accent pair: switches, focus halos, links, selected rows, and the ambient wash. The second stop is derived from this hue, so one choice moves every gradient."
+          description="The one saturated colour in the window: the selected row, the live tab, focus, links, and the single filled action a surface is allowed."
           layout="stacked"
         >
           <AccentSwatches value={appearance.accentHue} onChange={appearance.onAccentHue} />
@@ -603,7 +602,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
 
       <Section
         title="Surfaces"
-        description={`The window's own planes: how deep it sits, how far things stand off it, and how much of the desktop shows through. Background and contrast are kept per theme, so those two are the ${schemeWord} theme's.`}
+        description={`The window's own planes: how deep it sits, how far things stand off it, how firmly they are ruled apart, and how much of the desktop shows through. Background and contrast are kept per theme, so those two are the ${schemeWord} theme's.`}
       >
         <Row
           label="Background depth"
@@ -647,16 +646,18 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
           />
         </Row>
         <Row
-          label="Ambient glow"
-          description="The accent wash pooled in the corners of the window and under the composer. Zero switches it off."
+          label="Separators"
+          description="How strongly every hairline in the app is drawn. Subtle leans on the difference between one surface and the next; firm draws the line."
         >
-          <Slider
-            label="Ambient glow"
-            value={appearance.ambient}
-            display={`${appearance.ambient}%`}
-            min={AMBIENT_MIN}
-            max={AMBIENT_MAX}
-            onChange={appearance.onAmbient}
+          <Segmented
+            label="Separators"
+            value={appearance.separators}
+            options={[
+              { value: "subtle", label: "Subtle" },
+              { value: "regular", label: "Regular" },
+              { value: "firm", label: "Firm" },
+            ]}
+            onChange={appearance.onSeparators}
           />
         </Row>
         <Row
@@ -945,7 +946,7 @@ function AccentSwatches({ value, onChange }: { value: number; onChange: (hue: nu
               selected ? "ring-2 ring-content/70" : "ring-1 ring-content/15 hover:ring-content/40"
             }`}
             style={{
-              background: `linear-gradient(135deg, hsl(${preset.hue} 88% var(--accent-lightness, 66%)), hsl(${preset.hue + 42} 88% calc(var(--accent-lightness, 66%) + 5%)))`,
+              background: `hsl(${preset.hue} var(--accent-saturation, 62%) var(--accent-lightness, 58%))`,
             }}
           />
         );

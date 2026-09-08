@@ -15,7 +15,7 @@ export function InboxMiniCard({ card, onDismiss }: Props) {
 
   return (
     <div className="px-3 pt-2">
-      <div className="relative rounded-md border border-content/10 bg-content/6 px-2.5 py-2 pr-8">
+      <div className="relative rounded-md border border-edge bg-content/6 px-2.5 py-2 pr-8">
         <button
           type="button"
           title={`Open in ${providerLabel}`}
@@ -59,7 +59,7 @@ export function InboxMiniCard({ card, onDismiss }: Props) {
             title="Remove"
             aria-label={`Remove ${kindLabel} ${card.identifier}`}
             onClick={onDismiss}
-            className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-content/40 hover:bg-content/10 hover:text-content"
+            className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-content/40 hover:bg-hover hover:text-content"
           >
             <X className="size-3" strokeWidth={2} />
           </button>

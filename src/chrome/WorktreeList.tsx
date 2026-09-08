@@ -96,7 +96,7 @@ export function WorktreeList({
         title="New worktree"
         aria-label="New worktree"
         onClick={onCreate}
-        className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-content/5 hover:text-content"
+        className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-hover hover:text-content"
       >
         <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
         <span className="min-w-0 flex-1 truncate text-[12px] leading-tight">New worktree</span>
@@ -107,7 +107,7 @@ export function WorktreeList({
           type="button"
           disabled={pruning}
           onClick={() => void prune()}
-          className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-content/5 hover:text-content disabled:opacity-40"
+          className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
         >
           <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
           <span className="min-w-0 flex-1 truncate text-[12px] leading-tight">
@@ -200,7 +200,7 @@ function WorktreeRow({
   return (
     <div
       className={`group relative flex h-7 items-stretch rounded-md px-2 ${
-        selected ? "bg-accent/16 text-content" : "opacity-65 hover:bg-content/5 hover:text-content"
+        selected ? "bg-accent/14 text-content" : "opacity-65 hover:bg-hover hover:text-content"
       }`}
       onContextMenu={onOpenMenu}
     >
@@ -274,7 +274,7 @@ function WorktreeRow({
         aria-label="Worktree options"
         aria-haspopup="menu"
         onClick={onOpenMenu}
-        className="absolute right-1 top-1/2 hidden size-5 -translate-y-1/2 place-items-center rounded-md text-content/55 hover:bg-content/8 hover:text-content group-hover:grid"
+        className="absolute right-1 top-1/2 hidden size-5 -translate-y-1/2 place-items-center rounded-md text-content/55 hover:bg-hover hover:text-content group-hover:grid"
       >
         <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
       </button>

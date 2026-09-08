@@ -70,17 +70,17 @@ export function QueueStrip({
   return (
     <div className="px-2 text-content/55" data-message-queue>
       <div
-        className="relative z-0 rounded-t-[10px] border border-b-0 border-content/10 bg-content/3 px-2 py-1"
+        className="relative z-0 rounded-t-[10px] border border-b-0 border-edge bg-content/3 px-2 py-1"
         data-message-queue-card
       >
         {paused ? (
-          <div className="flex h-7 items-center gap-2 border-b border-content/10 text-[12px]">
+          <div className="flex h-7 items-center gap-2 border-b border-edge text-[12px]">
             <Pause className="size-3.5" />
             <span className="min-w-0 flex-1 truncate">Queue paused because you interrupted</span>
             <button
               type="button"
               onClick={onResume}
-              className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 hover:bg-content/10 hover:text-content"
+              className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 hover:bg-hover hover:text-content"
             >
               <Play className="size-3.5" />
               Resume
@@ -99,7 +99,7 @@ export function QueueStrip({
             <div
               key={prompt.id}
               className={`flex min-h-7 items-center gap-2 text-[12px] ${
-                index > 0 ? "border-t border-content/10" : ""
+                index > 0 ? "border-t border-edge" : ""
               }`}
             >
               <ListEnd className="size-3.5 shrink-0" />
@@ -120,7 +120,7 @@ export function QueueStrip({
                         saveEdit(prompt);
                       }
                     }}
-                    className="min-h-6 min-w-0 flex-1 resize-none rounded-md border border-content/15 bg-content/5 px-1.5 py-0.5 text-[12px] text-content outline-none focus:border-content/30"
+                    className="min-h-6 min-w-0 flex-1 resize-none rounded-md border border-edge-strong bg-content/5 px-1.5 py-0.5 text-[12px] text-content outline-none focus:border-edge-strong"
                   />
                   <button
                     type="button"
@@ -128,7 +128,7 @@ export function QueueStrip({
                     aria-label="Save queued prompt"
                     disabled={!editDraft.trim() && prompt.attachments.length === 0}
                     onClick={() => saveEdit(prompt)}
-                    className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-content/10 hover:text-content disabled:opacity-30"
+                    className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-hover hover:text-content disabled:opacity-30"
                   >
                     <Check className="size-3.5" />
                   </button>
@@ -137,7 +137,7 @@ export function QueueStrip({
                     title="Cancel queued prompt edit"
                     aria-label="Cancel queued prompt edit"
                     onClick={cancelEdit}
-                    className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-content/10 hover:text-content"
+                    className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-hover hover:text-content"
                   >
                     <X className="size-3.5" />
                   </button>
@@ -151,7 +151,7 @@ export function QueueStrip({
                     <button
                       type="button"
                       onClick={() => onSteer?.(prompt.id)}
-                      className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 hover:bg-content/10 hover:text-content"
+                      className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 hover:bg-hover hover:text-content"
                     >
                       <CornerDownRight className="size-3.5" />
                       Steer
@@ -162,7 +162,7 @@ export function QueueStrip({
                       title="Send now"
                       aria-label="Send now"
                       onClick={() => onSend(prompt.id)}
-                      className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-content/10 hover:text-content"
+                      className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-hover hover:text-content"
                     >
                       <ArrowUp className="size-3.5" strokeWidth={2.25} />
                     </button>
@@ -173,7 +173,7 @@ export function QueueStrip({
                       title="Edit queued prompt"
                       aria-label="Edit queued prompt"
                       onClick={() => startEdit(prompt)}
-                      className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-content/10 hover:text-content"
+                      className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-hover hover:text-content"
                     >
                       <Pencil className="size-3.5" />
                     </button>
@@ -184,7 +184,7 @@ export function QueueStrip({
                       title="Remove from queue"
                       aria-label="Remove from queue"
                       onClick={() => onRemove(prompt.id)}
-                      className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-content/10 hover:text-content"
+                      className="grid size-6 shrink-0 place-items-center rounded-md hover:bg-hover hover:text-content"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

@@ -160,7 +160,7 @@ function Tooltip({
 
   return (
     <div
-      className="pointer-events-none absolute bottom-full z-10 mb-2 w-max max-w-[15rem] rounded-lg border border-content/10 bg-[var(--color-background-base)] px-2.5 py-2 text-[11px] shadow-lg"
+      className="pointer-events-none absolute bottom-full z-10 mb-2 w-max max-w-[15rem] rounded-lg border border-edge bg-[var(--color-background-base)] px-2.5 py-2 text-[11px] shadow-lg"
       style={{ left: `${centre}%`, transform: `translateX(${shift})` }}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-3">

@@ -101,7 +101,7 @@ export function ModelMenu({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="pb-1.5">
-        <label className="flex items-center gap-2 border-b border-content/10 px-2 py-2.5 text-content/50">
+        <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
           <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
           <input
             ref={search}
@@ -204,7 +204,7 @@ function ModelList({
             ref={highlighted ? activeRef : undefined}
             onMouseEnter={() => onActive(index)}
             className={`flex w-full items-center gap-1 rounded-lg px-1 ${
-              disabled ? "" : highlighted || selected ? "bg-content/10" : "hover:bg-content/5"
+              disabled ? "" : highlighted || selected ? "bg-content/10" : "hover:bg-hover"
             }`}
           >
             <button

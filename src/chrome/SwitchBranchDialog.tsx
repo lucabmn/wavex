@@ -76,7 +76,7 @@ export function SwitchBranchDialog({
         aria-busy={Boolean(busy) || generating}
         aria-label={creating ? `Create ${branch}` : `Switch to ${branch}`}
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute left-1/2 top-[22%] flex w-[min(420px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[22%] flex w-[min(420px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-[13px] font-medium leading-tight text-content">
@@ -112,7 +112,7 @@ export function SwitchBranchDialog({
             aria-label="Generate commit message"
             disabled={Boolean(busy) || generating}
             onClick={() => void generate()}
-            className="absolute top-1 right-1 grid size-5 place-items-center rounded-md bg-content/10 text-content hover:bg-content/20 hover:text-content disabled:opacity-40"
+            className="absolute top-1 right-1 grid size-5 place-items-center rounded-md bg-content/10 text-content hover:bg-hover hover:text-content disabled:opacity-40"
           >
             {generating ? (
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -131,7 +131,7 @@ export function SwitchBranchDialog({
             type="button"
             disabled={Boolean(busy) || generating}
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content disabled:opacity-40"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
           >
             Cancel
           </button>
@@ -139,7 +139,7 @@ export function SwitchBranchDialog({
             type="button"
             disabled={!canCommit}
             onClick={() => onCommit(trimmed)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-content/10 px-3 py-1.5 text-[12px] font-medium text-content hover:bg-content/15 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md bg-content/10 px-3 py-1.5 text-[12px] font-medium text-content hover:bg-hover disabled:opacity-40"
           >
             {busy === "commit" ? (
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -150,7 +150,7 @@ export function SwitchBranchDialog({
             type="button"
             disabled={Boolean(busy) || generating}
             onClick={onStash}
-            className="inline-flex items-center gap-1.5 rounded-md bg-content px-3 py-1.5 text-[12px] font-medium text-background-base hover:bg-content/80 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md ui-fill px-3 py-1.5 text-[12px] font-medium disabled:opacity-40"
           >
             {busy === "stash" ? (
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />

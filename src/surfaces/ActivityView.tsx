@@ -168,7 +168,7 @@ export function ActivityView({
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 items-center border-b border-content/10 select-none"
+        className="flex h-10 shrink-0 items-center border-b border-edge select-none"
         data-tauri-drag-region="deep"
       >
         {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
@@ -212,7 +212,7 @@ export function ActivityView({
           <div
             role="group"
             aria-label="Filter agent activity"
-            className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
+            className="sticky top-0 z-10 flex items-center gap-1 border-b border-edge bg-background-base/90 px-3 py-2 backdrop-blur-md"
           >
             <FilterChip
               label="All"
@@ -272,7 +272,7 @@ export function ActivityView({
             <button
               type="button"
               onClick={() => setFilter("all")}
-              className="rounded-md bg-content/10 px-2 py-1 text-[11.5px] text-content/70 hover:bg-content/15 hover:text-content"
+              className="rounded-md bg-content/10 px-2 py-1 text-[11.5px] text-content/70 hover:bg-hover hover:text-content"
             >
               Show all activity
             </button>
@@ -323,7 +323,7 @@ function AgentRow({
       : null;
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-content/10 bg-content/[0.03] px-2.5 py-2">
+    <div className="flex items-center gap-2 rounded-lg border border-edge bg-content/[0.03] px-2.5 py-2">
       <button
         type="button"
         onClick={onOpen}
@@ -353,7 +353,7 @@ function AgentRow({
           title="Stop this turn"
           aria-label="Stop this turn"
           onClick={onStop}
-          className="grid size-6.5 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content"
+          className="grid size-6.5 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>

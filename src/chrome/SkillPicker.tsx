@@ -55,7 +55,7 @@ export function SkillPicker({
   return (
     <div
       data-skill-picker
-      className="overflow-hidden rounded-lg border border-content/10 bg-content/5 backdrop-blur-xl"
+      className="overflow-hidden rounded-lg border border-edge bg-content/5 backdrop-blur-xl"
     >
       {creating ? (
         <CreateSkillForm
@@ -76,7 +76,7 @@ export function SkillPicker({
             onPick={onPick}
             onEditTemplate={onEditTemplate}
           />
-          <div className="flex items-center gap-1 border-t border-content/10 px-1 py-1">
+          <div className="flex items-center gap-1 border-t border-edge px-1 py-1">
             <FooterAction
               label="New template"
               disabled={!templatesEnabled}
@@ -118,7 +118,7 @@ function FooterAction({
       title={title}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="flex flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12px] text-content/70 hover:bg-content/10 hover:text-content disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/70"
+      className="flex flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/70"
     >
       <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
       {label}
@@ -256,7 +256,7 @@ function PickerList({
                 aria-label={`Edit template ${template.name}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onEditTemplate(template)}
-                className={`absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-content/50 hover:bg-content/15 hover:text-content ${
+                className={`absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-content/50 hover:bg-hover hover:text-content ${
                   highlighted ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 }`}
               >
@@ -350,7 +350,7 @@ function CreateSkillForm({
           type="button"
           disabled={busy}
           onClick={onCancel}
-          className="rounded-md px-2 py-1 text-[12px] text-content/50 hover:bg-content/10 hover:text-content"
+          className="rounded-md px-2 py-1 text-[12px] text-content/50 hover:bg-hover hover:text-content"
         >
           Cancel
         </button>

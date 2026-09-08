@@ -99,7 +99,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
   return (
     <div className="px-2" data-session-review-shell>
       <div
-        className="relative z-0 rounded-t-[10px] border border-b-0 border-content/10 bg-content/3 px-2 py-1"
+        className="relative z-0 rounded-t-[10px] border border-b-0 border-edge bg-content/3 px-2 py-1"
         data-session-review
       >
         <div className="flex min-w-0 items-center gap-2">
@@ -127,7 +127,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               title="Undo all session changes"
               disabled={disabled}
               onClick={() => run("undo")}
-              className="h-6 rounded-md px-1.5  text-[11px] text-content/55 hover:bg-content/10 hover:text-content disabled:opacity-40"
+              className="h-6 rounded-md px-1.5  text-[11px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
             >
               Undo All
             </button>
@@ -136,7 +136,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               title="Keep all session changes"
               disabled={disabled}
               onClick={() => run("keep")}
-              className="h-6 rounded-md px-1.5  text-[11px] text-content/55 hover:bg-content/10 hover:text-content disabled:opacity-40"
+              className="h-6 rounded-md px-1.5  text-[11px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
             >
               Keep All
             </button>
@@ -144,7 +144,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               type="button"
               title="Review changes"
               onClick={() => onOpenDiff()}
-              className="h-6 rounded-md bg-content/15 px-2 text-[11px] text-content/80 hover:bg-content/20 hover:text-content"
+              className="h-6 rounded-md bg-content/15 px-2 text-[11px] text-content/80 hover:bg-hover hover:text-content"
             >
               Review
             </button>
@@ -199,7 +199,7 @@ function FileRow({
       type="button"
       title={file.relative}
       onClick={() => onOpenDiff(file.path)}
-      className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-1 text-left text-content/80 hover:bg-content/10 hover:text-content"
+      className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-1 text-left text-content/80 hover:bg-hover hover:text-content"
     >
       <FileTypeIcon name={name} isDir={false} size={16} />
       <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{name}</span>

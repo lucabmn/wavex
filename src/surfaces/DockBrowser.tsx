@@ -185,7 +185,7 @@ export function DockBrowser({ browser, active, onChange }: Props) {
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <form
-        className="flex h-9 shrink-0 items-center gap-0.5 border-b border-content/10 px-1"
+        className="flex h-9 shrink-0 items-center gap-0.5 border-b border-edge px-1"
         onSubmit={submit}
       >
         <IconButton label="Back" disabled={!back} onClick={() => onChange(browserBack(browser))}>
@@ -292,7 +292,7 @@ function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
             key={suggestion}
             type="button"
             onClick={() => onPick(suggestion)}
-            className="rounded-md bg-content/5 px-2 py-1 text-[11px] text-content/60 transition-colors hover:bg-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="rounded-md bg-content/5 px-2 py-1 text-[11px] text-content/60 transition-colors hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {suggestion}
           </button>

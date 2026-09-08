@@ -51,7 +51,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
               <button
                 type="button"
                 onClick={() => onSwitchProfile(profile.id)}
-                className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+                className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
               >
                 Switch to
               </button>
@@ -59,7 +59,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
             <button
               type="button"
               onClick={() => setEditing(profile)}
-              className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+              className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
             >
               Edit…
             </button>
@@ -88,7 +88,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15"
+            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-hover"
           >
             Add profile
           </button>

@@ -108,7 +108,7 @@ export function GitChangesPanel({
 
   return (
     <div ref={paneRef} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex h-9 shrink-0 items-center gap-2 border-b border-content/10 px-3">
+      <header className="flex h-9 shrink-0 items-center gap-2 border-b border-edge px-3">
         {(index?.additions ?? 0) > 0 || (index?.deletions ?? 0) > 0 ? (
           <DiffCounts additions={index?.additions ?? 0} deletions={index?.deletions ?? 0} />
         ) : (
@@ -161,7 +161,7 @@ export function GitChangesPanel({
         />
       ) : null}
       <div
-        className={`shrink-0 overflow-hidden border-t border-content/10 ${
+        className={`shrink-0 overflow-hidden border-t border-edge ${
           graphExpanded ? "min-h-0" : "h-7"
         }`}
         style={graphExpanded ? { height: graphHeight } : undefined}
@@ -401,7 +401,7 @@ function ChangedFiles({
 
   return (
     <aside className={`flex min-h-0 min-w-0 flex-col ${fill ? "flex-1" : "shrink-0"}`}>
-      <div className="shrink-0 border-b border-content/10 p-2">
+      <div className="shrink-0 border-b border-edge p-2">
         <div className="relative">
           <textarea
             ref={messageRef}
@@ -424,7 +424,7 @@ function ChangedFiles({
             aria-label="Generate commit message"
             disabled={!canGenerate}
             onClick={() => void generate()}
-            className="absolute top-1 right-1 grid size-5 place-items-center rounded-md text-content bg-content/10 hover:bg-content/20 hover:text-content disabled:opacity-40"
+            className="absolute top-1 right-1 grid size-5 place-items-center rounded-md text-content bg-content/10 hover:bg-hover hover:text-content disabled:opacity-40"
           >
             {busy === "generate" ? (
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -438,7 +438,7 @@ function ChangedFiles({
             type="button"
             disabled={!canCommit}
             onClick={() => void commit(false)}
-            className="flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-l-md bg-content text-[12px] font-medium text-background-base disabled:opacity-40"
+            className="flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-l-md ui-fill text-[12px] font-medium disabled:opacity-40"
           >
             <Check className="size-3.5" strokeWidth={2} />
             Commit
@@ -450,17 +450,17 @@ function ChangedFiles({
             aria-label="Commit options"
             disabled={!canCommit}
             onClick={() => setMenuOpen((open) => !open)}
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-r-md border-l border-background-base/10 bg-content text-background-base disabled:opacity-40"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-r-md border-l border-background-base/10 ui-fill disabled:opacity-40"
           >
             <ChevronDown className="size-3.5" strokeWidth={2} />
           </button>
           {menuOpen ? (
-            <div className="absolute top-full right-0 z-30 mt-1 min-w-48 rounded-md border border-content/10 bg-background-base py-1 shadow-lg">
+            <div className="absolute top-full right-0 z-30 mt-1 min-w-48 rounded-md border border-edge bg-background-base py-1 shadow-lg">
               <button
                 type="button"
                 disabled={!canCommitPush}
                 onClick={() => void commit(true)}
-                className="flex h-7 w-full items-center px-3 text-left text-[12px] text-content hover:bg-content/10 disabled:opacity-40"
+                className="flex h-7 w-full items-center px-3 text-left text-[12px] text-content hover:bg-hover disabled:opacity-40"
               >
                 Commit & Push
               </button>
@@ -468,7 +468,7 @@ function ChangedFiles({
                 type="button"
                 disabled={!canCommitPushPr}
                 onClick={() => void commit(true, true)}
-                className="flex h-7 w-full items-center px-3 text-left text-[12px] text-content hover:bg-content/10 disabled:opacity-40"
+                className="flex h-7 w-full items-center px-3 text-left text-[12px] text-content hover:bg-hover disabled:opacity-40"
               >
                 Commit, Push & Create PR
               </button>
@@ -688,7 +688,7 @@ function GitSyncActions({
   const viewTitle = pr?.title ? `View PR #${pr.number}: ${pr.title}` : "View pull request";
   const btn =
     "flex h-7 w-full min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-[12px] font-medium disabled:opacity-40";
-  const secondary = `${btn} bg-content/10 text-content hover:bg-content/15`;
+  const secondary = `${btn} bg-content/10 text-content hover:bg-hover`;
   const showCreatePr = !hasOpenPr && !onDefault;
   const showViewPr = hasOpenPr;
   if (!canPublish && !canSync && !showCreatePr && !showViewPr) return null;
@@ -835,7 +835,7 @@ function ChangeRow({
     <li>
       <div
         className={`group flex h-7 w-full items-center gap-1 px-2 leading-none ${
-          active ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
+          active ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
         }`}
       >
         <button
@@ -912,7 +912,7 @@ function IconAction({
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-5 place-items-center rounded text-content/55 hover:bg-content/10 hover:text-content disabled:opacity-40"
+      className="grid size-5 place-items-center rounded text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
     >
       {children}
     </button>

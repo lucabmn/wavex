@@ -109,8 +109,8 @@ export function MenuBarApp() {
     // so the card fills it edge to edge; an inset card would sit inside a
     // second frame.
     <main className="h-full text-content">
-      <div className="flex h-full flex-col overflow-hidden rounded-[14px] border border-content/10 bg-background-base/70">
-        <header className="flex h-11 shrink-0 items-center gap-2 border-b border-content/10 px-3">
+      <div className="flex h-full flex-col overflow-hidden rounded-[14px] border border-edge bg-background-base/70">
+        <header className="flex h-11 shrink-0 items-center gap-2 border-b border-edge px-3">
           <img src="/logo.png" alt="" className="h-3.5 w-5 object-contain" draggable={false} />
           <span className="text-[12px] font-semibold tracking-tight">wavex</span>
           <span
@@ -169,7 +169,7 @@ export function MenuBarApp() {
           <UsageTab active={focused} />
         )}
 
-        <footer className="flex h-10 shrink-0 items-center border-t border-content/10 px-3">
+        <footer className="flex h-10 shrink-0 items-center border-t border-edge px-3">
           <span className="text-[10px] text-content/45">
             {tab !== "agents"
               ? "From local CLI transcripts"
@@ -180,7 +180,7 @@ export function MenuBarApp() {
           <button
             type="button"
             onClick={() => void invoke("menu_bar_open_app")}
-            className="ml-auto inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[11px] text-content/55 hover:bg-content/10 hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
+            className="ml-auto inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[11px] text-content/55 hover:bg-hover hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
           >
             Open wavex
             <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
@@ -363,7 +363,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
             disabled={answer != null}
             aria-label={`Allow: ${approval.label}`}
             onClick={() => respond("allow")}
-            className="h-6 flex-1 rounded-md bg-content px-2.5 text-[11px] font-medium text-background-base hover:bg-content/85 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
+            className="h-6 flex-1 rounded-md ui-fill px-2.5 text-[11px] font-medium focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
           >
             {answer === "allow" ? "Allowing…" : "Allow"}
           </button>
@@ -372,7 +372,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
             disabled={answer != null}
             aria-label={`Deny: ${approval.label}`}
             onClick={() => respond("deny")}
-            className="h-6 flex-1 rounded-md bg-content/10 px-2.5 text-[11px] font-medium text-content/75 hover:bg-content/20 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
+            className="h-6 flex-1 rounded-md bg-content/10 px-2.5 text-[11px] font-medium text-content/75 hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
           >
             {answer === "deny" ? "Denying…" : "Deny"}
           </button>
@@ -381,7 +381,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
             aria-label={`Open ${agent.title} in wavex`}
             title="Open in wavex"
             onClick={() => focusMenuBarAgent(agent.id)}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/40 hover:bg-content/10 hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-content/40 hover:bg-hover hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
           >
             <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
           </button>
@@ -391,7 +391,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
           <button
             type="button"
             onClick={() => focusMenuBarAgent(agent.id)}
-            className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md bg-content/10 text-[11px] font-medium text-content/75 hover:bg-content/20 focus-visible:outline-2 focus-visible:outline-accent"
+            className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md bg-content/10 text-[11px] font-medium text-content/75 hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent"
           >
             Open session to answer
             <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
@@ -494,7 +494,7 @@ function UsageTab({ active }: { active: boolean }) {
           title="Refresh usage"
           disabled={busy}
           onClick={refresh}
-          className="grid size-6 place-items-center rounded-md text-content/40 hover:bg-content/10 hover:text-content disabled:opacity-40"
+          className="grid size-6 place-items-center rounded-md text-content/40 hover:bg-hover hover:text-content disabled:opacity-40"
         >
           <RefreshCw
             className={`size-3.5 ${busy ? "animate-spin" : ""}`}
@@ -530,7 +530,7 @@ function UsageSummary({ report }: { report: UsageReport }) {
       </div>
 
       {report.providers.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-content/10 px-4 py-5 text-center">
+        <div className="rounded-lg border border-dashed border-edge px-4 py-5 text-center">
           <p className="text-[11px] text-content/45">No usage in this period</p>
         </div>
       ) : (

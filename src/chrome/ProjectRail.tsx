@@ -424,7 +424,7 @@ export function ProjectRail({
     <nav
       ref={resize.setPaneRef}
       aria-label="Projects"
-      className="sidebar-glass halo-seam-right relative flex shrink-0 flex-col"
+      className="sidebar-glass ui-rule-r relative flex shrink-0 flex-col"
     >
       <div
         className="flex h-10 shrink-0 select-none items-center pr-1.5"
@@ -659,7 +659,7 @@ export function ProjectRail({
         aria-valuemin={PROJECT_RAIL_WIDTH_MIN}
         aria-valuemax={resize.maxWidth}
         className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none focus-visible:bg-accent/60 focus-visible:outline-none ${
-          resize.dragging ? "bg-content/15" : "hover:bg-content/10"
+          resize.dragging ? "bg-content/15" : "hover:bg-hover"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
@@ -719,12 +719,9 @@ function LiveAgentsPreview({
           aria-expanded={!collapsed}
           aria-label={collapsed ? "Expand working agents" : "Collapse working agents"}
           onClick={() => setCollapsed((closed) => !closed)}
-          className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left hover:bg-content/8"
+          className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left hover:bg-hover"
         >
-          <span
-            aria-hidden
-            className="size-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-pulse"
-          />
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-accent animate-pulse" />
           <span className="min-w-0 flex-1 truncate text-xs text-content/50">Working</span>
           <span className="text-[11px] tabular-nums text-content/40">{agents.length}</span>
           {collapsed ? (
@@ -760,7 +757,7 @@ function LiveAgentsPreview({
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setExpanded((open) => !open)}
-                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11px] text-content/50 hover:bg-content/8 hover:text-content"
+                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11px] text-content/50 hover:bg-hover hover:text-content"
               >
                 {expanded ? (
                   <ChevronUp className="size-3" strokeWidth={1.75} />
@@ -823,9 +820,9 @@ function LiveAgentCard({
       aria-label={[agent.title, where, activity, elapsed].filter(Boolean).join(", ")}
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect?.(agent.id)}
-      data-halo={selected ? "on" : undefined}
-      className={`halo-row halo-focus relative flex w-full flex-col rounded-lg px-2 py-1.5 text-left transition-colors ${
-        selected ? "" : "hover:bg-content/6"
+      data-selected={selected ? "true" : undefined}
+      className={`ui-row ui-focus relative flex w-full flex-col rounded-lg px-2 py-1.5 text-left transition-colors ${
+        selected ? "" : "hover:bg-hover"
       }`}
     >
       <span className="flex min-w-0 items-center gap-2">
@@ -932,7 +929,7 @@ function ProjectSection({
             title="Open project"
             aria-label="Open project"
             onClick={onAdd}
-            className="halo-focus grid size-5 shrink-0 place-items-center rounded-md text-content/45 transition-colors hover:bg-content/8 hover:text-content"
+            className="ui-focus grid size-5 shrink-0 place-items-center rounded-md text-content/45 transition-colors hover:bg-hover hover:text-content"
           >
             <Plus className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -1038,13 +1035,13 @@ function ProjectCard({
   return (
     <div
       ref={(el) => sortable.setItemRef(item.path, el)}
-      data-halo={selected ? "on" : undefined}
-      className={`halo-row group relative flex h-8 touch-none items-stretch rounded-lg px-2 transition-colors ${
+      data-selected={selected ? "true" : undefined}
+      className={`ui-row group relative flex h-8 touch-none items-stretch rounded-lg px-2 transition-colors ${
         selected
           ? "text-content"
           : expanded
-            ? "text-content hover:bg-content/6"
-            : "opacity-60 hover:bg-content/6 hover:text-content"
+            ? "text-content hover:bg-hover"
+            : "opacity-60 hover:bg-hover hover:text-content"
       } ${dragging ? "opacity-40" : ""} cursor-default`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -1063,10 +1060,10 @@ function ProjectCard({
       onContextMenu={(event) => onContextMenu(item.path, event)}
     >
       {showStart ? (
-        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 rounded-full bg-gradient-to-r from-accent to-accent-2" />
+        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 rounded-full bg-accent" />
       ) : null}
       {showEnd ? (
-        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 rounded-full bg-gradient-to-r from-accent to-accent-2" />
+        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 rounded-full bg-accent" />
       ) : null}
       <button
         type="button"
@@ -1124,7 +1121,7 @@ function ProjectCard({
           event.stopPropagation();
           onOpenMenu(item.path, event.clientX, event.clientY);
         }}
-        className="halo-focus absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-content/50 transition-colors hover:bg-content/8 hover:text-content group-hover:grid"
+        className="ui-focus absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-content/50 transition-colors hover:bg-hover hover:text-content group-hover:grid"
       >
         <MoreHorizontal className="size-4" strokeWidth={1.75} />
       </button>

@@ -76,7 +76,7 @@ export function HostProjectDialog({ onCancel, onOpen, onPickLocal }: Props) {
           <button
             type="button"
             onClick={onPickLocal}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-content/55 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-content/55 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <FolderOpen className="size-3.5" strokeWidth={1.75} />
             This device
@@ -88,8 +88,8 @@ export function HostProjectDialog({ onCancel, onOpen, onPickLocal }: Props) {
               onClick={() => setHostId(host.hostId)}
               className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 host.hostId === hostId
-                  ? "bg-accent/16 text-content"
-                  : "text-content/55 hover:bg-content/8 hover:text-content"
+                  ? "bg-accent/14 text-content"
+                  : "text-content/55 hover:bg-hover hover:text-content"
               }`}
             >
               <Connection className="size-3.5" strokeWidth={1.75} />
@@ -168,12 +168,12 @@ function HostBrowser({
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-2 border-b border-content/8 px-4 pb-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-edge px-4 pb-2">
         <button
           type="button"
           onClick={goUp}
           disabled={!cwd || parentPath(cwd) === cwd}
-          className="rounded-md px-1.5 py-0.5 text-[12px] text-content/55 hover:bg-content/8 hover:text-content disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="rounded-md px-1.5 py-0.5 text-[12px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           Up
         </button>
@@ -198,7 +198,7 @@ function HostBrowser({
               type="button"
               onClick={() => setCwd(entry.path)}
               onDoubleClick={() => onOpen(entry.path)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-content/80 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-content/80 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <Folder className="size-4 shrink-0 text-content/45" strokeWidth={1.75} />
               <span className="min-w-0 flex-1 truncate">{entry.name}</span>
@@ -207,12 +207,12 @@ function HostBrowser({
           ))
         )}
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t border-content/8 px-4 py-3">
+      <div className="flex shrink-0 justify-end gap-2 border-t border-edge px-4 py-3">
         <button
           type="button"
           disabled={!canOpen}
           onClick={() => cwd && onOpen(cwd)}
-          className="halo-fill halo-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40 disabled:shadow-none"
+          className="ui-fill ui-focus rounded-lg px-3.5 py-1.5 text-[12px] font-medium disabled:opacity-40"
         >
           Open this folder
         </button>

@@ -4,17 +4,19 @@
 @source "../node_modules/@streamdown/mermaid/dist/*.js";
 
 /*
- * ── wavex Halo ─────────────────────────────────────────────────────────────
+ * ── The wavex surface ──────────────────────────────────────────────────────
  *
- * The app is drawn on a ladder of surfaces rather than one flat sheet: a
- * sunken canvas, the panel plane, raised cards, and overlays. Every rung is
- * derived from the one background lightness the user controls, so the whole
- * ladder moves with a single slider instead of drifting apart.
+ * The app is drawn as planes of colour separated by space, not as boxes drawn
+ * with rules. Four surfaces come off the one background lightness the user
+ * controls — sunken, the panel plane, raised, and overlay — and a step between
+ * two of them is what says one thing sits on another. A hairline is the
+ * exception, kept for a genuine input and the edge of something that floats,
+ * because a rule around every box turns a window into a wireframe of itself.
  *
- * Depth is carried by a tinted cast shadow and a lit top edge rather than a
- * hairline around every box. That is what keeps the transparent window
- * readable: a border drawn over vibrancy reads as a seam, a highlight reads
- * as glass.
+ * Nothing here uses a gradient, and nothing glows. Colour carries meaning:
+ * the accent marks what is selected and what is about to happen, and it is
+ * the only saturated thing on screen, which is what makes it readable at a
+ * glance in a window full of text.
  */
 @theme {
   --color-background-base: hsl(
@@ -22,27 +24,21 @@
   );
   --color-content: hsl(var(--theme-hue) var(--theme-saturation) var(--content-lightness));
   --color-accent: hsl(var(--accent-hue) var(--accent-saturation) var(--accent-lightness));
-  /*
-   * The second accent stop, derived rather than picked: one hue slider gives
-   * two related colors, so every gradient in the app turns with the user's
-   * choice instead of pinning a brand color they cannot change.
-   */
-  --color-accent-2: hsl(
-    calc(var(--accent-hue) + 42) var(--accent-saturation) calc(var(--accent-lightness) + 5%)
-  );
   --color-surface: var(--surface-1);
   --color-surface-sunken: var(--surface-0);
   --color-surface-raised: var(--surface-2);
   --color-surface-overlay: var(--surface-3);
   --color-edge: var(--edge);
   --color-edge-strong: var(--edge-strong);
-  --color-skill: #f4b942;
-  --color-template: #b491ff;
-  --color-mention: #4fd1e0;
-  --shadow-lift: var(--elevation-1);
+  /* One hover tone for the whole app, so a row in the file tree answers the
+     pointer exactly like a row in a menu. */
+  --color-hover: var(--hover);
+  --color-skill: #d9a441;
+  --color-template: #9a8cd8;
+  --color-mention: #5ba3a0;
+  --shadow-raise: var(--elevation-1);
   --shadow-float: var(--elevation-2);
   --shadow-cast: var(--elevation-3);
-  --shadow-halo: var(--halo);
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
@@ -52,86 +48,70 @@
 }
 
 :root {
-  --theme-hue: 234;
-  --theme-saturation: 14%;
-  --accent-hue: 264;
-  --accent-saturation: 88%;
-  --accent-lightness: 66%;
-  --sidebar-opacity: 0.72;
-  --background-lightness: 8%;
-  --content-lightness: 94%;
+  /*
+   * A warm graphite ground. The warmth is the point: a neutral or blue-black
+   * window full of grey text is the default every tool of this kind arrives
+   * at, and a few degrees of red in the greys is what stops the app reading
+   * as a terminal with panels bolted on.
+   */
+  --theme-hue: 28;
+  --theme-saturation: 7%;
+  /*
+   * Clay. Restrained on purpose — a fully saturated accent has to be rationed
+   * to stay legible, and this one is used on every selected row, so it is
+   * mixed down far enough to live next to body text all day.
+   */
+  --accent-hue: 14;
+  --accent-saturation: 54%;
+  --accent-lightness: 56%;
+  --sidebar-opacity: 0.8;
+  --background-lightness: 9%;
+  --content-lightness: 92%;
 
   /*
-   * The ladder. The steps are deliberately small — four percent of lightness
-   * reads as a plane when it carries a shadow, and as noise when it does not.
-   * Saturation climbs with the rung so a raised card looks lit by the theme
-   * rather than washed out toward gray.
+   * The ladder. Steps are small — three or four percent of lightness reads as
+   * a plane and not as a patch — and saturation climbs a little with each
+   * rung so a raised surface looks warmed rather than washed toward grey.
    */
-  --surface-0: hsl(
-    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) - 2.5%)
-  );
+  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) - 2%));
   --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
   --surface-2: hsl(
-    var(--theme-hue) calc(var(--theme-saturation) + 2%) calc(var(--background-lightness) + 4%)
+    var(--theme-hue) calc(var(--theme-saturation) + 1%) calc(var(--background-lightness) + 3.5%)
   );
   --surface-3: hsl(
-    var(--theme-hue) calc(var(--theme-saturation) + 3%) calc(var(--background-lightness) + 7%)
+    var(--theme-hue) calc(var(--theme-saturation) + 2%) calc(var(--background-lightness) + 6.5%)
   );
 
-  --edge: color-mix(in srgb, var(--color-content) 10%, transparent);
-  --edge-strong: color-mix(in srgb, var(--color-content) 18%, transparent);
-  /* The lit top edge. Inset, one pixel, never a full border. */
-  --edge-highlight: color-mix(in srgb, white 9%, transparent);
+  /*
+   * `--rule` is the strength of every hairline in the app, exposed as the
+   * Separators setting. It is one number because the alternative — a hundred
+   * hand-picked border opacities — is how the chrome ended up looking like a
+   * wireframe in the first place.
+   */
+  --rule: 0.09;
+  --edge: color-mix(in srgb, var(--color-content) calc(100% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(190% * var(--rule)), transparent);
+
+  --hover: color-mix(in srgb, var(--color-content) 6%, transparent);
 
   /*
-   * Shadows take the theme hue instead of black. A neutral drop shadow on a
-   * tinted surface grays it out; a tinted one deepens it.
+   * Shadows are for things that genuinely float and nothing else. Flat black
+   * at low alpha rather than a tinted or coloured drop: on a warm ground a
+   * tinted shadow reads as a smudge of the accent.
    */
-  --shade: hsl(var(--theme-hue) calc(var(--theme-saturation) + 26%) 4%);
-  --elevation-1: 0 1px 2px -1px color-mix(in srgb, var(--shade) 60%, transparent);
-  --elevation-2:
-    0 8px 20px -10px color-mix(in srgb, var(--shade) 70%, transparent),
-    0 2px 6px -4px color-mix(in srgb, var(--shade) 55%, transparent);
-  --elevation-3:
-    0 32px 64px -24px color-mix(in srgb, var(--shade) 80%, transparent),
-    0 10px 24px -14px color-mix(in srgb, var(--shade) 60%, transparent);
-  --halo:
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 50%, transparent),
-    0 0 20px -6px color-mix(in srgb, var(--color-accent) 70%, transparent);
-
-  /*
-   * The ambient wash: two accent-tinted pools in the top corners and one
-   * under the composer, painted as a background image so it sits behind
-   * content without a stacking context of its own. `--ambient` scales it to
-   * nothing at zero, which is the setting rather than a separate code path.
-   */
-  --ambient: 1;
-  --app-ambient:
-    radial-gradient(
-      125% 80% at 6% -14%,
-      color-mix(in srgb, var(--color-accent) calc(16% * var(--ambient)), transparent),
-      transparent 62%
-    ),
-    radial-gradient(
-      110% 70% at 97% -8%,
-      color-mix(in srgb, var(--color-accent-2) calc(13% * var(--ambient)), transparent),
-      transparent 58%
-    ),
-    radial-gradient(
-      120% 55% at 50% 118%,
-      color-mix(in srgb, var(--color-accent-2) calc(9% * var(--ambient)), transparent),
-      transparent 62%
-    );
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.18);
+  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.22);
+  --elevation-3: 0 16px 40px rgb(0 0 0 / 0.34);
 
   --editor-font-size: 13px;
   --transcript-width: 56rem;
   --transcript-font-size: 13px;
   --transcript-gap: 0.25rem;
-  --link-color: hsl(calc(var(--accent-hue) + 42) 90% 76%);
-  --color-skill: #f4b942;
-  --color-template: #b491ff;
-  --color-mention: #4fd1e0;
-  --color-markdown-heading: #8fd3ff;
+  --link-color: hsl(var(--accent-hue) 55% 68%);
+  --color-skill: #d9a441;
+  --color-template: #9a8cd8;
+  --color-mention: #5ba3a0;
+  --color-markdown-heading: #d8b48a;
 }
 
 html {
@@ -139,42 +119,50 @@ html {
 }
 
 /*
- * Depth. `soft` is the ladder above, so it needs no class; these two are the
- * ends of the same rule. Flat keeps a hairline where the shadow was, because
- * a plane with neither shadow nor edge stops being a plane.
+ * Depth. `soft` is the ladder above, so it needs no class of its own; these
+ * two are the ends of the same rule. Flat keeps a hairline where the shadow
+ * was, because a plane with neither shadow nor edge stops being a plane.
  */
 html.depth-flat {
   --elevation-1: none;
   --elevation-2: 0 0 0 1px var(--edge);
   --elevation-3: 0 0 0 1px var(--edge-strong);
-  --edge-highlight: transparent;
 }
 
 html.depth-deep {
-  --elevation-1: 0 2px 5px -2px color-mix(in srgb, var(--shade) 70%, transparent);
-  --elevation-2:
-    0 16px 34px -12px color-mix(in srgb, var(--shade) 85%, transparent),
-    0 4px 10px -5px color-mix(in srgb, var(--shade) 65%, transparent);
-  --elevation-3:
-    0 48px 96px -28px color-mix(in srgb, var(--shade) 92%, transparent),
-    0 16px 36px -18px color-mix(in srgb, var(--shade) 75%, transparent);
+  --elevation-1: 0 1px 3px rgb(0 0 0 / 0.26);
+  --elevation-2: 0 8px 22px rgb(0 0 0 / 0.34);
+  --elevation-3: 0 26px 64px rgb(0 0 0 / 0.48);
 }
 
 html.theme-light {
-  --background-lightness: 94%;
-  --content-lightness: 20%;
-  --accent-saturation: 76%;
-  --accent-lightness: 50%;
-  --edge: color-mix(in srgb, var(--color-content) 12%, transparent);
-  --edge-strong: color-mix(in srgb, var(--color-content) 22%, transparent);
-  /* On a light ground the highlight is the thing that reads, not the shadow. */
-  --edge-highlight: color-mix(in srgb, white 80%, transparent);
-  --shade: hsl(var(--theme-hue) calc(var(--theme-saturation) + 16%) 44%);
-  --link-color: hsl(calc(var(--accent-hue) + 42) 78% 42%);
-  --color-skill: #96690a;
-  --color-template: #6d3ff5;
-  --color-mention: #0b8ea8;
-  --color-markdown-heading: #0d6fa8;
+  --background-lightness: 96%;
+  --content-lightness: 18%;
+  --accent-saturation: 56%;
+  --accent-lightness: 40%;
+  /*
+   * The upper rungs take smaller steps on paper. Lightness runs out at 100%,
+   * so the dark theme's steps would land raised and overlay on the same white
+   * and collapse the top of the ladder.
+   */
+  --surface-2: hsl(
+    var(--theme-hue) calc(var(--theme-saturation) + 1%) calc(var(--background-lightness) + 2%)
+  );
+  --surface-3: hsl(
+    var(--theme-hue) calc(var(--theme-saturation) + 2%) calc(var(--background-lightness) + 3.8%)
+  );
+  /* Ink on paper needs a firmer rule than light on graphite to read at all. */
+  --edge: color-mix(in srgb, var(--color-content) calc(140% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(260% * var(--rule)), transparent);
+  --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.07);
+  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.09);
+  --elevation-3: 0 16px 40px rgb(0 0 0 / 0.14);
+  --link-color: hsl(var(--accent-hue) 60% 40%);
+  --color-skill: #8a6212;
+  --color-template: #5b4bb5;
+  --color-mention: #2b7a76;
+  --color-markdown-heading: #8a5a28;
   color-scheme: light;
 }
 
@@ -221,11 +209,11 @@ html:not(.is-mac) ::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 9999px;
   background-clip: content-box;
-  background-color: color-mix(in srgb, var(--color-content) 20%, transparent);
+  background-color: color-mix(in srgb, var(--color-content) 18%, transparent);
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--color-content) 38%, transparent);
+  background-color: color-mix(in srgb, var(--color-content) 34%, transparent);
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-corner {
@@ -236,16 +224,6 @@ html.has-native-glass,
 html.has-native-glass body,
 html.has-native-glass #root {
   background: transparent;
-}
-
-/*
- * The ambient wash again, on the root this time, for the surfaces that are
- * not a panel — pairing, onboarding, a bare dialog over the window. Skipped
- * under native vibrancy, where the root has to stay genuinely transparent and
- * the panels paint the wash themselves.
- */
-html:not(.has-native-glass) #root {
-  background-image: var(--app-ambient);
 }
 
 /* The inline rule in `index.html` paints the shade dark, because first paint
@@ -274,13 +252,12 @@ html.reduce-motion *::after {
 
 /*
  * The rail and the sidebar sit one rung below the body, so the working area
- * is the brightest plane on screen. Both carry the ambient wash: it is one
- * continuous field across the window rather than a gradient per panel, which
- * is why the panels paint it themselves instead of a layer behind them.
+ * is the brightest plane on screen. That step is the whole separation — there
+ * is no rule between them, because two planes that differ already read as two
+ * planes and a line between them only adds a seam.
  */
 .sidebar-glass {
   background-color: var(--surface-0);
-  background-image: var(--app-ambient);
 }
 
 html.has-native-glass .sidebar-glass {
@@ -293,7 +270,6 @@ html.has-native-glass .sidebar-glass {
 
 .body-glass {
   background-color: var(--surface-1);
-  background-image: var(--app-ambient);
 }
 
 .transcript-turn {
@@ -444,37 +420,30 @@ header[data-tauri-drag-region] button {
 }
 
 /*
- * The settings slider. The track is sunken and the thumb is a lit disc that
- * picks up the accent halo on hover, so a row of sliders reads as controls
- * rather than as hairlines with dots on them.
+ * The settings slider: a sunken track and a flat clay thumb. No gradient and
+ * no ring — the thumb is already the only saturated thing in the row.
  */
 .sidebar-opacity-slider {
   appearance: none;
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
   background: var(--surface-0);
-  box-shadow:
-    inset 0 0 0 1px var(--edge),
-    inset 0 1px 2px color-mix(in srgb, var(--shade) 45%, transparent);
+  box-shadow: inset 0 0 0 1px var(--edge);
   outline: none;
 }
 
 .sidebar-opacity-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border-radius: 999px;
-  background: linear-gradient(160deg, var(--color-accent), var(--color-accent-2));
-  box-shadow:
-    var(--elevation-1),
-    inset 0 1px 0 color-mix(in srgb, white 35%, transparent);
+  background: var(--color-accent);
   cursor: pointer;
-  transition: box-shadow 140ms ease;
 }
 
-.sidebar-opacity-slider:hover::-webkit-slider-thumb,
 .sidebar-opacity-slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: var(--halo);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .agent-markdown [data-streamdown="code-block"],
@@ -1319,159 +1288,227 @@ header[data-tauri-drag-region] button {
   border-top-right-radius: 0;
 }
 
-/* ── Halo primitives ───────────────────────────────────────────────────────
+/* ── Surface primitives ────────────────────────────────────────────────────
  *
- * The shapes the redesign is made of. They live here rather than as repeated
- * utility strings because every one of them is two or three properties that
- * only mean something together — a wash without its spine reads as a hover
- * state, a shadow without its lit edge reads as a smudge.
+ * The handful of shapes the chrome is made of. They live here rather than as
+ * repeated utility strings because each is two or three properties that only
+ * mean anything together, and because one definition is what keeps a row in
+ * the file tree behaving like a row in a menu.
  */
 
-/*
- * A plane that sits above the one behind it: raised fill, a hairline, a cast
- * shadow, and the one-pixel lit top edge. The highlight is an inset shadow
- * rather than a border so it survives a transparent window, where a real
- * border would draw a seam through the vibrancy.
- */
-.halo-pane {
+/* A card inside a page: a step up from the plane behind it, and a rule only
+   because a settings card has to hold a list of rows apart from the page. */
+.ui-pane {
   border: 1px solid var(--edge);
   background: var(--surface-2);
-  box-shadow:
-    var(--elevation-2),
-    inset 0 1px 0 0 var(--edge-highlight);
 }
 
-/* Overlays — popovers, menus, dialogs — sit a rung higher and cast further. */
-.halo-overlay {
-  border: 1px solid var(--edge);
-  background: color-mix(in srgb, var(--surface-3) 86%, transparent);
-  box-shadow:
-    var(--elevation-3),
-    inset 0 1px 0 0 var(--edge-highlight);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+/* Something that genuinely floats: menu, popover, dialog. This is where the
+   shadow and the border earn their place. */
+.ui-overlay {
+  border: 1px solid var(--edge-strong);
+  background: var(--surface-3);
+  box-shadow: var(--elevation-3);
 }
 
 /*
- * The selected row. A tinted wash plus a short accent spine on the leading
- * edge: the spine is what carries selection at a glance down a long list,
- * where a fill alone is just a slightly different gray.
+ * A row in a list. Hover and pressed come from the two shared tones; the
+ * selected state is a flat step up plus a clay rule down the leading edge.
+ * The rule is what carries selection down a long list — a fill on its own is
+ * one more shade of grey among forty.
  */
-.halo-row {
+.ui-row {
   position: relative;
 }
 
-.halo-row::before {
+.ui-row::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   width: 2px;
-  height: 0;
-  border-radius: 0 2px 2px 0;
-  background: linear-gradient(to bottom, var(--color-accent), var(--color-accent-2));
+  background: var(--color-accent);
   opacity: 0;
-  transform: translateY(-50%);
-  transition:
-    height 180ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 140ms ease;
 }
 
-.halo-row[data-halo="on"]::before {
-  height: 60%;
+.ui-row[data-selected="true"]::before {
   opacity: 1;
 }
 
-.halo-row[data-halo="on"] {
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--color-accent) 16%, transparent),
-    color-mix(in srgb, var(--color-accent) 6%, transparent) 55%,
-    transparent
-  );
+.ui-row[data-selected="true"] {
+  background: var(--surface-2);
 }
 
-/* The accent gradient, for the one primary action a surface is allowed. */
-.halo-fill {
-  background-image: linear-gradient(
-    135deg,
-    var(--color-accent),
-    color-mix(in srgb, var(--color-accent-2) 85%, var(--color-accent))
-  );
-  color: white;
-  box-shadow:
-    var(--elevation-1),
-    inset 0 1px 0 0 color-mix(in srgb, white 22%, transparent);
+/* The one filled action a surface is allowed. Flat clay, no gradient: it has
+   to read as a button, not as an illustration of one. */
+.ui-fill {
+  background: var(--color-accent);
+  color: hsl(var(--accent-hue) 70% 8%);
 }
 
-.halo-fill:hover:not(:disabled) {
-  filter: brightness(1.08);
+html.theme-light .ui-fill {
+  color: hsl(var(--accent-hue) 40% 98%);
 }
 
-.halo-fill:active:not(:disabled) {
-  filter: brightness(0.94);
+.ui-fill:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: hsl(var(--accent-hue) var(--accent-saturation) calc(var(--accent-lightness) + 5%));
 }
 
-/* A tinted, unfilled action: the accent as a wash rather than a block. */
-.halo-tint {
-  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+.ui-fill:active:not(:disabled):not([aria-disabled="true"]) {
+  background: hsl(var(--accent-hue) var(--accent-saturation) calc(var(--accent-lightness) - 4%));
+}
+
+/* Its quieter sibling: the accent as text on a tinted ground. */
+.ui-tint {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
   color: var(--color-accent);
 }
 
-.halo-tint:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
-}
-
-/* Micro-labels: the section headings above a group of rows. */
-.halo-label {
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-content) 38%, transparent);
+.ui-tint:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
 /*
- * The seam between two panels. A gradient rather than a flat hairline: it is
- * strongest where the content is and fades at the window edges, so the chrome
- * stops looking like a wireframe of boxes.
+ * Section headings. Small, uppercase, widely tracked — the tracking is doing
+ * the work a heavier weight or a rule underneath would otherwise do, which is
+ * why headings here need neither.
  */
-.halo-seam-y {
-  background-image: linear-gradient(
-    to bottom,
-    transparent,
-    var(--edge) 12%,
-    var(--edge) 88%,
-    transparent
-  );
-}
-
-.halo-seam-x {
-  background-image: linear-gradient(
-    to right,
-    transparent,
-    var(--edge) 8%,
-    var(--edge) 92%,
-    transparent
-  );
-}
-
-/* Focus is the accent halo everywhere, not a browser outline. */
-.halo-focus:focus-visible {
-  outline: none;
-  box-shadow: var(--halo);
+.ui-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-content) 42%, transparent);
 }
 
 /*
- * Typography. A hair of negative tracking across the UI tightens the small
- * sizes the app is mostly made of; code and terminals keep their metrics,
- * where tracking is alignment rather than style.
+ * Focus. A ring inset by a pixel so it lands inside the control's own bounds
+ * instead of pushing the layout around, and drawn in the accent because the
+ * accent is already what "this one" means everywhere else.
+ */
+.ui-focus:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+/*
+ * A tab. Flush with the strip, no fill and no border: the active one is named
+ * by a clay rule along its bottom edge and by its text going to full
+ * strength. This is the idiom the whole app uses for exclusive choices —
+ * title-bar tabs, workspace tabs, editor tabs, the mode switch.
+ */
+.ui-tab {
+  position: relative;
+  color: color-mix(in srgb, var(--color-content) 52%, transparent);
+}
+
+.ui-tab:hover {
+  color: color-mix(in srgb, var(--color-content) 80%, transparent);
+}
+
+.ui-tab[data-selected="true"] {
+  color: var(--color-content);
+}
+
+.ui-tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-accent);
+  opacity: 0;
+}
+
+.ui-tab[data-selected="true"]::after {
+  opacity: 1;
+}
+
+/* A tab inside a boxed track — a settings segmented control — where there is
+   no strip edge for the rule to sit on, so the active one takes a fill. */
+.ui-segment[data-selected="true"] {
+  background: var(--surface-3);
+  color: var(--color-content);
+}
+
+/*
+ * Rules. Two of them, both one pixel, both `--rule` strength: `ui-rule-b`
+ * under a strip of chrome, `ui-rule-r` between two columns. They are drawn as
+ * a pseudo-element rather than a border so a translucent window does not
+ * stack a second line where two panels meet.
+ */
+.ui-rule-b,
+.ui-rule-r {
+  position: relative;
+}
+
+.ui-rule-b::after,
+.ui-rule-r::after {
+  content: "";
+  position: absolute;
+  background: var(--edge);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ui-rule-b::after {
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+}
+
+.ui-rule-r::after {
+  inset-block: 0;
+  right: 0;
+  width: 1px;
+}
+
+/*
+ * The composer. The one place the app raises something toward the reader, and
+ * it does it with a plane and a rule rather than a glow: it is where the
+ * cursor lives, so it is the brightest surface on screen and everything else
+ * sits back from it.
+ */
+.ui-composer {
+  border: 1px solid var(--edge-strong);
+  background: var(--surface-2);
+}
+
+.ui-composer:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--edge-strong));
+}
+
+/* Scroll areas inside the chrome get the same thumb on every platform. */
+.ui-scroll::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.ui-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ui-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--color-content) 18%, transparent);
+}
+
+.ui-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-content) 34%, transparent);
+}
+
+/*
+ * Typography. The UI runs a hair tight; code and terminals keep their own
+ * metrics, where tracking is alignment rather than style.
  */
 html,
 body,
 #root {
-  letter-spacing: -0.006em;
+  letter-spacing: -0.008em;
 }
 
 code,
@@ -1486,157 +1523,26 @@ samp,
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
   color: var(--color-content);
 }
 
 /*
- * Scrollbars, on every platform. macOS overlay scrollbars are the reason the
- * rules above are scoped away from it, but the app's own scroll areas read as
- * part of the chrome, so they get the same thin accent-neutral thumb.
+ * The user's own turn in a transcript. A raised plane with a clay rule down
+ * the leading edge, which is the same mark a selected row carries — in a long
+ * scroll of agent output, what the person typed has to be findable without
+ * reading, and one more grey block is not findable.
  */
-.halo-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.halo-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.halo-scroll::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 9999px;
-  background-clip: content-box;
-  background-color: color-mix(in srgb, var(--color-content) 18%, transparent);
-}
-
-.halo-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--color-content) 34%, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .halo-row::before {
-    transition: none;
-  }
-}
-
-/*
- * The title bar. Its rule fades out at both window edges rather than running
- * corner to corner: the old chrome read as a stack of boxed strips, and the
- * line across the top was the loudest of them.
- */
-.halo-topbar {
+.ui-prompt {
   position: relative;
+  background: var(--surface-2);
+  box-shadow: inset 2px 0 0 0 var(--color-accent);
 }
 
-.halo-topbar::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: 1px;
-  background-image: linear-gradient(
-    to right,
-    transparent,
-    var(--edge) 8%,
-    var(--edge) 92%,
-    transparent
-  );
-  pointer-events: none;
-}
-
-/* A vertical seam between two strips of chrome, fading at both ends. */
-.halo-divide-r {
-  position: relative;
-}
-
-.halo-divide-r::after {
-  content: "";
-  position: absolute;
-  top: 20%;
-  bottom: 20%;
-  right: 0;
-  width: 1px;
-  background: var(--edge);
-  pointer-events: none;
-}
-
-/* The seam between a side panel and the body it borders. */
-.halo-seam-right::after {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  right: 0;
-  width: 1px;
-  background-image: linear-gradient(
-    to bottom,
-    transparent,
-    var(--edge) 6%,
-    var(--edge) 94%,
-    transparent
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
-/*
- * Editor tabs. They butt up against each other, so the seam is a right-hand
- * rule rather than a border box, and the active one drops its own so the tab
- * and the pane below read as one shape. The halo spine runs along the top
- * edge here instead of the leading edge, because that is where a tab meets
- * the strip it belongs to.
- */
-.halo-tab::after {
-  content: "";
-  position: absolute;
-  top: 25%;
-  bottom: 25%;
-  right: 0;
-  width: 1px;
-  background: var(--edge);
-  pointer-events: none;
-}
-
-.halo-tab[data-halo="on"]::after,
-.halo-tab[data-halo="on"] + .halo-tab::after {
-  opacity: 0;
-}
-
-.halo-tab.halo-row::before {
-  left: 0;
-  right: 0;
-  top: 0;
-  width: auto;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
-  background: linear-gradient(to right, var(--color-accent), var(--color-accent-2));
-  transform: none;
-}
-
-.halo-tab.halo-row[data-halo="on"]::before {
-  height: 2px;
-}
-
-.halo-tab.halo-row[data-halo="on"] {
-  background-image: none;
-}
-
-/*
- * The composer. It is the one thing on screen the user is always about to
- * touch, so it is the only surface that gets its own lit rim and a faint
- * accent bloom underneath — enough to sit forward of the transcript without
- * a heavier border doing the work.
- */
-.halo-composer {
-  background-color: color-mix(in srgb, var(--surface-2) 92%, transparent);
-  background-image:
-    linear-gradient(
-      to top,
-      color-mix(in srgb, var(--color-accent) calc(7% * var(--ambient)), transparent),
-      transparent 62%
-    ),
-    linear-gradient(to bottom, var(--edge-highlight), transparent 2px);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
+/* Chat layout floats the prompt as a bubble on the right, where a leading
+   rule would point away from the text; there the plane carries it alone. */
+.ui-prompt.rounded-xl,
+.ui-prompt.rounded-full {
+  box-shadow: none;
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--surface-2));
 }

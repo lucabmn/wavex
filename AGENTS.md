@@ -275,35 +275,43 @@ Use the existing custom chrome primitives and Tailwind 4 tokens. This is not a
 shadcn project. Import application icons from `src/chrome/icons.tsx`; that file
 deep-imports Hugeicons deliberately so the full catalog is not bundled.
 
-### The Halo design language
+### The design language
 
 `src/index.css` is the whole design system; components spend its tokens rather
 than inventing colors, shadows, or corners of their own.
 
+The window is planes of colour separated by space, not boxes drawn with rules.
 Every surface comes off one ladder derived from the single background lightness
 the user controls — `--surface-0` sunken, `--surface-1` the panel plane,
 `--surface-2` raised, `--surface-3` overlay — reachable as `bg-surface-sunken`,
-`bg-surface`, `bg-surface-raised`, `bg-surface-overlay`. Depth is a tinted cast
-shadow (`shadow-lift`, `shadow-float`, `shadow-cast`) plus a one-pixel lit top
-edge, not a hairline around every box: a border drawn over vibrancy reads as a
-seam, a highlight reads as glass. Hairlines that stay use `border-edge` and
-`border-edge-strong`.
+`bg-surface`, `bg-surface-raised`, `bg-surface-overlay`. A step between two
+rungs is what says one thing sits on another. A hairline is the exception, for
+a genuine input and the edge of something that floats; use `border-edge` and
+`border-edge-strong`, never a hand-picked `border-content/N`, because the
+Separators setting scales all of them through one `--rule` number.
 
-The accent is a pair. `--color-accent` is the user's hue and `--color-accent-2`
-is derived from it, so `from-accent to-accent-2` turns with their choice rather
-than pinning a color they cannot change. Selection is `halo-row` with
-`data-halo="on"` — an accent spine on the leading edge over a wash — never
-another grey fill. The primary action of a surface takes `halo-fill`; a
-secondary one takes `halo-tint`. Overlays take `halo-overlay`, section cards
-`halo-pane`, focus `halo-focus`, group headings `halo-label`, and the seam
-between two panels `halo-seam-x` / `halo-seam-right`, which fades at both ends
-instead of ruling the window corner to corner.
+Nothing in the chrome uses a gradient and nothing glows. Shadows
+(`shadow-raise`, `shadow-float`, `shadow-cast`) are for things that genuinely
+float. Hover is `bg-hover` everywhere, so a row in the file tree answers the
+pointer exactly like a row in a menu.
 
-Two appearance rules scale the language: `Depth` swaps the shadow set through
-`html.depth-flat` / `html.depth-deep`, and `Ambient glow` multiplies the
-accent wash through `--ambient`, so zero is the wash switched off rather than a
-second set of rules. Both mean every panel follows at once — which only holds
-while depth and the wash stay single tokens.
+The accent is the only saturated thing on screen, which is what makes it
+readable at a glance in a window full of text. It marks what is selected and
+what is about to happen, and nothing else. Selection is `ui-row` with
+`data-selected="true"` — a flat step up plus a clay rule down the leading edge.
+Exclusive choices are `ui-tab` with the same attribute: flush, no chip, named
+by a rule along the bottom edge; `ui-segment` is the variant for a boxed track,
+where there is no strip edge for a rule to sit on. The one filled action a
+surface is allowed is `ui-fill`; its quieter sibling is `ui-tint`. Overlays
+take `ui-overlay`, section cards `ui-pane`, focus `ui-focus`, group headings
+`ui-label`, the user's own turn in a transcript `ui-prompt`, and a seam between
+two strips of chrome `ui-rule-b` / `ui-rule-r`.
+
+Corners are deliberately tight — the app is mostly rows of text, and it reads
+as an instrument when the corners are barely there. `Corners` and `Depth` and
+`Separators` in Settings scale the language rather than bolting a second one
+beside it, which only holds while radius, shadow, and rule strength each stay
+a single token.
 
 Long transcripts, file lists, and live streaming are performance-sensitive.
 Avoid unbounded rendering, unnecessary global subscriptions, continuously

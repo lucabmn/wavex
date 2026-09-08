@@ -218,7 +218,7 @@ export function SecondOpinionButton({
         className={`rounded-md p-1 disabled:pointer-events-none disabled:opacity-40 ${
           open
             ? "bg-content/8 text-content/70"
-            : "text-content/40 hover:bg-content/8 hover:text-content/70"
+            : "text-content/40 hover:bg-hover hover:text-content/70"
         }`}
         onClick={() => {
           if (disabled) return;
@@ -278,8 +278,8 @@ export function SecondOpinionButton({
                       !available && probed
                         ? "text-content/30"
                         : highlighted
-                          ? "bg-accent/16 text-content"
-                          : "text-content hover:bg-content/5"
+                          ? "bg-accent/14 text-content"
+                          : "text-content hover:bg-hover"
                     }`}
                   >
                     <HarnessIcon harness={harness} className="size-3.5" />
@@ -326,7 +326,7 @@ export function SecondOpinionButton({
                     }}
                     onClick={() => pick(activeHarness, model.id)}
                     className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted ? "bg-accent/16 text-content" : "text-content hover:bg-content/5"
+                      highlighted ? "bg-accent/14 text-content" : "text-content hover:bg-hover"
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate">{model.name}</span>

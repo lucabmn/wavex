@@ -317,7 +317,7 @@ export function WorkView({
       <aside
         className={`sidebar-glass ${
           listOpen ? "flex w-64" : "flex w-auto"
-        } shrink-0 flex-col border-r border-content/10`}
+        } shrink-0 flex-col border-r border-edge`}
       >
         <div
           className="flex h-10 shrink-0 select-none items-center pr-1.5"
@@ -341,7 +341,7 @@ export function WorkView({
             </div>
 
             <div className="flex items-center gap-1">
-              <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2">
+              <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2">
                 <Search className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />
                 <input
                   ref={searchField}
@@ -367,7 +367,7 @@ export function WorkView({
                 title="New project"
                 aria-label="New project"
                 onClick={onNewFolder}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
               >
                 <FolderPlus className="size-3.5" strokeWidth={1.75} />
               </button>
@@ -376,7 +376,7 @@ export function WorkView({
                 title={`New chat (${MOD}T)`}
                 aria-label="New chat"
                 onClick={() => onNewChat()}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
               >
                 <Plus className="size-3.5" strokeWidth={1.75} />
               </button>
@@ -404,7 +404,7 @@ export function WorkView({
                 type="button"
                 disabled={state.loading}
                 onClick={() => void reloadWorkChats()}
-                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-content/15 hover:text-content disabled:opacity-40"
+                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-hover hover:text-content disabled:opacity-40"
               >
                 Try again
               </button>
@@ -449,7 +449,7 @@ export function WorkView({
               type="button"
               aria-pressed={showArchived}
               onClick={() => setShowArchived((on) => !on)}
-              className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11.5px] text-content/45 hover:bg-content/5 hover:text-content/80"
+              className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11.5px] text-content/45 hover:bg-hover hover:text-content/80"
             >
               <Archive className="size-3 shrink-0" strokeWidth={1.75} />
               <span className="min-w-0 flex-1 truncate">
@@ -546,7 +546,7 @@ export function WorkView({
               <button
                 type="button"
                 onClick={() => onNewChat()}
-                className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12px]"
               >
                 New chat
               </button>
@@ -587,7 +587,7 @@ export function WorkView({
                 type="button"
                 disabled={deleting}
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content disabled:opacity-40"
+                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
               >
                 Cancel
               </button>
@@ -623,7 +623,7 @@ export function WorkView({
                 ref={folderDeleteCancelRef}
                 type="button"
                 onClick={() => setFolderDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
               >
                 Cancel
               </button>
@@ -723,7 +723,7 @@ function FolderSection({
       ) : (
         <div
           className={`group relative flex items-center gap-1 rounded-md pr-1 ${
-            dropTarget ? "bg-accent/20 text-content" : "text-content/80 hover:bg-content/5"
+            dropTarget ? "bg-accent/20 text-content" : "text-content/80 hover:bg-hover"
           }`}
         >
           <button
@@ -811,20 +811,20 @@ function FolderPromptDialog({
           aria-label="Project brief"
           placeholder="We are redesigning the onboarding flow. Prefer short answers and cite files."
           onChange={(event) => setDraft(event.target.value)}
-          className="h-48 w-full resize-none rounded-lg border border-content/10 bg-content/5 px-3 py-2 text-[12.5px] leading-relaxed outline-none focus-visible:border-content/25"
+          className="h-48 w-full resize-none rounded-lg border border-edge bg-content/5 px-3 py-2 text-[12.5px] leading-relaxed outline-none focus-visible:border-edge-strong"
         />
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onSave(draft)}
-            className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+            className="rounded-md ui-fill px-3 py-1.5 text-[12px]"
           >
             Save
           </button>
@@ -866,7 +866,7 @@ function RenameField({
         }
       }}
       onBlur={() => onCommit(draft)}
-      className="w-full rounded-md border border-content/20 bg-content/5 px-2 py-1.5 text-[12.5px] outline-none"
+      className="w-full rounded-md border border-edge-strong bg-content/5 px-2 py-1.5 text-[12.5px] outline-none"
     />
   );
 }
@@ -1018,7 +1018,7 @@ function ChatRow({
                 transform: ghostTransform(point.current, grab.current),
                 zIndex: LAYER.drag,
               }}
-              className="pointer-events-none fixed left-0 top-0 flex items-center gap-1.5 rounded-md border border-content/15 bg-background-base/90 px-2 py-1.5 text-[12.5px] text-content shadow-lg backdrop-blur-sm"
+              className="pointer-events-none fixed left-0 top-0 flex items-center gap-1.5 rounded-md border border-edge-strong bg-background-base/90 px-2 py-1.5 text-[12.5px] text-content shadow-lg backdrop-blur-sm"
             >
               {pinned ? (
                 <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
@@ -1035,8 +1035,8 @@ function ChatRow({
           dropTarget
             ? "bg-accent/20 text-content"
             : active
-              ? "bg-accent/16 text-content"
-              : "text-content/75 hover:bg-content/5"
+              ? "bg-accent/14 text-content"
+              : "text-content/75 hover:bg-hover"
         } ${dragging ? "opacity-40" : ""} ${archived ? "opacity-60" : ""}`}
       >
         <button

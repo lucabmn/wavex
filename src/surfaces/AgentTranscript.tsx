@@ -345,7 +345,7 @@ function AgentTranscriptComponent({
           <div className="flex justify-center px-4 py-3">
             <button
               type="button"
-              className="rounded-md bg-content/8 px-2.5 py-1.5 font-sans text-[12px] text-content/60 hover:bg-content/12 hover:text-content"
+              className="rounded-md bg-content/8 px-2.5 py-1.5 font-sans text-[12px] text-content/60 hover:bg-hover hover:text-content"
               onClick={loadEarlier}
             >
               Load earlier messages
@@ -713,7 +713,7 @@ function TurnDuration({
               type="button"
               title="Regenerate"
               aria-label="Regenerate"
-              className="rounded-md p-1 text-content/40 hover:bg-content/8 hover:text-content/70"
+              className="rounded-md p-1 text-content/40 hover:bg-hover hover:text-content/70"
               onClick={onRegenerate}
             >
               <RefreshCw className="size-3.5" strokeWidth={1.75} />
@@ -773,7 +773,7 @@ function CopyTurnButton({ text }: { text: string }) {
       type="button"
       title={copied ? "Copied" : "Copy response"}
       aria-label={copied ? "Copied" : "Copy response"}
-      className="-ml-1 rounded-md p-1 text-content/40 hover:bg-content/8 hover:text-content/70"
+      className="-ml-1 rounded-md p-1 text-content/40 hover:bg-hover hover:text-content/70"
       onClick={() => {
         playCue("copy");
         void copyText(text).then(
@@ -811,7 +811,7 @@ function SaveNoteButton({ text, onSave }: { text: string; onSave: (text: string)
       type="button"
       title={saved ? "Saved to Notes" : "Save as note"}
       aria-label={saved ? "Saved to Notes" : "Save as note"}
-      className="rounded-md p-1 text-content/40 hover:bg-content/8 hover:text-content/70"
+      className="rounded-md p-1 text-content/40 hover:bg-hover hover:text-content/70"
       onClick={() => {
         playCue("copy");
         onSave(text);
@@ -993,7 +993,7 @@ function ResponseImage({ file }: { file: Attachment }) {
         type="button"
         title="Enlarge"
         onClick={() => setOpen(true)}
-        className="block max-w-full overflow-hidden rounded-lg border border-content/10"
+        className="block max-w-full overflow-hidden rounded-lg border border-edge"
       >
         <img src={src} alt={file.name} className="max-h-96 max-w-full object-contain" />
       </button>
@@ -1012,7 +1012,7 @@ function ResponseImage({ file }: { file: Attachment }) {
               <button
                 type="button"
                 onClick={onSave}
-                className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12px]"
               >
                 Save to disk
               </button>
@@ -1097,8 +1097,8 @@ function UserMessageBlock({
     return (
       <div className={chat ? "flex justify-end pt-1.5 pr-4 pb-4 pl-14" : "p-1.5 pb-3"}>
         <div
-          className={`min-w-0 bg-content/10 px-3 py-2 font-sans text-content ${
-            chat ? "w-full max-w-xl rounded-xl" : "w-full rounded-lg border border-content/10"
+          className={`ui-prompt min-w-0 px-3 py-2 font-sans text-content ${
+            chat ? "w-full max-w-xl rounded-xl" : "w-full rounded-lg"
           }`}
         >
           <textarea
@@ -1135,7 +1135,7 @@ function UserMessageBlock({
             </button>
             <button
               type="button"
-              className="rounded bg-content px-2 py-0.5 text-background-base hover:bg-content/80"
+              className="rounded ui-fill px-2 py-0.5"
               onClick={() => {
                 setEditing(false);
                 onEdit(block.id, draft);
@@ -1156,7 +1156,7 @@ function UserMessageBlock({
           type="button"
           title="Edit and resend"
           aria-label="Edit and resend"
-          className="mt-1 mr-1 hidden h-fit shrink-0 self-start rounded-md p-1 text-content/35 hover:bg-content/8 hover:text-content/70 group-hover:block"
+          className="mt-1 mr-1 hidden h-fit shrink-0 self-start rounded-md p-1 text-content/35 hover:bg-hover hover:text-content/70 group-hover:block"
           onClick={() => {
             setDraft(block.text);
             setEditing(true);
@@ -1166,10 +1166,8 @@ function UserMessageBlock({
         </button>
       ) : null}
       <div
-        className={`min-w-0 bg-content/10 px-3 py-2 font-sans text-content ${
-          chat
-            ? `w-fit max-w-xl ${singleLine ? "rounded-full" : "rounded-xl"}`
-            : "rounded-lg border border-content/10"
+        className={`ui-prompt min-w-0 px-3 py-2 font-sans text-content ${
+          chat ? `w-fit max-w-xl ${singleLine ? "rounded-full" : "rounded-xl"}` : "rounded-lg"
         }`}
         style={{ zIndex: stickyIndex }}
         onClick={overflows ? toggle : undefined}
@@ -1819,7 +1817,7 @@ function SubagentCard({
   const showLatest = latest && latest !== title;
 
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border border-content/10 bg-content/[0.02]">
+    <div className="flex min-w-0 flex-col rounded-lg bg-surface-raised">
       <div className="flex min-w-0 items-center gap-1 px-2 py-1.5">
         <button
           type="button"
@@ -1848,7 +1846,7 @@ function SubagentCard({
             title="Open subagent transcript"
             aria-label={`Open subagent transcript: ${title}`}
             onClick={() => onOpenSubagent(block.id)}
-            className="grid size-6 shrink-0 place-items-center rounded text-content/45 hover:bg-content/10 hover:text-content"
+            className="grid size-6 shrink-0 place-items-center rounded text-content/45 hover:bg-hover hover:text-content"
           >
             <PanelRight className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -1860,7 +1858,7 @@ function SubagentCard({
         </div>
       ) : null}
       {open ? (
-        <div className="min-w-0 border-t border-content/10 py-1">
+        <div className="min-w-0 border-t border-edge py-1">
           {meta.prompt?.trim() ? (
             <div className="px-4 py-1">
               <div className="font-sans text-xs text-content/45">Brief</div>
@@ -2191,7 +2189,7 @@ function ToolCallSummary({
             type="button"
             className={`-my-0.5 flex min-w-0 cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-left hover:text-sky-300 ${
               chip
-                ? `max-w-full bg-content/6 hover:bg-content/10 ${targetTone}`
+                ? `max-w-full bg-content/6 hover:bg-hover ${targetTone}`
                 : `flex-1 hover:underline ${targetTone}`
             }`}
             title={preview?.path || target}
@@ -2249,14 +2247,14 @@ function ApprovalControls({
     <div className="mt-1.5 flex gap-2">
       <button
         type="button"
-        className="rounded-md bg-content px-2.5 py-0.5 text-[11px] hover:bg-content/80     text-background-base"
+        className="rounded-md ui-fill px-2.5 py-0.5 text-[11px]"
         onClick={() => onApproval?.(approval.requestId, "allow")}
       >
         Allow
       </button>
       <button
         type="button"
-        className="rounded-md bg-content/10 px-2.5 py-0.5 text-[11px] text-content/70 hover:bg-content/20"
+        className="rounded-md bg-content/10 px-2.5 py-0.5 text-[11px] text-content/70 hover:bg-hover"
         onClick={() => onApproval?.(approval.requestId, "deny")}
       >
         Deny

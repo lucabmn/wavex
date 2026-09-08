@@ -33,7 +33,7 @@ export function UpdateRailCard({ update, onOpen, onDismiss }: Props) {
         type="button"
         aria-label="Dismiss update notification"
         onClick={onDismiss}
-        className="absolute right-1 top-1 grid size-6 place-items-center rounded-md text-content/45 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="absolute right-1 top-1 grid size-6 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <X className="size-3.5" strokeWidth={1.75} />
       </button>

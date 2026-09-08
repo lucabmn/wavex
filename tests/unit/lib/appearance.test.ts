@@ -13,11 +13,9 @@ import {
   ACCENT_HUE_DEFAULT,
   loadAccentHue,
   saveAccentHue,
-  AMBIENT_DEFAULT,
-  AMBIENT_MAX,
-  AMBIENT_MIN,
-  loadAmbient,
-  saveAmbient,
+  loadSeparators,
+  saveSeparators,
+  SEPARATORS_DEFAULT,
   loadSurfaceDepth,
   saveSurfaceDepth,
   SURFACE_DEPTH_DEFAULT,
@@ -202,9 +200,9 @@ describe("theme preference setting", () => {
 describe("accent hue setting", () => {
   beforeEach(mockLocalStorage);
 
-  it("defaults to the shipped iris", () => {
-    expect(ACCENT_HUE_DEFAULT).toBe(264);
-    expect(loadAccentHue()).toBe(264);
+  it("defaults to the shipped clay", () => {
+    expect(ACCENT_HUE_DEFAULT).toBe(16);
+    expect(loadAccentHue()).toBe(16);
   });
 
   it("clamps and rounds what it stores", () => {
@@ -392,10 +390,10 @@ describe("theme presets", () => {
     }
   });
 
-  it("starts with Halo, the palette the app ships dressed in", () => {
+  it("starts with Graphite, the palette the app ships dressed in", () => {
     const [first] = THEME_PRESETS;
-    expect(first.id).toBe("halo");
-    expect(first.label).toBe("Halo");
+    expect(first.id).toBe("graphite");
+    expect(first.label).toBe("Graphite");
     // The lead preset is the defaults, so picking it is a no-op rather than a
     // fourth palette a fresh install has never seen.
     expect(first.themeHue).toBe(THEME_HUE_DEFAULT);
@@ -434,26 +432,23 @@ describe("surface depth setting", () => {
   });
 });
 
-describe("ambient glow setting", () => {
+describe("separators setting", () => {
   beforeEach(mockLocalStorage);
 
-  it("defaults to most of the way up", () => {
-    expect(loadAmbient()).toBe(AMBIENT_DEFAULT);
-    expect(AMBIENT_DEFAULT).toBeGreaterThan(AMBIENT_MIN);
-    expect(AMBIENT_DEFAULT).toBeLessThanOrEqual(AMBIENT_MAX);
+  it("defaults to regular", () => {
+    expect(SEPARATORS_DEFAULT).toBe("regular");
+    expect(loadSeparators()).toBe("regular");
   });
 
-  it("clamps and rounds what it stores", () => {
-    saveAmbient(-40);
-    expect(loadAmbient()).toBe(AMBIENT_MIN);
-    saveAmbient(400);
-    expect(loadAmbient()).toBe(AMBIENT_MAX);
-    saveAmbient(42.6);
-    expect(loadAmbient()).toBe(43);
+  it("round-trips the three steps", () => {
+    for (const value of ["subtle", "regular", "firm"] as const) {
+      saveSeparators(value);
+      expect(loadSeparators()).toBe(value);
+    }
   });
 
-  it("reads zero back as zero rather than as the default", () => {
-    saveAmbient(0);
-    expect(loadAmbient()).toBe(0);
+  it("falls back rather than trusting a stored value it does not know", () => {
+    localStorage.setItem("wavex.separators", "invisible");
+    expect(loadSeparators()).toBe(SEPARATORS_DEFAULT);
   });
 });

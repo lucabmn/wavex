@@ -59,7 +59,7 @@ export function SubagentSurface({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-content/10 px-4 py-2.5">
+      <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-edge px-4 py-2.5">
         <Bot className="size-4 shrink-0 text-content/50" strokeWidth={1.75} />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="truncate font-sans text-sm text-content">

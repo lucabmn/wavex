@@ -81,7 +81,7 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
           setOpen(true);
         }}
         className={`flex h-6.5 max-w-52 items-center gap-1 rounded-md px-1.5 ${
-          open ? "bg-accent/16 text-content" : "bg-content/10 text-content hover:bg-content/15"
+          open ? "bg-accent/14 text-content" : "bg-content/10 text-content hover:bg-hover"
         }`}
       >
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -120,8 +120,8 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
                 onClick={() => pick(mode)}
                 className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left ${
                   highlighted || selected
-                    ? "bg-accent/16 text-content"
-                    : "text-content hover:bg-content/5"
+                    ? "bg-accent/14 text-content"
+                    : "text-content hover:bg-hover"
                 }`}
               >
                 <ModeIcon className="mt-0.5 size-3.5 shrink-0 text-content/70" strokeWidth={1.75} />

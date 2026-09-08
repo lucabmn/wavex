@@ -40,15 +40,15 @@ const DEFAULT_SIDEBAR_TAB_ORDER: SidebarTabId[] = ["sessions", "inbox", "files",
 
 export const THEME_HUE_MIN = 0;
 export const THEME_HUE_MAX = 360;
-export const THEME_HUE_DEFAULT = 234;
+export const THEME_HUE_DEFAULT = 28;
 
 export const THEME_SATURATION_MIN = 0;
 export const THEME_SATURATION_MAX = 100;
-export const THEME_SATURATION_DEFAULT = 14;
+export const THEME_SATURATION_DEFAULT = 7;
 
 export const SIDEBAR_OPACITY_MIN = 0.15;
 export const SIDEBAR_OPACITY_MAX = 1;
-export const SIDEBAR_OPACITY_DEFAULT = 0.72;
+export const SIDEBAR_OPACITY_DEFAULT = 0.8;
 
 export const SIDEBAR_BLUR_MIN = 1;
 export const SIDEBAR_BLUR_MAX = 64;
@@ -146,7 +146,7 @@ export function initAppearance() {
   applyEditorFontSize(loadEditorFontSize());
   applyCornerRadius(loadCornerRadius());
   applySurfaceDepth(loadSurfaceDepth());
-  applyAmbient(loadAmbient());
+  applySeparators(loadSeparators());
   applyReduceMotion(loadReduceMotion());
   applyTranscriptWidth(loadTranscriptWidth());
   applyTranscriptFontSize(loadTranscriptFontSize());
@@ -379,7 +379,7 @@ const TERMINAL_CURSOR_KEY = "wavex.terminalCursor";
 const TERMINAL_CURSOR_BLINK_KEY = "wavex.terminalCursorBlink";
 const CORNER_RADIUS_KEY = "wavex.cornerRadius";
 const SURFACE_DEPTH_KEY = "wavex.surfaceDepth";
-const AMBIENT_KEY = "wavex.ambientGlow";
+const RULE_KEY = "wavex.separators";
 const REDUCE_MOTION_KEY = "wavex.reduceMotion";
 const BACKGROUND_LIGHTNESS_KEY = "wavex.backgroundLightness";
 const CONTENT_LIGHTNESS_KEY = "wavex.contentLightness";
@@ -403,20 +403,20 @@ export function subscribeAppearance(onStoreChange: () => void) {
 
 export const ACCENT_HUE_MIN = 0;
 export const ACCENT_HUE_MAX = 360;
-export const ACCENT_HUE_DEFAULT = 264;
+export const ACCENT_HUE_DEFAULT = 16;
 
 /** Named stops on the accent wheel, so the common choice is one click. */
 export const ACCENT_PRESETS: { hue: number; label: string }[] = [
-  { hue: 264, label: "Iris" },
-  { hue: 288, label: "Orchid" },
-  { hue: 320, label: "Magenta" },
-  { hue: 348, label: "Coral" },
-  { hue: 22, label: "Ember" },
-  { hue: 46, label: "Citrine" },
-  { hue: 152, label: "Jade" },
-  { hue: 182, label: "Lagoon" },
-  { hue: 205, label: "Azure" },
-  { hue: 232, label: "Cobalt" },
+  { hue: 16, label: "Clay" },
+  { hue: 32, label: "Amber" },
+  { hue: 48, label: "Brass" },
+  { hue: 88, label: "Olive" },
+  { hue: 150, label: "Fern" },
+  { hue: 178, label: "Verdigris" },
+  { hue: 202, label: "Denim" },
+  { hue: 236, label: "Ink" },
+  { hue: 282, label: "Plum" },
+  { hue: 342, label: "Rust" },
 ];
 
 export function loadAccentHue(): number {
@@ -636,9 +636,9 @@ export type CornerRadius = "sharp" | "soft" | "round";
 export const CORNER_RADIUS_DEFAULT: CornerRadius = "soft";
 
 const RADIUS_SCALE: Record<CornerRadius, number> = {
-  sharp: 0.25,
+  sharp: 0.35,
   soft: 1,
-  round: 1.5,
+  round: 2.2,
 };
 
 /**
@@ -646,21 +646,21 @@ const RADIUS_SCALE: Record<CornerRadius, number> = {
  * factor moves every corner in the app rather than a hand-picked few.
  * `rounded-full` is a literal 9999px and stays a pill.
  *
- * The scale is wavex's own rather than Tailwind's: the steps grow faster, so
- * a row, a card, and a dialog read as three different sizes of thing instead
- * of three boxes with almost the same corner. `sharp` keeps a quarter of it
- * rather than dropping to zero — a true square corner tears against the
- * one-pixel lit edge the panels are drawn with.
+ * The scale is deliberately tight. A window that is mostly rows of text reads
+ * as an instrument when its corners are barely there and as a consumer app
+ * when they are not, and the rest of the chrome — flush tabs, rules instead of
+ * boxes — is pulling in the first direction. `round` is there for anyone who
+ * disagrees, and takes it more than twice as far.
  */
 const RADIUS_TOKENS: [token: string, rem: number][] = [
-  ["--radius-xs", 0.25],
-  ["--radius-sm", 0.375],
-  ["--radius-md", 0.5],
-  ["--radius-lg", 0.75],
-  ["--radius-xl", 1],
-  ["--radius-2xl", 1.25],
-  ["--radius-3xl", 1.75],
-  ["--radius-4xl", 2.25],
+  ["--radius-xs", 0.0625],
+  ["--radius-sm", 0.125],
+  ["--radius-md", 0.1875],
+  ["--radius-lg", 0.25],
+  ["--radius-xl", 0.375],
+  ["--radius-2xl", 0.5],
+  ["--radius-3xl", 0.75],
+  ["--radius-4xl", 1],
 ];
 
 function isCornerRadius(value: unknown): value is CornerRadius {
@@ -745,23 +745,46 @@ export function applySurfaceDepth(value: SurfaceDepth) {
   return next;
 }
 
-export const AMBIENT_MIN = 0;
-export const AMBIENT_MAX = 100;
-export const AMBIENT_DEFAULT = 70;
+export type Separators = "subtle" | "regular" | "firm";
 
-export function loadAmbient(): number {
-  return Math.round(clamp(readNumber(AMBIENT_KEY) ?? AMBIENT_DEFAULT, AMBIENT_MIN, AMBIENT_MAX));
+export const SEPARATORS_DEFAULT: Separators = "regular";
+
+/**
+ * How strongly every hairline in the app is drawn. It is a single number the
+ * stylesheet multiplies, rather than a per-component border opacity, because
+ * a rule around every box is the difference between chrome and a wireframe —
+ * and that judgement is the user's, not one to hard-code a hundred times.
+ */
+const RULE_STRENGTH: Record<Separators, number> = {
+  subtle: 0.05,
+  regular: 0.09,
+  firm: 0.15,
+};
+
+function isSeparators(value: unknown): value is Separators {
+  return value === "subtle" || value === "regular" || value === "firm";
 }
 
-export function saveAmbient(value: number) {
-  writeNumber(AMBIENT_KEY, Math.round(clamp(value, AMBIENT_MIN, AMBIENT_MAX)));
+export function loadSeparators(): Separators {
+  try {
+    const raw = profileStorage.getItem(RULE_KEY);
+    return isSeparators(raw) ? raw : SEPARATORS_DEFAULT;
+  } catch {
+    return SEPARATORS_DEFAULT;
+  }
 }
 
-export function applyAmbient(value: number) {
-  const next = Math.round(clamp(value, AMBIENT_MIN, AMBIENT_MAX));
-  // The stylesheet multiplies its mix percentages by this, so zero is the
-  // wash switched off rather than a second, washless set of rules.
-  document.documentElement.style.setProperty("--ambient", (next / 100).toFixed(3));
+export function saveSeparators(value: Separators) {
+  try {
+    profileStorage.setItem(RULE_KEY, isSeparators(value) ? value : SEPARATORS_DEFAULT);
+  } catch {
+    // private mode / quota
+  }
+}
+
+export function applySeparators(value: Separators) {
+  const next = isSeparators(value) ? value : SEPARATORS_DEFAULT;
+  document.documentElement.style.setProperty("--rule", String(RULE_STRENGTH[next]));
   return next;
 }
 
@@ -790,8 +813,8 @@ export const SURFACE_RANGE: Record<
   ColorScheme,
   { background: [min: number, max: number, fallback: number]; content: [number, number, number] }
 > = {
-  dark: { background: [2, 22, 8], content: [70, 100, 94] },
-  light: { background: [86, 100, 94], content: [0, 42, 20] },
+  dark: { background: [2, 22, 9], content: [70, 100, 92] },
+  light: { background: [86, 100, 96], content: [0, 42, 18] },
 };
 
 function schemeKey(key: string, scheme: ColorScheme) {
@@ -860,67 +883,67 @@ export type ThemePreset = {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
-    id: "halo",
-    label: "Halo",
+    id: "graphite",
+    label: "Graphite",
     themeHue: THEME_HUE_DEFAULT,
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
-    dark: { background: 8, content: 94 },
-    light: { background: 94, content: 20 },
-  },
-  {
-    id: "tide",
-    label: "Tide",
-    themeHue: 202,
-    themeSaturation: 18,
-    accentHue: 186,
-    dark: { background: 9, content: 93 },
-    light: { background: 95, content: 20 },
-  },
-  {
-    id: "ember",
-    label: "Ember",
-    themeHue: 20,
-    themeSaturation: 14,
-    accentHue: 24,
     dark: { background: 9, content: 92 },
-    light: { background: 96, content: 20 },
+    light: { background: 96, content: 18 },
+  },
+  {
+    id: "linen",
+    label: "Linen",
+    themeHue: 40,
+    themeSaturation: 10,
+    accentHue: 32,
+    dark: { background: 10, content: 91 },
+    light: { background: 97, content: 20 },
+  },
+  {
+    id: "slate",
+    label: "Slate",
+    themeHue: 216,
+    themeSaturation: 8,
+    accentHue: 202,
+    dark: { background: 9, content: 92 },
+    light: { background: 96, content: 18 },
   },
   {
     id: "moss",
     label: "Moss",
-    themeHue: 146,
-    themeSaturation: 13,
-    accentHue: 158,
+    themeHue: 110,
+    themeSaturation: 7,
+    accentHue: 150,
+    dark: { background: 9, content: 91 },
+    light: { background: 96, content: 19 },
+  },
+  {
+    id: "ash",
+    label: "Ash",
+    themeHue: 0,
+    themeSaturation: 0,
+    accentHue: 202,
     dark: { background: 8, content: 92 },
-    light: { background: 95, content: 19 },
+    light: { background: 97, content: 17 },
   },
   {
-    id: "orchid",
-    label: "Orchid",
-    themeHue: 292,
-    themeSaturation: 15,
-    accentHue: 312,
-    dark: { background: 9, content: 93 },
-    light: { background: 96, content: 21 },
+    id: "iron",
+    label: "Iron",
+    themeHue: 250,
+    themeSaturation: 6,
+    accentHue: 282,
+    dark: { background: 8, content: 92 },
+    light: { background: 96, content: 19 },
   },
   {
-    id: "graphite",
-    label: "Graphite",
-    themeHue: 240,
-    themeSaturation: 2,
-    accentHue: 232,
-    dark: { background: 7, content: 92 },
-    light: { background: 96, content: 18 },
-  },
-  {
-    id: "sand",
-    label: "Sand",
-    themeHue: 38,
-    themeSaturation: 9,
-    accentHue: 44,
-    dark: { background: 10, content: 91 },
-    light: { background: 97, content: 18 },
+    id: "oxide",
+    label: "Oxide",
+    themeHue: 12,
+    themeSaturation: 12,
+    accentHue: 342,
+    dark: { background: 10, content: 90 },
+    light: { background: 96, content: 20 },
   },
 ];
 
