@@ -12,8 +12,9 @@
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Manager};
 
-use crate::fs::expand_home;
+use crate::fs::{expand_home, path_to_js};
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -29,6 +30,10 @@ pub struct OpenWithApp {
     pub id: String,
     pub name: String,
     pub kind: AppKind,
+    /// A PNG or SVG the WebView can load, or `None` where the platform keeps
+    /// its icons somewhere wavex cannot read. The menu draws a glyph for the
+    /// kind instead, so a missing icon costs a row nothing.
+    pub icon: Option<String>,
 }
 
 /// One application wavex knows how to hand a folder to.
@@ -264,24 +269,247 @@ fn resolve(spec: &Spec) -> Option<Target> {
     find_program(spec.binaries).map(Target::Program)
 }
 
+/// Where converted application icons are kept. macOS ships `.icns`, which no
+/// WebView can draw, so a bundle's icon is converted once and reused.
+const ICON_CACHE_DIR: &str = "open-with-icons";
+
+#[allow(unused_variables)]
+fn icon_for(spec: &Spec, target: &Target, cache: Option<&Path>) -> Option<PathBuf> {
+    #[cfg(target_os = "macos")]
+    {
+        match target {
+            Target::Bundle(bundle) => bundle_icon(bundle, spec.id, cache?),
+            // A macOS install found only on PATH is a CLI shim, not a bundle,
+            // and has no icon of its own.
+            Target::Program(_) => None,
+        }
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        desktop_icon(spec.binaries)
+    }
+
+    // Windows keeps an application's icon inside the executable, which takes
+    // the shell APIs to read. The menu draws its kind glyph instead.
+    #[cfg(not(unix))]
+    {
+        None
+    }
+}
+
+/// The bundle's icon as a PNG in the cache, converting it on first sight.
+#[cfg(target_os = "macos")]
+fn bundle_icon(bundle: &Path, id: &str, cache: &Path) -> Option<PathBuf> {
+    let png = cache.join(format!("{id}.png"));
+    if png.is_file() {
+        return Some(png);
+    }
+    let icns = bundle_icns(bundle)?;
+    std::fs::create_dir_all(cache).ok()?;
+    // `-Z 128` fits the icon in 128px, which is well past what a menu row
+    // draws and small enough that the cache stays a few kilobytes per app.
+    let output = crate::process::command("sips")
+        .args(["-s", "format", "png", "-Z", "128"])
+        .arg(&icns)
+        .arg("--out")
+        .arg(&png)
+        .output()
+        .ok()?;
+    (output.status.success() && png.is_file()).then_some(png)
+}
+
+#[cfg(target_os = "macos")]
+fn bundle_icns(bundle: &Path) -> Option<PathBuf> {
+    let resources = bundle.join("Contents/Resources");
+    if let Some(name) = plist_icon_file(&bundle.join("Contents/Info.plist")) {
+        // `CFBundleIconFile` is written both with and without the extension.
+        for candidate in [
+            resources.join(&name),
+            resources.join(format!("{name}.icns")),
+        ] {
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    // An app that names no icon almost always ships exactly one.
+    std::fs::read_dir(&resources)
+        .ok()?
+        .flatten()
+        .find_map(|entry| {
+            let path = entry.path();
+            (path.extension()? == "icns").then_some(path)
+        })
+}
+
+/// `CFBundleIconFile`, read through `plutil` because a bundle's `Info.plist`
+/// is as often the binary format as the XML one.
+#[cfg(target_os = "macos")]
+fn plist_icon_file(plist: &Path) -> Option<String> {
+    let output = crate::process::command("plutil")
+        .args(["-extract", "CFBundleIconFile", "raw", "-o", "-"])
+        .arg(plist)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let name = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    (!name.is_empty()).then_some(name)
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn desktop_dirs() -> Vec<PathBuf> {
+    let mut dirs = vec![
+        PathBuf::from("/usr/share/applications"),
+        PathBuf::from("/usr/local/share/applications"),
+        PathBuf::from("/var/lib/flatpak/exports/share/applications"),
+        PathBuf::from("/var/lib/snapd/desktop/applications"),
+    ];
+    if let Some(home) = std::env::var_os("HOME") {
+        let home = PathBuf::from(home);
+        dirs.push(home.join(".local/share/applications"));
+        dirs.push(home.join(".local/share/flatpak/exports/share/applications"));
+    }
+    dirs
+}
+
+/// The icon of the first desktop entry naming one of these programs.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn desktop_icon(binaries: &[&str]) -> Option<PathBuf> {
+    for dir in desktop_dirs() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("desktop") {
+                continue;
+            }
+            let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) else {
+                continue;
+            };
+            if !binaries.iter().any(|name| desktop_entry_names(stem, name)) {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let Some(icon) = desktop_entry_icon(&text) else {
+                continue;
+            };
+            if let Some(path) = resolve_icon_name(&icon) {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
+/// Whether a desktop file's stem belongs to `binary`. A reverse-DNS id is the
+/// norm now — `com.mitchellh.ghostty.desktop` — so a stem that ends in the
+/// program's name counts as much as one that is it.
+///
+/// Compiled on every platform so the rule stays under test where CI is not
+/// running Linux; only the Linux arm calls it.
+#[allow(dead_code)]
+fn desktop_entry_names(stem: &str, binary: &str) -> bool {
+    stem == binary || stem.rsplit('.').next() == Some(binary)
+}
+
+/// The `Icon=` of a desktop file's own section. An entry also carries actions
+/// in `[Desktop Action …]` sections with icons of their own, which are not the
+/// application's.
+///
+/// Compiled on every platform for the same reason as `desktop_entry_names`.
+#[allow(dead_code)]
+fn desktop_entry_icon(text: &str) -> Option<String> {
+    let mut inside = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            inside = line == "[Desktop Entry]";
+            continue;
+        }
+        if !inside {
+            continue;
+        }
+        if let Some(value) = line.strip_prefix("Icon=") {
+            let value = value.trim();
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// An `Icon=` is either a path or a theme name to look up.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn resolve_icon_name(name: &str) -> Option<PathBuf> {
+    let direct = Path::new(name);
+    if direct.is_absolute() {
+        return direct.is_file().then(|| direct.to_path_buf());
+    }
+    // Largest first: a menu row draws small, and a downscaled 256px icon reads
+    // better than an upscaled 22px one.
+    const SIZES: [&str; 6] = [
+        "scalable", "512x512", "256x256", "128x128", "64x64", "48x48",
+    ];
+    let mut roots = vec![
+        PathBuf::from("/usr/share/icons/hicolor"),
+        PathBuf::from("/usr/local/share/icons/hicolor"),
+    ];
+    if let Some(home) = std::env::var_os("HOME") {
+        roots.push(PathBuf::from(home).join(".local/share/icons/hicolor"));
+    }
+    for root in &roots {
+        for size in SIZES {
+            for ext in ["png", "svg"] {
+                let candidate = root.join(size).join("apps").join(format!("{name}.{ext}"));
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+    for ext in ["png", "svg", "xpm"] {
+        let candidate = PathBuf::from("/usr/share/pixmaps").join(format!("{name}.{ext}"));
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
 #[tauri::command]
-pub async fn list_open_with_apps() -> Result<Vec<OpenWithApp>, String> {
-    tauri::async_runtime::spawn_blocking(|| {
+pub async fn list_open_with_apps(app: AppHandle) -> Result<Vec<OpenWithApp>, String> {
+    // Under the app data directory rather than the cache one because that is
+    // what `assetProtocol`'s scope covers — a converted icon the WebView
+    // cannot load is not worth writing. A missing directory only costs the
+    // icons, so the list still answers.
+    let cache = app
+        .path()
+        .app_data_dir()
+        .ok()
+        .map(|dir| dir.join(ICON_CACHE_DIR));
+    tauri::async_runtime::spawn_blocking(move || {
         let mut apps = vec![OpenWithApp {
             id: FILES_ID.to_string(),
             name: files_name().to_string(),
             kind: AppKind::Files,
+            icon: None,
         }];
-        apps.extend(
-            SPECS
-                .iter()
-                .filter(|spec| resolve(spec).is_some())
-                .map(|spec| OpenWithApp {
-                    id: spec.id.to_string(),
-                    name: spec.name.to_string(),
-                    kind: spec.kind,
-                }),
-        );
+        apps.extend(SPECS.iter().filter_map(|spec| {
+            let target = resolve(spec)?;
+            Some(OpenWithApp {
+                id: spec.id.to_string(),
+                name: spec.name.to_string(),
+                kind: spec.kind,
+                icon: icon_for(spec, &target, cache.as_deref()).map(|path| path_to_js(&path)),
+            })
+        }));
         apps
     })
     .await
@@ -444,6 +672,26 @@ mod tests {
             path_argument(spec, Path::new("/home/luca/wavex")),
             std::ffi::OsString::from("/home/luca/wavex")
         );
+    }
+
+    #[test]
+    fn a_reverse_dns_desktop_id_still_belongs_to_its_program() {
+        assert!(desktop_entry_names("ghostty", "ghostty"));
+        assert!(desktop_entry_names("com.mitchellh.ghostty", "ghostty"));
+        assert!(!desktop_entry_names("ghostty-tui", "ghostty"));
+        assert!(!desktop_entry_names("code", "codium"));
+    }
+
+    #[test]
+    fn reads_the_icon_of_the_entry_and_not_of_an_action() {
+        let text = "[Desktop Entry]\nName=Zed\nIcon=zed\n\n[Desktop Action new]\nIcon=zed-new\n";
+        assert_eq!(desktop_entry_icon(text).as_deref(), Some("zed"));
+    }
+
+    #[test]
+    fn an_entry_without_an_icon_answers_with_nothing() {
+        assert_eq!(desktop_entry_icon("[Desktop Entry]\nName=Zed\n"), None);
+        assert_eq!(desktop_entry_icon("[Desktop Action new]\nIcon=zed\n"), None);
     }
 
     #[test]
