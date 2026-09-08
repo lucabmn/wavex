@@ -864,4 +864,12 @@ mod tests {
         assert!(!dispatch_name("fetch_inbox_media"));
         assert!(!dispatch_name("reveal_path"));
     }
+
+    /// An application opens on the machine that launches it, and a host
+    /// reached over a connection has nobody sitting in front of it.
+    #[test]
+    fn refuses_launching_another_application_on_the_host() {
+        assert!(!dispatch_name("list_open_with_apps"));
+        assert!(!dispatch_name("open_path_with"));
+    }
 }
