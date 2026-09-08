@@ -19,8 +19,15 @@ type Props = {
   onChange: (browser: BrowserHistory) => void;
 };
 
-/** How long a page gets before a blank frame is called a failure. */
-const LOAD_GRACE_MS = 6000;
+/**
+ * How long a page gets to commit before the frame is read.
+ *
+ * A refused frame never commits, so this is the whole wait before the panel can
+ * say so — long enough that an ordinary page has started, short enough that a
+ * refusal is not a silent pause. A page slower than this is called loaded on
+ * its own `load` a moment later, which clears the message again.
+ */
+const COMMIT_GRACE_MS = 3000;
 
 /** Ports a dev server is reached on often enough to be worth one click. */
 const SUGGESTIONS = ["localhost:3000", "localhost:5173", "localhost:8080"];
@@ -42,9 +49,7 @@ export function DockBrowser({ browser, onChange }: Props) {
   // Bumped to re-mount the frame on reload: the frame keeps its own history, so
   // pointing `src` at the address it already holds would do nothing.
   const [reloads, setReloads] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [blank, setBlank] = useState(false);
-  const settled = useRef(false);
+  const [state, setState] = useState<FrameState>("idle");
   const url = browserHistoryUrl(browser);
   const back = canGoBack(browser);
   const forward = canGoForward(browser);
@@ -56,20 +61,17 @@ export function DockBrowser({ browser, onChange }: Props) {
     setDraft(url ?? "");
   }, [url]);
 
-  // A frame that is refused, or whose server is not listening, does not
-  // reliably fire `load` — WebKit in particular leaves the element silent — so
-  // a page that has not arrived by now is reported rather than left as a white
-  // rectangle. A slow page that does arrive clears this again on its `load`.
+  // A refused frame fires no event a listener can hear, so the frame is read
+  // once the grace period is up rather than waited on. Until then the page is
+  // covered: a frame that has not committed paints white, and a white sheet in
+  // a dark panel reads as a broken app rather than as a page on its way.
   useEffect(() => {
-    settled.current = false;
-    setLoading(!!url);
-    setBlank(false);
-    if (!url) return;
-    const timer = window.setTimeout(() => {
-      if (settled.current) return;
-      setLoading(false);
-      setBlank(true);
-    }, LOAD_GRACE_MS);
+    if (!url) {
+      setState("idle");
+      return;
+    }
+    setState("loading");
+    const timer = window.setTimeout(() => setState(settle(frame.current)), COMMIT_GRACE_MS);
     return () => window.clearTimeout(timer);
   }, [url, reloads]);
 
@@ -152,22 +154,13 @@ export function DockBrowser({ browser, onChange }: Props) {
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
             referrerPolicy="strict-origin-when-cross-origin"
             className="absolute inset-0 h-full w-full border-0 bg-white"
-            onLoad={() => {
-              settled.current = true;
-              setLoading(false);
-              setBlank(frameLoadedNothing(frame.current));
-            }}
+            onLoad={() => setState(settle(frame.current))}
           />
         ) : (
           <EmptyBrowser onPick={(value) => onChange(browserVisit(browser, value))} />
         )}
-        {url && loading ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-0.5 animate-pulse bg-accent/70"
-          />
-        ) : null}
-        {blank ? (
+        {url && state === "loading" ? <Loading url={url} /> : null}
+        {state === "blank" ? (
           <NothingLoaded
             url={url ?? ""}
             onOpen={openExternally}
@@ -179,22 +172,23 @@ export function DockBrowser({ browser, onChange }: Props) {
   );
 }
 
+type FrameState = "idle" | "loading" | "ready" | "blank";
+
 /**
- * Whether the frame ended up with no page in it.
+ * What the frame has actually got in it.
  *
- * A frame that was blocked, or whose server never answered, still fires `load`,
- * so the event alone says nothing. It is left sitting on `about:blank`, which
- * is the one document this window may read across the boundary — a page that
- * really loaded throws instead, and the throw is the success. What it cannot
- * say is *why* nothing loaded, so the message that follows names both reasons
- * rather than guessing between them.
+ * A frame that was blocked, or whose server never answered, is left sitting on
+ * `about:blank` — the one document this window may read across the boundary. A
+ * page that really loaded throws on the same read, and that throw is the
+ * success. What this cannot say is *why* nothing arrived, so the message it
+ * leads to names both reasons rather than guessing between them.
  */
-function frameLoadedNothing(frame: HTMLIFrameElement | null): boolean {
-  if (!frame) return false;
+function settle(frame: HTMLIFrameElement | null): FrameState {
+  if (!frame) return "blank";
   try {
-    return frame.contentWindow?.location.href === "about:blank";
+    return frame.contentWindow?.location.href === "about:blank" ? "blank" : "ready";
   } catch {
-    return false;
+    return "ready";
   }
 }
 
@@ -203,7 +197,7 @@ function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
     <div className="absolute inset-0">
       <SurfacePlaceholder
         icon={Globe}
-        description="Open a development server or a page beside this project."
+        description="Open a development server or a page beside this project. Most large sites refuse to be embedded and open in your browser instead."
       >
         {SUGGESTIONS.map((suggestion) => (
           <button
@@ -216,6 +210,15 @@ function EmptyBrowser({ onPick }: { onPick: (url: string) => void }) {
           </button>
         ))}
       </SurfacePlaceholder>
+    </div>
+  );
+}
+
+/** Covers the frame until it commits, so a page on its way never paints white. */
+function Loading({ url }: { url: string }) {
+  return (
+    <div className="absolute inset-0 bg-background-base">
+      <SurfacePlaceholder icon={Globe} description={`Loading ${hostOf(url)}…`} />
     </div>
   );
 }
@@ -234,7 +237,7 @@ function NothingLoaded({
       <SurfacePlaceholder
         icon={Globe}
         title={`Nothing loaded from ${hostOf(url)}`}
-        description="Either the server is not running yet, or the site asks browsers not to embed it. Opening it in a browser tells you which."
+        description={`Either nothing is listening there, or ${hostOf(url)} asks browsers not to embed it — which most large sites do. Development servers and documentation sites almost never do.`}
       >
         <PlaceholderButton onClick={onRetry}>Try Again</PlaceholderButton>
         <PlaceholderButton onClick={onOpen}>Open in Browser</PlaceholderButton>
