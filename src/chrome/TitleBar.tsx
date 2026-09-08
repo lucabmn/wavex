@@ -5,6 +5,7 @@ import {
   Inbox,
   MessageMultiple,
   PanelLeft,
+  PanelRight,
   Plus,
   Search,
   Settings,
@@ -36,6 +37,13 @@ import { nativeWindow } from "../lib/native";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { WindowControls } from "./WindowControls";
 import { OpenWithMenu } from "./OpenWithMenu";
+import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
+import {
+  DOCK_SURFACES,
+  DOCK_SURFACE_LABEL,
+  isDockSurface,
+  type DockSurface,
+} from "../lib/terminal/projectTerminal";
 import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
 import { IS_MAC, MOD } from "../lib/platform";
@@ -53,8 +61,11 @@ type Props = {
   onSelect: (id: string) => void;
   onNew: () => void;
   onNewTerminal?: () => void;
-  onShowTerminal?: () => void;
   projectTerminalActive?: boolean;
+  dockSurface?: DockSurface | null;
+  dockOpen?: boolean;
+  onShowDockSurface?: (surface: DockSurface) => void;
+  onHideDock?: () => void;
   onOpenSettings?: () => void;
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
@@ -511,16 +522,89 @@ export function OverlayNav({
   );
 }
 
+/**
+ * The panel control: one button that opens the project's side panel on the
+ * surface the user picks, and puts it away again. Which four surfaces exist is
+ * the panel's own vocabulary, so the menu is built from it rather than repeated
+ * here.
+ */
+function DockSurfaceButton({
+  surface,
+  open,
+  terminalRunning,
+  onShow,
+  onHide,
+}: {
+  surface: DockSurface | null;
+  open: boolean;
+  terminalRunning?: boolean;
+  onShow: (surface: DockSurface) => void;
+  onHide: () => void;
+}) {
+  const anchor = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const items: ExplorerMenuItem[] = [
+    ...DOCK_SURFACES.map((value) => ({
+      kind: "item" as const,
+      id: value,
+      label: DOCK_SURFACE_LABEL[value],
+      shortcut: value === "terminal" ? `${MOD}\`` : undefined,
+      checked: open && value === surface,
+    })),
+    ...(open
+      ? [
+          { kind: "sep" as const },
+          { kind: "item" as const, id: "hide", label: "Hide Panel", shortcut: `${MOD}J` },
+        ]
+      : []),
+  ];
+
+  return (
+    <div ref={anchor}>
+      <IconButton
+        label={open ? `Panel (${MOD}J)` : `Show Panel (${MOD}J)`}
+        active={open}
+        accent={terminalRunning && !open}
+        onClick={() => {
+          const rect = anchor.current?.getBoundingClientRect();
+          if (!rect) return;
+          setMenu({ x: Math.max(8, rect.right - 228), y: rect.bottom + 6 });
+        }}
+      >
+        <PanelRight className="size-3.5" strokeWidth={1.75} />
+      </IconButton>
+      {menu ? (
+        <ExplorerMenu
+          x={menu.x}
+          y={menu.y}
+          ariaLabel="Panel surface"
+          items={items}
+          onPick={(id) => {
+            setMenu(null);
+            if (id === "hide") onHide();
+            else if (isDockSurface(id)) onShow(id);
+          }}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function TitleBarComponent({
   tabs,
   activeId,
   cwd,
+  dockSurface,
+  dockOpen,
+  onShowDockSurface,
+  onHideDock,
   projectRailOpen = true,
   onToggleSidebar,
   onSelect,
   onNew,
   onNewTerminal,
-  onShowTerminal,
   projectTerminalActive = false,
   onOpenSettings,
   onOpenInbox,
@@ -642,14 +726,14 @@ function TitleBarComponent({
             </IconButton>
           </>
         ) : null}
-        {!projectless && (onShowTerminal || onNewTerminal) ? (
-          <IconButton
-            label={projectTerminalActive ? "Terminal" : `New Terminal (${MOD}\`)`}
-            accent={projectTerminalActive}
-            onClick={projectTerminalActive ? (onShowTerminal ?? onNewTerminal) : onNewTerminal}
-          >
-            <Terminal className="size-3.5" strokeWidth={1.75} />
-          </IconButton>
+        {!projectless && onShowDockSurface && onHideDock ? (
+          <DockSurfaceButton
+            surface={dockSurface ?? null}
+            open={dockOpen ?? false}
+            terminalRunning={projectTerminalActive}
+            onShow={onShowDockSurface}
+            onHide={onHideDock}
+          />
         ) : null}
         {!projectless ? <OpenWithMenu cwd={cwd} /> : null}
         {!projectRailOpen && !showCurrentProject && onOpenSettings ? (

@@ -5,7 +5,7 @@ import {
   applyDockGridStyle,
   clampDockSize,
   closeTerminalInDock,
-  createProjectTerminal,
+  createProjectDock,
   dockGridStyle,
   findProjectTerminal,
   mapProjectTerminal,
@@ -16,7 +16,9 @@ import {
   splitProjectTerminalsForMove,
   withDockOpen,
   withDockSide,
+  withDockSurface,
 } from "@/lib/terminal/projectTerminal";
+import { EMPTY_DOCK_BROWSER } from "@/lib/workspace/dockBrowser";
 import type { Session } from "@/lib/session";
 
 function chat(id: string, cwd: string): Session {
@@ -36,7 +38,7 @@ function chat(id: string, cwd: string): Session {
 describe("createProjectTerminal", () => {
   it("opens a bottom dock with the first terminal focused", () => {
     const file = newTerminalFile("/tmp/a");
-    const dock = createProjectTerminal("/tmp/a/", file);
+    const dock = createProjectDock("/tmp/a/", { file });
     expect(dock.projectPath).toBe("/tmp/a");
     expect(dock.side).toBe("bottom");
     expect(dock.open).toBe(true);
@@ -49,7 +51,7 @@ describe("addTerminalToDock", () => {
   it("appends a tab, focuses it, and reveals a hidden dock", () => {
     const first = newTerminalFile("/tmp/a", "a");
     const second = newTerminalFile("/tmp/a", "a 2");
-    const dock = withDockOpen(createProjectTerminal("/tmp/a", first), false);
+    const dock = withDockOpen(createProjectDock("/tmp/a", { file: first }), false);
     const next = addTerminalToDock(dock, second);
     expect(next.open).toBe(true);
     expect(next.pane.files.map((file) => file.id)).toEqual([first.id, second.id]);
@@ -59,26 +61,65 @@ describe("addTerminalToDock", () => {
 });
 
 describe("closeTerminalInDock", () => {
-  it("drops the dock when the last terminal closes", () => {
+  it("puts the dock away when the last terminal closes", () => {
     const file = newTerminalFile("/tmp/a");
-    const dock = createProjectTerminal("/tmp/a", file);
-    expect(closeTerminalInDock(dock, file.id)).toBeNull();
+    const dock = createProjectDock("/tmp/a", { file });
+    const next = closeTerminalInDock(dock, file.id);
+    expect(next.pane.files).toEqual([]);
+    expect(next.open).toBe(false);
+  });
+
+  it("keeps a dock whose browser is the surface showing", () => {
+    const file = newTerminalFile("/tmp/a");
+    const dock = withDockSurface(createProjectDock("/tmp/a", { file }), "browser");
+    const next = closeTerminalInDock(dock, file.id);
+    expect(next.pane.files).toEqual([]);
+    expect(next.open).toBe(true);
   });
 
   it("focuses a neighbor after closing one of several terminals", () => {
     const first = newTerminalFile("/tmp/a", "one");
     const second = newTerminalFile("/tmp/a", "two");
-    const dock = addTerminalToDock(createProjectTerminal("/tmp/a", first), second);
+    const dock = addTerminalToDock(createProjectDock("/tmp/a", { file: first }), second);
     const next = closeTerminalInDock(dock, second.id);
     expect(next?.pane.files.map((file) => file.id)).toEqual([first.id]);
     expect(next?.pane.activeFileId).toBe(first.id);
   });
 });
 
+describe("dock surfaces", () => {
+  it("opens on the browser when nothing asked for a terminal", () => {
+    const dock = createProjectDock("/tmp/a", { surface: "browser" });
+    expect(dock.surface).toBe("browser");
+    expect(dock.side).toBe("right");
+    expect(dock.pane.files).toEqual([]);
+    expect(dock.browser).toEqual(EMPTY_DOCK_BROWSER);
+  });
+
+  it("keeps a terminal at the bottom, where it has always been", () => {
+    const dock = createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") });
+    expect(dock.surface).toBe("terminal");
+    expect(dock.side).toBe("bottom");
+  });
+
+  it("shows the terminals a new one was just added to", () => {
+    const dock = withDockSurface(createProjectDock("/tmp/a", { surface: "files" }), "files");
+    const next = addTerminalToDock(dock, newTerminalFile("/tmp/a"));
+    expect(next.surface).toBe("terminal");
+    expect(next.open).toBe(true);
+  });
+
+  it("leaves the side where the user put it when the surface changes", () => {
+    const dock = createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") });
+    expect(withDockSurface(dock, "browser").side).toBe("bottom");
+    expect(withDockSurface(dock, "terminal")).toBe(dock);
+  });
+});
+
 describe("mapProjectTerminal", () => {
-  it("updates only the matching project and can remove it", () => {
-    const alpha = createProjectTerminal("/tmp/a", newTerminalFile("/tmp/a"));
-    const beta = createProjectTerminal("/tmp/b", newTerminalFile("/tmp/b"));
+  it("updates only the matching project", () => {
+    const alpha = createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") });
+    const beta = createProjectDock("/tmp/b", { file: newTerminalFile("/tmp/b") });
     const docks = [alpha, beta];
     expect(findProjectTerminal(docks, "/tmp/a/")?.pane.id).toBe(alpha.pane.id);
 
@@ -86,8 +127,8 @@ describe("mapProjectTerminal", () => {
     expect(hidden[0]?.open).toBe(false);
     expect(hidden[1]?.open).toBe(true);
 
-    expect(mapProjectTerminal(docks, "/tmp/a", () => null).map((dock) => dock.projectPath)).toEqual(
-      ["/tmp/b"],
+    expect(mapProjectTerminal(docks, "/tmp/nowhere", (dock) => withDockOpen(dock, false))).toBe(
+      docks,
     );
   });
 });
@@ -96,7 +137,10 @@ describe("patchProjectTerminals", () => {
   it("renames a terminal by id without touching other docks", () => {
     const file = newTerminalFile("/tmp/a", "zsh");
     const other = newTerminalFile("/tmp/b", "other");
-    const docks = [createProjectTerminal("/tmp/a", file), createProjectTerminal("/tmp/b", other)];
+    const docks = [
+      createProjectDock("/tmp/a", { file }),
+      createProjectDock("/tmp/b", { file: other }),
+    ];
     const next = patchProjectTerminals(docks, file.id, {
       title: "npm",
       cwd: "/tmp/a/app",
@@ -111,7 +155,7 @@ describe("patchProjectTerminals", () => {
 
   it("records a foreground process without renaming other docks", () => {
     const file = newTerminalFile("/tmp/a", "zsh");
-    const docks = [createProjectTerminal("/tmp/a", file)];
+    const docks = [createProjectDock("/tmp/a", { file })];
     const next = patchProjectTerminals(docks, file.id, {
       title: "vite",
       foreground: "vite",
@@ -135,7 +179,7 @@ describe("clampDockSize", () => {
 
 describe("withDockSide", () => {
   it("keeps size when the axis stays the same", () => {
-    const dock = { ...createProjectTerminal("/tmp/a", newTerminalFile("/tmp/a")), size: 200 };
+    const dock = { ...createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") }), size: 200 };
     expect(withDockSide(dock, "top").size).toBe(200);
     expect(withDockSide(dock, "top").side).toBe("top");
   });
@@ -167,8 +211,8 @@ describe("projectTerminalFileIds", () => {
     const b = newTerminalFile("/tmp/b");
     expect(
       projectTerminalFileIds([
-        createProjectTerminal("/tmp/a", a),
-        createProjectTerminal("/tmp/b", b),
+        createProjectDock("/tmp/a", { file: a }),
+        createProjectDock("/tmp/b", { file: b }),
       ]),
     ).toEqual([a.id, b.id]);
   });
@@ -181,8 +225,8 @@ describe("splitProjectTerminalsForMove", () => {
     const b1 = { ...newTab("s3"), layout: leaf("s3") };
     const sessions = [chat("s1", "/tmp/a"), chat("s2", "/tmp/a"), chat("s3", "/tmp/b")];
     const docks = [
-      createProjectTerminal("/tmp/a", newTerminalFile("/tmp/a")),
-      createProjectTerminal("/tmp/b", newTerminalFile("/tmp/b")),
+      createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") }),
+      createProjectDock("/tmp/b", { file: newTerminalFile("/tmp/b") }),
     ];
 
     const partial = splitProjectTerminalsForMove(docks, [a1], [a2, b1], sessions);

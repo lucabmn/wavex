@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { leaf, newTab, newTerminalFile, type WorkspaceTab } from "@/lib/workspace/layout";
-import { createProjectTerminal } from "@/lib/terminal/projectTerminal";
+import { createProjectDock } from "@/lib/terminal/projectTerminal";
 import type { Session } from "@/lib/session";
 import { collectWindowTransfer } from "@/lib/windowTransfer";
 
@@ -40,10 +40,9 @@ describe("collectWindowTransfer", () => {
   it("carries a project terminal dock into the new window", () => {
     const s1 = session("s1", "/Users/me/agent-terminal");
     const tabs: WorkspaceTab[] = [{ ...newTab("s1"), id: "t1" }];
-    const dock = createProjectTerminal(
-      "/Users/me/agent-terminal",
-      newTerminalFile("/Users/me/agent-terminal"),
-    );
+    const dock = createProjectDock("/Users/me/agent-terminal", {
+      file: newTerminalFile("/Users/me/agent-terminal"),
+    });
     const payload = collectWindowTransfer(tabs, [s1], ["t1"], "t1", new Set(), "~", [dock]);
     expect(payload?.projectTerminals).toEqual([dock]);
   });

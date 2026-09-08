@@ -12,7 +12,14 @@ import {
   type WorkspaceTab,
 } from "./layout";
 import type { ReleaseNotesTabSource } from "../updates/releaseNotes";
-import { clampDockSize, isDockSide, type ProjectTerminalDock } from "../terminal/projectTerminal";
+import {
+  clampDockSize,
+  emptyDockPane,
+  isDockSide,
+  isDockSurface,
+  type ProjectTerminalDock,
+} from "../terminal/projectTerminal";
+import { sanitizeDockBrowser } from "./dockBrowser";
 import { normalizeProjectPath } from "../recents";
 import { DEFAULT_APP_MODE, sanitizeAppMode, type AppMode } from "./appMode";
 import {
@@ -433,19 +440,24 @@ function sanitizeProjectTerminal(raw: unknown): ProjectTerminalDock | null {
     return null;
   }
   if (!isDockSide(value.side)) return null;
+  // A dock written before the surfaces existed only ever held terminals.
+  const surface = isDockSurface(value.surface) ? value.surface : "terminal";
   const pane = sanitizePane(value.pane);
-  if (!pane) return null;
-  const files = pane.files.filter(isTerminalTab);
-  if (files.length === 0) return null;
-  const activeFileId = files.some((file) => file.id === pane.activeFileId)
-    ? pane.activeFileId
-    : files[0].id;
+  const files = pane ? pane.files.filter(isTerminalTab) : [];
+  // Terminals do not survive a restart on their own, so a dock that has lost
+  // them is only worth keeping for the page, tree, or diff it also holds.
+  if (files.length === 0 && surface === "terminal") return null;
+  const activeFileId = files.some((file) => file.id === pane?.activeFileId)
+    ? (pane?.activeFileId ?? "")
+    : (files[0]?.id ?? "");
   return {
     projectPath: normalizeProjectPath(value.projectPath),
-    pane: { ...pane, files, activeFileId },
+    pane: { ...(pane ?? emptyDockPane()), files, activeFileId },
     side: value.side,
     size: clampDockSize(value.side, Number(value.size)),
     open: value.open !== false,
+    surface,
+    browser: sanitizeDockBrowser(value.browser),
   };
 }
 

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { EMPTY_DOCK_BROWSER, type DockBrowser } from "../workspace/dockBrowser";
 import {
   newEditorPane,
   nextTerminalTitleFromFiles,
@@ -13,12 +14,30 @@ import { workspaceTabCwd } from "../workspace/workspaceTabGroups";
 
 export type DockSide = "top" | "bottom" | "left" | "right";
 
+/**
+ * What the dock is showing. One dock per project holds all four, so switching
+ * between them is a change of which one paints — never a teardown of the other
+ * three, whose terminals, page, and scroll positions have to survive it.
+ */
+export type DockSurface = "browser" | "terminal" | "files" | "review";
+
+export const DOCK_SURFACES: readonly DockSurface[] = ["browser", "terminal", "files", "review"];
+
+export const DOCK_SURFACE_LABEL: Record<DockSurface, string> = {
+  browser: "Browser",
+  terminal: "Terminal",
+  files: "Files",
+  review: "Review",
+};
+
 export type ProjectTerminalDock = {
   projectPath: string;
   pane: EditorPane;
   side: DockSide;
   size: number;
   open: boolean;
+  surface: DockSurface;
+  browser: DockBrowser;
 };
 
 export const DOCK_SIZE_DEFAULT = {
@@ -33,6 +52,22 @@ const HORIZONTAL_MIN = 180;
 
 export function isDockSide(value: unknown): value is DockSide {
   return value === "top" || value === "bottom" || value === "left" || value === "right";
+}
+
+export function isDockSurface(value: unknown): value is DockSurface {
+  return DOCK_SURFACES.includes(value as DockSurface);
+}
+
+/**
+ * Where a surface wants to sit the first time a project opens the dock.
+ *
+ * A terminal is read in wide short bursts and has always docked to the bottom;
+ * a page, a tree, and a diff are all read in tall narrow columns beside the
+ * editor. After that the side is the user's, and switching surfaces leaves it
+ * where they put it.
+ */
+export function defaultDockSide(surface: DockSurface): DockSide {
+  return surface === "terminal" ? "bottom" : "right";
 }
 
 export function isVerticalDock(side: DockSide): boolean {
@@ -66,17 +101,24 @@ export function findProjectTerminal(
   return docks.find((dock) => sameProjectPath(dock.projectPath, projectPath));
 }
 
-export function createProjectTerminal(
+export function emptyDockPane(): EditorPane {
+  return { id: crypto.randomUUID(), files: [], activeFileId: "" };
+}
+
+export function createProjectDock(
   projectPath: string,
-  file: FilePaneTab,
-  side: DockSide = "bottom",
+  options: { file?: FilePaneTab; surface?: DockSurface; side?: DockSide } = {},
 ): ProjectTerminalDock {
+  const surface = options.surface ?? (options.file ? "terminal" : "browser");
+  const side = options.side ?? defaultDockSide(surface);
   return {
     projectPath: normalizeProjectPath(projectPath),
-    pane: newEditorPane(file),
+    pane: options.file ? newEditorPane(options.file) : emptyDockPane(),
     side,
     size: defaultDockSize(side),
     open: true,
+    surface,
+    browser: EMPTY_DOCK_BROWSER,
   };
 }
 
@@ -87,6 +129,7 @@ export function addTerminalToDock(
   return {
     ...dock,
     open: true,
+    surface: "terminal",
     pane: {
       ...dock.pane,
       files: [...dock.pane.files, file],
@@ -99,14 +142,25 @@ export function nextDockTerminalTitle(dock: ProjectTerminalDock, cwd: string): s
   return nextTerminalTitleFromFiles(dock.pane.files, cwd);
 }
 
+/**
+ * The dock outlives its last terminal, because the Browser it is also holding
+ * has a page in it. Closing the last one while the terminals are showing still
+ * puts the dock away, which is what closing the last terminal always did.
+ */
 export function closeTerminalInDock(
   dock: ProjectTerminalDock,
   fileId: string,
-): ProjectTerminalDock | null {
+): ProjectTerminalDock {
   const index = dock.pane.files.findIndex((file) => file.id === fileId);
   if (index < 0) return dock;
   const files = dock.pane.files.filter((file) => file.id !== fileId);
-  if (files.length === 0) return null;
+  if (files.length === 0) {
+    return {
+      ...dock,
+      pane: { ...dock.pane, files, activeFileId: "" },
+      open: dock.surface === "terminal" ? false : dock.open,
+    };
+  }
   const activeFileId =
     dock.pane.activeFileId === fileId
       ? files[Math.min(index, files.length - 1)].id
@@ -161,7 +215,7 @@ export function patchProjectTerminals(
 export function mapProjectTerminal(
   docks: ProjectTerminalDock[],
   projectPath: string,
-  update: (dock: ProjectTerminalDock) => ProjectTerminalDock | null,
+  update: (dock: ProjectTerminalDock) => ProjectTerminalDock,
 ): ProjectTerminalDock[] {
   let found = false;
   const next: ProjectTerminalDock[] = [];
@@ -171,14 +225,27 @@ export function mapProjectTerminal(
       continue;
     }
     found = true;
-    const updated = update(dock);
-    if (updated) next.push(updated);
+    next.push(update(dock));
   }
   return found ? next : docks;
 }
 
 export function withDockOpen(dock: ProjectTerminalDock, open: boolean): ProjectTerminalDock {
   return dock.open === open ? dock : { ...dock, open };
+}
+
+export function withDockSurface(
+  dock: ProjectTerminalDock,
+  surface: DockSurface,
+): ProjectTerminalDock {
+  return dock.surface === surface ? dock : { ...dock, surface };
+}
+
+export function withDockBrowser(
+  dock: ProjectTerminalDock,
+  browser: DockBrowser,
+): ProjectTerminalDock {
+  return dock.browser === browser ? dock : { ...dock, browser };
 }
 
 export function withDockSide(

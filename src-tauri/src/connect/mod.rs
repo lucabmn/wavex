@@ -61,8 +61,10 @@ impl HostServices for AppServices {
 
 /// Deliberately narrower than the WebView's: a page served over loopback has
 /// no `ipc:` or `asset:` scheme to allow, and the only socket it opens is the
-/// one back to the host that served it.
-const BROWSER_CSP: &str = "default-src 'self';      script-src 'self';      style-src 'self' 'unsafe-inline';      img-src 'self' data: blob: https://avatars.githubusercontent.com https://lh3.googleusercontent.com;      font-src 'self' data:;      connect-src 'self' ws://127.0.0.1:* ws://localhost:*;      media-src 'self' blob:;      object-src 'none';      base-uri 'self';      frame-ancestors 'none';      frame-src 'none'";
+/// one back to the host that served it. `frame-src` is the one place it is not
+/// narrower — the panel's Browser surface frames whatever address the user
+/// typed, and a sandboxed frame is what keeps that page out of this one.
+const BROWSER_CSP: &str = "default-src 'self';      script-src 'self';      style-src 'self' 'unsafe-inline';      img-src 'self' data: blob: https://avatars.githubusercontent.com https://lh3.googleusercontent.com;      font-src 'self' data:;      connect-src 'self' ws://127.0.0.1:* ws://localhost:*;      media-src 'self' blob:;      object-src 'none';      base-uri 'self';      frame-ancestors 'none';      frame-src http: https:";
 
 /// What the settings surface renders. The token is deliberately absent: it is
 /// shown once, on request, as a pairing code the user copies.

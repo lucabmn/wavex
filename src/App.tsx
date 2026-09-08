@@ -116,20 +116,25 @@ import { orderByIds } from "./lib/reorder";
 import {
   addTerminalToDock,
   applyDockGridStyle,
+  clampDockSize,
   closeTerminalInDock,
-  createProjectTerminal,
+  createProjectDock,
   findProjectTerminal,
   mapProjectTerminal,
   nextDockTerminalTitle,
   patchProjectTerminals,
   reorderDockTerminals,
   selectDockTerminal,
+  withDockBrowser,
   withDockOpen,
   withDockSide,
   withDockSize,
+  withDockSurface,
   type DockSide,
+  type DockSurface,
   type ProjectTerminalDock as ProjectTerminal,
 } from "./lib/terminal/projectTerminal";
+import type { DockBrowser } from "./lib/workspace/dockBrowser";
 import {
   applyGroupedReorder,
   insertTabBesideActive,
@@ -348,7 +353,7 @@ import {
   subscribeRaces,
   viewRaceOfSession,
 } from "./lib/race/raceStore";
-import { ProjectTerminalDock } from "./surfaces/ProjectTerminalDock";
+import { ProjectTerminalDock, type DockProject } from "./surfaces/ProjectTerminalDock";
 import { SearchView } from "./surfaces/SearchView";
 import { SettingsView } from "./surfaces/SettingsView";
 import { ActivityView } from "./surfaces/ActivityView";
@@ -1502,7 +1507,7 @@ export default function App({
           existing ? nextDockTerminalTitle(existing, workdir) : undefined,
         );
         if (!existing) {
-          return [...prev, createProjectTerminal(projectPath, file)];
+          return [...prev, createProjectDock(projectPath, { file })];
         }
         return mapProjectTerminal(prev, projectPath, (dock) => addTerminalToDock(dock, file));
       });
@@ -1551,20 +1556,6 @@ export default function App({
     onOpenTerminal(active?.cwd ?? projectCwd);
   }, [active?.cwd, onOpenTerminal, projectCwd]);
 
-  const onShowProjectTerminal = useCallback(() => {
-    const dock = findProjectTerminal(projectTerminalsRef.current, projectCwd);
-    if (dock && dock.pane.files.length > 0) {
-      if (!dock.open) {
-        setProjectTerminals((prev) =>
-          mapProjectTerminal(prev, projectCwd, (entry) => withDockOpen(entry, true)),
-        );
-      }
-      focusProjectTerminal();
-      return;
-    }
-    onOpenTerminal(active?.cwd ?? projectCwd);
-  }, [active?.cwd, focusProjectTerminal, onOpenTerminal, projectCwd]);
-
   const onNewTerminalInSession = useCallback(
     (sessionId: string) => {
       const session = sessionsRef.current.find((entry) => entry.id === sessionId);
@@ -1577,6 +1568,10 @@ export default function App({
     if (!looksLikeProject(projectCwd)) return;
     const dock = findProjectTerminal(projectTerminalsRef.current, projectCwd);
     if (!dock) {
+      openProjectTerminal(active?.cwd ?? projectCwd);
+      return;
+    }
+    if (!dock.open && dock.surface === "terminal" && dock.pane.files.length === 0) {
       openProjectTerminal(active?.cwd ?? projectCwd);
       return;
     }
@@ -1603,6 +1598,46 @@ export default function App({
           height: window.innerHeight,
         }),
       ),
+    );
+  }, []);
+
+  /**
+   * Show a surface in the project's panel, opening the panel if it is away.
+   * The panel belongs to a project, so a window with none has no panel to open.
+   */
+  const onShowDockSurface = useCallback(
+    (surface: DockSurface) => {
+      const projectPath = projectCwdRef.current;
+      if (!looksLikeProject(projectPath)) return;
+      if (
+        surface === "terminal" &&
+        !findProjectTerminal(projectTerminalsRef.current, projectPath)
+      ) {
+        openProjectTerminal(projectPath);
+        return;
+      }
+      setProjectTerminals((prev) => {
+        if (!findProjectTerminal(prev, projectPath)) {
+          return [...prev, createProjectDock(projectPath, { surface })];
+        }
+        return mapProjectTerminal(prev, projectPath, (dock) =>
+          withDockOpen(withDockSurface(dock, surface), true),
+        );
+      });
+      focusProjectTerminal();
+    },
+    [focusProjectTerminal, openProjectTerminal],
+  );
+
+  const onDockSurfaceChange = useCallback((surface: DockSurface) => {
+    setProjectTerminals((prev) =>
+      mapProjectTerminal(prev, projectCwdRef.current, (dock) => withDockSurface(dock, surface)),
+    );
+  }, []);
+
+  const onDockBrowserChange = useCallback((browser: DockBrowser) => {
+    setProjectTerminals((prev) =>
+      mapProjectTerminal(prev, projectCwdRef.current, (dock) => withDockBrowser(dock, browser)),
     );
   }, []);
 
@@ -4363,6 +4398,7 @@ export default function App({
     onNewTerminal,
     onNewTerminalTab,
     onToggleProjectTerminal,
+    onShowDockSurface,
     openSettings,
     onToggleProfileMenu,
   });
@@ -4393,6 +4429,7 @@ export default function App({
     onNewTerminal,
     onNewTerminalTab,
     onToggleProjectTerminal,
+    onShowDockSurface,
     openSettings,
     onToggleProfileMenu,
   };
@@ -4495,6 +4532,14 @@ export default function App({
       "terminal.newTab": () => runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
       "terminal.toggleDock": () =>
         runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
+      "panel.showBrowser": () =>
+        runInWorkspace("panel-browser", () => actions.current.onShowDockSurface("browser")),
+      "panel.showTerminal": () =>
+        runInWorkspace("panel-terminal", () => actions.current.onShowDockSurface("terminal")),
+      "panel.showFiles": () =>
+        runInWorkspace("panel-files", () => actions.current.onShowDockSurface("files")),
+      "panel.showReview": () =>
+        runInWorkspace("panel-review", () => actions.current.onShowDockSurface("review")),
     }),
     [onQuickAsk, run, runInCoding, runInWorkspace],
   );
@@ -4792,6 +4837,54 @@ export default function App({
 
   const dockGridRef = useRef<HTMLDivElement>(null);
   const dockDragSize = useRef<number | null>(null);
+  const dockProject = useMemo<DockProject>(
+    () => ({
+      gitCwd,
+      textHarness: pickTextHarness(active?.harness),
+      selectedDiffPath: activeTab ? selectedChangePath(activeTab, gitCwd) : undefined,
+      selectedCommitSha: activeTab ? selectedCommitSha(activeTab) : undefined,
+      onOpenFile,
+      onOpenDiff,
+      onOpenCommit,
+      onOpenTerminal: (cwd: string) => onOpenTerminal(cwd),
+      onFileMoved,
+      onFileDeleted,
+      onSearch: onFindInProject,
+    }),
+    [
+      active?.harness,
+      activeTab,
+      gitCwd,
+      onFileDeleted,
+      onFileMoved,
+      onFindInProject,
+      onOpenCommit,
+      onOpenDiff,
+      onOpenFile,
+      onOpenTerminal,
+    ],
+  );
+
+  // A window narrowed past the panel's share of it leaves no room for the
+  // workspace, so the panel gives the width back rather than keeping it.
+  useEffect(() => {
+    const onResize = () => {
+      setProjectTerminals((prev) => {
+        const viewport = { width: window.innerWidth, height: window.innerHeight };
+        let changed = false;
+        const next = prev.map((dock) => {
+          const size = clampDockSize(dock.side, dock.size, viewport);
+          if (size === dock.size) return dock;
+          changed = true;
+          return { ...dock, size };
+        });
+        return changed ? next : prev;
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const paintDockSize = useCallback((size: number) => {
     const dock = findProjectTerminal(projectTerminalsRef.current, projectCwdRef.current);
     const el = dockGridRef.current;
@@ -5016,8 +5109,11 @@ export default function App({
             onSelect={activateTab}
             onNew={onNew}
             onNewTerminal={onNewTerminal}
-            onShowTerminal={onShowProjectTerminal}
             projectTerminalActive={!!currentProjectDock && currentProjectDock.pane.files.length > 0}
+            dockSurface={currentProjectDock?.surface ?? null}
+            dockOpen={dockVisible}
+            onShowDockSurface={onShowDockSurface}
+            onHideDock={onHideProjectTerminal}
             onOpenSettings={onOpenSettings}
             onOpenInbox={onOpenInbox}
             onOpenNotes={notesEnabled ? onOpenNotes : undefined}
@@ -5051,9 +5147,12 @@ export default function App({
                     <ProjectTerminalDock
                       dock={dock}
                       focused={show && projectTerminalFocused}
+                      project={dockProject}
                       onFocus={focusProjectTerminal}
                       onHide={onHideProjectTerminal}
                       onSideChange={onProjectTerminalSide}
+                      onSurfaceChange={onDockSurfaceChange}
+                      onBrowserChange={onDockBrowserChange}
                       onSizePaint={paintDockSize}
                       onSizeCommit={commitDockSize}
                       onAddTerminal={() => onOpenTerminal(active?.cwd ?? projectCwd)}

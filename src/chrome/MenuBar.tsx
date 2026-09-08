@@ -242,7 +242,7 @@ export function MenuBar({
           { kind: "item", id: "toggle_sidebar", label: "Toggle Sidebar", shortcut: `${MOD}B` },
           { kind: "item", id: "open_inbox", label: "Inbox" },
           ...(onOpenNotes ? [{ kind: "item" as const, id: "open_notes", label: "Notes" }] : []),
-          { kind: "item", id: "toggle_terminal", label: "Toggle Terminal", shortcut: `${MOD}J` },
+          { kind: "item", id: "toggle_terminal", label: "Toggle Panel", shortcut: `${MOD}J` },
           { kind: "item", id: "open_model_picker", label: "Switch Model…", shortcut: `${MOD}.` },
           { kind: "item", id: "toggle_diff", label: "Toggle Changes" },
           { kind: "sep" },
@@ -253,7 +253,7 @@ export function MenuBar({
       case "terminal":
         return [
           { kind: "item", id: "new_terminal", label: "New Terminal", shortcut: `${MOD}\`` },
-          { kind: "item", id: "toggle_terminal", label: "Toggle Terminal", shortcut: `${MOD}J` },
+          { kind: "item", id: "toggle_terminal", label: "Toggle Panel", shortcut: `${MOD}J` },
         ];
     }
   };

@@ -49,6 +49,10 @@ export type CommandId =
   | "terminal.new"
   | "terminal.newTab"
   | "terminal.toggleDock"
+  | "panel.showBrowser"
+  | "panel.showTerminal"
+  | "panel.showFiles"
+  | "panel.showReview"
   | "composer.steer"
   | "editor.find"
   | "editor.replace"
@@ -153,7 +157,11 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "pane.focusDown", label: "Pane: Focus Down", keys: `${MOD}${ALT}↓`, when: "Always" },
   { id: "terminal.new", label: "Terminal: New", keys: `${MOD}\``, when: "Always" },
   { id: "terminal.newTab", label: "Terminal: New Tab", keys: `${MOD}${SHIFT}\``, when: "Always" },
-  { id: "terminal.toggleDock", label: "Terminal: Toggle Dock", keys: `${MOD}J`, when: "Always" },
+  { id: "terminal.toggleDock", label: "Panel: Toggle", keys: `${MOD}J`, when: "Always" },
+  { id: "panel.showBrowser", label: "Panel: Show Browser", when: "Always" },
+  { id: "panel.showTerminal", label: "Panel: Show Terminal", when: "Always" },
+  { id: "panel.showFiles", label: "Panel: Show Files", when: "Always" },
+  { id: "panel.showReview", label: "Panel: Show Review", when: "Always" },
   {
     // Follow-ups queue while a turn runs unless they steer; ⌥Enter always
     // steers instead, and this is the way past the queue.
