@@ -79,3 +79,16 @@ export function hostPathSeparator(hostId: HostId = getDefaultHostId()): string {
 export function canRevealPath(hostId: HostId = getDefaultHostId()): boolean {
   return !isRemoteHostId(hostId);
 }
+
+/**
+ * Whether handing this project to another installed application means
+ * anything.
+ *
+ * The same reasoning as `canRevealPath`: an editor or a terminal launches on
+ * the machine that runs it, a remote host has nobody sitting in front of it,
+ * and `list_open_with_apps` and `open_path_with` are deliberately not
+ * reachable over a connection. The button is left out rather than offered.
+ */
+export function canOpenProjectIn(hostId: HostId = getDefaultHostId()): boolean {
+  return !isRemoteHostId(hostId);
+}
