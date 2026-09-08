@@ -46,6 +46,11 @@ struct Spec {
     /// Bundle names probed under the macOS application directories. Empty for
     /// a program that has no macOS build, or whose build cannot take a folder
     /// as a document.
+    ///
+    /// This describes the macOS arm, which Linux and Windows never read. It
+    /// stays in the table so one row still says everything about an
+    /// application, and so it stays under test on any host.
+    #[allow(dead_code)]
     bundles: &'static [&'static str],
     /// Program names looked up on `PATH`. Empty for a macOS-only application.
     ///
