@@ -360,14 +360,13 @@ fn bundle_icns(bundle: &Path) -> Option<PathBuf> {
             }
         }
     }
-    // An app that names no icon almost always ships exactly one.
-    std::fs::read_dir(&resources)
-        .ok()?
-        .flatten()
-        .find_map(|entry| {
-            let path = entry.path();
-            (path.extension()? == "icns").then_some(path)
-        })
+    // An app that names no icon is usually named after it. Taking whatever
+    // `.icns` the directory happens to yield instead would pick a document
+    // badge — VS Code alone ships `bat`, `bower`, `c`, `css` — and `read_dir`
+    // answers in filesystem order, so it would not even pick the same one
+    // twice. Nothing is the honest answer; the menu draws its glyph.
+    let named = resources.join(format!("{}.icns", bundle.file_stem()?.to_str()?));
+    named.is_file().then_some(named)
 }
 
 /// `CFBundleIconFile`, read through `plutil` because a bundle's `Info.plist`
