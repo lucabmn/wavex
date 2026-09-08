@@ -4,6 +4,7 @@ import {
   Bot,
   Connection,
   Code,
+  Cube,
   Keyboard,
   Palette,
   SlidersHorizontal,
@@ -20,6 +21,7 @@ const SECTION_ICONS: Record<SettingsSectionId, IconComponent> = {
   keybindings: Keyboard,
   providers: Bot,
   connections: Connection,
+  skills: Cube,
   "language-servers": Code,
   archive: Archive,
 };

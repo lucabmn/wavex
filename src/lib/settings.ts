@@ -11,6 +11,7 @@ export type SettingsSectionId =
   | "keybindings"
   | "providers"
   | "connections"
+  | "skills"
   | "language-servers"
   | "archive";
 
@@ -71,6 +72,12 @@ export const SETTINGS_SECTIONS: {
     label: "Connections",
     description:
       "Serve this machine to another wavex, and reach the machines you have paired with.",
+  },
+  {
+    id: "skills",
+    group: "agents",
+    label: "Skills",
+    description: "Skills the installed agent CLIs can load, and the folders they live in.",
   },
   {
     id: "language-servers",
