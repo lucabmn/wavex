@@ -119,10 +119,10 @@ import {
   clampDocksToViewport,
   closeTerminalInDock,
   createProjectDock,
-  findProjectTerminal,
-  mapProjectTerminal,
+  findProjectDock,
+  mapProjectDock,
   nextDockTerminalTitle,
-  patchProjectTerminals,
+  patchProjectDocks,
   reorderDockTerminals,
   selectDockTerminal,
   withDockBrowser,
@@ -132,8 +132,8 @@ import {
   withDockSurface,
   type DockSide,
   type DockSurface,
-  type ProjectTerminalDock as ProjectTerminal,
-} from "./lib/terminal/projectTerminal";
+  type ProjectDock,
+} from "./lib/workspace/projectDock";
 import type { BrowserHistory } from "./lib/workspace/browserHistory";
 import {
   applyGroupedReorder,
@@ -353,7 +353,7 @@ import {
   subscribeRaces,
   viewRaceOfSession,
 } from "./lib/race/raceStore";
-import { ProjectTerminalDock, type DockProject } from "./surfaces/ProjectTerminalDock";
+import { DockPanel, type DockProject } from "./surfaces/DockPanel";
 import { SearchView } from "./surfaces/SearchView";
 import { SettingsView } from "./surfaces/SettingsView";
 import { ActivityView } from "./surfaces/ActivityView";
@@ -501,10 +501,10 @@ export default function App({
   const [tabs, setTabs] = useState<WorkspaceTab[]>(
     () => windowTransfer?.tabs ?? resumed?.tabs ?? [seed.tab],
   );
-  const [projectTerminals, setProjectTerminals] = useState<ProjectTerminal[]>(
-    () => windowTransfer?.projectTerminals ?? resumed?.projectTerminals ?? [],
+  const [projectDocks, setProjectDocks] = useState<ProjectDock[]>(
+    () => windowTransfer?.projectDocks ?? resumed?.projectDocks ?? [],
   );
-  const [projectTerminalFocused, setProjectTerminalFocused] = useState(false);
+  const [projectDockFocused, setProjectDockFocused] = useState(false);
   // Chat vs Workspace. The workspace stays mounted behind Chat so live
   // terminals, editors, and streaming turns survive a mode switch.
   const [appMode, setAppMode] = useState<AppMode>(() => resumed?.mode ?? "coding");
@@ -522,7 +522,7 @@ export default function App({
   const projectOfTab = useCallback((id: string) => tabProjectsRef.current.get(id), []);
   const [projectRailOpen, setProjectRailOpen] = useState(loadProjectRailOpen);
   const tabCloseScope = "project" as const;
-  const currentProjectDock = findProjectTerminal(projectTerminals, projectCwd);
+  const currentProjectDock = findProjectDock(projectDocks, projectCwd);
   const dockVisible = !!currentProjectDock?.open;
   const [sidebarTab, setSidebarTab] = useState<SidebarTabId>(
     () => loadSidebarTabOrder()[0] ?? "sessions",
@@ -615,10 +615,10 @@ export default function App({
   tabsRef.current = tabs;
   const dirtyFilesRef = useRef(dirtyFiles);
   dirtyFilesRef.current = dirtyFiles;
-  const projectTerminalsRef = useRef(projectTerminals);
-  projectTerminalsRef.current = projectTerminals;
-  const projectTerminalFocusedRef = useRef(projectTerminalFocused);
-  projectTerminalFocusedRef.current = projectTerminalFocused;
+  const projectDocksRef = useRef(projectDocks);
+  projectDocksRef.current = projectDocks;
+  const projectDockFocusedRef = useRef(projectDockFocused);
+  projectDockFocusedRef.current = projectDockFocused;
   const activeTabIdRef = useRef(activeTabId);
   activeTabIdRef.current = activeTabId;
   const projectCwdRef = useRef(projectCwd);
@@ -784,10 +784,10 @@ export default function App({
         activeTabIdRef.current,
         projectCwdRef.current,
         "unload",
-        projectTerminalsRef.current,
+        projectDocksRef.current,
         appModeRef.current,
       ).finally(() => {
-        void reapWindowRuntime(sessionsRef.current, tabsRef.current, projectTerminalsRef.current);
+        void reapWindowRuntime(sessionsRef.current, tabsRef.current, projectDocksRef.current);
       });
     };
     window.addEventListener("pagehide", reap);
@@ -816,7 +816,7 @@ export default function App({
           activeTabIdRef.current,
           projectCwdRef.current,
           "quit",
-          projectTerminalsRef.current,
+          projectDocksRef.current,
         ).catch(() => undefined);
         beginProfileSwitch();
       },
@@ -908,7 +908,7 @@ export default function App({
   }, [active?.harness]);
   const runningTerminals = useMemo(() => {
     const files: FilePaneTab[] = [];
-    const dock = findProjectTerminal(projectTerminals, projectCwd);
+    const dock = findProjectDock(projectDocks, projectCwd);
     if (dock) files.push(...dock.pane.files);
     for (const tab of tabs) {
       for (const pane of tab.terminalPanes ?? []) {
@@ -916,7 +916,7 @@ export default function App({
       }
     }
     return listRunningTerminals(files);
-  }, [projectCwd, projectTerminals, tabs]);
+  }, [projectCwd, projectDocks, tabs]);
   const runningTerminalOpen = useMemo(() => {
     const ids = new Set(runningTerminals.map((terminal) => terminal.id));
     if (
@@ -1017,7 +1017,7 @@ export default function App({
       () => tabsRef.current,
       () => activeTabIdRef.current,
       () => projectCwdRef.current,
-      () => projectTerminalsRef.current,
+      () => projectDocksRef.current,
       flushHarnessEvents,
       () => appModeRef.current,
     );
@@ -1041,7 +1041,7 @@ export default function App({
           activeTabIdRef.current,
           projectCwdRef.current,
           "unload",
-          projectTerminalsRef.current,
+          projectDocksRef.current,
           appModeRef.current,
         ).finally(() => {
           void closeCurrentWindow();
@@ -1223,7 +1223,7 @@ export default function App({
       sessions,
       activeTabId,
       projectCwd,
-      projectTerminals,
+      projectDocks,
       appMode,
     );
     const key = workspaceSnapshotKey(snapshot);
@@ -1234,7 +1234,7 @@ export default function App({
       void saveWorkspaceSnapshot(snapshot).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [tabs, sessions, activeTabId, projectCwd, projectTerminals, appMode, windowTransfer]);
+  }, [tabs, sessions, activeTabId, projectCwd, projectDocks, appMode, windowTransfer]);
 
   useEffect(() => {
     if (lastProjectPath()) return;
@@ -1490,18 +1490,18 @@ export default function App({
     [activeTab, projectCwd, sessionDefaults?.cwd, sessionDefaults?.runtimeMode],
   );
 
-  const focusProjectTerminal = useCallback(() => {
-    setProjectTerminalFocused(true);
+  const focusProjectDock = useCallback(() => {
+    setProjectDockFocused(true);
     setComposerFocused(false);
   }, []);
 
-  const openProjectTerminal = useCallback(
+  const openProjectDock = useCallback(
     (cwd: string) => {
       const workdir = cwd || projectCwdRef.current;
       const projectPath = projectCwdRef.current;
       if (!looksLikeProject(projectPath)) return false;
-      setProjectTerminals((prev) => {
-        const existing = findProjectTerminal(prev, projectPath);
+      setProjectDocks((prev) => {
+        const existing = findProjectDock(prev, projectPath);
         const file = newTerminalFile(
           workdir,
           existing ? nextDockTerminalTitle(existing, workdir) : undefined,
@@ -1509,18 +1509,18 @@ export default function App({
         if (!existing) {
           return [...prev, createProjectDock(projectPath, { file })];
         }
-        return mapProjectTerminal(prev, projectPath, (dock) => addTerminalToDock(dock, file));
+        return mapProjectDock(prev, projectPath, (dock) => addTerminalToDock(dock, file));
       });
-      focusProjectTerminal();
+      focusProjectDock();
       return true;
     },
-    [focusProjectTerminal],
+    [focusProjectDock],
   );
 
   const onOpenTerminal = useCallback(
     (cwd: string, asWorkspaceTab = false, occupySessionId?: string) => {
       const workdir = cwd || active?.cwd || projectCwd;
-      if (openProjectTerminal(workdir)) return;
+      if (openProjectDock(workdir)) return;
 
       if (asWorkspaceTab || !activeTab) {
         const file = newTerminalFile(workdir);
@@ -1549,7 +1549,7 @@ export default function App({
       );
       setComposerFocused(false);
     },
-    [active?.cwd, activeTab, appendTab, openProjectTerminal, projectCwd],
+    [active?.cwd, activeTab, appendTab, openProjectDock, projectCwd],
   );
 
   const onNewTerminal = useCallback(() => {
@@ -1564,35 +1564,35 @@ export default function App({
     [onOpenTerminal, projectCwd],
   );
 
-  const onToggleProjectTerminal = useCallback(() => {
+  const onToggleProjectDock = useCallback(() => {
     if (!looksLikeProject(projectCwd)) return;
-    const dock = findProjectTerminal(projectTerminalsRef.current, projectCwd);
+    const dock = findProjectDock(projectDocksRef.current, projectCwd);
     if (!dock) {
-      openProjectTerminal(active?.cwd ?? projectCwd);
+      openProjectDock(active?.cwd ?? projectCwd);
       return;
     }
     if (!dock.open && dock.surface === "terminal" && dock.pane.files.length === 0) {
-      openProjectTerminal(active?.cwd ?? projectCwd);
+      openProjectDock(active?.cwd ?? projectCwd);
       return;
     }
     const nextOpen = !dock.open;
-    setProjectTerminals((prev) =>
-      mapProjectTerminal(prev, projectCwd, (entry) => withDockOpen(entry, nextOpen)),
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwd, (entry) => withDockOpen(entry, nextOpen)),
     );
-    if (nextOpen) focusProjectTerminal();
-    else setProjectTerminalFocused(false);
-  }, [active?.cwd, focusProjectTerminal, openProjectTerminal, projectCwd]);
+    if (nextOpen) focusProjectDock();
+    else setProjectDockFocused(false);
+  }, [active?.cwd, focusProjectDock, openProjectDock, projectCwd]);
 
-  const onHideProjectTerminal = useCallback(() => {
-    setProjectTerminals((prev) =>
-      mapProjectTerminal(prev, projectCwdRef.current, (dock) => withDockOpen(dock, false)),
+  const onHideProjectDock = useCallback(() => {
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwdRef.current, (dock) => withDockOpen(dock, false)),
     );
-    setProjectTerminalFocused(false);
+    setProjectDockFocused(false);
   }, []);
 
-  const onProjectTerminalSide = useCallback((side: DockSide) => {
-    setProjectTerminals((prev) =>
-      mapProjectTerminal(prev, projectCwdRef.current, (dock) =>
+  const onProjectDockSide = useCallback((side: DockSide) => {
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwdRef.current, (dock) =>
         withDockSide(dock, side, {
           width: window.innerWidth,
           height: window.innerHeight,
@@ -1609,41 +1609,38 @@ export default function App({
     (surface: DockSurface) => {
       const projectPath = projectCwdRef.current;
       if (!looksLikeProject(projectPath)) return;
-      if (
-        surface === "terminal" &&
-        !findProjectTerminal(projectTerminalsRef.current, projectPath)
-      ) {
-        openProjectTerminal(projectPath);
+      if (surface === "terminal" && !findProjectDock(projectDocksRef.current, projectPath)) {
+        openProjectDock(projectPath);
         return;
       }
-      setProjectTerminals((prev) => {
-        if (!findProjectTerminal(prev, projectPath)) {
+      setProjectDocks((prev) => {
+        if (!findProjectDock(prev, projectPath)) {
           return [...prev, createProjectDock(projectPath, { surface })];
         }
-        return mapProjectTerminal(prev, projectPath, (dock) =>
+        return mapProjectDock(prev, projectPath, (dock) =>
           withDockOpen(withDockSurface(dock, surface), true),
         );
       });
-      focusProjectTerminal();
+      focusProjectDock();
     },
-    [focusProjectTerminal, openProjectTerminal],
+    [focusProjectDock, openProjectDock],
   );
 
   const onDockSurfaceChange = useCallback((surface: DockSurface) => {
-    setProjectTerminals((prev) =>
-      mapProjectTerminal(prev, projectCwdRef.current, (dock) => withDockSurface(dock, surface)),
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwdRef.current, (dock) => withDockSurface(dock, surface)),
     );
   }, []);
 
   const onDockBrowserChange = useCallback((browser: BrowserHistory) => {
-    setProjectTerminals((prev) =>
-      mapProjectTerminal(prev, projectCwdRef.current, (dock) => withDockBrowser(dock, browser)),
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwdRef.current, (dock) => withDockBrowser(dock, browser)),
     );
   }, []);
 
-  const onProjectTerminalSize = useCallback((size: number) => {
-    setProjectTerminals((prev) =>
-      mapProjectTerminal(prev, projectCwdRef.current, (dock) =>
+  const onProjectDockSize = useCallback((size: number) => {
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwdRef.current, (dock) =>
         withDockSize(dock, size, {
           width: window.innerWidth,
           height: window.innerHeight,
@@ -1652,62 +1649,60 @@ export default function App({
     );
   }, []);
 
-  const onSelectProjectTerminal = useCallback(
+  const onSelectProjectDock = useCallback(
     (fileId: string) => {
-      setProjectTerminals((prev) =>
-        mapProjectTerminal(prev, projectCwdRef.current, (dock) => selectDockTerminal(dock, fileId)),
+      setProjectDocks((prev) =>
+        mapProjectDock(prev, projectCwdRef.current, (dock) => selectDockTerminal(dock, fileId)),
       );
-      focusProjectTerminal();
+      focusProjectDock();
     },
-    [focusProjectTerminal],
+    [focusProjectDock],
   );
 
-  const onReorderProjectTerminals = useCallback((ids: string[]) => {
-    setProjectTerminals((prev) =>
-      mapProjectTerminal(prev, projectCwdRef.current, (dock) =>
+  const onReorderProjectDocks = useCallback((ids: string[]) => {
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwdRef.current, (dock) =>
         reorderDockTerminals(dock, orderByIds(dock.pane.files, ids)),
       ),
     );
   }, []);
 
-  const onCloseProjectTerminal = useCallback((fileId: string) => {
-    const dock = findProjectTerminal(projectTerminalsRef.current, projectCwdRef.current);
+  const onCloseProjectDock = useCallback((fileId: string) => {
+    const dock = findProjectDock(projectDocksRef.current, projectCwdRef.current);
     const file = dock?.pane.files.find((entry) => entry.id === fileId);
     if (!file) return;
     const finishClose = () => {
-      setProjectTerminals((prev) =>
-        mapProjectTerminal(prev, projectCwdRef.current, (entry) =>
-          closeTerminalInDock(entry, fileId),
-        ),
+      setProjectDocks((prev) =>
+        mapProjectDock(prev, projectCwdRef.current, (entry) => closeTerminalInDock(entry, fileId)),
       );
     };
     void confirmCloseTerminal(file).then((ok) => ok && finishClose());
   }, []);
 
   const onTerminalMetaChange = useCallback((fileId: string, patch: TerminalMetaPatch) => {
-    setProjectTerminals((prev) => patchProjectTerminals(prev, fileId, patch));
+    setProjectDocks((prev) => patchProjectDocks(prev, fileId, patch));
     setTabs((prev) => prev.map((tab) => updateTerminalTab(tab, fileId, patch)));
   }, []);
 
   const onToggleRunningTerminal = useCallback(
     (fileId: string) => {
-      const dock = projectTerminalsRef.current.find((entry) =>
+      const dock = projectDocksRef.current.find((entry) =>
         entry.pane.files.some((file) => file.id === fileId),
       );
       if (dock) {
         if (dock.open) {
-          setProjectTerminals((prev) =>
-            mapProjectTerminal(prev, dock.projectPath, (entry) => withDockOpen(entry, false)),
+          setProjectDocks((prev) =>
+            mapProjectDock(prev, dock.projectPath, (entry) => withDockOpen(entry, false)),
           );
-          setProjectTerminalFocused(false);
+          setProjectDockFocused(false);
           return;
         }
-        setProjectTerminals((prev) =>
-          mapProjectTerminal(prev, dock.projectPath, (entry) =>
+        setProjectDocks((prev) =>
+          mapProjectDock(prev, dock.projectPath, (entry) =>
             withDockOpen(selectDockTerminal(entry, fileId), true),
           ),
         );
-        focusProjectTerminal();
+        focusProjectDock();
         return;
       }
       for (const tab of tabsRef.current) {
@@ -1719,7 +1714,7 @@ export default function App({
             pane.activeFileId === fileId;
           if (showing) {
             setComposerFocused(true);
-            setProjectTerminalFocused(false);
+            setProjectDockFocused(false);
             return;
           }
           setActiveTabId(tab.id);
@@ -1735,13 +1730,13 @@ export default function App({
               );
             }),
           );
-          setProjectTerminalFocused(false);
+          setProjectDockFocused(false);
           setComposerFocused(false);
           return;
         }
       }
     },
-    [focusProjectTerminal],
+    [focusProjectDock],
   );
 
   const onNewTerminalTab = useCallback(() => {
@@ -2044,10 +2039,10 @@ export default function App({
 
   const onClosePane = useCallback(
     (sessionId?: string) => {
-      if (sessionId === undefined && projectTerminalFocused) {
-        const dock = findProjectTerminal(projectTerminalsRef.current, projectCwdRef.current);
+      if (sessionId === undefined && projectDockFocused) {
+        const dock = findProjectDock(projectDocksRef.current, projectCwdRef.current);
         if (dock) {
-          onCloseProjectTerminal(dock.pane.activeFileId);
+          onCloseProjectDock(dock.pane.activeFileId);
           return;
         }
       }
@@ -2093,11 +2088,11 @@ export default function App({
     [
       activeTab,
       onCloseFile,
-      onCloseProjectTerminal,
+      onCloseProjectDock,
       onCloseTab,
       onClearTabSession,
       persistSession,
-      projectTerminalFocused,
+      projectDockFocused,
       refreshHistory,
       sidebarCwd,
       tabCloseScope,
@@ -2156,7 +2151,7 @@ export default function App({
 
   const onFocusPane = useCallback(
     (paneId: string) => {
-      setProjectTerminalFocused(false);
+      setProjectDockFocused(false);
       setTabs((prev) =>
         prev.map((t) =>
           t.id === activeTabId ? { ...t, focusedId: paneId, diffFocused: false } : t,
@@ -2395,7 +2390,7 @@ export default function App({
       setSessions(result.sessions);
       setTabs(result.tabs);
       setActiveTabId(result.activeTabId);
-      setProjectTerminalFocused(false);
+      setProjectDockFocused(false);
       setComposerFocused(true);
     },
     [ensureOpenSession, tabCloseScope],
@@ -2850,7 +2845,7 @@ export default function App({
         }
         return updated;
       });
-      setProjectTerminals((prev) =>
+      setProjectDocks((prev) =>
         prev.filter((dock) => !sameProjectPath(dock.projectPath, normalized)),
       );
 
@@ -3622,7 +3617,7 @@ export default function App({
         setActiveTabId(nextTab.id);
       }
 
-      setProjectTerminalFocused(false);
+      setProjectDockFocused(false);
       setComposerFocused(focusComposer);
     },
     [appendTab],
@@ -3738,7 +3733,7 @@ export default function App({
           runnerIds: created.map((session) => session.id),
         }),
       );
-      setProjectTerminalFocused(false);
+      setProjectDockFocused(false);
       for (const session of created) onSubmit(session.id, text, attachments);
     },
     [appendTab, onSubmit],
@@ -3996,7 +3991,7 @@ export default function App({
         activeTabId,
         tabsRef.current,
         sessionsRef.current,
-        projectTerminalFocusedRef.current,
+        projectDockFocusedRef.current,
       );
       if (
         !sessionId ||
@@ -4013,7 +4008,7 @@ export default function App({
           activeTabIdRef.current,
           tabsRef.current,
           sessionsRef.current,
-          projectTerminalFocusedRef.current,
+          projectDockFocusedRef.current,
         );
         if (activeTabIdRef.current !== activeTabId || stillFocusedSessionId !== sessionId) {
           return;
@@ -4272,7 +4267,7 @@ export default function App({
         return;
       }
       const running = inFlightSessions(sessionsRef.current, tabsRef.current);
-      const terminals = projectTerminalsRef.current.reduce(
+      const terminals = projectDocksRef.current.reduce(
         (count, dock) => count + dock.pane.files.length,
         0,
       );
@@ -4349,7 +4344,7 @@ export default function App({
   }, [sidebarTab]);
 
   useEffect(() => {
-    if (!dockVisible) setProjectTerminalFocused(false);
+    if (!dockVisible) setProjectDockFocused(false);
   }, [dockVisible]);
 
   const openFilePaths = useMemo(() => {
@@ -4397,7 +4392,7 @@ export default function App({
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
-    onToggleProjectTerminal,
+    onToggleProjectDock,
     onShowDockSurface,
     openSettings,
     onToggleProfileMenu,
@@ -4428,7 +4423,7 @@ export default function App({
     pickProject,
     onNewTerminal,
     onNewTerminalTab,
-    onToggleProjectTerminal,
+    onToggleProjectDock,
     onShowDockSurface,
     openSettings,
     onToggleProfileMenu,
@@ -4530,8 +4525,7 @@ export default function App({
         runInWorkspace("focus-down", () => actions.current.onFocusDir("down")),
       "terminal.new": () => runInWorkspace("new-terminal", actions.current.onNewTerminal),
       "terminal.newTab": () => runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
-      "panel.toggle": () =>
-        runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
+      "panel.toggle": () => runInWorkspace("toggle-terminal", actions.current.onToggleProjectDock),
       "panel.showBrowser": () =>
         runInWorkspace("panel-browser", () => actions.current.onShowDockSurface("browser")),
       "panel.showTerminal": () =>
@@ -4607,7 +4601,7 @@ export default function App({
         else if (cmd === "split-down") run("split-down", () => a.onSplit("down"));
         else if (cmd === "new-terminal") run("new-terminal", a.onNewTerminal);
         else if (cmd === "new-terminal-tab") run("new-terminal-tab", a.onNewTerminalTab);
-        else if (cmd === "toggle-terminal") run("toggle-terminal", a.onToggleProjectTerminal);
+        else if (cmd === "toggle-terminal") run("toggle-terminal", a.onToggleProjectDock);
         else if ("focus" in cmd) run(`focus-${cmd.focus}`, () => a.onFocusDir(cmd.focus));
         else run(`activate-${cmd.activate}`, () => a.onActivate(cmd.activate));
         return;
@@ -4736,7 +4730,7 @@ export default function App({
         runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
       ),
       listen("toggle_terminal", () =>
-        runInWorkspace("toggle-terminal", actions.current.onToggleProjectTerminal),
+        runInWorkspace("toggle-terminal", actions.current.onToggleProjectDock),
       ),
       listen("focus_left", () =>
         runInWorkspace("focus-left", () => actions.current.onFocusDir("left")),
@@ -4874,7 +4868,7 @@ export default function App({
       if (frame != null) return;
       frame = requestAnimationFrame(() => {
         frame = null;
-        setProjectTerminals((prev) =>
+        setProjectDocks((prev) =>
           clampDocksToViewport(prev, { width: window.innerWidth, height: window.innerHeight }),
         );
       });
@@ -4887,7 +4881,7 @@ export default function App({
   }, []);
 
   const paintDockSize = useCallback((size: number) => {
-    const dock = findProjectTerminal(projectTerminalsRef.current, projectCwdRef.current);
+    const dock = findProjectDock(projectDocksRef.current, projectCwdRef.current);
     const el = dockGridRef.current;
     if (!dock || !el) return;
     dockDragSize.current = size;
@@ -4896,9 +4890,9 @@ export default function App({
   const commitDockSize = useCallback(
     (size: number) => {
       dockDragSize.current = null;
-      onProjectTerminalSize(size);
+      onProjectDockSize(size);
     },
-    [onProjectTerminalSize],
+    [onProjectDockSize],
   );
   useLayoutEffect(() => {
     if (dockDragSize.current != null) return;
@@ -5074,7 +5068,7 @@ export default function App({
             <MenuBar
               onNew={onNew}
               onNewTerminal={onNewTerminal}
-              onToggleTerminal={onToggleProjectTerminal}
+              onToggleTerminal={onToggleProjectDock}
               onGoToFile={onGoToFile}
               onGoToSymbol={onGoToSymbol}
               onToggleSidebar={onToggleSidebar}
@@ -5110,11 +5104,11 @@ export default function App({
             onSelect={activateTab}
             onNew={onNew}
             onNewTerminal={onNewTerminal}
-            projectTerminalActive={!!currentProjectDock && currentProjectDock.pane.files.length > 0}
+            projectDockActive={!!currentProjectDock && currentProjectDock.pane.files.length > 0}
             dockSurface={currentProjectDock?.surface ?? null}
             dockOpen={dockVisible}
             onShowDockSurface={onShowDockSurface}
-            onHideDock={onHideProjectTerminal}
+            onHideDock={onHideProjectDock}
             onOpenSettings={onOpenSettings}
             onOpenInbox={onOpenInbox}
             onOpenNotes={notesEnabled ? onOpenNotes : undefined}
@@ -5136,7 +5130,7 @@ export default function App({
             }}
           >
             <div ref={dockGridRef} className="absolute inset-0 grid h-full min-h-0 min-w-0">
-              {projectTerminals.map((dock) => {
+              {projectDocks.map((dock) => {
                 const show = dock.open && sameProjectPath(dock.projectPath, projectCwd);
                 return (
                   <div
@@ -5145,22 +5139,22 @@ export default function App({
                     style={show ? { gridArea: "dock" } : undefined}
                     aria-hidden={!show}
                   >
-                    <ProjectTerminalDock
+                    <DockPanel
                       dock={dock}
-                      focused={show && projectTerminalFocused}
+                      focused={show && projectDockFocused}
                       visible={show}
                       project={dockProject}
-                      onFocus={focusProjectTerminal}
-                      onHide={onHideProjectTerminal}
-                      onSideChange={onProjectTerminalSide}
+                      onFocus={focusProjectDock}
+                      onHide={onHideProjectDock}
+                      onSideChange={onProjectDockSide}
                       onSurfaceChange={onDockSurfaceChange}
                       onBrowserChange={onDockBrowserChange}
                       onSizePaint={paintDockSize}
                       onSizeCommit={commitDockSize}
                       onAddTerminal={() => onOpenTerminal(active?.cwd ?? projectCwd)}
-                      onSelectTerminal={onSelectProjectTerminal}
-                      onCloseTerminal={onCloseProjectTerminal}
-                      onReorderTerminals={onReorderProjectTerminals}
+                      onSelectTerminal={onSelectProjectDock}
+                      onCloseTerminal={onCloseProjectDock}
+                      onReorderTerminals={onReorderProjectDocks}
                       onTerminalMetaChange={onTerminalMetaChange}
                     />
                   </div>
@@ -5187,11 +5181,11 @@ export default function App({
                           dirtyFileIds={dirtyFiles}
                           fileErrorCounts={fileErrorCounts}
                           focusedId={
-                            tab.id === activeTabId && !tab.diffFocused && !projectTerminalFocused
+                            tab.id === activeTabId && !tab.diffFocused && !projectDockFocused
                               ? tab.focusedId
                               : ""
                           }
-                          composerFocused={composerFocused && !projectTerminalFocused}
+                          composerFocused={composerFocused && !projectDockFocused}
                           recents={recents}
                           hideProjectPicker
                           onFocus={onFocusPane}
@@ -5400,10 +5394,7 @@ export default function App({
         <ProfileSwitchConfirm
           target={findProfile(loadProfiles(), profileSwitchConfirm) ?? null}
           running={inFlightSessions(sessions, tabs)}
-          terminalCount={projectTerminals.reduce(
-            (count, dock) => count + dock.pane.files.length,
-            0,
-          )}
+          terminalCount={projectDocks.reduce((count, dock) => count + dock.pane.files.length, 0)}
           onCancel={() => setProfileSwitchConfirm(null)}
           onConfirm={onConfirmProfileSwitch}
         />

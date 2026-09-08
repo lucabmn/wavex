@@ -38,8 +38,8 @@ import {
   isVerticalDock,
   type DockSide,
   type DockSurface,
-  type ProjectTerminalDock,
-} from "../lib/terminal/projectTerminal";
+  type ProjectDock,
+} from "../lib/workspace/projectDock";
 import type { BrowserHistory } from "../lib/workspace/browserHistory";
 import { MOD } from "../lib/platform";
 import type { HarnessId } from "../lib/session";
@@ -63,7 +63,7 @@ export type DockProject = {
 };
 
 type Props = {
-  dock: ProjectTerminalDock;
+  dock: ProjectDock;
   focused: boolean;
   /** Whether this dock's project is the one the window is showing. */
   visible: boolean;
@@ -123,7 +123,7 @@ function hideIcon(side: DockSide) {
  * avoid. A surface that has never been opened is not mounted at all, so a
  * project that only ever uses terminals pays for nothing else.
  */
-export function ProjectTerminalDock({
+export function DockPanel({
   dock,
   focused,
   visible,
@@ -237,7 +237,7 @@ export function ProjectTerminalDock({
 
   return (
     <section
-      data-project-terminal-dock=""
+      data-project-dock=""
       className={`@container/dock relative flex h-full min-h-0 min-w-0 flex-col ${
         focused ? "bg-content/3" : "bg-content/2"
       } ${

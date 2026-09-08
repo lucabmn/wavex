@@ -21,7 +21,7 @@ import {
 import { stopWindowLspServers } from "./lsp/manager";
 import { leafIds, type WorkspaceTab } from "./workspace/layout";
 import { killPty } from "./terminal/pty";
-import { projectTerminalFileIds, type ProjectTerminalDock } from "./terminal/projectTerminal";
+import { dockTerminalFileIds, type ProjectDock } from "./workspace/projectDock";
 import { isRemoteHostId, LOCAL_HOST_ID } from "./host";
 import { IS_BROWSER_CLIENT } from "./clientRuntime";
 import { sessionHostId, sessionWorkCwd, type Session } from "./session";
@@ -72,7 +72,7 @@ let liveWorkspace: {
   tabs: () => WorkspaceTab[];
   activeTabId: () => string;
   projectCwd: () => string;
-  projectTerminals: () => ProjectTerminalDock[];
+  projectDocks: () => ProjectDock[];
   appMode: () => AppMode;
   flush: () => void;
 } | null = null;
@@ -99,7 +99,7 @@ export function setQuitWorkspace(
   tabs: () => WorkspaceTab[],
   activeTabId: () => string,
   projectCwd: () => string,
-  projectTerminals: () => ProjectTerminalDock[],
+  projectDocks: () => ProjectDock[],
   flush: () => void,
   appMode: () => AppMode = () => "coding",
 ): () => void {
@@ -108,7 +108,7 @@ export function setQuitWorkspace(
     tabs,
     activeTabId,
     projectCwd,
-    projectTerminals,
+    projectDocks,
     appMode,
     flush,
   };
@@ -126,7 +126,7 @@ export async function handleQuitRequested(): Promise<void> {
       liveWorkspace.tabs(),
       liveWorkspace.activeTabId(),
       liveWorkspace.projectCwd(),
-      liveWorkspace.projectTerminals(),
+      liveWorkspace.projectDocks(),
       liveWorkspace.appMode(),
     );
     return;
@@ -308,7 +308,7 @@ export async function persistQuitState(
   activeTabId: string,
   projectCwd: string,
   mode: "quit" | "unload" = "quit",
-  projectTerminals: ProjectTerminalDock[] = [],
+  projectDocks: ProjectDock[] = [],
   appMode: AppMode = "coding",
 ): Promise<void> {
   const refs = inFlightRefs(sessions, tabs);
@@ -322,7 +322,7 @@ export async function persistQuitState(
     }),
   );
   await saveWorkspaceSnapshot(
-    collectWorkspaceSnapshot(tabs, sessions, activeTabId, projectCwd, projectTerminals, appMode),
+    collectWorkspaceSnapshot(tabs, sessions, activeTabId, projectCwd, projectDocks, appMode),
   ).catch(() => undefined);
   // Work chats are deliberately absent from `refs`: that table decides which
   // tabs a restored workspace reopens, and a chat has no tab. Its interrupt
@@ -347,7 +347,7 @@ async function persistBootingResume(workspace: ResumedWorkspace): Promise<void> 
       workspace.sessions,
       workspace.activeTabId,
       workspace.projectCwd,
-      workspace.projectTerminals ?? [],
+      workspace.projectDocks ?? [],
       workspace.mode,
     ),
   ).catch(() => undefined);
@@ -364,7 +364,7 @@ async function confirmQuitAndExit(
   tabs: WorkspaceTab[],
   activeTabId: string,
   projectCwd: string,
-  projectTerminals: ProjectTerminalDock[] = [],
+  projectDocks: ProjectDock[] = [],
   appMode: AppMode = "coding",
 ): Promise<void> {
   if (quitDialogOpen) return;
@@ -387,7 +387,7 @@ async function confirmQuitAndExit(
         activeTabId,
         projectCwd,
         "quit",
-        projectTerminals,
+        projectDocks,
         appMode,
       );
       await invoke("confirm_quit");
@@ -402,7 +402,7 @@ async function confirmQuitAndExit(
 export async function reapWindowRuntime(
   sessions: Session[],
   tabs: WorkspaceTab[],
-  projectTerminals: ProjectTerminalDock[] = [],
+  projectDocks: ProjectDock[] = [],
 ): Promise<void> {
   // Only this device's children. A closing window must never reach across a
   // connection and stop the agents another machine is still running — leaving a
@@ -425,7 +425,7 @@ export async function reapWindowRuntime(
   // is merely closing must not reach across the connection and stop them.
   if (IS_BROWSER_CLIENT) return;
   await Promise.all(
-    [...terminalFileIds(tabs), ...projectTerminalFileIds(projectTerminals)].map((id) =>
+    [...terminalFileIds(tabs), ...dockTerminalFileIds(projectDocks)].map((id) =>
       killPty(id, LOCAL_HOST_ID),
     ),
   );

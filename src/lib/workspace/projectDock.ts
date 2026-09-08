@@ -1,16 +1,16 @@
 import type { CSSProperties } from "react";
-import { EMPTY_BROWSER_HISTORY, type BrowserHistory } from "../workspace/browserHistory";
+import { EMPTY_BROWSER_HISTORY, type BrowserHistory } from "./browserHistory";
 import {
   newEditorPane,
   nextTerminalTitleFromFiles,
   type EditorPane,
   type FilePaneTab,
   type WorkspaceTab,
-} from "../workspace/layout";
+} from "./layout";
 import { normalizeProjectPath, sameProjectPath } from "../recents";
 import type { Session } from "../session";
-import { applyTerminalMeta, type TerminalMetaPatch } from "./terminalTab";
-import { workspaceTabCwd } from "../workspace/workspaceTabGroups";
+import { applyTerminalMeta, type TerminalMetaPatch } from "../terminal/terminalTab";
+import { workspaceTabCwd } from "./workspaceTabGroups";
 
 export type DockSide = "top" | "bottom" | "left" | "right";
 
@@ -30,7 +30,7 @@ export const DOCK_SURFACE_LABEL: Record<DockSurface, string> = {
   review: "Review",
 };
 
-export type ProjectTerminalDock = {
+export type ProjectDock = {
   projectPath: string;
   pane: EditorPane;
   side: DockSide;
@@ -94,10 +94,10 @@ export function clampDockSize(
   return Math.min(max, Math.max(min, Math.round(value)));
 }
 
-export function findProjectTerminal(
-  docks: ProjectTerminalDock[],
+export function findProjectDock(
+  docks: ProjectDock[],
   projectPath: string,
-): ProjectTerminalDock | undefined {
+): ProjectDock | undefined {
   return docks.find((dock) => sameProjectPath(dock.projectPath, projectPath));
 }
 
@@ -108,7 +108,7 @@ export function emptyDockPane(): EditorPane {
 export function createProjectDock(
   projectPath: string,
   options: { file?: FilePaneTab; surface?: DockSurface } = {},
-): ProjectTerminalDock {
+): ProjectDock {
   const surface = options.surface ?? (options.file ? "terminal" : "browser");
   const side = defaultDockSide(surface);
   return {
@@ -122,10 +122,7 @@ export function createProjectDock(
   };
 }
 
-export function addTerminalToDock(
-  dock: ProjectTerminalDock,
-  file: FilePaneTab,
-): ProjectTerminalDock {
+export function addTerminalToDock(dock: ProjectDock, file: FilePaneTab): ProjectDock {
   return {
     ...dock,
     open: true,
@@ -138,7 +135,7 @@ export function addTerminalToDock(
   };
 }
 
-export function nextDockTerminalTitle(dock: ProjectTerminalDock, cwd: string): string {
+export function nextDockTerminalTitle(dock: ProjectDock, cwd: string): string {
   return nextTerminalTitleFromFiles(dock.pane.files, cwd);
 }
 
@@ -147,10 +144,7 @@ export function nextDockTerminalTitle(dock: ProjectTerminalDock, cwd: string): s
  * has a page in it. Closing the last one while the terminals are showing still
  * puts the dock away, which is what closing the last terminal always did.
  */
-export function closeTerminalInDock(
-  dock: ProjectTerminalDock,
-  fileId: string,
-): ProjectTerminalDock {
+export function closeTerminalInDock(dock: ProjectDock, fileId: string): ProjectDock {
   const index = dock.pane.files.findIndex((file) => file.id === fileId);
   if (index < 0) return dock;
   const files = dock.pane.files.filter((file) => file.id !== fileId);
@@ -168,25 +162,22 @@ export function closeTerminalInDock(
   return { ...dock, pane: { ...dock.pane, files, activeFileId } };
 }
 
-export function selectDockTerminal(dock: ProjectTerminalDock, fileId: string): ProjectTerminalDock {
+export function selectDockTerminal(dock: ProjectDock, fileId: string): ProjectDock {
   if (!dock.pane.files.some((file) => file.id === fileId) || dock.pane.activeFileId === fileId) {
     return dock;
   }
   return { ...dock, pane: { ...dock.pane, activeFileId: fileId } };
 }
 
-export function reorderDockTerminals(
-  dock: ProjectTerminalDock,
-  files: FilePaneTab[],
-): ProjectTerminalDock {
+export function reorderDockTerminals(dock: ProjectDock, files: FilePaneTab[]): ProjectDock {
   return { ...dock, pane: { ...dock.pane, files } };
 }
 
 export function patchDockTerminal(
-  dock: ProjectTerminalDock,
+  dock: ProjectDock,
   fileId: string,
   patch: TerminalMetaPatch,
-): ProjectTerminalDock {
+): ProjectDock {
   let changed = false;
   const files = dock.pane.files.map((file) => {
     if (!file.terminal || file.id !== fileId) return file;
@@ -198,11 +189,11 @@ export function patchDockTerminal(
   return { ...dock, pane: { ...dock.pane, files } };
 }
 
-export function patchProjectTerminals(
-  docks: ProjectTerminalDock[],
+export function patchProjectDocks(
+  docks: ProjectDock[],
   fileId: string,
   patch: TerminalMetaPatch,
-): ProjectTerminalDock[] {
+): ProjectDock[] {
   let changed = false;
   const next = docks.map((dock) => {
     const updated = patchDockTerminal(dock, fileId, patch);
@@ -212,13 +203,13 @@ export function patchProjectTerminals(
   return changed ? next : docks;
 }
 
-export function mapProjectTerminal(
-  docks: ProjectTerminalDock[],
+export function mapProjectDock(
+  docks: ProjectDock[],
   projectPath: string,
-  update: (dock: ProjectTerminalDock) => ProjectTerminalDock,
-): ProjectTerminalDock[] {
+  update: (dock: ProjectDock) => ProjectDock,
+): ProjectDock[] {
   let found = false;
-  const next: ProjectTerminalDock[] = [];
+  const next: ProjectDock[] = [];
   for (const dock of docks) {
     if (!sameProjectPath(dock.projectPath, projectPath)) {
       next.push(dock);
@@ -230,29 +221,23 @@ export function mapProjectTerminal(
   return found ? next : docks;
 }
 
-export function withDockOpen(dock: ProjectTerminalDock, open: boolean): ProjectTerminalDock {
+export function withDockOpen(dock: ProjectDock, open: boolean): ProjectDock {
   return dock.open === open ? dock : { ...dock, open };
 }
 
-export function withDockSurface(
-  dock: ProjectTerminalDock,
-  surface: DockSurface,
-): ProjectTerminalDock {
+export function withDockSurface(dock: ProjectDock, surface: DockSurface): ProjectDock {
   return dock.surface === surface ? dock : { ...dock, surface };
 }
 
-export function withDockBrowser(
-  dock: ProjectTerminalDock,
-  browser: BrowserHistory,
-): ProjectTerminalDock {
+export function withDockBrowser(dock: ProjectDock, browser: BrowserHistory): ProjectDock {
   return dock.browser === browser ? dock : { ...dock, browser };
 }
 
 export function withDockSide(
-  dock: ProjectTerminalDock,
+  dock: ProjectDock,
   side: DockSide,
   viewport?: { width: number; height: number },
-): ProjectTerminalDock {
+): ProjectDock {
   if (dock.side === side) return dock;
   return {
     ...dock,
@@ -262,10 +247,10 @@ export function withDockSide(
 }
 
 export function withDockSize(
-  dock: ProjectTerminalDock,
+  dock: ProjectDock,
   size: number,
   viewport?: { width: number; height: number },
-): ProjectTerminalDock {
+): ProjectDock {
   const next = clampDockSize(dock.side, size, viewport);
   return next === dock.size ? dock : { ...dock, size: next };
 }
@@ -275,9 +260,9 @@ export function withDockSize(
  * holding. A dock keeps the size the user dragged it to whenever it still fits.
  */
 export function clampDocksToViewport(
-  docks: ProjectTerminalDock[],
+  docks: ProjectDock[],
   viewport: { width: number; height: number },
-): ProjectTerminalDock[] {
+): ProjectDock[] {
   let changed = false;
   const next = docks.map((dock) => {
     const size = clampDockSize(dock.side, dock.size, viewport);
@@ -288,7 +273,7 @@ export function clampDocksToViewport(
   return changed ? next : docks;
 }
 
-export function projectTerminalFileIds(docks: ProjectTerminalDock[]): string[] {
+export function dockTerminalFileIds(docks: ProjectDock[]): string[] {
   const ids: string[] = [];
   for (const dock of docks) {
     for (const file of dock.pane.files) {
@@ -347,16 +332,16 @@ export function applyDockGridStyle(el: HTMLElement, side: DockSide | null, size:
  * every remaining tab of that project is leaving too — otherwise the
  * original window keeps the running terminals.
  */
-export function splitProjectTerminalsForMove(
-  docks: ProjectTerminalDock[],
+export function splitProjectDocksForMove(
+  docks: ProjectDock[],
   movingTabs: WorkspaceTab[],
   remainingTabs: WorkspaceTab[],
   sessions: Session[],
-): { moving: ProjectTerminalDock[]; remaining: ProjectTerminalDock[] } {
+): { moving: ProjectDock[]; remaining: ProjectDock[] } {
   const remainingProjects = projectPathsOf(remainingTabs, sessions);
   const movingProjects = projectPathsOf(movingTabs, sessions);
-  const moving: ProjectTerminalDock[] = [];
-  const remaining: ProjectTerminalDock[] = [];
+  const moving: ProjectDock[] = [];
+  const remaining: ProjectDock[] = [];
   for (const dock of docks) {
     const path = normalizeProjectPath(dock.projectPath);
     const stays = remainingProjects.has(path);

@@ -1,5 +1,5 @@
 import { leafIds, type WorkspaceTab } from "./workspace/layout";
-import type { ProjectTerminalDock } from "./terminal/projectTerminal";
+import type { ProjectDock } from "./workspace/projectDock";
 import type { Session } from "./session";
 
 export type WindowTransferPayload = {
@@ -8,7 +8,7 @@ export type WindowTransferPayload = {
   activeTabId: string;
   projectCwd: string;
   dirtyFileIds: string[];
-  projectTerminals?: ProjectTerminalDock[];
+  projectDocks?: ProjectDock[];
 };
 
 export function collectWindowTransfer(
@@ -18,7 +18,7 @@ export function collectWindowTransfer(
   activeTabId: string,
   dirtyFiles: Set<string>,
   fallbackCwd: string,
-  projectTerminals: ProjectTerminalDock[] = [],
+  projectDocks: ProjectDock[] = [],
 ): WindowTransferPayload | null {
   const idSet = new Set(tabIds);
   const movingTabs = tabs.filter((tab) => idSet.has(tab.id));
@@ -47,6 +47,6 @@ export function collectWindowTransfer(
     activeTabId: activeTabIdInGroup,
     projectCwd: movingSessions[0]?.cwd ?? fallbackCwd,
     dirtyFileIds: [...dirtyInTabs],
-    ...(projectTerminals.length > 0 ? { projectTerminals } : {}),
+    ...(projectDocks.length > 0 ? { projectDocks } : {}),
   };
 }

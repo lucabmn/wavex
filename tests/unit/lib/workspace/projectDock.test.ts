@@ -8,17 +8,17 @@ import {
   closeTerminalInDock,
   createProjectDock,
   dockGridStyle,
-  findProjectTerminal,
-  mapProjectTerminal,
+  findProjectDock,
+  mapProjectDock,
   nextDockTerminalTitle,
-  patchProjectTerminals,
-  projectTerminalFileIds,
+  patchProjectDocks,
+  dockTerminalFileIds,
   selectDockTerminal,
-  splitProjectTerminalsForMove,
+  splitProjectDocksForMove,
   withDockOpen,
   withDockSide,
   withDockSurface,
-} from "@/lib/terminal/projectTerminal";
+} from "@/lib/workspace/projectDock";
 import { EMPTY_BROWSER_HISTORY } from "@/lib/workspace/browserHistory";
 import type { Session } from "@/lib/session";
 
@@ -117,24 +117,22 @@ describe("dock surfaces", () => {
   });
 });
 
-describe("mapProjectTerminal", () => {
+describe("mapProjectDock", () => {
   it("updates only the matching project", () => {
     const alpha = createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") });
     const beta = createProjectDock("/tmp/b", { file: newTerminalFile("/tmp/b") });
     const docks = [alpha, beta];
-    expect(findProjectTerminal(docks, "/tmp/a/")?.pane.id).toBe(alpha.pane.id);
+    expect(findProjectDock(docks, "/tmp/a/")?.pane.id).toBe(alpha.pane.id);
 
-    const hidden = mapProjectTerminal(docks, "/tmp/a", (dock) => withDockOpen(dock, false));
+    const hidden = mapProjectDock(docks, "/tmp/a", (dock) => withDockOpen(dock, false));
     expect(hidden[0]?.open).toBe(false);
     expect(hidden[1]?.open).toBe(true);
 
-    expect(mapProjectTerminal(docks, "/tmp/nowhere", (dock) => withDockOpen(dock, false))).toBe(
-      docks,
-    );
+    expect(mapProjectDock(docks, "/tmp/nowhere", (dock) => withDockOpen(dock, false))).toBe(docks);
   });
 });
 
-describe("patchProjectTerminals", () => {
+describe("patchProjectDocks", () => {
   it("renames a terminal by id without touching other docks", () => {
     const file = newTerminalFile("/tmp/a", "zsh");
     const other = newTerminalFile("/tmp/b", "other");
@@ -142,7 +140,7 @@ describe("patchProjectTerminals", () => {
       createProjectDock("/tmp/a", { file }),
       createProjectDock("/tmp/b", { file: other }),
     ];
-    const next = patchProjectTerminals(docks, file.id, {
+    const next = patchProjectDocks(docks, file.id, {
       title: "npm",
       cwd: "/tmp/a/app",
     });
@@ -157,7 +155,7 @@ describe("patchProjectTerminals", () => {
   it("records a foreground process without renaming other docks", () => {
     const file = newTerminalFile("/tmp/a", "zsh");
     const docks = [createProjectDock("/tmp/a", { file })];
-    const next = patchProjectTerminals(docks, file.id, {
+    const next = patchProjectDocks(docks, file.id, {
       title: "vite",
       foreground: "vite",
     });
@@ -166,7 +164,7 @@ describe("patchProjectTerminals", () => {
       foreground: "vite",
     });
     expect(
-      patchProjectTerminals(next, file.id, { foreground: null })[0]?.pane.files[0]?.foreground,
+      patchProjectDocks(next, file.id, { foreground: null })[0]?.pane.files[0]?.foreground,
     ).toBeUndefined();
   });
 });
@@ -221,12 +219,12 @@ describe("dockGridStyle", () => {
   });
 });
 
-describe("projectTerminalFileIds", () => {
+describe("dockTerminalFileIds", () => {
   it("lists every terminal in every dock", () => {
     const a = newTerminalFile("/tmp/a");
     const b = newTerminalFile("/tmp/b");
     expect(
-      projectTerminalFileIds([
+      dockTerminalFileIds([
         createProjectDock("/tmp/a", { file: a }),
         createProjectDock("/tmp/b", { file: b }),
       ]),
@@ -234,7 +232,7 @@ describe("projectTerminalFileIds", () => {
   });
 });
 
-describe("splitProjectTerminalsForMove", () => {
+describe("splitProjectDocksForMove", () => {
   it("moves a dock only when every tab of that project is leaving", () => {
     const a1 = newTab("s1");
     const a2 = newTab("s2");
@@ -245,11 +243,11 @@ describe("splitProjectTerminalsForMove", () => {
       createProjectDock("/tmp/b", { file: newTerminalFile("/tmp/b") }),
     ];
 
-    const partial = splitProjectTerminalsForMove(docks, [a1], [a2, b1], sessions);
+    const partial = splitProjectDocksForMove(docks, [a1], [a2, b1], sessions);
     expect(partial.moving).toEqual([]);
     expect(partial.remaining.map((dock) => dock.projectPath)).toEqual(["/tmp/a", "/tmp/b"]);
 
-    const allA = splitProjectTerminalsForMove(docks, [a1, a2], [b1], sessions);
+    const allA = splitProjectDocksForMove(docks, [a1, a2], [b1], sessions);
     expect(allA.moving.map((dock) => dock.projectPath)).toEqual(["/tmp/a"]);
     expect(allA.remaining.map((dock) => dock.projectPath)).toEqual(["/tmp/b"]);
   });

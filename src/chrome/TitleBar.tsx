@@ -43,7 +43,7 @@ import {
   DOCK_SURFACE_LABEL,
   isDockSurface,
   type DockSurface,
-} from "../lib/terminal/projectTerminal";
+} from "../lib/workspace/projectDock";
 import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
 import { IS_MAC, MOD } from "../lib/platform";
@@ -61,7 +61,7 @@ type Props = {
   onSelect: (id: string) => void;
   onNew: () => void;
   onNewTerminal?: () => void;
-  projectTerminalActive?: boolean;
+  projectDockActive?: boolean;
   dockSurface?: DockSurface | null;
   dockOpen?: boolean;
   onShowDockSurface?: (surface: DockSurface) => void;
@@ -605,7 +605,7 @@ function TitleBarComponent({
   onSelect,
   onNew,
   onNewTerminal,
-  projectTerminalActive = false,
+  projectDockActive = false,
   onOpenSettings,
   onOpenInbox,
   onOpenNotes,
@@ -730,7 +730,7 @@ function TitleBarComponent({
           <DockSurfaceButton
             surface={dockSurface ?? null}
             open={dockOpen ?? false}
-            terminalRunning={projectTerminalActive}
+            terminalRunning={projectDockActive}
             onShow={onShowDockSurface}
             onHide={onHideDock}
           />
