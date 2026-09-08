@@ -1,4 +1,5 @@
 import { projectKey, type HostId } from "../host";
+import { gitWritingModelNativeId } from "../models";
 import { AcpClient } from "./acp";
 import {
   harnessHostId,
@@ -225,13 +226,14 @@ async function openSession(session: LiveText, cwd: string): Promise<void> {
     .catch(() => undefined);
 
   const modelConfigId = extractModelConfigId(setup.configOptions);
+  const textModel = gitWritingModelNativeId("cursor") ?? TEXT_MODEL;
   await session.acp
     .request(
       "session/set_config_option",
       {
         sessionId: acpSessionId,
         configId: modelConfigId,
-        value: TEXT_MODEL,
+        value: textModel,
       },
       REQUEST_TIMEOUT_MS,
     )
@@ -239,7 +241,7 @@ async function openSession(session: LiveText, cwd: string): Promise<void> {
       session.acp
         .request(
           "session/set_model",
-          { sessionId: acpSessionId, modelId: TEXT_MODEL },
+          { sessionId: acpSessionId, modelId: textModel },
           REQUEST_TIMEOUT_MS,
         )
         .catch(() => undefined),

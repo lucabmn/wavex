@@ -13,7 +13,7 @@ import { runClaudeTextPrompt, warmupClaudeText } from "./claudeText";
 import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
-const gitText = createGitTextGenerators(runClaudeTextPrompt, "Claude Code");
+const gitText = createGitTextGenerators(runClaudeTextPrompt, "Claude Code", "claude");
 
 export const claudeAdapter: HarnessAdapter = {
   id: "claude",

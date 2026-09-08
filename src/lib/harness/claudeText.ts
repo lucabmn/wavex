@@ -1,5 +1,5 @@
 import { projectKey, type HostId } from "../host";
-import { modelsFor } from "../models";
+import { gitWritingModelNativeId, modelsFor } from "../models";
 import {
   harnessHostId,
   killChild,
@@ -57,6 +57,10 @@ function stateFor(hostId: HostId): TextState {
 }
 
 function pickTextModel(): string {
+  // The git-writings setting names the exact model; the cheap Haiku stays
+  // the fallback for a choice that belongs to another provider.
+  const configured = gitWritingModelNativeId("claude");
+  if (configured) return configured;
   const models = modelsFor("claude");
   const haiku = models.find((model) =>
     /haiku/i.test(`${model.nativeId ?? ""} ${model.name} ${model.id}`),

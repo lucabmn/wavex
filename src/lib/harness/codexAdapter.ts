@@ -12,7 +12,7 @@ import { runCodexTextPrompt, warmupCodexText } from "./codexText";
 import { createGitTextGenerators, createSessionTitleGenerator } from "./textGenerators";
 import { registerHarness, type HarnessAdapter } from "./registry";
 
-const gitText = createGitTextGenerators(runCodexTextPrompt, "Codex");
+const gitText = createGitTextGenerators(runCodexTextPrompt, "Codex", "codex");
 
 export const codexAdapter: HarnessAdapter = {
   id: "codex",

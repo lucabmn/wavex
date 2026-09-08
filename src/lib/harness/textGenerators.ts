@@ -1,5 +1,6 @@
 import { gitRangeContext, gitStagedContext } from "../fs";
 import type { HostId } from "../host";
+import type { HarnessId } from "../session";
 import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
@@ -11,6 +12,7 @@ import {
   type PrContent,
 } from "../gitText";
 import { buildThreadTitlePrompt, parseGeneratedThreadTitle } from "../sessions/sessionTitle";
+import { loadGitWritingSkillSection } from "./gitWritingSkills";
 
 /**
  * A harness's one-shot text call. Every harness exposes the same shape, so the
@@ -50,22 +52,37 @@ export function createSessionTitleGenerator(run: TextPromptRunner) {
 
 /**
  * `label` names the harness in the one message a user can see: the fallback
- * when the model answered with nothing usable.
+ * when the model answered with nothing usable. `harness` scopes the project
+ * skills folded into each prompt, so a commit skill is honored instead of
+ * bypassed.
  */
 export function createGitTextGenerators(
   run: TextPromptRunner,
   label: string,
+  harness: HarnessId,
   timeoutMs = DEFAULT_GIT_TIMEOUT_MS,
 ) {
+  async function withSkills(
+    prompt: string,
+    input: { harness: HarnessId; cwd: string; kind: "commit" | "pr" | "branch"; hostId?: HostId },
+  ): Promise<string> {
+    const section = await loadGitWritingSkillSection(input);
+    return section ? `${prompt}\n\n${section}` : prompt;
+  }
+
   async function generateCommitMessage(cwd: string, hostId?: HostId): Promise<string> {
     const context = await gitStagedContext(cwd, hostId);
-    const output = await run({
-      cwd,
-      prompt: buildCommitMessagePrompt({
+    const prompt = await withSkills(
+      buildCommitMessagePrompt({
         branch: context.branch,
         stagedSummary: context.summary,
         stagedPatch: context.patch,
       }),
+      { harness, cwd, kind: "commit", hostId },
+    );
+    const output = await run({
+      cwd,
+      prompt,
       timeoutMs,
       hostId,
     });
@@ -86,15 +103,19 @@ export function createGitTextGenerators(
     const range = await gitRangeContext(cwd, hostId);
     let parsed: PrContent | null = null;
     try {
-      const output = await run({
-        cwd,
-        prompt: buildPrContentPrompt({
+      const prompt = await withSkills(
+        buildPrContentPrompt({
           baseBranch: range.base,
           headBranch: range.head,
           commitSummary: range.commitSummary,
           diffSummary: range.diffSummary,
           diffPatch: range.diffPatch,
         }),
+        { harness, cwd, kind: "pr", hostId },
+      );
+      const output = await run({
+        cwd,
+        prompt,
         timeoutMs,
         hostId,
       });
@@ -119,9 +140,15 @@ export function createGitTextGenerators(
     hostId?: HostId,
   ): Promise<string | null> {
     try {
+      const prompt = await withSkills(buildBranchNamePrompt(message), {
+        harness,
+        cwd,
+        kind: "branch",
+        hostId,
+      });
       const output = await run({
         cwd,
-        prompt: buildBranchNamePrompt(message),
+        prompt,
         timeoutMs,
         hostId,
       });

@@ -1,5 +1,5 @@
 import { projectKey, type HostId } from "../host";
-import { modelsFor } from "../models";
+import { gitWritingModelNativeId, modelsFor } from "../models";
 import {
   execChild,
   freeHarnessPort,
@@ -201,6 +201,16 @@ async function dropLive(hostId: HostId): Promise<void> {
 }
 
 function pickTextModel(): { providerID: string; modelID: string } {
+  const configured = gitWritingModelNativeId("opencode");
+  if (configured) {
+    const parsed = parseOpenCodeModelSlug(configured);
+    if (parsed) return parsed;
+    // Built-in entries carry a bare model id (`glm-5`); the provider is
+    // this harness itself.
+    if (!configured.includes("/") && !configured.includes(":")) {
+      return { providerID: "opencode", modelID: configured };
+    }
+  }
   const models = modelsFor("opencode");
   for (const model of models) {
     const parsed = parseOpenCodeModelSlug(model.nativeId ?? model.id);
