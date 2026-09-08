@@ -12,6 +12,8 @@
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 
 use crate::fs::{expand_home, path_to_js};
@@ -25,7 +27,7 @@ pub enum AppKind {
     Terminal,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct OpenWithApp {
     pub id: String,
     pub name: String,
@@ -46,11 +48,18 @@ struct Spec {
     /// as a document.
     bundles: &'static [&'static str],
     /// Program names looked up on `PATH`. Empty for a macOS-only application.
+    ///
+    /// This and the two below describe the Linux and Windows arm, which macOS
+    /// never reads. They stay in the table so one row still says everything
+    /// about an application, and so they stay under test on any host.
+    #[allow(dead_code)]
     binaries: &'static [&'static str],
     /// Arguments that precede the project path when a program is run directly.
+    #[allow(dead_code)]
     args: &'static [&'static str],
     /// When set, the path is glued to this prefix instead of standing alone —
     /// `--working-directory=/repo` rather than `--working-directory /repo`.
+    #[allow(dead_code)]
     inline: Option<&'static str>,
 }
 
@@ -210,6 +219,7 @@ enum Target {
     #[cfg(target_os = "macos")]
     Bundle(PathBuf),
     /// A program run directly with the project path in its arguments.
+    #[cfg(not(target_os = "macos"))]
     Program(PathBuf),
 }
 
@@ -255,18 +265,39 @@ fn find_bundle(names: &[&str]) -> Option<PathBuf> {
     })
 }
 
-fn find_program(names: &[&str]) -> Option<PathBuf> {
+#[cfg(not(target_os = "macos"))]
+fn find_program(names: &[&str], search_path: &str) -> Option<PathBuf> {
     names
         .iter()
-        .find_map(|name| crate::harness::resolve_gui_binary(name))
+        .find_map(|name| crate::harness::which_in_path(search_path, name))
 }
 
-fn resolve(spec: &Spec) -> Option<Target> {
+/// The `PATH` a lookup walks, built once for a whole probe.
+///
+/// Reading it costs an interactive login shell, so macOS answers with nothing:
+/// there, an application *is* a bundle, and a name on `PATH` is only its CLI
+/// shim — `code`, `subl` — which is not the thing being launched.
+fn search_path() -> String {
     #[cfg(target_os = "macos")]
-    if let Some(bundle) = find_bundle(spec.bundles) {
-        return Some(Target::Bundle(bundle));
+    {
+        String::new()
     }
-    find_program(spec.binaries).map(Target::Program)
+    #[cfg(not(target_os = "macos"))]
+    {
+        crate::harness::gui_search_path()
+    }
+}
+
+#[allow(unused_variables)]
+fn resolve(spec: &Spec, search_path: &str) -> Option<Target> {
+    #[cfg(target_os = "macos")]
+    {
+        find_bundle(spec.bundles).map(Target::Bundle)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        find_program(spec.binaries, search_path).map(Target::Program)
+    }
 }
 
 /// Where converted application icons are kept. macOS ships `.icns`, which no
@@ -277,12 +308,8 @@ const ICON_CACHE_DIR: &str = "open-with-icons";
 fn icon_for(spec: &Spec, target: &Target, cache: Option<&Path>) -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     {
-        match target {
-            Target::Bundle(bundle) => bundle_icon(bundle, spec.id, cache?),
-            // A macOS install found only on PATH is a CLI shim, not a bundle,
-            // and has no icon of its own.
-            Target::Program(_) => None,
-        }
+        let Target::Bundle(bundle) = target;
+        bundle_icon(bundle, spec.id, cache?)
     }
 
     #[cfg(all(unix, not(target_os = "macos")))]
@@ -483,8 +510,76 @@ fn resolve_icon_name(name: &str) -> Option<PathBuf> {
     None
 }
 
+/// What was installed the last time anyone looked.
+///
+/// Every window asks as its title bar mounts, and they all read the same disk.
+/// Applications are installed rarely enough that a short life beats walking
+/// `PATH` and the application directories once per title bar, and short enough
+/// that installing one shows up without restarting wavex.
+static PROBED: Mutex<Option<(Instant, Vec<OpenWithApp>)>> = Mutex::new(None);
+const PROBE_LIFE: Duration = Duration::from_secs(60);
+
+fn probed() -> Option<Vec<OpenWithApp>> {
+    let guard = PROBED.lock().ok()?;
+    let (at, apps) = guard.as_ref()?;
+    (at.elapsed() < PROBE_LIFE).then(|| apps.clone())
+}
+
+fn remember(apps: &[OpenWithApp]) {
+    if let Ok(mut guard) = PROBED.lock() {
+        *guard = Some((Instant::now(), apps.to_vec()));
+    }
+}
+
+/// Walk the disk for what is installed, then read the icons of what was found.
+///
+/// The icons go wide because each one is a `sips` or a directory walk that
+/// waits on the disk rather than on this thread, and doing ten in a row is ten
+/// times the wait for no reason.
+fn probe(cache: Option<&Path>) -> Vec<OpenWithApp> {
+    let search_path = search_path();
+    let found: Vec<(&Spec, Target)> = SPECS
+        .iter()
+        .filter_map(|spec| Some((spec, resolve(spec, &search_path)?)))
+        .collect();
+    let icons: Vec<Option<String>> = std::thread::scope(|scope| {
+        let running: Vec<_> = found
+            .iter()
+            .map(|(spec, target)| {
+                scope.spawn(move || icon_for(spec, target, cache).map(|path| path_to_js(&path)))
+            })
+            .collect();
+        running
+            .into_iter()
+            .map(|handle| handle.join().unwrap_or(None))
+            .collect()
+    });
+
+    let mut apps = vec![OpenWithApp {
+        id: FILES_ID.to_string(),
+        name: files_name().to_string(),
+        kind: AppKind::Files,
+        icon: None,
+    }];
+    apps.extend(
+        found
+            .into_iter()
+            .zip(icons)
+            .map(|((spec, _), icon)| OpenWithApp {
+                id: spec.id.to_string(),
+                name: spec.name.to_string(),
+                kind: spec.kind,
+                icon,
+            }),
+    );
+    apps
+}
+
 #[tauri::command]
 pub async fn list_open_with_apps(app: AppHandle) -> Result<Vec<OpenWithApp>, String> {
+    if let Some(apps) = probed() {
+        return Ok(apps);
+    }
     // Under the app data directory rather than the cache one because that is
     // what `assetProtocol`'s scope covers — a converted icon the WebView
     // cannot load is not worth writing. A missing directory only costs the
@@ -495,21 +590,8 @@ pub async fn list_open_with_apps(app: AppHandle) -> Result<Vec<OpenWithApp>, Str
         .ok()
         .map(|dir| dir.join(ICON_CACHE_DIR));
     tauri::async_runtime::spawn_blocking(move || {
-        let mut apps = vec![OpenWithApp {
-            id: FILES_ID.to_string(),
-            name: files_name().to_string(),
-            kind: AppKind::Files,
-            icon: None,
-        }];
-        apps.extend(SPECS.iter().filter_map(|spec| {
-            let target = resolve(spec)?;
-            Some(OpenWithApp {
-                id: spec.id.to_string(),
-                name: spec.name.to_string(),
-                kind: spec.kind,
-                icon: icon_for(spec, &target, cache.as_deref()).map(|path| path_to_js(&path)),
-            })
-        }));
+        let apps = probe(cache.as_deref());
+        remember(&apps);
         apps
     })
     .await
@@ -537,10 +619,12 @@ fn open_path_with_sync(app: &str, path: &str) -> Result<(), String> {
         .iter()
         .find(|spec| spec.id == app)
         .ok_or_else(|| format!("Unknown application: {app}"))?;
-    let target = resolve(spec).ok_or_else(|| format!("{} is not installed.", spec.name))?;
+    let target =
+        resolve(spec, &search_path()).ok_or_else(|| format!("{} is not installed.", spec.name))?;
     match target {
         #[cfg(target_os = "macos")]
         Target::Bundle(bundle) => launch_bundle(&bundle, &path, spec.name),
+        #[cfg(not(target_os = "macos"))]
         Target::Program(program) => launch_program(&program, spec, &path),
     }
 }
@@ -599,6 +683,7 @@ fn launch_bundle(bundle: &Path, path: &Path, name: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn launch_program(program: &Path, spec: &Spec, path: &Path) -> Result<(), String> {
     let mut cmd = crate::process::command(program);
     // A CLI shim like `code` re-execs a runtime it expects on PATH, and a
@@ -616,6 +701,10 @@ fn launch_program(program: &Path, spec: &Spec, path: &Path) -> Result<(), String
 
 /// The single argument carrying the project path, glued to a prefix when the
 /// program takes its working directory that way.
+///
+/// Compiled on every platform so the rule stays under test where CI is not
+/// running Linux; only the non-macOS arm calls it.
+#[allow(dead_code)]
 fn path_argument(spec: &Spec, path: &Path) -> std::ffi::OsString {
     match spec.inline {
         Some(prefix) => {
