@@ -306,6 +306,12 @@ scale are therefore restated for light — the theme block is declared after the
 `depth-flat` and `depth-deep` arms and matches their specificity, so without a
 light arm of its own the setting would do nothing on paper.
 
+Tailwind's `dark:` is bound to `html:not(.theme-light)` rather than to
+`prefers-color-scheme`. Nothing in `src` writes `dark:` itself; the variant
+exists for the markdown renderer's vendored classes, which ship syntax colours
+as `dark:text-[var(--shiki-dark,…)]` and otherwise paint a dark desktop's
+palette onto a white card.
+
 Status has four meanings and one tone each — `danger`, `warn`, `positive`,
 `note` — spent as `text-danger`, `bg-warn/15`, `border-danger/30`. Never reach
 into Tailwind's palette for a status: a `-400` rung is picked for whichever

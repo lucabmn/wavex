@@ -4,6 +4,15 @@
 @source "../node_modules/@streamdown/mermaid/dist/*.js";
 
 /*
+ * `dark:` follows the app's own scheme, not the desktop's. Tailwind's default
+ * binds it to `prefers-color-scheme`, and the markdown renderer ships its
+ * syntax colours as `dark:text-[var(--shiki-dark,…)]` — so a light window on a
+ * dark desktop painted github-dark tokens onto a white card. Nothing in `src`
+ * writes `dark:` itself; this exists for the vendored classes above.
+ */
+@custom-variant dark (&:where(html:not(.theme-light), html:not(.theme-light) *));
+
+/*
  * ── The wavex surface ──────────────────────────────────────────────────────
  *
  * The app is drawn as planes of colour separated by space, not as boxes drawn
