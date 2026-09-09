@@ -963,10 +963,10 @@ export function Composer({
         <div
           ref={boxRef}
           data-composer-box
-          className={`ui-composer relative z-10 rounded-xl ${fileDrag ? "border-accent" : ""}`}
+          className={`ui-composer relative z-10 rounded-lg ${fileDrag ? "border-accent" : ""}`}
         >
           {fileDrag ? (
-            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-xl bg-accent/10 text-[12.5px] text-muted">
+            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg bg-accent/10 text-[12.5px] text-muted">
               Drop files to attach
             </div>
           ) : null}
@@ -1225,7 +1225,7 @@ function ComposerAction({
             title="Send"
             aria-label="Send"
             onClick={onSend}
-            className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg"
+            className="ui-fill ui-focus grid size-6.5 place-items-center rounded-md"
           >
             <ArrowUp className="size-3.5" strokeWidth={2.25} />
           </button>
@@ -1235,7 +1235,7 @@ function ComposerAction({
           title="Stop"
           aria-label="Stop"
           onClick={onStop}
-          className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg"
+          className="ui-fill ui-focus grid size-6.5 place-items-center rounded-md"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>
@@ -1250,7 +1250,7 @@ function ComposerAction({
       aria-label="Send"
       disabled={!hasValue}
       onClick={onSend}
-      className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg disabled:cursor-default disabled:opacity-35"
+      className="ui-fill ui-focus grid size-6.5 place-items-center rounded-md disabled:cursor-default disabled:opacity-35"
     >
       <ArrowUp className="size-3.5" strokeWidth={2.25} />
     </button>

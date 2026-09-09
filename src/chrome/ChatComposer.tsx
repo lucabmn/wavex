@@ -170,7 +170,7 @@ export function ChatComposer({
         onResume={onResumeQueue}
       />
       <div
-        className={`ui-composer overflow-hidden rounded-xl ${dragging ? "border-accent" : ""}`}
+        className={`ui-composer overflow-hidden rounded-lg ${dragging ? "border-accent" : ""}`}
         onDragOver={(event) => {
           if (!attachmentsSupported) return;
           event.preventDefault();
@@ -226,7 +226,7 @@ export function ChatComposer({
             title={attachmentsSupported ? "Attach images" : `${harness} does not support images`}
             aria-label="Attach images"
             disabled={!attachmentsSupported}
-            className="ui-focus grid size-6.5 place-items-center rounded-lg text-faint transition-colors hover:bg-hover hover:text-content disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent"
+            className="ui-focus grid size-6.5 place-items-center rounded-md text-faint transition-colors hover:bg-hover hover:text-content disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent"
             onClick={() => {
               void pickFiles().then((paths) => {
                 if (!paths?.length) return;
@@ -284,7 +284,7 @@ export function ChatComposer({
                 title="Stop (Esc)"
                 aria-label="Stop"
                 onClick={onStop}
-                className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg"
+                className="ui-fill ui-focus grid size-6.5 place-items-center rounded-md"
               >
                 <Square className="size-2.5 fill-current" strokeWidth={0} />
               </button>
@@ -295,7 +295,7 @@ export function ChatComposer({
               aria-label="Send"
               disabled={!hasText && (imageMode || attachments.length === 0)}
               onClick={submit}
-              className="ui-fill ui-focus grid size-6.5 place-items-center rounded-lg disabled:cursor-default disabled:opacity-35"
+              className="ui-fill ui-focus grid size-6.5 place-items-center rounded-md disabled:cursor-default disabled:opacity-35"
             >
               <ArrowUp className="size-3.5" strokeWidth={2.25} />
             </button>
