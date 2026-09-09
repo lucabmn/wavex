@@ -132,27 +132,33 @@ html.depth-deep {
 }
 
 html.theme-light {
-  --background-lightness: 100%;
-  --content-lightness: 12%;
-  --accent-saturation: 52%;
-  --accent-lightness: 52%;
+  --background-lightness: 96%;
+  --content-lightness: 16%;
+  --accent-saturation: 56%;
+  --accent-lightness: 48%;
   /*
-   * Paper inverts the ladder. The page is white and the sidebar sits *below*
-   * it, because on light backgrounds a panel reads as behind the work when it
-   * is greyer, not when it is brighter — and lightness has no headroom above
-   * white to raise anything into.
+   * Paper climbs the same way the dark theme does: the sidebar sits behind
+   * the page and a card sits on it, ending at white. It ran the other way —
+   * the page pinned at 100% with cards *darker* than it, and the overlay on
+   * the same white as the page — so a card read as a stain and a menu had
+   * nothing but its shadow to stand on.
    */
-  --surface-0: hsl(var(--theme-hue) calc(var(--theme-saturation) + 4%) 96.5%);
-  --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
-  --surface-2: hsl(var(--theme-hue) calc(var(--theme-saturation) + 3%) 98%);
-  --surface-3: hsl(var(--theme-hue) var(--theme-saturation) 100%);
-  --edge: color-mix(in srgb, var(--color-content) calc(130% * var(--rule)), transparent);
-  --edge-strong: color-mix(in srgb, var(--color-content) calc(230% * var(--rule)), transparent);
-  --hover: color-mix(in srgb, var(--color-content) 4%, transparent);
-  --selected: color-mix(in srgb, var(--color-content) 7%, transparent);
-  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.06);
-  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.08);
-  --elevation-3: 0 12px 32px rgb(0 0 0 / 0.12);
+  --surface-0: hsl(
+    var(--theme-hue) calc(var(--theme-saturation) + 4%) calc(var(--background-lightness) - 3.5%)
+  );
+  --surface-1: hsl(var(--theme-hue) calc(var(--theme-saturation) + 2%) var(--background-lightness));
+  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 3%));
+  --surface-3: hsl(
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 3.5%)
+  );
+  /* Ink on paper needs a firmer line than light on graphite to read at all. */
+  --edge: color-mix(in srgb, var(--color-content) calc(170% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(290% * var(--rule)), transparent);
+  --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
+  --selected: color-mix(in srgb, var(--color-content) 9%, transparent);
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.07);
+  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.1);
+  --elevation-3: 0 12px 32px rgb(0 0 0 / 0.16);
   --link-color: hsl(var(--accent-hue) 60% 46%);
   --color-skill: #8a6a1c;
   --color-template: #5a4bc4;

@@ -661,11 +661,11 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
           />
         </Row>
         <Row
-          label="Sidebar opacity"
-          description="How much of the desktop shows through the sidebar and the project rail."
+          label="Window opacity"
+          description="How much of the desktop shows through wavex. It applies to the sidebar and the project rail, and to the main pane as well when Main pane glass is on."
         >
           <Slider
-            label="Sidebar opacity"
+            label="Window opacity"
             value={percent}
             display={`${percent}%`}
             min={Math.round(SIDEBAR_OPACITY_MIN * 100)}

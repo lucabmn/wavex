@@ -819,7 +819,7 @@ export const SURFACE_RANGE: Record<
   { background: [min: number, max: number, fallback: number]; content: [number, number, number] }
 > = {
   dark: { background: [2, 26, 13], content: [70, 100, 96] },
-  light: { background: [86, 100, 100], content: [0, 42, 12] },
+  light: { background: [86, 100, 96], content: [0, 42, 16] },
 };
 
 function schemeKey(key: string, scheme: ColorScheme) {
@@ -894,7 +894,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
     dark: { background: 13, content: 96 },
-    light: { background: 100, content: 12 },
+    light: { background: 96, content: 16 },
   },
   {
     id: "midnight",
@@ -903,7 +903,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeSaturation: 14,
     accentHue: 214,
     dark: { background: 11, content: 96 },
-    light: { background: 100, content: 14 },
+    light: { background: 96, content: 14 },
   },
   {
     id: "carbon",
@@ -912,7 +912,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeSaturation: 0,
     accentHue: 232,
     dark: { background: 11, content: 96 },
-    light: { background: 100, content: 12 },
+    light: { background: 96, content: 12 },
   },
   {
     id: "linen",
@@ -921,7 +921,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeSaturation: 8,
     accentHue: 24,
     dark: { background: 11, content: 95 },
-    light: { background: 99, content: 16 },
+    light: { background: 96, content: 16 },
   },
   {
     id: "moss",
@@ -930,7 +930,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeSaturation: 7,
     accentHue: 152,
     dark: { background: 11, content: 95 },
-    light: { background: 100, content: 14 },
+    light: { background: 96, content: 14 },
   },
   {
     id: "plum",
@@ -939,7 +939,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeSaturation: 9,
     accentHue: 288,
     dark: { background: 11, content: 96 },
-    light: { background: 100, content: 14 },
+    light: { background: 96, content: 14 },
   },
   {
     id: "harbor",
@@ -948,7 +948,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeSaturation: 10,
     accentHue: 188,
     dark: { background: 11, content: 95 },
-    light: { background: 100, content: 14 },
+    light: { background: 96, content: 14 },
   },
 ];
 

@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Rebuild the light theme so its surfaces climb like the dark theme's: the page
+  no longer sits pinned at white with cards darker than it and overlays on the
+  same white, and its rules and text are firm enough to read on paper.
+- Rename Sidebar opacity to Window opacity — one number drives the sidebar and,
+  with Main pane glass on, the main pane too.
 - Give the projects rail its own edge again, so the projects list and the
   sessions list no longer run together, and stand its mode switch in a band
   matching the panel's strip beside it so both rules sit on one line.

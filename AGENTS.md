@@ -288,9 +288,12 @@ raised, `--surface-3` overlay — as `bg-surface-sunken`, `bg-surface`,
 `bg-surface-raised`, `bg-surface-overlay`. The ladder is shallow on purpose:
 separating everything by shade leaves the window looking quilted, so most of
 the app sits on one plane and a step is spent only on the sidebar behind the
-work, a card above the page, and an overlay above everything. On paper the
-ladder inverts — the page is white and the sidebar is greyer — because
-lightness has no headroom above white to raise anything into.
+work, a card above the page, and an overlay above everything. Paper climbs the
+same way: the sidebar is greyer than the page and a card is whiter than it,
+ending at white. Pinning the page itself to 100% leaves nothing to raise a
+card into — cards come out _darker_ than the page and read as stains, and an
+overlay lands on the same white with only its shadow to stand on. Every light
+preset therefore opens below 100 so the top of the ladder has somewhere to go.
 
 Hairlines are `border-edge` and `border-edge-strong`, never a hand-picked
 `border-content/N`: the Separators setting scales all of them through one
@@ -341,9 +344,10 @@ duplicated.
 
 Every strip of tabs is a 40px band whose tabs are `h-full`, so the rule under
 the live one always lands on the bottom edge of the row it belongs to. That
-includes the mode switch at the top of the rail: it stands beside the panel's
-strip, so it gets a band of its own rather than sitting inside the padded
-column below it. A strip sized to its content instead puts two rules at two
+includes the mode switch at the top of the rail _and_ the one Work draws: each
+stands beside a strip in the next column, so each gets a band of its own rather
+than sitting inside the padded column below it, and a mode switch does not move
+when the mode does. A strip sized to its content instead puts two rules at two
 heights, and two strips side by side stop reading as one row.
 
 A tab in the header is a chip, not an underlined tab: it sits in a toolbar

@@ -317,53 +317,56 @@ export function WorkView({
         className={`sidebar-glass ${listOpen ? "flex w-64" : "flex w-auto"} shrink-0 flex-col`}
       >
         {listOpen ? (
-          <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
-            <div className="pb-1.5">
+          <>
+            {/* The same 40px band the workspace rail gives it, so switching
+                modes does not move the switch or its rule. */}
+            <div className="ui-rule-b flex h-10 shrink-0 items-stretch px-2">
               <ModeSwitch mode={mode} onChange={onModeChange} stretch />
             </div>
-
-            <div className="flex items-center gap-1">
-              <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2">
-                <Search className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />
-                <input
-                  ref={searchField}
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={`Search chats (${MOD}F)`}
-                  aria-label="Search chats"
-                  className="h-full min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-content/35"
-                />
-                {query ? (
-                  <button
-                    type="button"
-                    aria-label="Clear search"
-                    onClick={() => setQuery("")}
-                    className="shrink-0 text-content/40 hover:text-content"
-                  >
-                    <X className="size-3" strokeWidth={2} />
-                  </button>
-                ) : null}
+            <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-2">
+              <div className="flex items-center gap-1">
+                <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2">
+                  <Search className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />
+                  <input
+                    ref={searchField}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={`Search chats (${MOD}F)`}
+                    aria-label="Search chats"
+                    className="h-full min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-content/35"
+                  />
+                  {query ? (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => setQuery("")}
+                      className="shrink-0 text-content/40 hover:text-content"
+                    >
+                      <X className="size-3" strokeWidth={2} />
+                    </button>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  title="New project"
+                  aria-label="New project"
+                  onClick={onNewFolder}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
+                >
+                  <FolderPlus className="size-3.5" strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  title={`New chat (${MOD}T)`}
+                  aria-label="New chat"
+                  onClick={() => onNewChat()}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
+                >
+                  <Plus className="size-3.5" strokeWidth={1.75} />
+                </button>
               </div>
-              <button
-                type="button"
-                title="New project"
-                aria-label="New project"
-                onClick={onNewFolder}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
-              >
-                <FolderPlus className="size-3.5" strokeWidth={1.75} />
-              </button>
-              <button
-                type="button"
-                title={`New chat (${MOD}T)`}
-                aria-label="New chat"
-                onClick={() => onNewChat()}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
-              >
-                <Plus className="size-3.5" strokeWidth={1.75} />
-              </button>
             </div>
-          </div>
+          </>
         ) : null}
 
         <div
