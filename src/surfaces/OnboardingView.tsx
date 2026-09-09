@@ -210,7 +210,7 @@ function AgentsStep() {
               </span>
               <span
                 className={`size-2 shrink-0 rounded-full ${
-                  available ? "bg-green-500" : "bg-content/20"
+                  available ? "bg-positive" : "bg-content/20"
                 }`}
                 aria-label={available ? "Installed" : "Not found"}
                 title={available ? "Installed" : "Not found"}

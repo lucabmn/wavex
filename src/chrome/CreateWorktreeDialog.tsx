@@ -185,7 +185,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
 
         {error ? (
           <div className="flex flex-col gap-2">
-            <p className="max-h-24 overflow-y-auto whitespace-pre-wrap text-[11.5px] leading-4 text-red-400/90">
+            <p className="max-h-24 overflow-y-auto whitespace-pre-wrap text-[11.5px] leading-4 text-danger/90">
               {error}
             </p>
             {conflict ? (

@@ -246,8 +246,8 @@ export function SurfaceTabs({
                   className={`min-w-0 flex-1 truncate ${review ? "italic" : ""} ${
                     errors
                       ? active
-                        ? "text-red-400"
-                        : "text-red-400/75 group-hover:text-red-400"
+                        ? "text-danger"
+                        : "text-danger/75 group-hover:text-danger"
                       : ""
                   }`}
                 >
@@ -255,7 +255,7 @@ export function SurfaceTabs({
                 </span>
                 {errors > 0 ? (
                   <span
-                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold tabular-nums text-red-400"
+                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold tabular-nums text-danger"
                     title={checkLabel(errors)}
                     aria-label={checkLabel(errors)}
                   >
@@ -264,7 +264,7 @@ export function SurfaceTabs({
                   </span>
                 ) : !terminal && !changes && !commit ? (
                   <span
-                    className="shrink-0 text-emerald-400/60"
+                    className="shrink-0 text-positive/60"
                     title={checkLabel(0)}
                     aria-label={checkLabel(0)}
                   >

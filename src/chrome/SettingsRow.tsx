@@ -252,7 +252,7 @@ export function SecondaryButton({
       disabled={disabled}
       className={`ui-focus flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-[12.5px] font-medium ${
         danger
-          ? "text-red-400 hover:border-red-400/40 hover:bg-red-400/10"
+          ? "text-danger hover:border-danger/40 hover:bg-danger/10"
           : "bg-surface-raised text-muted hover:border-edge-strong hover:text-content"
       } disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
     >

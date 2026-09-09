@@ -472,7 +472,7 @@ export function AutomationDialog({ draft, existing, projects, onClose, onSave }:
         </div>
 
         {error ? (
-          <p className="shrink-0 border-t border-edge px-4 py-2 text-[12.5px] leading-4 text-red-400/90">
+          <p className="shrink-0 border-t border-edge px-4 py-2 text-[12.5px] leading-4 text-danger/90">
             {error}
           </p>
         ) : null}
@@ -544,7 +544,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
     <div className="flex flex-col gap-1.5">
       <span className="ui-label">{label}</span>
       {children}
-      {error ? <p className="text-[11.5px] leading-snug text-red-400/90">{error}</p> : null}
+      {error ? <p className="text-[11.5px] leading-snug text-danger/90">{error}</p> : null}
     </div>
   );
 }
@@ -552,7 +552,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 /** Amber, for something true about the world rather than wrong about the form. */
 function Attention({ children }: { children: ReactNode }) {
   return (
-    <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-amber-300">
+    <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-warn">
       <CircleAlert className="mt-px size-3 shrink-0" strokeWidth={1.75} />
       {children}
     </p>

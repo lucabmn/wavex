@@ -290,10 +290,28 @@ separating everything by shade leaves the window looking quilted, so most of
 the app sits on one plane and a step is spent only on the sidebar behind the
 work, a card above the page, and an overlay above everything. Paper climbs the
 same way: the sidebar is greyer than the page and a card is whiter than it,
-ending at white. Pinning the page itself to 100% leaves nothing to raise a
-card into — cards come out _darker_ than the page and read as stains, and an
-overlay lands on the same white with only its shadow to stand on. Every light
-preset therefore opens below 100 so the top of the ladder has somewhere to go.
+ending at white. Paper has a ceiling graphite does not, so its ladder is built
+_downwards_ from `--paper-top` — capped at 100%, four points above the page —
+and never upwards from the page. Deriving upwards meant a saved lightness near
+100 clamped the two rungs above the page onto it: a card came out the same
+colour as the sheet it was supposed to sit on, and an overlay had only its
+shadow to stand on. The cap is why a stored 100 now behaves like the default
+rather than collapsing the ladder — and stored values do reach production,
+because a preset writes both schemes and outlives any change to the defaults.
+
+A shadow on paper is a shadow, not a hole: the alpha that reads as depth over
+graphite reads as dirt under a white card, so light carries its own elevations
+and relies on the surface step above to do the lifting. Both ends of the Depth
+scale are therefore restated for light — the theme block is declared after the
+`depth-flat` and `depth-deep` arms and matches their specificity, so without a
+light arm of its own the setting would do nothing on paper.
+
+Status has four meanings and one tone each — `danger`, `warn`, `positive`,
+`note` — spent as `text-danger`, `bg-warn/15`, `border-danger/30`. Never reach
+into Tailwind's palette for a status: a `-400` rung is picked for whichever
+theme its author had open, and the shades that read on graphite wash out to
+illegible pastel on paper. These carry a value per theme instead, each tuned to
+land near the contrast its counterpart does, so one class is right in both.
 
 Text speaks in four strengths — `text-strong`, `text-muted`, `text-faint`,
 `text-dim` — never a hand-picked `text-content/N`. Opacity is not symmetric

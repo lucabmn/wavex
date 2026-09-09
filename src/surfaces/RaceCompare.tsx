@@ -43,8 +43,8 @@ type FileDiff = { binary: boolean; tooLarge: boolean; original: string; current:
 type RunnerFiles = { files: CheckpointFile[]; diffs: Map<string, FileDiff> };
 
 const STATUS_TONE: Record<RaceRunnerStatus, string> = {
-  working: "bg-emerald-400/15 text-emerald-300",
-  waiting: "bg-amber-400/15 text-amber-300",
+  working: "bg-positive/15 text-positive",
+  waiting: "bg-warn/15 text-warn",
   done: "bg-content/10 text-muted",
   stopped: "bg-content/10 text-faint",
   idle: "bg-content/10 text-dim",

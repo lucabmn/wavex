@@ -123,7 +123,7 @@ export function SwitchBranchDialog({
         </div>
 
         {error ? (
-          <p className="whitespace-pre-wrap text-[11.5px] leading-4 text-red-400/90">{error}</p>
+          <p className="whitespace-pre-wrap text-[11.5px] leading-4 text-danger/90">{error}</p>
         ) : null}
 
         <div className="flex flex-wrap justify-end gap-2">

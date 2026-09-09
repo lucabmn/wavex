@@ -236,12 +236,12 @@ const lintTheme = EditorView.theme({
     // can only be recoloured by reproducing the whole SVG. A text-decoration
     // squiggle takes the palette directly and renders sharper.
     backgroundImage: "none",
-    textDecoration: "underline wavy #f87171",
+    textDecoration: "underline wavy var(--color-danger)",
     textDecorationSkipInk: "none",
     textUnderlineOffset: "3px",
   },
   ".cm-lintPoint:after": {
-    borderBottomColor: "#f87171",
+    borderBottomColor: "var(--color-danger)",
   },
   ".cm-tooltip-lint .cm-diagnostic": {
     fontFamily: "var(--font-mono)",
@@ -250,6 +250,6 @@ const lintTheme = EditorView.theme({
     marginLeft: "0",
   },
   ".cm-tooltip-lint .cm-diagnostic-error": {
-    borderLeft: "2px solid #f87171",
+    borderLeft: "2px solid var(--color-danger)",
   },
 });

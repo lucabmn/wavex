@@ -889,7 +889,7 @@ function SidebarComponent({
           ) : isChangesTab ? (
             <span className="flex min-w-0 items-center gap-1">
               <span className="block truncate">{TAB_LABELS[itemId]}</span>
-              <Check className="size-3 shrink-0 text-emerald-400/80" strokeWidth={2.25} />
+              <Check className="size-3 shrink-0 text-positive/80" strokeWidth={2.25} />
             </span>
           ) : (
             <span className="block truncate">{TAB_LABELS[itemId]}</span>
@@ -1043,8 +1043,8 @@ function SidebarComponent({
               cannot claim "No sessions yet" before the rows have landed.
             */}
               {pendingFirstLoad ? null : status === "error" && sessions.length === 0 ? (
-                <div role="alert" className="m-2 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
-                  <span className="flex items-center gap-2 text-[12.5px] text-red-300">
+                <div role="alert" className="m-2 flex flex-col gap-2 rounded-lg bg-danger/8 p-2.5">
+                  <span className="flex items-center gap-2 text-[12.5px] text-danger">
                     <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
                     Couldn’t load sessions
                   </span>
@@ -1697,11 +1697,11 @@ function FolderRow({
       </span>
       <span className="relative flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-faint">
         {!expanded && needsApproval ? (
-          <CircleAlert className="size-3 text-amber-400" strokeWidth={1.75} />
+          <CircleAlert className="size-3 text-warn" strokeWidth={1.75} />
         ) : !expanded && busy ? (
           <TerminalSpinner className="inline-block w-3 select-none text-center text-[11.5px] leading-none text-accent" />
         ) : !expanded && done ? (
-          <Check className="size-3 text-emerald-400" strokeWidth={2.25} />
+          <Check className="size-3 text-positive" strokeWidth={2.25} />
         ) : null}
         <span>{count}</span>
       </span>
@@ -1977,7 +1977,7 @@ function SessionCard({
         dropTarget
           ? "border-transparent text-content"
           : needsApproval
-            ? "border-dashed border-amber-400/45 bg-amber-400/10 text-content"
+            ? "border-dashed border-warn/45 bg-warn/10 text-content"
             : isActive
               ? "border-transparent text-content"
               : "border-transparent text-strong hover:bg-hover hover:text-content"
@@ -2079,7 +2079,7 @@ function SessionRenameRow({
     <div
       data-selected={!needsApproval && isActive ? "true" : undefined}
       className={`ui-row flex w-full flex-col rounded-lg px-2.5 py-2 ${
-        needsApproval ? "bg-amber-400/10 text-content" : isActive ? "text-content" : "text-strong"
+        needsApproval ? "bg-warn/10 text-content" : isActive ? "text-content" : "text-strong"
       }`}
     >
       <input
@@ -2120,8 +2120,8 @@ function DiffStat({
       className="flex min-w-0 items-center gap-1.5 overflow-hidden font-mono text-[11.5px] font-semibold tabular-nums"
     >
       {files > 0 ? <span className="truncate text-muted">{files} changed</span> : null}
-      {additions > 0 ? <span className="shrink-0 text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="shrink-0 text-red-400">-{deletions}</span> : null}
+      {additions > 0 ? <span className="shrink-0 text-positive">+{additions}</span> : null}
+      {deletions > 0 ? <span className="shrink-0 text-danger">-{deletions}</span> : null}
     </span>
   );
 }

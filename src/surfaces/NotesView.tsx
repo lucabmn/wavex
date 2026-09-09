@@ -589,13 +589,13 @@ function NoteEditor({
                 if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
                 void onDelete(note.id);
               }}
-              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12.5px] text-muted hover:bg-hover hover:text-red-400"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12.5px] text-muted hover:bg-hover hover:text-danger"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
               Delete
             </button>
           </div>
-          {saveError ? <p className="text-[12.5px] text-red-400/90">{saveError}</p> : null}
+          {saveError ? <p className="text-[12.5px] text-danger/90">{saveError}</p> : null}
         </header>
         <div
           role="tablist"

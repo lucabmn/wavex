@@ -952,9 +952,9 @@ const DiffLineRow = memo(function DiffLineRow({
   const added = line.kind === "add";
   const deleted = line.kind === "del";
   const number = deleted ? line.oldNumber : line.newNumber;
-  const row = added ? "bg-emerald-500/15" : deleted ? "bg-rose-500/15" : "";
-  const gutterTint = added ? "bg-emerald-500/25" : deleted ? "bg-rose-500/25" : "";
-  const gutterText = added ? "text-emerald-300" : deleted ? "text-rose-300" : "text-dim";
+  const row = added ? "bg-positive/15" : deleted ? "bg-danger/15" : "";
+  const gutterTint = added ? "bg-positive/25" : deleted ? "bg-danger/25" : "";
+  const gutterText = added ? "text-positive" : deleted ? "text-danger" : "text-dim";
 
   if (lane === "gutter") {
     return (
@@ -1021,8 +1021,8 @@ function DiffCounts({ additions, deletions }: { additions: number; deletions: nu
   if (additions <= 0 && deletions <= 0) return null;
   return (
     <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11.5px] font-semibold tabular-nums">
-      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
+      {additions > 0 ? <span className="text-positive">+{additions}</span> : null}
+      {deletions > 0 ? <span className="text-danger">-{deletions}</span> : null}
     </span>
   );
 }

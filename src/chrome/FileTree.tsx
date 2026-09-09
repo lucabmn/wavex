@@ -60,10 +60,10 @@ import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { FileTypeIcon } from "./FileTypeIcon";
 
 const GIT_STATUS_COLOR: Record<string, string> = {
-  modified: "text-amber-400",
-  added: "text-emerald-400",
-  untracked: "text-emerald-400",
-  deleted: "text-red-400",
+  modified: "text-warn",
+  added: "text-positive",
+  untracked: "text-positive",
+  deleted: "text-danger",
 };
 
 type Props = {
@@ -657,7 +657,7 @@ export function FileTree({
         </div>
         <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
           {opError ? (
-            <p className="px-3 py-1 text-[12.5px] leading-4 text-red-400">{opError}</p>
+            <p className="px-3 py-1 text-[12.5px] leading-4 text-danger">{opError}</p>
           ) : null}
           {rootOpen ? (
             <div role="tree" aria-label={`${name} files`}>
@@ -1103,7 +1103,7 @@ function NameIssueView({
   const error = Boolean(fallback) || !issue || issue.severity === "error";
   return (
     <p
-      className={`pr-2 pb-1 text-[12.5px] leading-4 ${error ? "text-red-400" : "text-amber-400"}`}
+      className={`pr-2 pb-1 text-[12.5px] leading-4 ${error ? "text-danger" : "text-warn"}`}
       style={{ paddingLeft: 28 + depth * 12 }}
     >
       {body}

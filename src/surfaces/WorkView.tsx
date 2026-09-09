@@ -380,8 +380,8 @@ export function WorkView({
             <p className="px-1 py-2 text-[12.5px] text-faint">Loading…</p>
           ) : null}
           {state.error ? (
-            <div role="alert" className="mx-1 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
-              <span className="flex items-start gap-2 text-[12.5px] leading-snug text-red-300">
+            <div role="alert" className="mx-1 flex flex-col gap-2 rounded-lg bg-danger/8 p-2.5">
+              <span className="flex items-start gap-2 text-[12.5px] leading-snug text-danger">
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.75} />
                 <span className="min-w-0 flex-1 break-words">{state.error}</span>
               </span>
@@ -550,12 +550,12 @@ export function WorkView({
               be undone.
             </p>
             {deleteTarget.busy ? (
-              <p className="rounded-md bg-amber-400/10 px-2.5 py-2 text-[11.5px] leading-snug text-amber-300">
+              <p className="rounded-md bg-warn/10 px-2.5 py-2 text-[11.5px] leading-snug text-warn">
                 The current turn will be stopped before the chat is removed.
               </p>
             ) : null}
             {deleteError ? (
-              <p role="alert" className="max-h-24 overflow-y-auto text-[11.5px] text-red-300">
+              <p role="alert" className="max-h-24 overflow-y-auto text-[11.5px] text-danger">
                 {deleteError}
               </p>
             ) : null}
@@ -573,7 +573,7 @@ export function WorkView({
                 type="button"
                 disabled={deleting}
                 onClick={() => void confirmDelete()}
-                className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-[12.5px] font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30 disabled:opacity-40"
               >
                 {deleting ? <Loader className="size-3.5 animate-spin" strokeWidth={1.75} /> : null}
                 {deleteTarget.busy ? "Stop & delete" : "Delete chat"}
@@ -611,7 +611,7 @@ export function WorkView({
                   deleteChatFolder(folderDeleteTarget.id);
                   setFolderDeleteTarget(null);
                 }}
-                className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12.5px] font-medium text-red-300 hover:bg-red-500/30"
+                className="rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30"
               >
                 Delete project
               </button>
@@ -753,7 +753,7 @@ function FolderSection({
             aria-label={`Delete project ${folder.name}`}
             title="Delete project — its chats are kept"
             onClick={onDelete}
-            className="hidden shrink-0 rounded p-1 text-faint hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="hidden shrink-0 rounded p-1 text-faint hover:text-danger group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Trash2 className="size-3" strokeWidth={1.75} />
           </button>
@@ -1072,7 +1072,7 @@ function ChatRow({
           type="button"
           aria-label={`Delete ${title}`}
           onClick={onDelete}
-          className="hidden shrink-0 rounded p-1 text-faint hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="hidden shrink-0 rounded p-1 text-faint hover:text-danger group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Trash2 className="size-3" strokeWidth={1.75} />
         </button>

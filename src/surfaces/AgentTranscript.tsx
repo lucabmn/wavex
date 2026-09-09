@@ -1003,7 +1003,7 @@ function ResponseImage({ file }: { file: Attachment }) {
           Save…
         </button>
       </div>
-      {error ? <p className="mt-1 text-[11.5px] text-red-400/90">{error}</p> : null}
+      {error ? <p className="mt-1 text-[11.5px] text-danger/90">{error}</p> : null}
       {open ? (
         <Modal onClose={() => setOpen(false)} title={file.name}>
           <div className="flex flex-col gap-3">
@@ -1890,7 +1890,7 @@ function subagentStatusText(status: SubagentStatus): string {
 
 function SubagentStatusIcon({ status, live = false }: { status: SubagentStatus; live?: boolean }) {
   if (status === "failed") {
-    return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
+    return <X className="size-3.5 shrink-0 text-danger" strokeWidth={2} />;
   }
   if (status === "running") {
     return (
@@ -1919,7 +1919,7 @@ function ActivityToolIcon({ state, live = false }: { state: ToolCallState; live?
 /** Failure stays marked. Running and success do not get a trailing icon. */
 function ToolCallStatusIcon({ state }: { state: ToolCallState }) {
   if (state === "rejected") {
-    return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
+    return <X className="size-3.5 shrink-0 text-danger" strokeWidth={2} />;
   }
   return null;
 }
@@ -2153,7 +2153,7 @@ function ToolCallSummary({
     return (
       <span
         className={`min-w-0 flex-1 truncate font-mono text-[13.5px] ${
-          failed ? "text-red-400" : chip ? "text-muted" : "text-strong"
+          failed ? "text-danger" : chip ? "text-muted" : "text-strong"
         }`}
       >
         {label}
@@ -2171,8 +2171,8 @@ function ToolCallSummary({
     "file";
   const filePath = resolveWorkspacePath(preview?.path || target, cwd);
   const canOpen = interactive && !!onOpenFile && !!filePath;
-  const actionTone = failed ? "text-red-400" : "text-faint";
-  const targetTone = failed ? "text-red-400" : chip ? "text-muted" : "text-strong";
+  const actionTone = failed ? "text-danger" : "text-faint";
+  const targetTone = failed ? "text-danger" : chip ? "text-muted" : "text-strong";
 
   return (
     <span className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[13.5px]">
@@ -2220,7 +2220,7 @@ function ToolCallSummary({
 
 function ToolCallIcon({ state }: { state: ToolCallState }) {
   if (state === "rejected") {
-    return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
+    return <X className="size-3.5 shrink-0 text-danger" strokeWidth={2} />;
   }
   if (state === "pending") {
     return <CircleDashed className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />;

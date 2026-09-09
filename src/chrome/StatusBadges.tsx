@@ -37,7 +37,7 @@ export function AgentStatusBadge({
   if (status === "needs-approval") {
     return (
       <span
-        className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-amber-400"
+        className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-warn"
         title="Agent needs approval to continue"
         aria-label="Agent needs approval to continue"
       >
@@ -48,7 +48,7 @@ export function AgentStatusBadge({
   }
   return (
     <span
-      className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-emerald-400"
+      className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-positive"
       title="Agent finished — new reply to read"
       aria-label="Agent finished, new reply to read"
     >
@@ -101,7 +101,7 @@ export function GitStatusBadge({
       ) : (
         <span className="flex shrink-0 items-center gap-1">
           {showBranch && branch ? <span aria-hidden>·</span> : null}
-          <Check className="size-3 text-emerald-400/80" strokeWidth={2.25} />
+          <Check className="size-3 text-positive/80" strokeWidth={2.25} />
           <span>{gitStateLabel({ files, additions, deletions })}</span>
         </span>
       )}
@@ -114,7 +114,7 @@ export function CheckBadge({ errors }: { errors: number }) {
   const label = checkLabel(errors);
   return (
     <span
-      className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-red-400"
+      className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-danger"
       title={`${label} in open files`}
       aria-label={`${label} in open files`}
     >

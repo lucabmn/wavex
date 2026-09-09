@@ -66,7 +66,7 @@ export function BrowserPairing({ onPaired }: Props) {
           placeholder="wavex-connect:…"
           className="mt-4 w-full resize-none rounded-md border border-edge bg-content/5 px-2.5 py-2 font-mono text-[12.5px] text-strong placeholder:text-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
-        {error ? <div className="mt-2 text-[12.5px] text-red-400/90">{error}</div> : null}
+        {error ? <div className="mt-2 text-[12.5px] text-danger/90">{error}</div> : null}
         <div className="mt-4 flex items-center justify-between gap-3">
           <span className="text-[11.5px] text-dim">
             The code is exchanged for a session this page cannot read.

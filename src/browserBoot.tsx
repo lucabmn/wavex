@@ -52,7 +52,7 @@ function BrowserGate({ onReady }: { onReady: () => void }) {
       <>
         <BrowserPairing onPaired={(host) => void attach(host)} />
         {phase.error ? (
-          <div className="pointer-events-none fixed inset-x-0 bottom-6 text-center text-[12.5px] text-red-400/90">
+          <div className="pointer-events-none fixed inset-x-0 bottom-6 text-center text-[12.5px] text-danger/90">
             {phase.error}
           </div>
         ) : null}

@@ -188,12 +188,10 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
           {command}
         </pre>
 
-        {error ? <p className="text-[12.5px] leading-snug text-red-300">{error}</p> : null}
+        {error ? <p className="text-[12.5px] leading-snug text-danger">{error}</p> : null}
         {result ? (
           <div className="flex flex-col gap-1">
-            <p
-              className={`text-[12.5px] leading-snug ${result.ok ? "text-muted" : "text-red-300"}`}
-            >
+            <p className={`text-[12.5px] leading-snug ${result.ok ? "text-muted" : "text-danger"}`}>
               {result.ok ? "Installed." : "The skills CLI reported a problem."}
             </p>
             {result.output ? (

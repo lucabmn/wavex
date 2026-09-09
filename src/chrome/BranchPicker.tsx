@@ -341,7 +341,7 @@ export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }:
               onPick={pick}
             />
             {error ? (
-              <p className="max-h-16 shrink-0 overflow-y-auto whitespace-pre-wrap border-t border-edge px-2.5 py-2 text-[11.5px] leading-4 text-red-400/90">
+              <p className="max-h-16 shrink-0 overflow-y-auto whitespace-pre-wrap border-t border-edge px-2.5 py-2 text-[11.5px] leading-4 text-danger/90">
                 {error}
               </p>
             ) : null}

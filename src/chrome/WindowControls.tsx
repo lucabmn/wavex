@@ -92,7 +92,7 @@ export function WindowControls() {
         aria-label="Close window"
         data-tauri-drag-region="false"
         onClick={handleClose}
-        className="flex w-10 items-center justify-center text-muted transition-colors hover:bg-red-600 hover:text-white"
+        className="flex w-10 items-center justify-center text-muted transition-colors hover:bg-[var(--close-red)] hover:text-white"
       >
         <X className="size-3.5" strokeWidth={1.75} />
       </button>

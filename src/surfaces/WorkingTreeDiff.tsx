@@ -195,7 +195,7 @@ export function WorkingTreeDiff({ cwd, focusPath }: Props) {
   if (error) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
-        <AlertCircle className="mx-auto mb-3 size-5 text-red-400" />
+        <AlertCircle className="mx-auto mb-3 size-5 text-danger" />
         <p className="text-[13.5px] text-content">Couldn’t load changes</p>
         <p className="mt-1 text-[12.5px] text-faint">{error}</p>
       </div>

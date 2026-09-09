@@ -349,7 +349,7 @@ function MenuRow({ item, onPick }: { item: MenuItem; onPick: () => void }) {
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPick}
       className={`flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13.5px] leading-none ${
-        item.danger ? "text-red-300/90 hover:bg-red-500/15" : "text-content hover:bg-hover"
+        item.danger ? "text-danger/90 hover:bg-danger/15" : "text-content hover:bg-hover"
       }`}
     >
       <Icon className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />

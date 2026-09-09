@@ -213,7 +213,7 @@ function WorktreeRow({
         className="flex min-w-0 flex-1 items-center gap-2 text-left group-hover:pr-6"
       >
         {worktree.missing ? (
-          <CircleAlert className="size-3 shrink-0 text-amber-400" strokeWidth={1.75} />
+          <CircleAlert className="size-3 shrink-0 text-warn" strokeWidth={1.75} />
         ) : (
           <GitBranch className="size-3 shrink-0 text-faint" strokeWidth={1.75} />
         )}
@@ -225,7 +225,7 @@ function WorktreeRow({
           <span className={labelClassName}>{label}</span>
         )}
         {worktree.missing ? (
-          <span className="shrink-0 text-[10px] font-medium text-amber-400 group-hover:hidden">
+          <span className="shrink-0 text-[10px] font-medium text-warn group-hover:hidden">
             Missing
           </span>
         ) : null}
@@ -249,12 +249,10 @@ function WorktreeRow({
           >
             <span className="truncate font-sans font-medium text-faint">{changed}</span>
             {stats.additions > 0 ? (
-              <span className="shrink-0 text-emerald-400">
-                +{formatCompactCount(stats.additions)}
-              </span>
+              <span className="shrink-0 text-positive">+{formatCompactCount(stats.additions)}</span>
             ) : null}
             {stats.deletions > 0 ? (
-              <span className="shrink-0 text-red-400">-{formatCompactCount(stats.deletions)}</span>
+              <span className="shrink-0 text-danger">-{formatCompactCount(stats.deletions)}</span>
             ) : null}
           </span>
         ) : null}
@@ -263,7 +261,7 @@ function WorktreeRow({
             className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-faint group-hover:hidden"
             title="No uncommitted changes"
           >
-            <Check className="size-3 text-emerald-400/80" strokeWidth={2.25} />
+            <Check className="size-3 text-positive/80" strokeWidth={2.25} />
             <span>Clean</span>
           </span>
         ) : null}

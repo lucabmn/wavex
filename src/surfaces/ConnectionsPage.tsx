@@ -27,10 +27,10 @@ import {
 } from "../lib/connect";
 
 const PHASE_TONE: Record<string, string> = {
-  connected: "text-emerald-300/80",
+  connected: "text-positive/80",
   connecting: "text-faint",
-  reconnecting: "text-amber-300/80",
-  resynchronizing: "text-amber-300/80",
+  reconnecting: "text-warn/80",
+  resynchronizing: "text-warn/80",
   offline: "text-dim",
 };
 
@@ -138,7 +138,7 @@ export function ConnectionsPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => void run(rotateHostToken)}
-                className="rounded-md px-2.5 py-1.5 text-[12.5px] text-red-300/80 hover:bg-red-500/15 hover:text-red-300"
+                className="rounded-md px-2.5 py-1.5 text-[12.5px] text-danger/80 hover:bg-danger/15 hover:text-danger"
               >
                 Replace
               </button>
@@ -208,7 +208,7 @@ export function ConnectionsPage() {
                     await removeSavedHost(host.hostId);
                   })
                 }
-                className="rounded-md p-1.5 text-red-300/80 hover:bg-red-500/15 hover:text-red-300"
+                className="rounded-md p-1.5 text-danger/80 hover:bg-danger/15 hover:text-danger"
               >
                 <Trash2 className="size-3.5" strokeWidth={1.75} />
               </button>
@@ -244,7 +244,7 @@ export function ConnectionsPage() {
       </Section>
 
       {error ? (
-        <p role="alert" className="text-[12.5px] text-red-300/80">
+        <p role="alert" className="text-[12.5px] text-danger/80">
           {error}
         </p>
       ) : null}

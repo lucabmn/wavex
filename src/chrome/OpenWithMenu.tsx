@@ -109,7 +109,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
           className="overflow-y-auto overscroll-none p-1"
         >
           {error ? (
-            <p role="alert" className="px-2 py-1.5 text-[12.5px] leading-snug text-red-300">
+            <p role="alert" className="px-2 py-1.5 text-[12.5px] leading-snug text-danger">
               {error}
             </p>
           ) : apps == null ? (

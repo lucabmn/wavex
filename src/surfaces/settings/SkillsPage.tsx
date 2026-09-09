@@ -392,7 +392,7 @@ function SkillDetailPane({
           )}
         </div>
 
-        {error ? <p className="text-[12.5px] leading-snug text-red-300">{error}</p> : null}
+        {error ? <p className="text-[12.5px] leading-snug text-danger">{error}</p> : null}
 
         <div className="flex flex-col gap-2 border-t border-edge pt-4">
           <span className="font-mono ui-label">
@@ -467,7 +467,7 @@ function Action({
       onClick={onClick}
       className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] disabled:opacity-40 ${
         danger
-          ? "border-red-500/25 text-red-300 enabled:hover:bg-red-500/15"
+          ? "border-danger/25 text-danger enabled:hover:bg-danger/15"
           : "border-edge bg-content/5 text-muted enabled:hover:text-content"
       }`}
     >
@@ -536,7 +536,7 @@ function DeleteSkillDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12.5px] font-medium text-red-300 hover:bg-red-500/30"
+            className="rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30"
           >
             Delete
           </button>

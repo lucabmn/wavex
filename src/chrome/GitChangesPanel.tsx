@@ -919,8 +919,8 @@ function DiffCounts({ additions, deletions }: { additions: number; deletions: nu
   if (additions <= 0 && deletions <= 0) return null;
   return (
     <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11.5px] font-semibold tabular-nums">
-      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
+      {additions > 0 ? <span className="text-positive">+{additions}</span> : null}
+      {deletions > 0 ? <span className="text-danger">-{deletions}</span> : null}
     </span>
   );
 }
@@ -939,9 +939,9 @@ function statusLetter(status: string): string {
 
 function statusColor(status: string): string {
   if (status === "untracked") return "text-accent";
-  if (status === "added") return "text-emerald-400";
-  if (status === "deleted") return "text-red-400";
-  return "text-amber-400";
+  if (status === "added") return "text-positive";
+  if (status === "deleted") return "text-danger";
+  return "text-warn";
 }
 
 function useDiffIndex(

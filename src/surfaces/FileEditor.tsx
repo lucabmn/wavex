@@ -380,7 +380,7 @@ export function FileEditor({
     return (
       <div className="grid h-full place-items-center p-6">
         <div className="max-w-md text-center">
-          <AlertCircle className="mx-auto mb-3 size-5 text-red-400" />
+          <AlertCircle className="mx-auto mb-3 size-5 text-danger" />
           <p className="text-[13.5px] text-content">Couldn’t open {basename(path)}</p>
           <p className="mt-1 text-[12.5px] leading-5 text-faint">{loadState.message}</p>
           <button
@@ -456,7 +456,7 @@ export function FileEditor({
         ) : saveState.status === "saved" ? (
           <span>Saved</span>
         ) : saveState.status === "error" ? (
-          <span className="max-w-64 truncate text-red-400" title={saveState.message}>
+          <span className="max-w-64 truncate text-danger" title={saveState.message}>
             Save failed: {saveState.message}
           </span>
         ) : null}
@@ -1042,8 +1042,8 @@ function DiffChunkStat({ additions, deletions }: { additions: number; deletions:
   }
   return (
     <span className="flex min-w-0 shrink-0 items-center gap-1.5 font-mono text-[11.5px] font-semibold tabular-nums">
-      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
+      {additions > 0 ? <span className="text-positive">+{additions}</span> : null}
+      {deletions > 0 ? <span className="text-danger">-{deletions}</span> : null}
     </span>
   );
 }

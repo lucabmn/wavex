@@ -115,14 +115,14 @@ export function MenuBarApp() {
           <span className="text-[12.5px] font-semibold tracking-tight">wavex</span>
           <span
             className={`ml-auto inline-flex items-center gap-1.5 text-[11.5px] ${
-              waiting > 0 ? "text-amber-400" : "text-faint"
+              waiting > 0 ? "text-warn" : "text-faint"
             }`}
           >
             <span
               aria-hidden
               className={`size-1.5 rounded-full ${
                 waiting > 0
-                  ? "bg-amber-400 shadow-[0_0_7px] shadow-amber-400/70"
+                  ? "bg-warn"
                   : working > 0
                     ? "bg-accent shadow-[0_0_7px_var(--color-accent)]"
                     : "bg-content/20"
@@ -330,7 +330,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
   };
 
   return (
-    <article className="overflow-hidden rounded-xl border border-amber-400/25 bg-amber-400/[0.05]">
+    <article className="overflow-hidden rounded-xl border border-warn/25 bg-warn/[0.05]">
       <div className="flex items-start gap-2.5 px-2.5 pb-2 pt-2.5">
         <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-content/[0.07]">
           <HarnessIcon harness={agent.harness} className="size-4" />
@@ -340,7 +340,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
             <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold leading-snug">
               {agent.title}
             </span>
-            <span className="flex shrink-0 items-center gap-1 text-[10px] text-amber-400">
+            <span className="flex shrink-0 items-center gap-1 text-[10px] text-warn">
               <CircleAlert className="size-3" strokeWidth={1.75} aria-hidden />
               {question ? "Question" : "Approval"}
             </span>
@@ -357,7 +357,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
       </div>
 
       {approval.answerable ? (
-        <div className="flex items-center gap-1.5 border-t border-amber-400/15 px-2.5 py-2">
+        <div className="flex items-center gap-1.5 border-t border-warn/15 px-2.5 py-2">
           <button
             type="button"
             disabled={answer != null}
@@ -387,7 +387,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
           </button>
         </div>
       ) : (
-        <div className="border-t border-amber-400/15 px-2.5 py-2">
+        <div className="border-t border-warn/15 px-2.5 py-2">
           <button
             type="button"
             onClick={() => focusMenuBarAgent(agent.id)}
@@ -437,7 +437,7 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
         </span>
         <span
           className={`mt-1 flex min-w-0 items-center gap-1.5 text-[11.5px] ${
-            agent.done ? "text-emerald-400" : "text-faint"
+            agent.done ? "text-positive" : "text-faint"
           }`}
         >
           {agent.done ? (
@@ -509,7 +509,7 @@ function UsageTab({ active }: { active: boolean }) {
       <PlanLimitCards limits={planLimits} now={now} />
 
       {error ? (
-        <div className="mt-3 rounded-lg border border-red-400/20 bg-red-400/[0.06] px-3 py-2 text-[11.5px] text-red-300/80">
+        <div className="mt-3 rounded-lg border border-danger/20 bg-danger/[0.06] px-3 py-2 text-[11.5px] text-danger/80">
           {error}
         </div>
       ) : !report ? (

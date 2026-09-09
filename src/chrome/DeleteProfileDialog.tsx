@@ -60,7 +60,7 @@ export function DeleteProfileDialog({ profile, onCancel, onConfirm }: Props) {
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12.5px] font-medium text-red-300 hover:bg-red-500/30"
+            className="rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30"
           >
             Delete profile
           </button>

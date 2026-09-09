@@ -212,9 +212,9 @@ function DiffCounts({ file }: { file: CheckpointFile }) {
   if (file.additions <= 0 && file.deletions <= 0) return null;
   return (
     <span className="shrink-0 font-mono text-[11.5px] font-semibold">
-      {file.additions > 0 ? <span className="text-emerald-400">+{file.additions}</span> : null}
+      {file.additions > 0 ? <span className="text-positive">+{file.additions}</span> : null}
       {file.additions > 0 && file.deletions > 0 ? " " : null}
-      {file.deletions > 0 ? <span className="text-red-400">-{file.deletions}</span> : null}
+      {file.deletions > 0 ? <span className="text-danger">-{file.deletions}</span> : null}
     </span>
   );
 }

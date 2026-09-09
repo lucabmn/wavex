@@ -14,7 +14,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
   const meta = streaming ? "Writing…" : planMeta(text).join(" · ");
 
   return (
-    <div className="overflow-hidden rounded-[10px] border border-yellow-200/40 bg-yellow-200/10 border-dashed mb-2">
+    <div className="overflow-hidden rounded-[10px] border border-warn/40 bg-warn/10 border-dashed mb-2">
       <div className="flex items-start gap-2 px-2.5 py-2">
         {streaming ? (
           <CircleDashed className="mt-0.5 size-4 shrink-0 text-dim" strokeWidth={1.75} />

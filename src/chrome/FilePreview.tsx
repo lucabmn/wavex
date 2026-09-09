@@ -96,9 +96,9 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
         )}
         {added > 0 || deleted > 0 ? (
           <span className="shrink-0 font-mono text-[11.5px] font-semibold">
-            {added > 0 ? <span className="text-emerald-400">+{added}</span> : null}
+            {added > 0 ? <span className="text-positive">+{added}</span> : null}
             {added > 0 && deleted > 0 ? " " : null}
-            {deleted > 0 ? <span className="text-red-400">-{deleted}</span> : null}
+            {deleted > 0 ? <span className="text-danger">-{deleted}</span> : null}
           </span>
         ) : (
           <StatusIcon status={status} />
@@ -123,15 +123,15 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
 }
 
 function PreviewLine({ line, showGutter }: { line: ToolPreviewLine; showGutter: boolean }) {
-  const bg = line.kind === "add" ? "bg-teal-800/20" : line.kind === "del" ? "bg-rose-800/20" : "";
+  const bg = line.kind === "add" ? "bg-positive/20" : line.kind === "del" ? "bg-danger/20" : "";
   const bar =
-    line.kind === "add" ? "bg-teal-400" : line.kind === "del" ? "bg-rose-400" : "bg-transparent";
+    line.kind === "add" ? "bg-positive" : line.kind === "del" ? "bg-danger" : "bg-transparent";
   const mark = line.kind === "add" ? "+" : line.kind === "del" ? "−" : " ";
   const markColor =
     line.kind === "add"
-      ? "text-teal-400"
+      ? "text-positive"
       : line.kind === "del"
-        ? "text-rose-400"
+        ? "text-danger"
         : "text-transparent";
 
   return (
@@ -154,7 +154,7 @@ function PreviewLine({ line, showGutter }: { line: ToolPreviewLine; showGutter: 
 
 function StatusIcon({ status }: { status: Status }) {
   if (status === "rejected") {
-    return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
+    return <X className="size-3.5 shrink-0 text-danger" strokeWidth={2} />;
   }
   if (status === "pending") {
     return <CircleDashed className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />;
@@ -179,9 +179,9 @@ function highlight(text: string, dimmed: boolean) {
     }
     const token = match[1];
     const color = KEYWORDS.has(token)
-      ? "text-teal-300"
+      ? "text-positive"
       : /^[A-Z]/.test(token)
-        ? "text-amber-200/90"
+        ? "text-warn/90"
         : "";
     parts.push({ text: token, color });
     last = match.index + token.length;

@@ -531,18 +531,18 @@ function inboxStatusMark(item: InboxItem): InboxStatusMark {
     };
   }
   if (label === "Merged") {
-    return { Icon: GitMerge, className: "text-violet-400/90", label };
+    return { Icon: GitMerge, className: "text-note/90", label };
   }
   if (label === "Closed") {
     return {
       Icon: pr ? GitPullRequestClosed : CircleX,
-      className: "text-rose-400/90",
+      className: "text-danger/90",
       label,
     };
   }
   return {
     Icon: pr ? GitPullRequest : CircleDot,
-    className: "text-emerald-400/90",
+    className: "text-positive/90",
     label,
   };
 }
@@ -681,9 +681,9 @@ function InboxDetail({
   const reviewLabel = githubReviewDecisionLabel(reviewDecision);
   const reviewClass =
     reviewDecision.toUpperCase() === "APPROVED"
-      ? "text-emerald-400/90"
+      ? "text-positive/90"
       : reviewDecision.toUpperCase() === "CHANGES_REQUESTED"
-        ? "text-rose-400/90"
+        ? "text-danger/90"
         : "text-faint";
   const baseRef = details?.baseRefName?.trim() || thread?.baseRefName?.trim() || "";
   const headRef = details?.headRefName?.trim() || thread?.headRefName?.trim() || "";
@@ -920,7 +920,7 @@ function InboxDetail({
             {item.kind === "pr" ? "Review on GitHub" : "Open on GitHub"}
           </button>
         </div>
-        {startError ? <p className="text-[12.5px] text-red-400/90">{startError}</p> : null}
+        {startError ? <p className="text-[12.5px] text-danger/90">{startError}</p> : null}
       </header>
       {isPr ? (
         <div

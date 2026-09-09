@@ -183,7 +183,7 @@ function HostBrowser({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
         {error ? (
-          <p className="px-2 py-3 text-[12.5px] leading-relaxed text-red-400/90">{error}</p>
+          <p className="px-2 py-3 text-[12.5px] leading-relaxed text-danger/90">{error}</p>
         ) : entries == null ? (
           <p className="flex items-center gap-2 px-2 py-3 text-[12.5px] text-faint">
             <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />

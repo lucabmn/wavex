@@ -816,7 +816,7 @@ function LiveAgentCard({
       </span>
       <span
         className={`mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight ${
-          agent.needsApproval ? "text-amber-400" : agent.done ? "text-emerald-400" : "text-faint"
+          agent.needsApproval ? "text-warn" : agent.done ? "text-positive" : "text-faint"
         }`}
       >
         {agent.needsApproval ? (
@@ -1065,7 +1065,7 @@ function ProjectCard({
           </span>
         ) : stats ? (
           <span
-            className="shrink-0 text-emerald-400/70 group-hover:hidden"
+            className="shrink-0 text-positive/70 group-hover:hidden"
             title="No uncommitted changes"
             aria-label="No uncommitted changes"
           >
@@ -1146,10 +1146,10 @@ function ProjectDiffStat({
         <span className="truncate font-sans font-medium text-faint">{files} changed</span>
       ) : null}
       {additions > 0 ? (
-        <span className="shrink-0 text-emerald-400">+{formatCompactCount(additions)}</span>
+        <span className="shrink-0 text-positive">+{formatCompactCount(additions)}</span>
       ) : null}
       {deletions > 0 ? (
-        <span className="shrink-0 text-red-400">-{formatCompactCount(deletions)}</span>
+        <span className="shrink-0 text-danger">-{formatCompactCount(deletions)}</span>
       ) : null}
     </span>
   );

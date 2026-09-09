@@ -197,7 +197,7 @@ export function ProjectSearch({ cwd, focusToken = 0, onOpenFile, onClose }: Prop
             <span>Searching…</span>
           </>
         ) : error ? (
-          <span className="text-red-400">{error}</span>
+          <span className="text-danger">{error}</span>
         ) : query.trim() ? (
           <span>
             {matchCount === 0

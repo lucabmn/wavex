@@ -177,7 +177,7 @@ export function ActivityView({ sessions, onClose, onOpenSession }: Props) {
                 const next = agents.find((agent) => agent.needsApproval);
                 if (next) focusMenuBarAgent(next.id);
               }}
-              className="hidden shrink-0 items-center gap-1.5 rounded-md bg-amber-400/12 px-2 py-1 text-[11.5px] font-medium text-amber-300 hover:bg-amber-400/18 sm:flex"
+              className="hidden shrink-0 items-center gap-1.5 rounded-md bg-warn/12 px-2 py-1 text-[11.5px] font-medium text-warn hover:bg-warn/18 sm:flex"
             >
               <CircleAlert className="size-3.5" strokeWidth={1.75} />
               Review next
@@ -231,7 +231,7 @@ export function ActivityView({ sessions, onClose, onOpenSession }: Props) {
           </div>
         ) : null}
         {error ? (
-          <p className="flex items-center gap-2 px-4 pt-3 text-[12.5px] text-amber-300">
+          <p className="flex items-center gap-2 px-4 pt-3 text-[12.5px] text-warn">
             <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
             {error}
           </p>
@@ -326,7 +326,7 @@ function AgentRow({
         </span>
       </button>
       {waiting > 0 ? (
-        <span className="shrink-0 rounded-full bg-amber-400/15 px-2 py-0.5 text-[11.5px] text-amber-300">
+        <span className="shrink-0 rounded-full bg-warn/15 px-2 py-0.5 text-[11.5px] text-warn">
           {waiting === 1 ? "1 needs you" : `${waiting} need you`}
         </span>
       ) : null}

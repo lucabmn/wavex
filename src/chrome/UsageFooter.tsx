@@ -350,7 +350,7 @@ function MiniBar({ usedPct }: { usedPct: number }) {
 }
 
 function barClass(pct: number): string {
-  if (pct >= 90) return "bg-red-400";
-  if (pct >= 80) return "bg-amber-400";
+  if (pct >= 90) return "bg-danger";
+  if (pct >= 80) return "bg-warn";
   return "bg-content/45";
 }

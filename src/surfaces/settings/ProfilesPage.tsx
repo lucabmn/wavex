@@ -74,7 +74,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
                     : undefined
               }
               onClick={() => setDeleting(profile)}
-              className="rounded-md px-2.5 py-1.5 text-[12.5px] text-red-300/80 hover:bg-red-500/15 hover:text-red-300 disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent"
+              className="rounded-md px-2.5 py-1.5 text-[12.5px] text-danger/80 hover:bg-danger/15 hover:text-danger disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent"
             >
               Delete
             </button>
@@ -95,7 +95,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
         </Row>
       </Section>
 
-      {error ? <p className="pb-4 text-[12.5px] text-red-300">{error}</p> : null}
+      {error ? <p className="pb-4 text-[12.5px] text-danger">{error}</p> : null}
 
       <Section title="What profiles do not separate">
         <SectionBody>

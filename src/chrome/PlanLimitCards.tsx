@@ -116,7 +116,7 @@ function Placeholder({
   tone?: "muted" | "error";
 }) {
   return (
-    <p className={`text-[11.5px] ${tone === "error" ? "text-red-400/80" : "text-dim"}`}>
+    <p className={`text-[11.5px] ${tone === "error" ? "text-danger/80" : "text-dim"}`}>
       {children}
     </p>
   );
@@ -124,14 +124,14 @@ function Placeholder({
 
 function severityText(usedPercent: number): string {
   const severity = limitSeverity(usedPercent);
-  if (severity === "critical") return "text-red-400";
-  if (severity === "high") return "text-amber-400";
+  if (severity === "critical") return "text-danger";
+  if (severity === "high") return "text-warn";
   return "text-content";
 }
 
 function severityFill(usedPercent: number): string {
   const severity = limitSeverity(usedPercent);
-  if (severity === "critical") return "bg-red-400";
-  if (severity === "high") return "bg-amber-400";
+  if (severity === "critical") return "bg-danger";
+  if (severity === "high") return "bg-warn";
   return "bg-content/45";
 }

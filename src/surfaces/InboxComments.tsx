@@ -187,7 +187,7 @@ export function InboxCommentForm({
           </button>
         </div>
       </div>
-      {error ? <p className="text-[12.5px] text-red-400/90">{error}</p> : null}
+      {error ? <p className="text-[12.5px] text-danger/90">{error}</p> : null}
     </form>
   );
 }
@@ -256,11 +256,11 @@ function InboxComment({
               <span
                 className={
                   comment.state === "APPROVED"
-                    ? "text-emerald-400/90"
+                    ? "text-positive/90"
                     : comment.state === "CHANGES_REQUESTED"
-                      ? "text-rose-400/90"
+                      ? "text-danger/90"
                       : comment.resolved && part === "Resolved"
-                        ? "text-emerald-400/80"
+                        ? "text-positive/80"
                         : "min-w-0 truncate"
                 }
               >

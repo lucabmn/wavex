@@ -74,18 +74,18 @@ const FILTERS: AutomationFilter[] = ["all", "active", "running", "failing", "pau
 
 const STATUS_TONE: Record<AutomationListStatus, string> = {
   running: "bg-accent",
-  active: "bg-emerald-400",
-  failing: "bg-amber-400",
+  active: "bg-positive",
+  failing: "bg-warn",
   paused: "bg-content/30",
   finished: "bg-content/20",
 };
 
 const RUN_TONE: Record<AutomationRun["status"], string> = {
   running: "text-accent",
-  success: "text-emerald-400",
-  failed: "text-red-400",
+  success: "text-positive",
+  failed: "text-danger",
   cancelled: "text-faint",
-  "needs-attention": "text-amber-300",
+  "needs-attention": "text-warn",
   interrupted: "text-faint",
 };
 
@@ -245,7 +245,7 @@ export function AutomationsView({ projects, onClose, onOpenSession }: Props) {
             onClick={() => void pauseAllAutomations(!state.allPaused).catch(() => undefined)}
             className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               state.allPaused
-                ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/22"
+                ? "bg-warn/15 text-warn hover:bg-warn/22"
                 : "text-muted hover:bg-hover hover:text-content"
             }`}
           >
@@ -257,13 +257,13 @@ export function AutomationsView({ projects, onClose, onOpenSession }: Props) {
       </div>
 
       {state.allPaused ? (
-        <p className="flex items-center gap-2 border-b border-edge bg-amber-400/8 px-4 py-1.5 text-[11.5px] text-amber-300">
+        <p className="flex items-center gap-2 border-b border-edge bg-warn/8 px-4 py-1.5 text-[11.5px] text-warn">
           <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
           Every automation is held. Nothing runs until you release the pause.
         </p>
       ) : null}
       {state.error ? (
-        <p className="border-b border-edge px-4 py-1.5 text-[11.5px] text-red-400">{state.error}</p>
+        <p className="border-b border-edge px-4 py-1.5 text-[11.5px] text-danger">{state.error}</p>
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1">
@@ -535,7 +535,7 @@ function Detail({
       </header>
 
       {host && host.phase !== "connected" ? (
-        <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-amber-300">
+        <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-warn">
           <CircleAlert className="mt-px size-3 shrink-0" strokeWidth={1.75} />
           {host.name} is not connected. This automation cannot run until it is.
         </p>

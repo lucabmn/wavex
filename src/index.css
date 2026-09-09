@@ -41,6 +41,17 @@
   --color-skill: #d9a441;
   --color-template: #9a8cd8;
   --color-mention: #5ba3a0;
+  /*
+   * Status has four meanings and one tone each, because a palette shade
+   * picked per component is a palette tuned for whichever theme its author
+   * had open. Tailwind's `-400` rungs read on graphite and wash out to a
+   * pastel on paper; these carry a value per theme instead, so `text-danger`
+   * is legible in both.
+   */
+  --color-danger: var(--status-danger);
+  --color-warn: var(--status-warn);
+  --color-positive: var(--status-positive);
+  --color-note: var(--status-note);
   --shadow-raise: var(--elevation-1);
   --shadow-float: var(--elevation-2);
   --shadow-cast: var(--elevation-3);
@@ -106,6 +117,14 @@
   --text-faint: color-mix(in srgb, var(--color-content) 50%, transparent);
   --text-dim: color-mix(in srgb, var(--color-content) 38%, transparent);
 
+  --status-danger: hsl(2 76% 70%);
+  --status-warn: hsl(38 88% 60%);
+  --status-positive: hsl(154 56% 56%);
+  --status-note: hsl(258 62% 72%);
+  /* The Windows close button's own red, which belongs to the platform's
+     control rather than to this palette, so it does not follow the theme. */
+  --close-red: #c42b1c;
+
   --hover: color-mix(in srgb, var(--color-content) 7%, transparent);
   /* Selection is a flat step, not a tint: the accent is busy meaning something
      else, and a coloured row is a decoration a list of forty cannot afford. */
@@ -149,37 +168,48 @@ html.depth-deep {
 
 html.theme-light {
   --background-lightness: 96%;
-  --content-lightness: 13%;
+  --content-lightness: 16%;
   --accent-saturation: 56%;
   --accent-lightness: 48%;
   /*
-   * Paper climbs the same way the dark theme does: the sidebar sits behind
-   * the page and a card sits on it, ending at white. It ran the other way —
-   * the page pinned at 100% with cards *darker* than it, and the overlay on
-   * the same white as the page — so a card read as a stain and a menu had
-   * nothing but its shadow to stand on.
+   * Paper climbs the same way graphite does — sidebar behind the page, card
+   * above it, overlay above everything — but it has a ceiling graphite does
+   * not: white. So the ladder is built downwards from a top rung and never
+   * upwards from the page. Deriving upwards meant a saved lightness near 100
+   * clamped the two rungs above the page onto it, and a card came out the
+   * same colour as the sheet it was supposed to sit on. `--paper-top` also
+   * caps at 100 rather than being pinned there, so the page keeps meaning
+   * "the lightness you chose" everywhere below that.
    */
-  --surface-0: hsl(
-    var(--theme-hue) calc(var(--theme-saturation) + 4%) calc(var(--background-lightness) - 3.5%)
-  );
-  --surface-1: hsl(var(--theme-hue) calc(var(--theme-saturation) + 2%) var(--background-lightness));
-  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 3%));
-  --surface-3: hsl(
-    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 3.5%)
-  );
+  --paper-top: min(calc(var(--background-lightness) + 4%), 100%);
+  --surface-0: hsl(var(--theme-hue) calc(var(--theme-saturation) + 3%) calc(var(--paper-top) - 9%));
+  --surface-1: hsl(var(--theme-hue) calc(var(--theme-saturation) + 1%) calc(var(--paper-top) - 4%));
+  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 1%));
+  --surface-3: hsl(var(--theme-hue) var(--theme-saturation) var(--paper-top));
   /* Ink on paper needs a firmer line than light on graphite to read at all. */
-  --edge: color-mix(in srgb, var(--color-content) calc(170% * var(--rule)), transparent);
-  --edge-strong: color-mix(in srgb, var(--color-content) calc(290% * var(--rule)), transparent);
-  --glass: max(var(--sidebar-opacity), 0.9);
+  --edge: color-mix(in srgb, var(--color-content) calc(150% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(260% * var(--rule)), transparent);
+  --glass: max(var(--sidebar-opacity), 0.94);
   --text-strong: color-mix(in srgb, var(--color-content) 90%, transparent);
   --text-muted: color-mix(in srgb, var(--color-content) 80%, transparent);
   --text-faint: color-mix(in srgb, var(--color-content) 66%, transparent);
   --text-dim: color-mix(in srgb, var(--color-content) 55%, transparent);
   --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
   --selected: color-mix(in srgb, var(--color-content) 9%, transparent);
-  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.07);
-  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.1);
-  --elevation-3: 0 12px 32px rgb(0 0 0 / 0.16);
+  /*
+   * A shadow on paper is a shadow, not a hole: the same alpha that reads as
+   * depth over graphite reads as dirt under a white card, so these are much
+   * lighter and rely on the surface step above to do the lifting.
+   */
+  --elevation-1: 0 1px 2px rgb(15 23 42 / 0.06);
+  --elevation-2: 0 4px 14px rgb(15 23 42 / 0.08);
+  --elevation-3: 0 14px 36px rgb(15 23 42 / 0.13);
+  /* Darker than their graphite counterparts by as much as the ground is
+     lighter, so each status lands on the contrast its dark twin does. */
+  --status-danger: hsl(2 68% 44%);
+  --status-warn: hsl(32 88% 33%);
+  --status-positive: hsl(154 66% 27%);
+  --status-note: hsl(258 52% 44%);
   --link-color: hsl(var(--accent-hue) 60% 46%);
   --color-skill: #8a6a1c;
   --color-template: #5a4bc4;
@@ -251,8 +281,20 @@ html.has-native-glass #root {
 /* The inline rule in `index.html` paints the shade dark, because first paint
    happens before this file exists. By the time it does, `initAppearance` has
    settled the scheme, so a light install stops covering itself in black. */
+html.theme-light.depth-flat {
+  --elevation-1: none;
+  --elevation-2: 0 0 0 1px var(--edge);
+  --elevation-3: 0 0 0 1px var(--edge-strong);
+}
+
+html.theme-light.depth-deep {
+  --elevation-1: 0 1px 3px rgb(15 23 42 / 0.1);
+  --elevation-2: 0 8px 24px rgb(15 23 42 / 0.14);
+  --elevation-3: 0 24px 56px rgb(15 23 42 / 0.2);
+}
+
 html.theme-light #boot-splash {
-  background: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
+  background: var(--surface-1);
 }
 
 /*
@@ -1197,8 +1239,8 @@ header[data-tauri-drag-region] button {
   }
 }
 
-/* Status-bar mark for a running terminal: three orange bars that light
-   one after another. */
+/* Status-bar mark for a running terminal: three bars in the warn tone that
+   light one after another. */
 .terminal-live {
   display: inline-flex;
   align-items: flex-end;
@@ -1211,7 +1253,7 @@ header[data-tauri-drag-region] button {
   width: 4px;
   height: 8px;
   border-radius: 0;
-  background: #e39b4a;
+  background: var(--color-warn);
   opacity: 0.4;
 }
 

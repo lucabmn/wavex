@@ -18,9 +18,9 @@ import { AGENT_STATUS_LABEL, resolveAgentStatus, sessionStatusTooltip } from "..
 
 /** Lane colors carry no meaning on their own: every lane is labelled too. */
 const LANE_DOT: Record<ActivityBoardLane, string> = {
-  "needs-you": "bg-amber-400",
+  "needs-you": "bg-warn",
   working: "bg-content/55",
-  done: "bg-emerald-400/70",
+  done: "bg-positive/70",
   parked: "bg-content/20",
 };
 

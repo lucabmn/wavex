@@ -472,7 +472,7 @@ function Notice({ children }: { children: React.ReactNode }) {
   return (
     <div
       role="alert"
-      className="rounded-xl border border-red-400/30 px-4 py-3 text-[12.5px] text-red-400"
+      className="rounded-xl border border-danger/30 px-4 py-3 text-[12.5px] text-danger"
     >
       {children}
     </div>

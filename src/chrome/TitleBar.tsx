@@ -326,7 +326,7 @@ function TitleTabItem({
             ) : null}
             {tab.needsApproval ? (
               <span
-                className="flex shrink-0 items-center gap-0.5 text-amber-400"
+                className="flex shrink-0 items-center gap-0.5 text-warn"
                 title="Agent needs approval to continue"
                 aria-label="Agent needs approval to continue"
               >
@@ -336,7 +336,7 @@ function TitleTabItem({
             ) : null}
             {tab.hasUnread ? (
               <span
-                className="flex shrink-0 items-center gap-0.5 text-emerald-400"
+                className="flex shrink-0 items-center gap-0.5 text-positive"
                 title="Agent finished — new reply to read"
                 aria-label="Agent finished, new reply to read"
               >
@@ -346,7 +346,7 @@ function TitleTabItem({
             ) : null}
             {(tab.checkErrors ?? 0) > 0 ? (
               <span
-                className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-red-400"
+                className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-danger"
                 title={checkLabel(tab.checkErrors ?? 0)}
                 aria-label={checkLabel(tab.checkErrors ?? 0)}
               >
