@@ -51,7 +51,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
               <button
                 type="button"
                 onClick={() => onSwitchProfile(profile.id)}
-                className="rounded-md px-2.5 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+                className="rounded-md px-2.5 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
               >
                 Switch to
               </button>
@@ -59,7 +59,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
             <button
               type="button"
               onClick={() => setEditing(profile)}
-              className="rounded-md px-2.5 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+              className="rounded-md px-2.5 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
             >
               Edit…
             </button>
@@ -74,7 +74,7 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
                     : undefined
               }
               onClick={() => setDeleting(profile)}
-              className="rounded-md px-2.5 py-1.5 text-[12.5px] text-red-300/80 hover:bg-red-500/15 hover:text-red-300 disabled:cursor-default disabled:text-content/25 disabled:hover:bg-transparent"
+              className="rounded-md px-2.5 py-1.5 text-[12.5px] text-red-300/80 hover:bg-red-500/15 hover:text-red-300 disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent"
             >
               Delete
             </button>
@@ -99,12 +99,12 @@ export function ProfilesPage({ onSwitchProfile }: { onSwitchProfile: (id: string
 
       <Section title="What profiles do not separate">
         <SectionBody>
-          <p className="max-w-xl text-[12.5px] leading-relaxed text-content/45">
+          <p className="max-w-xl text-[12.5px] leading-relaxed text-faint">
             Agent CLIs hold their own sign-in and their own agent definitions on disk, outside
             wavex. Every profile drives the same installed CLIs, so switching profiles does not
             switch provider accounts.
           </p>
-          <p className="max-w-xl pt-2 text-[12.5px] leading-relaxed text-content/45">
+          <p className="max-w-xl pt-2 text-[12.5px] leading-relaxed text-faint">
             Switching stops the agents and terminals running in the profile you leave, exactly as
             quitting wavex does. Their chats come back with Continue when you switch back.
           </p>

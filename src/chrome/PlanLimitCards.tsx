@@ -43,7 +43,7 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
           {HARNESS_LABEL[limits.provider]}
         </span>
         {limits.plan ? (
-          <span className="shrink-0 rounded-full bg-content/[0.08] px-1.5 py-0.5 text-[10px] text-content/55">
+          <span className="shrink-0 rounded-full bg-content/[0.08] px-1.5 py-0.5 text-[10px] text-faint">
             {limits.plan}
           </span>
         ) : null}
@@ -69,12 +69,12 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
             {limits.windows.map((window) => (
               <li key={window.id} className="flex flex-col gap-1.5">
                 <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
-                  <span className="min-w-0 truncate text-content/60">{window.label}</span>
+                  <span className="min-w-0 truncate text-muted">{window.label}</span>
                   <span className="shrink-0 tabular-nums">
                     <span className={severityText(window.usedPercent)}>
                       {formatPercent(window.usedPercent)}
                     </span>
-                    <span className="ml-1.5 text-content/35">
+                    <span className="ml-1.5 text-dim">
                       {formatResetLabel(window.resetsAt, now)}
                     </span>
                   </span>
@@ -116,7 +116,7 @@ function Placeholder({
   tone?: "muted" | "error";
 }) {
   return (
-    <p className={`text-[11.5px] ${tone === "error" ? "text-red-400/80" : "text-content/35"}`}>
+    <p className={`text-[11.5px] ${tone === "error" ? "text-red-400/80" : "text-dim"}`}>
       {children}
     </p>
   );

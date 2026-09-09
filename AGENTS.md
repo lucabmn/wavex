@@ -295,6 +295,16 @@ card into — cards come out _darker_ than the page and read as stains, and an
 overlay lands on the same white with only its shadow to stand on. Every light
 preset therefore opens below 100 so the top of the ladder has somewhere to go.
 
+Text speaks in four strengths — `text-strong`, `text-muted`, `text-faint`,
+`text-dim` — never a hand-picked `text-content/N`. Opacity is not symmetric
+between the themes: 45% of near-white on graphite is 4.1:1, and the same 45%
+of near-black on paper is 2.6:1, which is why light used to read as washed out
+however dark its ink. The light rungs are therefore higher than the dark ones,
+tuned so each lands on the contrast its counterpart does. `--glass` floors the
+window's translucency on paper for the same reason: the desktop behind a light
+window is usually darker than it, so the setting that reads as tinted glass
+over graphite reads as a smear over paper.
+
 Hairlines are `border-edge` and `border-edge-strong`, never a hand-picked
 `border-content/N`: the Separators setting scales all of them through one
 `--rule`. Hover is `bg-hover` and selection `bg-selected`, one tone each for

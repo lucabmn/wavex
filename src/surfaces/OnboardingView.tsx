@@ -49,7 +49,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
               <div className="flex flex-1 flex-col gap-1">
                 <span
                   className={`text-[11.5px] font-medium ${
-                    index === step ? "text-content" : "text-content/35"
+                    index === step ? "text-content" : "text-dim"
                   }`}
                 >
                   {label}
@@ -73,13 +73,13 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t border-edge px-5 py-3">
-          <span className="text-[11.5px] text-content/35">Step {step + 1} of 3</span>
+          <span className="text-[11.5px] text-dim">Step {step + 1} of 3</span>
           <div className="flex gap-2">
             {step > 0 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
               >
                 Back
               </button>
@@ -122,7 +122,7 @@ function ProjectStep({
       <h1 id="onboarding-title" className="text-lg font-semibold text-content">
         Where is your code?
       </h1>
-      <p className="text-[12.5px] leading-relaxed text-content/60">
+      <p className="text-[12.5px] leading-relaxed text-muted">
         wavex works in your real checkout — pick the project folder you want to start in. You can
         switch projects anytime afterwards.
       </p>
@@ -135,11 +135,11 @@ function ProjectStep({
           <span className="block text-[12.5px] font-medium text-content">
             {project ?? "Choose a project folder…"}
           </span>
-          <span className="block text-[11.5px] text-content/45">
+          <span className="block text-[11.5px] text-faint">
             {project ? "Looks good, or pick a different folder" : "Opens a folder picker"}
           </span>
         </span>
-        <span aria-hidden className="shrink-0 text-content/40">
+        <span aria-hidden className="shrink-0 text-dim">
           →
         </span>
       </button>
@@ -180,12 +180,12 @@ function AgentsStep() {
               .catch(() => undefined)
               .finally(() => setProbing(false));
           }}
-          className="shrink-0 text-[12.5px] text-content/55 hover:text-content disabled:opacity-50"
+          className="shrink-0 text-[12.5px] text-faint hover:text-content disabled:opacity-50"
         >
           {probing ? "Scanning…" : "Rescan"}
         </button>
       </div>
-      <p className="text-[12.5px] leading-relaxed text-content/60">
+      <p className="text-[12.5px] leading-relaxed text-muted">
         wavex uses your own subscriptions — sign in stays in the CLI, never in wavex.{" "}
         {found.length === 0 && !probing ? "Nothing found yet." : ""}
       </p>
@@ -203,7 +203,7 @@ function AgentsStep() {
                   {HARNESS_TITLE[id]}
                 </span>
                 {!available && hasProbedHarnessAvailability() ? (
-                  <span className="block truncate font-mono text-[11.5px] text-content/45">
+                  <span className="block truncate font-mono text-[11.5px] text-faint">
                     {harnessUnavailableHint(id)}
                   </span>
                 ) : null}
@@ -219,7 +219,7 @@ function AgentsStep() {
           );
         })}
       </ul>
-      <p className="text-[11.5px] leading-snug text-content/45">
+      <p className="text-[11.5px] leading-snug text-faint">
         Missing one? Install it, then hit Rescan. You can finish setup now and add CLIs later.
       </p>
     </div>
@@ -232,8 +232,8 @@ function ReadyStep({ project }: { project: string | null }) {
       <h1 id="onboarding-title" className="text-lg font-semibold text-content">
         You are set{project ? ` for ${project}` : ""}
       </h1>
-      <p className="text-[12.5px] leading-relaxed text-content/60">A few things worth knowing:</p>
-      <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-content/70">
+      <p className="text-[12.5px] leading-relaxed text-muted">A few things worth knowing:</p>
+      <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-muted">
         <li>
           <span className="font-mono text-content">⌘K</span> runs any command —{" "}
           <span className="font-mono text-content">@</span> jumps to a file,{" "}

@@ -81,16 +81,16 @@ export function QuestionForm({ prompt, onReply }: Props) {
         }}
       >
         <div className="flex items-center gap-1.5">
-          <MessageSquare className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
-          <span className="min-w-0 flex-1 truncate text-[11.5px] text-content/50">{title}</span>
+          <MessageSquare className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
+          <span className="min-w-0 flex-1 truncate text-[11.5px] text-faint">{title}</span>
           {total > 1 ? (
-            <span className="shrink-0 text-[11.5px] text-content/40">
+            <span className="shrink-0 text-[11.5px] text-dim">
               {index + 1} of {total}
             </span>
           ) : null}
           <button
             type="button"
-            className="h-6 shrink-0 rounded-md px-1.5 text-[11.5px] text-content/55 hover:bg-hover hover:text-content"
+            className="h-6 shrink-0 rounded-md px-1.5 text-[11.5px] text-faint hover:bg-hover hover:text-content"
             onClick={skipCurrent}
           >
             Skip
@@ -162,14 +162,14 @@ function QuestionFields({
     <fieldset className="min-w-0" aria-label={question.header || question.prompt}>
       <p className="text-[13.5px] font-medium leading-snug text-content">{question.prompt}</p>
       {question.multiSelect ? (
-        <p className="mt-0.5 text-[11.5px] text-content/40">Select all that apply</p>
+        <p className="mt-0.5 text-[11.5px] text-dim">Select all that apply</p>
       ) : null}
       {options.length === 0 && question.allowCustom ? (
         <input
           value={custom}
           onChange={(event) => onCustom(event.target.value)}
           placeholder="Type your answer"
-          className="mt-1.5 w-full rounded-md border border-edge-strong bg-transparent px-2 py-1 text-[12.5px] text-content outline-none placeholder:text-content/35 focus:border-edge-strong"
+          className="mt-1.5 w-full rounded-md border border-edge-strong bg-transparent px-2 py-1 text-[12.5px] text-content outline-none placeholder:text-dim focus:border-edge-strong"
         />
       ) : (
         <div className="mt-1.5 flex max-h-52 flex-col gap-1 overflow-y-auto" role="group">
@@ -199,7 +199,7 @@ function QuestionFields({
                       {option.label}
                     </span>
                     {option.description ? (
-                      <span className="mt-0.5 block text-[11.5px] leading-snug text-content/50">
+                      <span className="mt-0.5 block text-[11.5px] leading-snug text-faint">
                         {option.description}
                       </span>
                     ) : null}
@@ -210,7 +210,7 @@ function QuestionFields({
                     value={custom}
                     onChange={(event) => onCustom(event.target.value)}
                     placeholder="Type your answer"
-                    className="mt-1 w-full rounded-md border border-edge-strong bg-transparent px-2 py-1 text-[12.5px] text-content outline-none placeholder:text-content/35 focus:border-edge-strong"
+                    className="mt-1 w-full rounded-md border border-edge-strong bg-transparent px-2 py-1 text-[12.5px] text-content outline-none placeholder:text-dim focus:border-edge-strong"
                     onClick={(event) => event.stopPropagation()}
                     onFocus={() => {
                       if (!customSelected) onSelect(customId);

@@ -315,7 +315,7 @@ export function UnifiedDiffView({
   };
 
   if (files.length === 0) {
-    return <p className="px-4 py-6 text-[13.5px] text-content/45">No file changes</p>;
+    return <p className="px-4 py-6 text-[13.5px] text-faint">No file changes</p>;
   }
 
   const fileLabel = files.length === 1 ? "1 file" : `${files.length} files`;
@@ -331,7 +331,7 @@ export function UnifiedDiffView({
       <div
         className={`flex h-8 shrink-0 items-center gap-3 border-b border-edge px-3 text-[12.5px]`}
       >
-        <span className="text-content/70">{fileLabel}</span>
+        <span className="text-muted">{fileLabel}</span>
         <DiffCounts additions={additions} deletions={deletions} />
         <span className="ml-auto flex items-center gap-0.5">
           <button
@@ -339,7 +339,7 @@ export function UnifiedDiffView({
             title="Expand all files"
             aria-label="Expand all files"
             onClick={() => setOpen(new Set(files.map((file) => file.id)))}
-            className="grid size-7 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
+            className="grid size-7 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
           >
             <UnfoldVertical className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -349,7 +349,7 @@ export function UnifiedDiffView({
             aria-label="Collapse all files"
             disabled={open.size === 0}
             onClick={() => setOpen(new Set())}
-            className="grid size-7 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
+            className="grid size-7 place-items-center rounded-md text-faint hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <FoldVertical className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -365,7 +365,7 @@ export function UnifiedDiffView({
         onFocusCapture={claimReview}
       >
         {truncated ? (
-          <p className="px-3 py-3 text-[12.5px] text-content/45">
+          <p className="px-3 py-3 text-[12.5px] text-faint">
             Diff is too large to display in full. File list is shown without patches.
           </p>
         ) : null}
@@ -523,10 +523,10 @@ const FileSection = memo(function FileSection({
           onClick={onToggle}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
-          <Chevron className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
+          <Chevron className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
           <FileTypeIcon name={name} isDir={false} size={16} />
           <span
-            className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-content/85"
+            className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-strong"
             title={file.label}
           >
             {file.label}
@@ -898,7 +898,7 @@ function FoldBar({
         title="Expand upward"
         aria-label="Expand unmodified lines upward"
         onClick={() => onReveal("up")}
-        className="grid size-5 place-items-center rounded text-content/40 hover:bg-hover hover:text-content"
+        className="grid size-5 place-items-center rounded text-dim hover:bg-hover hover:text-content"
       >
         <ChevronUp className="size-3" strokeWidth={2} />
       </button>
@@ -907,14 +907,14 @@ function FoldBar({
         title="Expand downward"
         aria-label="Expand unmodified lines downward"
         onClick={() => onReveal("down")}
-        className="grid size-5 place-items-center rounded text-content/40 hover:bg-hover hover:text-content"
+        className="grid size-5 place-items-center rounded text-dim hover:bg-hover hover:text-content"
       >
         <ChevronDown className="size-3" strokeWidth={2} />
       </button>
       <button
         type="button"
         onClick={() => onReveal("all")}
-        className="min-w-0 flex-1 py-1 text-left font-mono text-[11.5px] text-content/45 hover:text-content/70"
+        className="min-w-0 flex-1 py-1 text-left font-mono text-[11.5px] text-faint hover:text-muted"
       >
         {hidden} unmodified {hidden === 1 ? "line" : "lines"}
       </button>
@@ -944,9 +944,7 @@ const DiffLineRow = memo(function DiffLineRow({
         style={{ height: UNIFIED_HUNK_PX }}
       >
         {lane === "code" ? (
-          <span className="px-3 font-mono text-[11.5px] leading-none text-content/40">
-            {line.text}
-          </span>
+          <span className="px-3 font-mono text-[11.5px] leading-none text-dim">{line.text}</span>
         ) : null}
       </div>
     );
@@ -956,7 +954,7 @@ const DiffLineRow = memo(function DiffLineRow({
   const number = deleted ? line.oldNumber : line.newNumber;
   const row = added ? "bg-emerald-500/15" : deleted ? "bg-rose-500/15" : "";
   const gutterTint = added ? "bg-emerald-500/25" : deleted ? "bg-rose-500/25" : "";
-  const gutterText = added ? "text-emerald-300" : deleted ? "text-rose-300" : "text-content/35";
+  const gutterText = added ? "text-emerald-300" : deleted ? "text-rose-300" : "text-dim";
 
   if (lane === "gutter") {
     return (
@@ -989,7 +987,7 @@ const DiffLineRow = memo(function DiffLineRow({
   return (
     <div className={`flex items-center ${row}`} style={{ height: UNIFIED_LINE_PX }}>
       <span
-        className={`whitespace-pre px-3 font-mono text-[12.5px] leading-none text-content/80 ${
+        className={`whitespace-pre px-3 font-mono text-[12.5px] leading-none text-strong ${
           line.kind === "context" ? "opacity-70" : ""
         }`}
       >
@@ -1016,7 +1014,7 @@ function renderLineText(line: UnifiedLine, tokens?: SyntaxToken[]) {
 }
 
 function EmptyBody({ children }: { children: string }) {
-  return <p className="px-3 py-3 text-[12.5px] text-content/45">{children}</p>;
+  return <p className="px-3 py-3 text-[12.5px] text-faint">{children}</p>;
 }
 
 function DiffCounts({ additions, deletions }: { additions: number; deletions: number }) {
@@ -1047,7 +1045,7 @@ function IconButton({
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-6 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
+      className="grid size-6 place-items-center rounded-md text-faint hover:bg-hover hover:text-content disabled:opacity-40"
     >
       {children}
     </button>

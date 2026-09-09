@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Give secondary text four named strengths with their own value per theme, so
+  the light interface stops reading as washed out. The same opacity is not the
+  same contrast on paper as on graphite — the app's most common muted level sat
+  at 2.6:1 in light against 4.1:1 in dark — and every rung now lands on the
+  same ratio in both. Window translucency gets a floor on paper for the same
+  reason.
 - Rebuild the light theme so its surfaces climb like the dark theme's: the page
   no longer sits pinned at white with cards darker than it and overlays on the
   same white, and its rules and text are firm enough to read on paper.

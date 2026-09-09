@@ -792,7 +792,7 @@ function SidebarComponent({
           setSearchQuery("");
         }
       }}
-      className="h-full w-full min-w-0 rounded-md bg-transparent py-0 pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-content/35"
+      className="h-full w-full min-w-0 rounded-md bg-transparent py-0 pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-dim"
     />
   );
 
@@ -1002,7 +1002,7 @@ function SidebarComponent({
               />
             </div>
           ) : (
-            <p className="px-3 py-2 text-[12.5px] text-content/50">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No project folder</p>
           )}
         </div>
         {tab === "sessions" && cwd && cwd !== "~" ? (
@@ -1032,7 +1032,7 @@ function SidebarComponent({
           }`}
         >
           {!cwd || cwd === "~" ? (
-            <p className="px-3 py-2 text-[12.5px] text-content/50">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No project folder</p>
           ) : (
             <div>
               {/*
@@ -1052,7 +1052,7 @@ function SidebarComponent({
                     <button
                       type="button"
                       onClick={onRetrySessions}
-                      className="ui-focus self-start rounded-md border border-edge bg-surface-raised px-2.5 py-1 text-[11.5px] font-medium text-content/75 hover:text-content"
+                      className="ui-focus self-start rounded-md border border-edge bg-surface-raised px-2.5 py-1 text-[11.5px] font-medium text-strong hover:text-content"
                     >
                       Try again
                     </button>
@@ -1063,7 +1063,7 @@ function SidebarComponent({
                 // just typed, so it stays a quiet line of text. Only the genuine
                 // "this project has nothing in it" case earns the illustration.
                 narrowedByUser ? (
-                  <p className="px-3 py-2 text-[12.5px] text-content/50">
+                  <p className="px-3 py-2 text-[12.5px] text-faint">
                     {searchNarrowed ? "No matching sessions" : "No sessions match these filters"}
                   </p>
                 ) : (
@@ -1190,7 +1190,7 @@ function SidebarComponent({
                                       title="New session"
                                       aria-label="New session"
                                       onClick={() => onNewInFolder(entry.folder.id)}
-                                      className="relative flex w-full items-center gap-1 rounded-md border border-transparent px-2.5 py-1.5 text-left text-content/45 hover:bg-hover hover:text-content"
+                                      className="relative flex w-full items-center gap-1 rounded-md border border-transparent px-2.5 py-1.5 text-left text-faint hover:bg-hover hover:text-content"
                                     >
                                       <Plus className="size-3 shrink-0" strokeWidth={1.75} />
                                       <span className="text-[13.5px] font-semibold leading-snug">
@@ -1553,7 +1553,7 @@ function SessionsHeaderButton({
       aria-haspopup={hasPopup ? "menu" : undefined}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`ui-focus relative z-50 grid size-6 place-items-center rounded-lg text-content/45 transition-colors hover:bg-hover hover:text-content ${
+      className={`ui-focus relative z-50 grid size-6 place-items-center rounded-lg text-faint transition-colors hover:bg-hover hover:text-content ${
         open || active ? "bg-selected text-content" : ""
       }`}
     >
@@ -1665,16 +1665,14 @@ function FolderRow({
           ? "text-content"
           : expanded
             ? "text-content hover:bg-hover"
-            : "text-content/80 hover:bg-hover hover:text-content"
+            : "text-strong hover:bg-hover hover:text-content"
       }`}
     >
       {dropTarget ? (
         <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/20" />
       ) : null}
       <span
-        className={`relative grid size-4 shrink-0 place-items-center ${
-          accent ? "" : "text-content/50"
-        }`}
+        className={`relative grid size-4 shrink-0 place-items-center ${accent ? "" : "text-faint"}`}
         style={accent ? { color: accent } : undefined}
       >
         {expanded ? (
@@ -1697,7 +1695,7 @@ function FolderRow({
       <span className="relative min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug text-content">
         {folder.name}
       </span>
-      <span className="relative flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-content/45">
+      <span className="relative flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-faint">
         {!expanded && needsApproval ? (
           <CircleAlert className="size-3 text-amber-400" strokeWidth={1.75} />
         ) : !expanded && busy ? (
@@ -1760,7 +1758,7 @@ function FolderRenameRow({
       {dropTarget ? (
         <div className="pointer-events-none absolute inset-0 rounded-md bg-accent/20" />
       ) : null}
-      <span className="relative grid size-4 shrink-0 place-items-center text-content/50">
+      <span className="relative grid size-4 shrink-0 place-items-center text-faint">
         <ChevronDown className="size-3.5" strokeWidth={1.75} />
       </span>
       <input
@@ -1781,9 +1779,7 @@ function FolderRenameRow({
         }}
         className="relative min-w-0 flex-1 rounded-md bg-surface-sunken px-2 py-0.5 text-[13.5px] font-semibold leading-snug text-content outline-none"
       />
-      <span className="relative shrink-0 text-[11.5px] tabular-nums text-content/45">
-        {memberCount}
-      </span>
+      <span className="relative shrink-0 text-[11.5px] tabular-nums text-faint">{memberCount}</span>
     </div>
   );
 }
@@ -1842,7 +1838,7 @@ function SessionCard({
   });
   const status =
     agent === "idle" ? (
-      <span className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-content/45">
+      <span className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-faint">
         <span>{time}</span>
       </span>
     ) : (
@@ -1984,7 +1980,7 @@ function SessionCard({
             ? "border-dashed border-amber-400/45 bg-amber-400/10 text-content"
             : isActive
               ? "border-transparent text-content"
-              : "border-transparent text-content/75 hover:bg-hover hover:text-content"
+              : "border-transparent text-strong hover:bg-hover hover:text-content"
       }`}
     >
       {dropTarget ? (
@@ -1994,15 +1990,13 @@ function SessionCard({
         <span className="relative flex items-center gap-2">
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
             <HarnessIcon harness={session.harness} className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate text-[11.5px] text-content/50">{model}</span>
+            <span className="min-w-0 truncate text-[11.5px] text-faint">{model}</span>
           </span>
           {status}
         </span>
       )}
       <span className={`relative flex min-w-0 items-center gap-1.5 ${compact ? "" : "mt-1"}`}>
-        {session.pinned ? (
-          <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
-        ) : null}
+        {session.pinned ? <Pin className="size-3 shrink-0 text-faint" strokeWidth={1.75} /> : null}
         <span className="min-w-0 flex-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
           {title}
         </span>
@@ -2085,11 +2079,7 @@ function SessionRenameRow({
     <div
       data-selected={!needsApproval && isActive ? "true" : undefined}
       className={`ui-row flex w-full flex-col rounded-lg px-2.5 py-2 ${
-        needsApproval
-          ? "bg-amber-400/10 text-content"
-          : isActive
-            ? "text-content"
-            : "text-content/75"
+        needsApproval ? "bg-amber-400/10 text-content" : isActive ? "text-content" : "text-strong"
       }`}
     >
       <input
@@ -2129,7 +2119,7 @@ function DiffStat({
       title={`${label} uncommitted`}
       className="flex min-w-0 items-center gap-1.5 overflow-hidden font-mono text-[11.5px] font-semibold tabular-nums"
     >
-      {files > 0 ? <span className="truncate text-content/60">{files} changed</span> : null}
+      {files > 0 ? <span className="truncate text-muted">{files} changed</span> : null}
       {additions > 0 ? <span className="shrink-0 text-emerald-400">+{additions}</span> : null}
       {deletions > 0 ? <span className="shrink-0 text-red-400">-{deletions}</span> : null}
     </span>

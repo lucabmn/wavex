@@ -61,7 +61,7 @@ function BrowserGate({ onReady }: { onReady: () => void }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background-base text-[12.5px] text-content/50">
+    <div className="flex min-h-screen items-center justify-center bg-background-base text-[12.5px] text-faint">
       {phase.kind === "connecting" ? `Connecting to ${phase.host.name}…` : ""}
     </div>
   );

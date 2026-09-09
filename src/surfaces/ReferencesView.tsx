@@ -73,7 +73,7 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
   if (references.targets.length === 0) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
-        <p className="text-[13.5px] text-content/70">
+        <p className="text-[13.5px] text-muted">
           No references to <span className="font-mono">{references.symbol}</span>
         </p>
       </div>
@@ -87,7 +87,7 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-8 shrink-0 items-center gap-2 border-b border-edge px-3 text-[11.5px] text-content/55">
+      <header className="flex h-8 shrink-0 items-center gap-2 border-b border-edge px-3 text-[11.5px] text-faint">
         <span className="truncate font-mono text-content">{references.symbol}</span>
         <span className="tabular-nums">
           {plural(references.targets.length, "result")} in {plural(groups.length, "file")}
@@ -103,15 +103,15 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
               className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11.5px] hover:bg-hover"
             >
               {collapsed.has(group.path) ? (
-                <ChevronRight className="size-3 shrink-0 text-content/50" strokeWidth={1.75} />
+                <ChevronRight className="size-3 shrink-0 text-faint" strokeWidth={1.75} />
               ) : (
-                <ChevronDown className="size-3 shrink-0 text-content/50" strokeWidth={1.75} />
+                <ChevronDown className="size-3 shrink-0 text-faint" strokeWidth={1.75} />
               )}
               <span className="shrink-0 font-medium text-content">{basename(group.path)}</span>
-              <span className="min-w-0 flex-1 truncate text-content/40">
+              <span className="min-w-0 flex-1 truncate text-dim">
                 {displayPath(group.path, cwd)}
               </span>
-              <span className="shrink-0 tabular-nums text-content/40">{group.rows.length}</span>
+              <span className="shrink-0 tabular-nums text-dim">{group.rows.length}</span>
             </button>
             {collapsed.has(group.path)
               ? null
@@ -122,10 +122,10 @@ export function ReferencesView({ cwd, references, active, onOpenFile }: Props) {
                     data-selected={index === selected}
                     onClick={() => open(target, index)}
                     className={`flex w-full items-center gap-2 py-0.5 pr-2 pl-7 text-left font-mono text-[11.5px] hover:bg-hover ${
-                      index === selected ? "bg-selected text-content" : "text-content/60"
+                      index === selected ? "bg-selected text-content" : "text-muted"
                     }`}
                   >
-                    <span className="w-9 shrink-0 text-right tabular-nums text-content/35">
+                    <span className="w-9 shrink-0 text-right tabular-nums text-dim">
                       {target.line}
                     </span>
                     <span className="truncate">{previews.get(previewKey(target)) ?? ""}</span>

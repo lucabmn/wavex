@@ -76,8 +76,8 @@ export function SettingsView({
         data-tauri-drag-region="deep"
       >
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
-          <span className="shrink-0 text-content/45">Settings</span>
-          <span aria-hidden className="shrink-0 text-content/25">
+          <span className="shrink-0 text-faint">Settings</span>
+          <span aria-hidden className="shrink-0 text-dim">
             /
           </span>
           <span className="min-w-0 truncate text-content">{settingsSectionLabel(section)}</span>
@@ -87,7 +87,7 @@ export function SettingsView({
             type="button"
             data-tauri-drag-region="false"
             onClick={appearance.restoreDefaults}
-            className="mr-2 flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] text-content/50 hover:bg-hover hover:text-content"
+            className="mr-2 flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] text-faint hover:bg-hover hover:text-content"
           >
             <RotateCcw className="size-3.5" strokeWidth={1.75} />
             Restore defaults

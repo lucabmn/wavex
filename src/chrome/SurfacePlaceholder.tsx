@@ -15,9 +15,9 @@ type Props = {
 export function SurfacePlaceholder({ icon: Icon, title, description, children }: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 px-6 text-center">
-      <Icon className="size-6 text-content/25" strokeWidth={1.5} />
+      <Icon className="size-6 text-dim" strokeWidth={1.5} />
       {title ? <p className="text-[12.5px] font-medium text-content">{title}</p> : null}
-      <p className="max-w-72 text-[12.5px] leading-relaxed text-content/50">{description}</p>
+      <p className="max-w-72 text-[12.5px] leading-relaxed text-faint">{description}</p>
       {children ? (
         <div className="flex flex-wrap items-center justify-center gap-1">{children}</div>
       ) : null}

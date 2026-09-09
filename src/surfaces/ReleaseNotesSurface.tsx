@@ -12,7 +12,7 @@ export function ReleaseNotesSurface({ source }: { source: ReleaseNotesTabSource 
         {markdown ? (
           <AgentMarkdown text={markdown} streaming={false} />
         ) : (
-          <p className="text-[13.5px] text-content/60">
+          <p className="text-[13.5px] text-muted">
             Release notes for this version are not available in this build.
           </p>
         )}

@@ -38,11 +38,11 @@ export function DeleteProfileDialog({ profile, onCancel, onConfirm }: Props) {
           <h2 className="text-[13.5px] font-medium leading-tight text-content">
             Delete “{profile.name}”?
           </h2>
-          <p className="text-[12.5px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             Its projects, chats, agents, and workspace are removed from wavex. This cannot be
             undone.
           </p>
-          <p className="text-[12.5px] leading-snug text-content/45">
+          <p className="text-[12.5px] leading-snug text-faint">
             Your folders on disk stay exactly as they are — no repository, worktree, or uncommitted
             change is touched.
           </p>
@@ -53,7 +53,7 @@ export function DeleteProfileDialog({ profile, onCancel, onConfirm }: Props) {
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             Cancel
           </button>

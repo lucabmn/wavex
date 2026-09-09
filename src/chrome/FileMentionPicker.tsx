@@ -62,7 +62,7 @@ export function FileMentionPicker({
       className="overflow-hidden rounded-lg border border-edge bg-content/5 backdrop-blur-xl"
     >
       {files.length === 0 ? (
-        <p className="px-3 py-2.5 text-[12.5px] text-content/50">
+        <p className="px-3 py-2.5 text-[12.5px] text-faint">
           {loading
             ? "Indexing files…"
             : query.trim()
@@ -120,9 +120,9 @@ export function FileMentionPicker({
                   {file.isDir ? "/" : null}
                 </span>
                 {note ? (
-                  <span className="shrink-0 font-mono text-[11.5px] text-content/40">Note</span>
+                  <span className="shrink-0 font-mono text-[11.5px] text-dim">Note</span>
                 ) : dir ? (
-                  <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-content/40">
+                  <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-dim">
                     <MatchText
                       text={dir}
                       positions={file.positions.filter((pos) => pos < slash)}

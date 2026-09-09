@@ -104,7 +104,7 @@ export function ProvidersPage() {
 
   return (
     <>
-      <p className="pb-5 text-[12.5px] leading-relaxed text-content/45">
+      <p className="pb-5 text-[12.5px] leading-relaxed text-faint">
         A provider is listed as installed once its CLI is found on your PATH. Uninstalled CLIs stay
         listed here but are omitted from the model picker. The model beside each provider is what
         new conversations use when that provider is selected; Use by default picks the provider
@@ -191,7 +191,7 @@ function GitWritingsRow({
             onChange={onModelChange}
           />
         ) : (
-          <span className="text-[12.5px] text-content/45">
+          <span className="text-[12.5px] text-faint">
             {isHarnessAvailable(harness)
               ? "Loading models…"
               : (harnessUnavailableHint(harness) ?? "Provider not installed.")}
@@ -253,7 +253,7 @@ function ProviderCard({
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-[12.5px] text-content/45">
+          <p className="mt-0.5 text-[12.5px] text-faint">
             {available
               ? `${enabled.length} of ${models.length} ${models.length === 1 ? "model" : "models"} on.`
               : harnessUnavailableHint(harness)}
@@ -277,7 +277,7 @@ function ProviderCard({
             onChange={(next) => onModelChange(harness, next)}
           />
         ) : (
-          <span className="text-[12.5px] text-content/45">
+          <span className="text-[12.5px] text-faint">
             {available ? "Loading models…" : (harnessUnavailableHint(harness) ?? "No models")}
           </span>
         )}
@@ -305,13 +305,13 @@ function ProviderCard({
             className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13.5px] font-medium text-content hover:bg-hover"
           >
             <ChevronDown
-              className={`size-3.5 shrink-0 text-content/40 transition-transform ${
+              className={`size-3.5 shrink-0 text-dim transition-transform ${
                 showModels ? "" : "-rotate-90"
               }`}
               strokeWidth={1.75}
             />
             Models
-            <span className="ml-auto text-[12.5px] font-normal text-content/40">
+            <span className="ml-auto text-[12.5px] font-normal text-dim">
               {enabled.length === models.length
                 ? "All on"
                 : enabled.length === 0
@@ -321,7 +321,7 @@ function ProviderCard({
           </button>
           {showModels ? (
             <div className="border-t border-edge">
-              <p className="px-4 pt-3 text-[12.5px] leading-relaxed text-content/40">
+              <p className="px-4 pt-3 text-[12.5px] leading-relaxed text-dim">
                 A model you turn off leaves the picker, racing, and second opinions. Conversations
                 already running on it keep running on it.
               </p>
@@ -335,7 +335,7 @@ function ProviderCard({
                     >
                       <span
                         className={`min-w-0 flex-1 truncate text-[12.5px] ${
-                          on ? "text-content" : "text-content/35"
+                          on ? "text-content" : "text-dim"
                         }`}
                       >
                         {model.name}
@@ -408,7 +408,7 @@ function ModelChoice({
         <HarnessIcon harness={current.harness} className="size-3.5 shrink-0" />
         <span className="min-w-0 truncate">{current.name}</span>
         <ChevronDown
-          className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
+          className={`size-3 shrink-0 text-faint ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
         />
       </button>

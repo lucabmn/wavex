@@ -109,7 +109,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               title={expanded ? "Collapse files" : "Expand files"}
               aria-expanded={expanded}
               onClick={() => setExpanded((open) => !open)}
-              className="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left text-content/70 hover:text-content"
+              className="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left text-muted hover:text-content"
             >
               {expanded ? (
                 <ChevronDown className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -127,7 +127,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               title="Undo all session changes"
               disabled={disabled}
               onClick={() => run("undo")}
-              className="h-6 rounded-md px-1.5  text-[11.5px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
+              className="h-6 rounded-md px-1.5  text-[11.5px] text-faint hover:bg-hover hover:text-content disabled:opacity-40"
             >
               Undo All
             </button>
@@ -136,7 +136,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               title="Keep all session changes"
               disabled={disabled}
               onClick={() => run("keep")}
-              className="h-6 rounded-md px-1.5  text-[11.5px] text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
+              className="h-6 rounded-md px-1.5  text-[11.5px] text-faint hover:bg-hover hover:text-content disabled:opacity-40"
             >
               Keep All
             </button>
@@ -144,7 +144,7 @@ export function SessionReview({ sessionId, cwd, enabled = true, busy = false, on
               type="button"
               title="Review changes"
               onClick={() => onOpenDiff()}
-              className="h-6 rounded-md bg-content/15 px-2 text-[11.5px] text-content/80 hover:bg-hover hover:text-content"
+              className="h-6 rounded-md bg-content/15 px-2 text-[11.5px] text-strong hover:bg-hover hover:text-content"
             >
               Review
             </button>
@@ -177,7 +177,7 @@ function FileLabel({
       type="button"
       title={file.relative}
       onClick={() => onOpenDiff(file.path)}
-      className="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left text-content/80 hover:text-content"
+      className="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left text-strong hover:text-content"
     >
       <FileTypeIcon name={name} isDir={false} size={14} />
       <span className="min-w-0 truncate font-mono text-[12.5px]">{name}</span>
@@ -199,7 +199,7 @@ function FileRow({
       type="button"
       title={file.relative}
       onClick={() => onOpenDiff(file.path)}
-      className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-1 text-left text-content/80 hover:bg-hover hover:text-content"
+      className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-1 text-left text-strong hover:bg-hover hover:text-content"
     >
       <FileTypeIcon name={name} isDir={false} size={16} />
       <span className="min-w-0 flex-1 truncate font-mono text-[12.5px]">{name}</span>

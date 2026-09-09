@@ -178,7 +178,7 @@ function UpdateRow({ onOpenWhatsNew }: { onOpenWhatsNew: (version: string) => vo
       label={
         <span className="flex items-baseline gap-2">
           Version
-          <span className="font-mono text-[12.5px] text-content/45">{snapshot.currentVersion}</span>
+          <span className="font-mono text-[12.5px] text-faint">{snapshot.currentVersion}</span>
         </span>
       }
       description={status}

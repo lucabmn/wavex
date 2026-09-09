@@ -82,7 +82,7 @@ export function GitStatusBadge({
     .join(" · ");
   return (
     <span
-      className="flex min-w-0 flex-1 items-center gap-1 text-[11.5px] text-content/45"
+      className="flex min-w-0 flex-1 items-center gap-1 text-[11.5px] text-faint"
       title={title}
       aria-label={title}
     >

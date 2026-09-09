@@ -188,8 +188,8 @@ function ToolButton({
       className={`grid size-6.5 shrink-0 place-items-center rounded-md ${
         active
           ? "bg-content/20 text-content"
-          : "bg-content/10 text-content/50 hover:bg-hover hover:text-content"
-      } disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/50`}
+          : "bg-content/10 text-faint hover:bg-hover hover:text-content"
+      } disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-faint`}
     >
       {children}
     </button>
@@ -968,7 +968,7 @@ export function Composer({
           className={`ui-composer relative z-10 rounded-xl ${fileDrag ? "border-accent" : ""}`}
         >
           {fileDrag ? (
-            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-xl bg-accent/10 text-[12.5px] text-content/70">
+            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-xl bg-accent/10 text-[12.5px] text-muted">
               Drop files to attach
             </div>
           ) : null}

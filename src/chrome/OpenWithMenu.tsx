@@ -77,7 +77,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
             title={`Open project in ${primary.name}`}
             aria-label={`Open project in ${primary.name}`}
             onClick={() => launch(primary)}
-            className="grid size-6.5 place-items-center rounded-l-md text-content/50 hover:bg-hover hover:text-content"
+            className="grid size-6.5 place-items-center rounded-l-md text-faint hover:bg-hover hover:text-content"
           >
             <AppIcon app={primary} />
           </button>
@@ -91,7 +91,7 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
           onClick={() => setOpen((value) => !value)}
           className={`grid h-6.5 place-items-center ${
             primary ? "w-4 rounded-r-md" : "w-6.5 rounded-md"
-          } ${open ? "text-content" : "text-content/50 hover:bg-hover hover:text-content"}`}
+          } ${open ? "text-content" : "text-faint hover:bg-hover hover:text-content"}`}
         >
           <ChevronDown className="size-3" strokeWidth={2} />
         </button>
@@ -113,9 +113,9 @@ export function OpenWithMenu({ cwd }: { cwd: string }) {
               {error}
             </p>
           ) : apps == null ? (
-            <p className="px-2 py-1.5 text-[12.5px] text-content/45">Looking for apps…</p>
+            <p className="px-2 py-1.5 text-[12.5px] text-faint">Looking for apps…</p>
           ) : groups.length === 0 ? (
-            <p className="px-2 py-1.5 text-[12.5px] text-content/45">No apps found</p>
+            <p className="px-2 py-1.5 text-[12.5px] text-faint">No apps found</p>
           ) : (
             groups.map((group) => (
               <div key={group.kind}>

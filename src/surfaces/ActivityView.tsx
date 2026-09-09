@@ -163,8 +163,8 @@ export function ActivityView({ sessions, onClose, onOpenSession }: Props) {
         data-tauri-drag-region="deep"
       >
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
-          <span className="shrink-0 text-content/45">Activity</span>
-          <span aria-hidden className="shrink-0 text-content/25">
+          <span className="shrink-0 text-faint">Activity</span>
+          <span aria-hidden className="shrink-0 text-dim">
             /
           </span>
           <span className="min-w-0 truncate text-content">{status}</span>
@@ -252,16 +252,16 @@ export function ActivityView({ sessions, onClose, onOpenSession }: Props) {
             onStop={(card) => card.live && stop(card.live)}
           />
         ) : agents.length === 0 ? (
-          <p className="px-4 py-6 text-[13.5px] text-content/45">
+          <p className="px-4 py-6 text-[13.5px] text-faint">
             No agent is working right now. Turns from every window show up here while they run.
           </p>
         ) : filteredAgents.length === 0 ? (
           <div className="flex flex-col items-start gap-2 px-4 py-6">
-            <p className="text-[13.5px] text-content/45">Nothing matches this filter.</p>
+            <p className="text-[13.5px] text-faint">Nothing matches this filter.</p>
             <button
               type="button"
               onClick={() => setFilter("all")}
-              className="rounded-md bg-content/10 px-2 py-1 text-[11.5px] text-content/70 hover:bg-hover hover:text-content"
+              className="rounded-md bg-content/10 px-2 py-1 text-[11.5px] text-muted hover:bg-hover hover:text-content"
             >
               Show all activity
             </button>
@@ -270,7 +270,7 @@ export function ActivityView({ sessions, onClose, onOpenSession }: Props) {
           <div className="flex flex-col gap-4 p-3">
             {projects.map(([cwd, rows]) => (
               <section key={cwd} className="flex flex-col gap-1">
-                <h2 className="px-1 text-[11.5px] font-medium tracking-wide text-content/40 uppercase">
+                <h2 className="px-1 text-[11.5px] font-medium tracking-wide text-dim uppercase">
                   {projectName(cwd)}
                 </h2>
                 {rows.map((agent) => (
@@ -322,7 +322,7 @@ function AgentRow({
         <HarnessIcon harness={agent.harness} className="size-4 shrink-0" />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[13.5px] text-content">{agent.title}</span>
-          <span className="truncate text-[12.5px] text-content/45">{agent.activity}</span>
+          <span className="truncate text-[12.5px] text-faint">{agent.activity}</span>
         </span>
       </button>
       {waiting > 0 ? (
@@ -330,9 +330,9 @@ function AgentRow({
           {waiting === 1 ? "1 needs you" : `${waiting} need you`}
         </span>
       ) : null}
-      <span className="shrink-0 text-[11.5px] text-content/35">{HARNESS_LABEL[agent.harness]}</span>
+      <span className="shrink-0 text-[11.5px] text-dim">{HARNESS_LABEL[agent.harness]}</span>
       {elapsed ? (
-        <span className="w-12 shrink-0 text-right font-mono text-[11.5px] tabular-nums text-content/40">
+        <span className="w-12 shrink-0 text-right font-mono text-[11.5px] tabular-nums text-dim">
           {elapsed}
         </span>
       ) : null}
@@ -342,7 +342,7 @@ function AgentRow({
           title="Stop this turn"
           aria-label="Stop this turn"
           onClick={onStop}
-          className="grid size-6.5 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
+          className="grid size-6.5 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>

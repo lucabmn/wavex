@@ -94,13 +94,13 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
           <h2 className="text-[13.5px] font-medium leading-tight text-content">
             {existing ? "Edit prompt template" : "New prompt template"}
           </h2>
-          <p className="text-[12.5px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             Saved with this project and inserted from the composer with{" "}
-            <span className="font-mono text-content/70">/</span>. It is plain text, so{" "}
-            <span className="font-mono text-content/70">@file</span> mentions work the same as when
-            you type them.
+            <span className="font-mono text-muted">/</span>. It is plain text, so{" "}
+            <span className="font-mono text-muted">@file</span> mentions work the same as when you
+            type them.
           </p>
-          <p className="truncate text-[11.5px] leading-tight text-content/40">
+          <p className="truncate text-[11.5px] leading-tight text-dim">
             {prettyCwd(draft.projectPath)}
           </p>
         </div>
@@ -116,7 +116,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
             maxLength={64}
             onChange={(event) => setName(event.target.value)}
             onBlur={() => setName((value) => slugTemplateName(value))}
-            className="w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13.5px] text-content outline-none placeholder:text-content/40"
+            className="w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13.5px] text-content outline-none placeholder:text-dim"
           />
         </label>
 
@@ -130,7 +130,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
             disabled={busy}
             maxLength={200}
             onChange={(event) => setDescription(event.target.value)}
-            className="w-full rounded-md bg-content/10 px-2 py-1.5 text-[13.5px] text-content outline-none placeholder:text-content/40"
+            className="w-full rounded-md bg-content/10 px-2 py-1.5 text-[13.5px] text-content outline-none placeholder:text-dim"
           />
         </label>
 
@@ -144,14 +144,14 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
             placeholder={"Review @src for our conventions, then list what you would change."}
             disabled={busy}
             onChange={(event) => setBody(event.target.value)}
-            className="max-h-[40vh] min-h-32 w-full resize-y rounded-md bg-content/10 px-2 py-1.5 font-mono text-[12.5px] leading-5 text-content outline-none placeholder:text-content/40"
+            className="max-h-[40vh] min-h-32 w-full resize-y rounded-md bg-content/10 px-2 py-1.5 font-mono text-[12.5px] leading-5 text-content outline-none placeholder:text-dim"
           />
         </label>
 
         {error ? (
-          <p className="text-[12.5px] leading-snug text-content/70">{error}</p>
+          <p className="text-[12.5px] leading-snug text-muted">{error}</p>
         ) : name.trim() && !isValidTemplateName(slug) ? (
-          <p className="text-[12.5px] leading-snug text-content/50">
+          <p className="text-[12.5px] leading-snug text-faint">
             Use lowercase letters, numbers, and hyphens.
           </p>
         ) : null}
@@ -163,7 +163,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
               disabled={busy}
               onClick={remove}
               onBlur={() => setConfirmDelete(false)}
-              className="mr-auto rounded-md px-3 py-1.5 text-[12.5px] text-content/60 hover:bg-hover hover:text-content disabled:opacity-40"
+              className="mr-auto rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40"
             >
               {confirmDelete ? "Click again to delete" : "Delete"}
             </button>
@@ -172,7 +172,7 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
             type="button"
             disabled={busy}
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             Cancel
           </button>

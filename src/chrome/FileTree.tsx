@@ -643,14 +643,14 @@ export function FileTree({
             }}
             className={`flex min-w-0 flex-1 items-center gap-1 h-full pl-2 text-left`}
           >
-            <span className="grid size-4 shrink-0 place-items-center text-content/50">
+            <span className="grid size-4 shrink-0 place-items-center text-faint">
               {rootOpen ? (
                 <ChevronDown className="size-3.5" strokeWidth={1.75} />
               ) : (
                 <ChevronRight className="size-3.5" strokeWidth={1.75} />
               )}
             </span>
-            <span className="min-w-0 truncate text-[11.5px] font-semibold tracking-[0.08em] text-content/50 uppercase">
+            <span className="min-w-0 truncate text-[11.5px] font-semibold tracking-[0.08em] text-faint uppercase">
               {name}
             </span>
           </button>
@@ -709,7 +709,7 @@ function HeaderIcon({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active ? "bg-selected text-content" : "text-content/50 hover:bg-hover hover:text-content"
+        active ? "bg-selected text-content" : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       {children}
@@ -754,7 +754,7 @@ function FileTreeDiffButton({
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={`relative flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active ? "bg-selected text-content" : "text-content/50 hover:bg-hover hover:text-content"
+        active ? "bg-selected text-content" : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       <span className="relative">
@@ -803,13 +803,13 @@ function TreeChildren({
   return (
     <>
       {error ? (
-        <p className="truncate pr-2 text-[12.5px] text-content/50" style={pad}>
+        <p className="truncate pr-2 text-[12.5px] text-faint" style={pad}>
           {error}
         </p>
       ) : null}
       {show && ctx.creating?.isDir ? row : null}
       {loading && !error ? (
-        <p className="pr-2 text-[12.5px] text-content/50" style={pad}>
+        <p className="pr-2 text-[12.5px] text-faint" style={pad}>
           …
         </p>
       ) : null}
@@ -914,7 +914,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
             selected ? "bg-selected text-content" : "text-content hover:bg-hover"
           } ${cutPath === entry.path ? "opacity-50" : ""}`}
         >
-          <span className="grid size-4 shrink-0 place-items-center text-content/50">
+          <span className="grid size-4 shrink-0 place-items-center text-faint">
             {entry.isDir ? (
               open ? (
                 <ChevronDown className="size-3.5" strokeWidth={1.75} />
@@ -927,9 +927,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
             <FileTypeIcon name={entry.name} isDir={entry.isDir} isOpen={open} />
           </span>
           <span
-            className={`min-w-0 truncate ${
-              entry.ignored ? "italic text-content/50" : (gitColor ?? "")
-            }`}
+            className={`min-w-0 truncate ${entry.ignored ? "italic text-faint" : (gitColor ?? "")}`}
           >
             {entry.name}
           </span>
@@ -1020,7 +1018,7 @@ function NameRow({
         style={{ paddingLeft: 8 + depth * 12 }}
         className="flex h-7.5 w-full items-center gap-1 bg-content/10 pr-2"
       >
-        <span className="grid size-4 shrink-0 place-items-center text-content/50">
+        <span className="grid size-4 shrink-0 place-items-center text-faint">
           {isDir ? <ChevronRight className="size-3.5" strokeWidth={1.75} /> : null}
         </span>
         <span className="shrink-0">

@@ -248,7 +248,7 @@ export function ModelPicker({
           {current.name}
         </span>
         <ChevronDown
-          className={`size-3 shrink-0 text-content/50 ${fill ? "ml-auto" : ""} ${open ? "rotate-180" : ""}`}
+          className={`size-3 shrink-0 text-faint ${fill ? "ml-auto" : ""} ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
         />
       </button>
@@ -348,10 +348,10 @@ function ProviderTabButton({
       }}
       className={`relative flex min-w-0 flex-1 items-center justify-center gap-1 px-2 py-3 text-[11.5px] leading-4 ${
         disabled
-          ? "cursor-not-allowed text-content/25"
+          ? "cursor-not-allowed text-dim"
           : selected
             ? "bg-selected text-content"
-            : "text-content/50 hover:bg-hover hover:text-content"
+            : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       <span className="shrink-0">{children}</span>

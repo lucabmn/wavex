@@ -62,7 +62,7 @@ export function InboxComments({
   }
   if (!thread) {
     if (error) {
-      return <p className="text-[12.5px] text-content/45">{error}</p>;
+      return <p className="text-[12.5px] text-faint">{error}</p>;
     }
     if (loading) return <CommentsPending />;
     return null;
@@ -74,14 +74,14 @@ export function InboxComments({
 
   return (
     <section className="flex flex-col gap-3 border-t border-edge pt-5">
-      <div className="flex items-center gap-2 text-[12.5px] text-content/50">
-        <h2 className="text-content/70">{label}</h2>
+      <div className="flex items-center gap-2 text-[12.5px] text-faint">
+        <h2 className="text-muted">{label}</h2>
         {thread.truncated ? <span>Latest comments · more on {moreOn}</span> : null}
         {loading ? (
-          <LoaderCircle className="size-3 animate-spin text-content/35" strokeWidth={1.75} />
+          <LoaderCircle className="size-3 animate-spin text-dim" strokeWidth={1.75} />
         ) : null}
       </div>
-      {error ? <p className="text-[12.5px] text-content/45">{error}</p> : null}
+      {error ? <p className="text-[12.5px] text-faint">{error}</p> : null}
       <ol className="flex flex-col gap-2">
         {thread.comments.map((comment) => (
           <li key={comment.id}>
@@ -153,14 +153,14 @@ export function InboxCommentForm({
   return (
     <form onSubmit={onFormSubmit} className="flex flex-col gap-2 border-t border-edge pt-5">
       {replyTo ? (
-        <div className="flex items-center gap-2 text-[12.5px] text-content/50">
+        <div className="flex items-center gap-2 text-[12.5px] text-faint">
           <span className="min-w-0 truncate">Replying to {replyTo.author || "comment"}</span>
           <button
             type="button"
             title="Cancel reply"
             aria-label="Cancel reply"
             onClick={onCancelReply}
-            className="grid size-5 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
+            className="grid size-5 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
           >
             <X className="size-3" strokeWidth={1.75} />
           </button>
@@ -175,7 +175,7 @@ export function InboxCommentForm({
           placeholder={replyTo ? `Write a reply (${MOD}↩)` : `Leave a comment (${MOD}↩)`}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
-          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent px-3 py-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
+          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent px-3 py-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-dim disabled:opacity-40"
         />
         <div className="flex items-center justify-end px-2 pb-2">
           <button
@@ -194,7 +194,7 @@ export function InboxCommentForm({
 
 function CommentsPending() {
   return (
-    <div className="flex items-center gap-2 border-t border-edge pt-5 text-[12.5px] text-content/45">
+    <div className="flex items-center gap-2 border-t border-edge pt-5 text-[12.5px] text-faint">
       <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
       Loading comments
     </div>
@@ -232,7 +232,7 @@ function InboxComment({
   const inner = (
     <>
       <header
-        className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-content/50 ${
+        className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-faint ${
           nested ? "" : "px-3 py-2"
         } ${!nested && (hasBody || hasReplies) ? "border-b border-edge" : ""}`}
       >
@@ -356,7 +356,7 @@ function InboxCommentPerson({ name, avatarUrl }: { name: string; avatarUrl: stri
       ) : (
         <span
           aria-hidden
-          className="grid size-5 shrink-0 place-items-center rounded-full bg-content/12 text-[10px] font-medium text-content/55"
+          className="grid size-5 shrink-0 place-items-center rounded-full bg-content/12 text-[10px] font-medium text-faint"
         >
           {initial}
         </span>

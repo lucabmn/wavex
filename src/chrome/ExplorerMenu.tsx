@@ -120,7 +120,7 @@ export function ExplorerMenu({
             }}
             className={`flex h-7 w-full items-center gap-3 rounded-lg px-2 text-left text-[13.5px] leading-none ${
               item.disabled
-                ? "text-content/30"
+                ? "text-dim"
                 : item.danger
                   ? highlighted
                     ? "bg-red-500/20 text-red-300"
@@ -134,7 +134,7 @@ export function ExplorerMenu({
             {item.checked ? (
               <Check className="size-3.5 shrink-0" strokeWidth={2.25} />
             ) : item.shortcut ? (
-              <span className="shrink-0 text-[11.5px] text-content/40">{item.shortcut}</span>
+              <span className="shrink-0 text-[11.5px] text-dim">{item.shortcut}</span>
             ) : null}
           </button>
         );

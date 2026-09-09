@@ -82,7 +82,7 @@ export function SwitchBranchDialog({
           <h2 className="text-[13.5px] font-medium leading-tight text-content">
             Uncommitted changes
           </h2>
-          <p className="text-[12.5px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             {creating
               ? `Creating “${branch}” would overwrite your local changes. Stash them for later, or commit them on this branch first.`
               : `Switching to “${branch}” would overwrite your local changes. Stash them for later, or commit them on this branch first.`}
@@ -97,7 +97,7 @@ export function SwitchBranchDialog({
             placeholder={`Message (${MOD}↩ to commit)`}
             disabled={Boolean(busy) || generating}
             aria-label="Commit message"
-            className="max-h-40 w-full resize-none overflow-y-auto rounded-md bg-content/10 py-1 pr-8 pl-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
+            className="max-h-40 w-full resize-none overflow-y-auto rounded-md bg-content/10 py-1 pr-8 pl-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-dim disabled:opacity-40"
             onChange={(event) => setMessage(event.target.value)}
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && canCommit) {
@@ -131,7 +131,7 @@ export function SwitchBranchDialog({
             type="button"
             disabled={Boolean(busy) || generating}
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40"
           >
             Cancel
           </button>

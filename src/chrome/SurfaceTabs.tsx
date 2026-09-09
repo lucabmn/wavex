@@ -159,7 +159,7 @@ export function SurfaceTabs({
             title="Drag to reorder pane"
             aria-label="Drag to reorder pane"
             tabIndex={-1}
-            className="grid h-full w-5 shrink-0 cursor-grab place-items-center text-content/35 hover:bg-hover hover:text-content/70 active:cursor-grabbing touch-none"
+            className="grid h-full w-5 shrink-0 cursor-grab place-items-center text-dim hover:bg-hover hover:text-muted active:cursor-grabbing touch-none"
             onPointerDown={(event) => {
               if (event.button !== 0) return;
               event.preventDefault();
@@ -290,7 +290,7 @@ export function SurfaceTabs({
                   event.stopPropagation();
                   onCloseFile(file.id);
                 }}
-                className={`absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 hover:bg-hover hover:text-content ${
+                className={`absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-faint hover:bg-hover hover:text-content ${
                   active
                     ? "opacity-100"
                     : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"

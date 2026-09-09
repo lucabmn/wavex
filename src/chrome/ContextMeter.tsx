@@ -11,7 +11,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 function ringClass(ratio: number): string {
   if (ratio >= 0.9) return "text-red-400";
   if (ratio >= 0.75) return "text-amber-400";
-  return "text-content/45";
+  return "text-faint";
 }
 
 /**
@@ -74,7 +74,7 @@ export function ContextMeter({ usage }: { usage?: ContextUsage }) {
           className="pointer-events-none w-max px-2.5 py-1.5"
         >
           <div className="text-[12.5px] leading-4 text-content">{headline}</div>
-          <div className="text-[11.5px] leading-4 text-content/50">{detail}</div>
+          <div className="text-[11.5px] leading-4 text-faint">{detail}</div>
         </Popover>
       ) : null}
     </div>

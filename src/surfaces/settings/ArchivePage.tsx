@@ -74,9 +74,7 @@ export function ArchivePage({
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13.5px]">{archivedProjectLabel(project.path)}</div>
-                <div className="truncate text-[11.5px] text-content/40">
-                  {prettyCwd(project.path)}
-                </div>
+                <div className="truncate text-[11.5px] text-dim">{prettyCwd(project.path)}</div>
               </div>
               {onRestoreProject ? (
                 <SecondaryButton onClick={() => onRestoreProject(project.path)}>
@@ -114,7 +112,7 @@ export function ArchivePage({
               >
                 {sessionDisplayTitle(session.title, session.harness)}
               </button>
-              <span className="shrink-0 text-[11.5px] text-content/35 tabular-nums">
+              <span className="shrink-0 text-[11.5px] text-dim tabular-nums">
                 {formatDate(session.updatedAt)}
               </span>
               <SecondaryButton onClick={() => onArchiveSession(session.id, false)}>

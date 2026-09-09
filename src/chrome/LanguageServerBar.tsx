@@ -50,7 +50,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
     if (failure?.state !== "failed") return null;
     return (
       <Bar>
-        <span className="min-w-0 flex-1 truncate text-content/70" title={failure.message}>
+        <span className="min-w-0 flex-1 truncate text-muted" title={failure.message}>
           {failure.message}
         </span>
         <BarButton
@@ -82,7 +82,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
 
   return (
     <Bar>
-      <span className="min-w-0 flex-1 truncate text-content/70">
+      <span className="min-w-0 flex-1 truncate text-muted">
         {installed ? (
           <>
             Use <span className="font-medium text-content">{server.name}</span> for this project?
@@ -91,7 +91,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
         ) : (
           <>
             <span className="font-medium text-content">{server.name}</span> isn’t installed —{" "}
-            <span className="font-mono text-content/55">{server.installHint}</span>
+            <span className="font-mono text-faint">{server.installHint}</span>
           </>
         )}
       </span>
@@ -142,7 +142,7 @@ function BarDismiss({
       onClick={onClick}
       aria-label={label}
       title={title}
-      className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
+      className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
     >
       <X className="size-3" strokeWidth={1.75} />
     </button>

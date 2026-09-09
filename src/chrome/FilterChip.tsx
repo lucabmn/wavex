@@ -32,7 +32,7 @@ export function FilterChip({
             : "bg-selected text-content"
           : attention
             ? "text-amber-300/80 hover:bg-amber-400/10 hover:text-amber-300"
-            : "text-content/45 hover:bg-hover hover:text-content/75"
+            : "text-faint hover:bg-hover hover:text-strong"
       }`}
     >
       <span className="truncate">{label}</span>

@@ -28,10 +28,10 @@ import {
 
 const PHASE_TONE: Record<string, string> = {
   connected: "text-emerald-300/80",
-  connecting: "text-content/50",
+  connecting: "text-faint",
   reconnecting: "text-amber-300/80",
   resynchronizing: "text-amber-300/80",
-  offline: "text-content/40",
+  offline: "text-dim",
 };
 
 export function ConnectionsPage() {
@@ -96,7 +96,7 @@ export function ConnectionsPage() {
               port over SSH or a private network; wavex will not bind a public
               address for you."
             >
-              <code className="rounded-md bg-content/8 px-2 py-1 text-[12.5px] text-content/70">
+              <code className="rounded-md bg-content/8 px-2 py-1 text-[12.5px] text-muted">
                 127.0.0.1:{status?.port}
               </code>
             </Row>
@@ -149,7 +149,7 @@ export function ConnectionsPage() {
               description="Clients attached right now. Closing one does not stop the agents it
               started."
             >
-              <span className="text-[12.5px] text-content/60">{status?.clients ?? 0}</span>
+              <span className="text-[12.5px] text-muted">{status?.clients ?? 0}</span>
             </Row>
           </>
         ) : null}
@@ -170,9 +170,7 @@ export function ConnectionsPage() {
               label={
                 <span className="flex items-center gap-2">
                   <span className="min-w-0 truncate">{host.name}</span>
-                  <span
-                    className={`shrink-0 text-[11.5px] ${PHASE_TONE[phase] ?? "text-content/40"}`}
-                  >
+                  <span className={`shrink-0 text-[11.5px] ${PHASE_TONE[phase] ?? "text-dim"}`}>
                     {connectionLabel(state)}
                   </span>
                 </span>
@@ -195,7 +193,7 @@ export function ConnectionsPage() {
                     disconnectSavedHost(host.hostId);
                     void refreshConnect();
                   }}
-                  className="rounded-md px-2.5 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+                  className="rounded-md px-2.5 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
                 >
                   Disconnect
                 </button>
@@ -227,7 +225,7 @@ export function ConnectionsPage() {
             onChange={(event) => setCode(event.target.value)}
             placeholder="wavex-connect:…"
             aria-label="Connection code"
-            className="w-72 rounded-md bg-content/8 px-2.5 py-1.5 font-mono text-[12.5px] text-content outline-none placeholder:text-content/30 focus:bg-content/12"
+            className="w-72 rounded-md bg-content/8 px-2.5 py-1.5 font-mono text-[12.5px] text-content outline-none placeholder:text-dim focus:bg-content/12"
           />
           <button
             type="button"
@@ -238,7 +236,7 @@ export function ConnectionsPage() {
                 setCode("");
               })
             }
-            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12.5px] font-medium text-content hover:bg-hover disabled:cursor-default disabled:text-content/25"
+            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12.5px] font-medium text-content hover:bg-hover disabled:cursor-default disabled:text-dim"
           >
             Add
           </button>

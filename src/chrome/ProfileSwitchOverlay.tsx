@@ -22,7 +22,7 @@ export function ProfileSwitchOverlay({ target }: { target: Profile }) {
       style={{ zIndex: 1000 }}
     >
       <ProfileAvatar profile={target} size="md" />
-      <p className="text-[12.5px] text-content/55">Switching to {target.name}…</p>
+      <p className="text-[12.5px] text-faint">Switching to {target.name}…</p>
     </div>,
     document.body,
   );

@@ -111,14 +111,14 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-[13.5px] font-medium leading-tight text-content">New worktree</h2>
-          <p className="text-[12.5px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             A second checkout of this repository in its own folder. Agents working there cannot
             touch the files in {prettyCwd(repoRoot)}.
           </p>
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[11.5px] text-content/50">Branch</span>
+          <span className="text-[11.5px] text-faint">Branch</span>
           <input
             ref={inputRef}
             type="text"
@@ -130,7 +130,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             autoCorrect="off"
             autoCapitalize="off"
             disabled={Boolean(busy)}
-            className="w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13.5px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
+            className="w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13.5px] leading-5 text-content outline-none placeholder:text-dim disabled:opacity-40"
             onChange={(event) => {
               setBranch(event.target.value);
               setError(null);
@@ -146,7 +146,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
         </label>
 
         <div className="flex items-center gap-2">
-          <span className="shrink-0 text-[11.5px] text-content/50">from</span>
+          <span className="shrink-0 text-[11.5px] text-faint">from</span>
           <button
             ref={baseRef}
             type="button"
@@ -154,25 +154,22 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             aria-haspopup="listbox"
             aria-expanded={baseOpen}
             onClick={() => setBaseOpen((open) => !open)}
-            className="flex min-w-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-content/80 hover:bg-hover hover:text-content disabled:opacity-40"
+            className="flex min-w-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-strong hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <GitBranch className="size-3.5 shrink-0" strokeWidth={1.5} />
             <span className="min-w-0 truncate font-mono text-[12.5px]">
               {baseBranch ?? "current HEAD"}
             </span>
-            <ChevronDown className="size-3 shrink-0 text-content/50" strokeWidth={1.75} />
+            <ChevronDown className="size-3 shrink-0 text-faint" strokeWidth={1.75} />
           </button>
         </div>
 
-        <p
-          className="truncate text-[11.5px] leading-tight text-content/40"
-          title={path || undefined}
-        >
+        <p className="truncate text-[11.5px] leading-tight text-dim" title={path || undefined}>
           {path ? prettyCwd(path) : "Pick a branch name to see the folder."}
         </p>
 
         {existing ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md bg-content/8 px-2.5 py-2 text-[11.5px] leading-4 text-content/70">
+          <div className="flex flex-wrap items-center gap-2 rounded-md bg-content/8 px-2.5 py-2 text-[11.5px] leading-4 text-muted">
             <span className="min-w-0 flex-1">
               “{worktreeLabel(existing)}” already has a worktree.
             </span>
@@ -208,7 +205,7 @@ export function CreateWorktreeDialog({ repoPath, onCancel, onCreated, onOpenWork
             type="button"
             disabled={Boolean(busy)}
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40"
           >
             Cancel
           </button>
@@ -302,7 +299,7 @@ function BaseBranchMenu({
       aria-label="Base branch"
       className="flex flex-col overflow-hidden"
     >
-      <label className="flex shrink-0 items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
+      <label className="flex shrink-0 items-center gap-2 border-b border-edge px-2 py-2.5 text-faint">
         <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
         <input
           ref={search}
@@ -312,7 +309,7 @@ function BaseBranchMenu({
           aria-label="Search branches"
           spellCheck={false}
           autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content/40"
+          className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-dim"
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
@@ -324,7 +321,7 @@ function BaseBranchMenu({
       </label>
       <div role="listbox" aria-label="Branches" className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {rows.length === 0 ? (
-          <p className="px-2 py-3 text-[12.5px] text-content/50">No matching branches</p>
+          <p className="px-2 py-3 text-[12.5px] text-faint">No matching branches</p>
         ) : (
           rows.map((entry) => {
             const value = entry.remote ? `${entry.remote}/${entry.name}` : entry.name;
@@ -343,13 +340,13 @@ function BaseBranchMenu({
                 {selected ? (
                   <Check className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : (
-                  <GitBranch className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+                  <GitBranch className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
                 )}
                 <span className="min-w-0 flex-1 truncate font-mono text-[12.5px]">
                   {entry.name}
                 </span>
                 {entry.remote ? (
-                  <span className="shrink-0 text-[10px] text-content/40">{entry.remote}</span>
+                  <span className="shrink-0 text-[10px] text-dim">{entry.remote}</span>
                 ) : null}
               </button>
             );

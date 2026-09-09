@@ -104,7 +104,7 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
         className="absolute top-[12%] left-1/2 flex w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col overflow-hidden rounded-lg border border-edge bg-content/5 backdrop-blur-xl"
       >
         <div className="pb-1.5">
-          <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
+          <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-faint">
             <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
             <ModeBadge mode={mode} />
             <input
@@ -117,7 +117,7 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none placeholder:text-content/40"
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none placeholder:text-dim"
               onChange={(event) => {
                 setQuery(event.target.value);
                 setActive(0);
@@ -128,7 +128,7 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
           <ModeHint active={mode} hasQuery={rest.trim().length > 0} />
         </div>
         {entries.length === 0 ? (
-          <p className="px-3 pt-1 pb-3 text-[12.5px] text-content/50">{meta.empty}</p>
+          <p className="px-3 pt-1 pb-3 text-[12.5px] text-faint">{meta.empty}</p>
         ) : (
           <CommandList
             entries={entries}
@@ -148,7 +148,7 @@ export function CommandPalette({ open, handlers, onClose }: Props) {
 function ModeBadge({ mode }: { mode: PaletteMode }) {
   if (mode === "commands") return null;
   return (
-    <span className="shrink-0 rounded border border-edge-strong bg-content/10 px-1.5 py-0.5 font-mono text-[11.5px] text-content/70">
+    <span className="shrink-0 rounded border border-edge-strong bg-content/10 px-1.5 py-0.5 font-mono text-[11.5px] text-muted">
       {PALETTE_MODES[mode].prefix}
     </span>
   );
@@ -160,12 +160,12 @@ function ModeHint({ active, hasQuery }: { active: PaletteMode; hasQuery: boolean
   return (
     <div
       aria-hidden
-      className={`flex items-center gap-2.5 overflow-hidden px-3 text-[11.5px] text-content/35 transition-all ${
+      className={`flex items-center gap-2.5 overflow-hidden px-3 text-[11.5px] text-dim transition-all ${
         hasQuery ? "max-h-0 py-0 opacity-0" : "max-h-7 py-1.5 opacity-100"
       }`}
     >
       {MODE_ORDER.map((mode) => (
-        <span key={mode} className={mode === active ? "font-medium text-content/70" : undefined}>
+        <span key={mode} className={mode === active ? "font-medium text-muted" : undefined}>
           <span className="font-mono">{PALETTE_MODES[mode].prefix}</span>{" "}
           {PALETTE_MODES[mode].label}
         </span>
@@ -225,7 +225,7 @@ function CommandList({
               index === active ? "bg-content/10" : "hover:bg-hover"
             } ${runnable ? "" : "opacity-70"}`}
           >
-            <span className="shrink-0 text-[12.5px] text-content/40">{group}</span>
+            <span className="shrink-0 text-[12.5px] text-dim">{group}</span>
             <span className="min-w-0 flex-1 truncate text-[13.5px] text-content">
               <MatchText
                 text={name}
@@ -236,7 +236,7 @@ function CommandList({
               />
             </span>
             {entry.command.keys ? (
-              <span className="shrink-0 font-mono text-[11.5px] text-content/40">
+              <span className="shrink-0 font-mono text-[11.5px] text-dim">
                 {entry.command.keys}
               </span>
             ) : null}

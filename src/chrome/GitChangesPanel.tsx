@@ -103,7 +103,7 @@ export function GitChangesPanel({
   }, [graphHeight]);
 
   if (!cwd || cwd === "~") {
-    return <p className="px-3 py-2 text-[12.5px] text-content/50">No project folder</p>;
+    return <p className="px-3 py-2 text-[12.5px] text-faint">No project folder</p>;
   }
 
   return (
@@ -115,14 +115,14 @@ export function GitChangesPanel({
           <span className="text-[12.5px] font-medium text-content">Changes</span>
         )}
         {index?.branch ? (
-          <span className="ml-auto flex min-w-0 items-center gap-1 text-[11.5px] text-content/50">
+          <span className="ml-auto flex min-w-0 items-center gap-1 text-[11.5px] text-faint">
             <GitBranch className="size-3 shrink-0" strokeWidth={1.75} />
             <span className="min-w-0 truncate">{index.branch}</span>
             {index.ahead > 0 ? (
-              <span className="shrink-0 tabular-nums text-content/40">↑{index.ahead}</span>
+              <span className="shrink-0 tabular-nums text-dim">↑{index.ahead}</span>
             ) : null}
             {index.behind > 0 ? (
-              <span className="shrink-0 tabular-nums text-content/40">↓{index.behind}</span>
+              <span className="shrink-0 tabular-nums text-dim">↓{index.behind}</span>
             ) : null}
           </span>
         ) : (
@@ -416,7 +416,7 @@ function ChangedFiles({
                 void commit(false);
               }
             }}
-            className="max-h-40 w-full resize-none overflow-y-auto rounded-md bg-content/10 py-1 pr-8 pl-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-content/35 disabled:opacity-40"
+            className="max-h-40 w-full resize-none overflow-y-auto rounded-md bg-content/10 py-1 pr-8 pl-2 text-[13.5px] leading-5 text-content outline-none placeholder:text-dim disabled:opacity-40"
           />
           <button
             type="button"
@@ -497,7 +497,7 @@ function ChangedFiles({
       </div>
       <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none py-1">
         {files.length === 0 ? (
-          <p className="px-3 py-2 text-[12.5px] text-content/45">
+          <p className="px-3 py-2 text-[12.5px] text-faint">
             {index
               ? index.ahead > 0 || index.behind > 0
                 ? syncStatusLabel(index)
@@ -723,12 +723,8 @@ function GitSyncActions({
             strokeWidth={1.75}
           />
           <span className="min-w-0 truncate">Sync Changes</span>
-          {behind > 0 ? (
-            <span className="shrink-0 tabular-nums text-content/55">↓{behind}</span>
-          ) : null}
-          {ahead > 0 ? (
-            <span className="shrink-0 tabular-nums text-content/55">↑{ahead}</span>
-          ) : null}
+          {behind > 0 ? <span className="shrink-0 tabular-nums text-faint">↓{behind}</span> : null}
+          {ahead > 0 ? <span className="shrink-0 tabular-nums text-faint">↑{ahead}</span> : null}
         </button>
       ) : null}
       {showCreatePr ? (
@@ -789,11 +785,11 @@ function FileSection({
           className="flex min-w-0 flex-1 items-center gap-1 text-left"
         >
           {open ? (
-            <ChevronDown className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+            <ChevronDown className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
           ) : (
-            <ChevronRight className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+            <ChevronRight className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
           )}
-          <span className="min-w-0 truncate text-[10px] font-semibold tracking-[0.04em] text-content/55 uppercase">
+          <span className="min-w-0 truncate text-[10px] font-semibold tracking-[0.04em] text-faint uppercase">
             {title}
           </span>
           <span className="ml-1 grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-accent/80 px-1 text-[8px] text-white">
@@ -849,7 +845,7 @@ function ChangeRow({
           <FileTypeIcon name={name} isDir={false} size={16} />
           <span className="min-w-0 flex-1 truncate">
             <span className="text-[13.5px] font-medium">{name}</span>
-            {dir ? <span className="ml-1.5 text-[11.5px] text-content/40">{dir}</span> : null}
+            {dir ? <span className="ml-1.5 text-[11.5px] text-dim">{dir}</span> : null}
           </span>
         </button>
         <div
@@ -912,7 +908,7 @@ function IconAction({
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-5 place-items-center rounded text-content/55 hover:bg-hover hover:text-content disabled:opacity-40"
+      className="grid size-5 place-items-center rounded text-faint hover:bg-hover hover:text-content disabled:opacity-40"
     >
       {children}
     </button>

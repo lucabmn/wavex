@@ -226,7 +226,7 @@ export function ChatComposer({
             title={attachmentsSupported ? "Attach images" : `${harness} does not support images`}
             aria-label="Attach images"
             disabled={!attachmentsSupported}
-            className="ui-focus grid size-6.5 place-items-center rounded-lg text-content/45 transition-colors hover:bg-hover hover:text-content disabled:cursor-default disabled:text-content/20 disabled:hover:bg-transparent"
+            className="ui-focus grid size-6.5 place-items-center rounded-lg text-faint transition-colors hover:bg-hover hover:text-content disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent"
             onClick={() => {
               void pickFiles().then((paths) => {
                 if (!paths?.length) return;
@@ -250,7 +250,7 @@ export function ChatComposer({
               className={`grid size-6.5 place-items-center rounded-md ${
                 imageMode
                   ? "bg-selected text-content"
-                  : "text-content/50 hover:bg-hover hover:text-content"
+                  : "text-faint hover:bg-hover hover:text-content"
               }`}
               onClick={() => {
                 setImageMode((on) => !on);

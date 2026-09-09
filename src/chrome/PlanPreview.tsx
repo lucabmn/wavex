@@ -17,7 +17,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
     <div className="overflow-hidden rounded-[10px] border border-yellow-200/40 bg-yellow-200/10 border-dashed mb-2">
       <div className="flex items-start gap-2 px-2.5 py-2">
         {streaming ? (
-          <CircleDashed className="mt-0.5 size-4 shrink-0 text-content/40" strokeWidth={1.75} />
+          <CircleDashed className="mt-0.5 size-4 shrink-0 text-dim" strokeWidth={1.75} />
         ) : (
           <span className="mt-0.5 shrink-0" aria-hidden="true">
             <FileTypeIcon name="plan.md" isDir={false} />
@@ -27,7 +27,7 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
           {onOpen ? (
             <button
               type="button"
-              className="block w-full truncate text-left font-mono text-[12.5px] font-medium text-content/85 hover:text-accent hover:underline"
+              className="block w-full truncate text-left font-mono text-[12.5px] font-medium text-strong hover:text-accent hover:underline"
               title={title}
               onClick={onOpen}
             >
@@ -35,25 +35,25 @@ export function PlanPreview({ text, streaming, onOpen }: Props) {
             </button>
           ) : (
             <span
-              className="block truncate font-mono text-[12.5px] font-medium text-content/85"
+              className="block truncate font-mono text-[12.5px] font-medium text-strong"
               title={title}
             >
               {title}
             </span>
           )}
           {summary ? (
-            <p className="mt-0.5 line-clamp-2 font-sans text-[12.5px] leading-4.5 text-content/50">
+            <p className="mt-0.5 line-clamp-2 font-sans text-[12.5px] leading-4.5 text-faint">
               {summary}
             </p>
           ) : null}
-          {meta ? <p className="mt-0.5 font-mono text-[11.5px] text-content/40">{meta}</p> : null}
+          {meta ? <p className="mt-0.5 font-mono text-[11.5px] text-dim">{meta}</p> : null}
         </div>
         {onOpen ? (
           <button
             type="button"
             title="Open in pane"
             aria-label="Open plan in pane"
-            className="mt-0.5 flex h-6 shrink-0 items-center gap-1 rounded-md bg-content/10 px-2 font-mono text-[11.5px] text-content/70 hover:bg-hover hover:text-content"
+            className="mt-0.5 flex h-6 shrink-0 items-center gap-1 rounded-md bg-content/10 px-2 font-mono text-[11.5px] text-muted hover:bg-hover hover:text-content"
             onClick={onOpen}
           >
             <PanelRight className="size-3" strokeWidth={1.75} />

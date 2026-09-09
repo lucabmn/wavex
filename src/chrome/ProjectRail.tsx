@@ -695,12 +695,12 @@ function LiveAgentsPreview({
           className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left hover:bg-hover"
         >
           <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-accent animate-pulse" />
-          <span className="min-w-0 flex-1 truncate text-xs text-content/50">Working</span>
-          <span className="text-[11.5px] tabular-nums text-content/40">{agents.length}</span>
+          <span className="min-w-0 flex-1 truncate text-xs text-faint">Working</span>
+          <span className="text-[11.5px] tabular-nums text-dim">{agents.length}</span>
           {collapsed ? (
-            <ChevronDown className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+            <ChevronDown className="size-3 shrink-0 text-dim" strokeWidth={1.75} />
           ) : (
-            <ChevronUp className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+            <ChevronUp className="size-3 shrink-0 text-dim" strokeWidth={1.75} />
           )}
         </button>
         {collapsed ? null : (
@@ -730,7 +730,7 @@ function LiveAgentsPreview({
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setExpanded((open) => !open)}
-                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11.5px] text-content/50 hover:bg-hover hover:text-content"
+                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11.5px] text-faint hover:bg-hover hover:text-content"
               >
                 {expanded ? (
                   <ChevronUp className="size-3" strokeWidth={1.75} />
@@ -816,11 +816,7 @@ function LiveAgentCard({
       </span>
       <span
         className={`mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight ${
-          agent.needsApproval
-            ? "text-amber-400"
-            : agent.done
-              ? "text-emerald-400"
-              : "text-content/50"
+          agent.needsApproval ? "text-amber-400" : agent.done ? "text-emerald-400" : "text-faint"
         }`}
       >
         {agent.needsApproval ? (
@@ -832,11 +828,11 @@ function LiveAgentCard({
         )}
         <span className="min-w-0 truncate">{activity}</span>
       </span>
-      <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight text-content/45">
+      <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight text-faint">
         <HarnessIcon harness={agent.harness} className="size-3 shrink-0" />
         <span className="min-w-0 flex-1 truncate">
           {project}
-          {worktree ? <span className="text-content/35"> · {worktree}</span> : null}
+          {worktree ? <span className="text-dim"> · {worktree}</span> : null}
         </span>
         {elapsed ? <span className="shrink-0 tabular-nums">{elapsed}</span> : null}
       </span>
@@ -893,21 +889,21 @@ function ProjectSection({
   return (
     <div className="shrink-0 mb-2">
       <div className="flex items-center gap-1 px-3 pb-1.5 pt-1">
-        <span className="min-w-0 flex-1 truncate px-1 text-xs text-content/50">{label}</span>
+        <span className="min-w-0 flex-1 truncate px-1 text-xs text-faint">{label}</span>
         {onAdd ? (
           <button
             type="button"
             title="Open project"
             aria-label="Open project"
             onClick={onAdd}
-            className="ui-focus grid size-5 shrink-0 place-items-center rounded-md text-content/45 transition-colors hover:bg-hover hover:text-content"
+            className="ui-focus grid size-5 shrink-0 place-items-center rounded-md text-faint transition-colors hover:bg-hover hover:text-content"
           >
             <Plus className="size-3.5" strokeWidth={1.75} />
           </button>
         ) : null}
       </div>
       {items.length === 0 && emptyLabel ? (
-        <p className="px-4 pb-1 text-[11.5px] leading-tight text-content/40">{emptyLabel}</p>
+        <p className="px-4 pb-1 text-[11.5px] leading-tight text-dim">{emptyLabel}</p>
       ) : null}
       <div className="flex flex-col gap-px px-2">
         {items.map((item, index) => (
@@ -1088,7 +1084,7 @@ function ProjectCard({
           event.stopPropagation();
           onOpenMenu(item.path, event.clientX, event.clientY);
         }}
-        className="ui-focus absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-content/50 transition-colors hover:bg-hover hover:text-content group-hover:grid"
+        className="ui-focus absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-faint transition-colors hover:bg-hover hover:text-content group-hover:grid"
       >
         <MoreHorizontal className="size-4" strokeWidth={1.75} />
       </button>
@@ -1102,7 +1098,7 @@ function ProjectCard({
           event.stopPropagation();
           onTogglePin(item.path);
         }}
-        className="absolute left-2 top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded-sm text-content/55 opacity-0 pointer-events-none transition-opacity hover:text-content group-hover:pointer-events-auto group-hover:opacity-100"
+        className="absolute left-2 top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded-sm text-faint opacity-0 pointer-events-none transition-opacity hover:text-content group-hover:pointer-events-auto group-hover:opacity-100"
       >
         {pinned ? (
           <PinOff className="size-3.5" strokeWidth={1.75} />
@@ -1147,7 +1143,7 @@ function ProjectDiffStat({
       className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[11.5px] font-semibold tabular-nums"
     >
       {files > 0 ? (
-        <span className="truncate font-sans font-medium text-content/55">{files} changed</span>
+        <span className="truncate font-sans font-medium text-faint">{files} changed</span>
       ) : null}
       {additions > 0 ? (
         <span className="shrink-0 text-emerald-400">+{formatCompactCount(additions)}</span>

@@ -198,8 +198,8 @@ export function TabGroupMenu({
             />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-[11.5px] text-content/50">Project logo</p>
-            <p className="truncate text-[12.5px] text-content/70">
+            <p className="text-[11.5px] text-faint">Project logo</p>
+            <p className="truncate text-[12.5px] text-muted">
               {logoPath ? "Shown in tabs and composer" : "Optional — replaces folder icon"}
             </p>
           </div>
@@ -212,7 +212,7 @@ export function TabGroupMenu({
               onClick={() => {
                 void clearProjectLogo(logoProject).then(onLogoChange);
               }}
-              className="grid size-7 shrink-0 place-items-center rounded-md text-content/50 hover:bg-hover hover:text-content"
+              className="grid size-7 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
             </button>
@@ -242,7 +242,7 @@ export function TabGroupMenu({
       ) : null}
 
       <div className="mb-2 px-0.5">
-        <p className="mb-1 text-[11.5px] text-content/50">Mascot</p>
+        <p className="mb-1 text-[11.5px] text-faint">Mascot</p>
         <div className="flex items-center justify-between gap-1">
           {PROJECT_MASCOTS.map((mascot) => (
             <MascotSwatch
@@ -251,11 +251,7 @@ export function TabGroupMenu({
               selected={shownMascot === mascot.name}
               onPick={() => onMascotChange(groupId, mascot.name)}
             >
-              <ProjectMascot
-                project={groupId}
-                name={mascot.name}
-                className="size-3 text-content/75"
-              />
+              <ProjectMascot project={groupId} name={mascot.name} className="size-3 text-strong" />
             </MascotSwatch>
           ))}
         </div>
@@ -356,10 +352,10 @@ function MenuRow({ item, onPick }: { item: MenuItem; onPick: () => void }) {
         item.danger ? "text-red-300/90 hover:bg-red-500/15" : "text-content hover:bg-hover"
       }`}
     >
-      <Icon className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />
+      <Icon className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.shortcut ? (
-        <span className="shrink-0 text-[11.5px] text-content/40">{item.shortcut}</span>
+        <span className="shrink-0 text-[11.5px] text-dim">{item.shortcut}</span>
       ) : null}
     </button>
   );

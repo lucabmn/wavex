@@ -91,7 +91,7 @@ function ToggleSetting({
       className={`flex h-6.5 items-center gap-1 rounded-md px-1.5 ${
         on
           ? "bg-content/20 text-content"
-          : "bg-content/10 text-content/50 hover:bg-hover hover:text-content"
+          : "bg-content/10 text-faint hover:bg-hover hover:text-content"
       }`}
     >
       <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -185,7 +185,7 @@ function SelectSetting({
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
         <span className="min-w-0 truncate text-[11.5px]">{current?.label ?? setting.label}</span>
         <ChevronDown
-          className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
+          className={`size-3 shrink-0 text-faint ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
         />
       </button>

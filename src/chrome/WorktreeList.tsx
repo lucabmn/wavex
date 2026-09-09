@@ -96,7 +96,7 @@ export function WorktreeList({
         title="New worktree"
         aria-label="New worktree"
         onClick={onCreate}
-        className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-hover hover:text-content"
+        className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-faint hover:bg-hover hover:text-content"
       >
         <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
         <span className="min-w-0 flex-1 truncate text-[12.5px] leading-tight">New worktree</span>
@@ -107,7 +107,7 @@ export function WorktreeList({
           type="button"
           disabled={pruning}
           onClick={() => void prune()}
-          className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
+          className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-faint hover:bg-hover hover:text-content disabled:opacity-40"
         >
           <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
           <span className="min-w-0 flex-1 truncate text-[12.5px] leading-tight">
@@ -215,7 +215,7 @@ function WorktreeRow({
         {worktree.missing ? (
           <CircleAlert className="size-3 shrink-0 text-amber-400" strokeWidth={1.75} />
         ) : (
-          <GitBranch className="size-3 shrink-0 text-content/50" strokeWidth={1.75} />
+          <GitBranch className="size-3 shrink-0 text-faint" strokeWidth={1.75} />
         )}
         {busy ? (
           <Shimmer as="span" duration={1.4} className={labelClassName}>
@@ -231,7 +231,7 @@ function WorktreeRow({
         ) : null}
         {worktree.locked && !worktree.missing ? (
           <span
-            className="flex shrink-0 items-center gap-0.5 text-content/50 group-hover:hidden"
+            className="flex shrink-0 items-center gap-0.5 text-faint group-hover:hidden"
             title={worktree.lockReason ? `Locked: ${worktree.lockReason}` : "Locked"}
           >
             <Lock className="size-3" strokeWidth={1.75} />
@@ -247,7 +247,7 @@ function WorktreeRow({
             className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[10px] font-semibold tabular-nums group-hover:hidden"
             title={`${changed} uncommitted`}
           >
-            <span className="truncate font-sans font-medium text-content/55">{changed}</span>
+            <span className="truncate font-sans font-medium text-faint">{changed}</span>
             {stats.additions > 0 ? (
               <span className="shrink-0 text-emerald-400">
                 +{formatCompactCount(stats.additions)}
@@ -260,7 +260,7 @@ function WorktreeRow({
         ) : null}
         {!worktree.missing && stats && !dirty && !busy ? (
           <span
-            className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-content/45 group-hover:hidden"
+            className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-faint group-hover:hidden"
             title="No uncommitted changes"
           >
             <Check className="size-3 text-emerald-400/80" strokeWidth={2.25} />
@@ -274,7 +274,7 @@ function WorktreeRow({
         aria-label="Worktree options"
         aria-haspopup="menu"
         onClick={onOpenMenu}
-        className="absolute right-1 top-1/2 hidden size-5 -translate-y-1/2 place-items-center rounded-md text-content/55 hover:bg-hover hover:text-content group-hover:grid"
+        className="absolute right-1 top-1/2 hidden size-5 -translate-y-1/2 place-items-center rounded-md text-faint hover:bg-hover hover:text-content group-hover:grid"
       >
         <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
       </button>

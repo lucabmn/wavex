@@ -101,7 +101,7 @@ export function ModelMenu({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="pb-1.5">
-        <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
+        <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-faint">
           <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
           <input
             ref={search}
@@ -109,7 +109,7 @@ export function ModelMenu({
             value={query}
             placeholder="Search models..."
             aria-label="Search models"
-            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content/40"
+            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-dim"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onSearchKey}
           />
@@ -181,7 +181,7 @@ function ModelList({
   }, [models.length]);
 
   if (models.length === 0) {
-    return <div className="px-3 py-4 text-[12.5px] text-content/50">{emptyLabel}</div>;
+    return <div className="px-3 py-4 text-[12.5px] text-faint">{emptyLabel}</div>;
   }
 
   return (
@@ -220,25 +220,25 @@ function ModelList({
                 onPick(item);
               }}
               className={`flex min-w-0 flex-1 items-center gap-2 px-1.5 py-2 text-left ${
-                disabled ? "cursor-not-allowed text-content/35" : "text-content"
+                disabled ? "cursor-not-allowed text-dim" : "text-content"
               }`}
             >
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
                   <span
                     className={`min-w-0 truncate text-[13.5px] font-medium leading-5 ${
-                      off ? "text-content/45" : ""
+                      off ? "text-faint" : ""
                     }`}
                   >
                     {item.name}
                   </span>
                   {off ? (
-                    <span className="shrink-0 rounded-full bg-content/10 px-1.5 text-[10px] uppercase leading-4 tracking-wide text-content/45">
+                    <span className="shrink-0 rounded-full bg-content/10 px-1.5 text-[10px] uppercase leading-4 tracking-wide text-faint">
                       Off
                     </span>
                   ) : null}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] leading-4 text-content/50">
+                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] leading-4 text-faint">
                   <HarnessIcon harness={item.harness} className="size-3 shrink-0 opacity-80" />
                   <span className="truncate">
                     {HARNESS_TITLE[item.harness]} · {HARNESS_LABEL[item.harness]}
@@ -246,7 +246,7 @@ function ModelList({
                 </span>
               </span>
               {shortcut ? (
-                <span className="shrink-0 rounded-md bg-content/10 px-1.5 py-0.5 font-mono text-[10px] text-content/50">
+                <span className="shrink-0 rounded-md bg-content/10 px-1.5 py-0.5 font-mono text-[10px] text-faint">
                   {shortcut}
                 </span>
               ) : null}
@@ -261,7 +261,7 @@ function ModelList({
                 onToggleFavorite(item.id);
               }}
               className={`grid size-6 shrink-0 place-items-center rounded-md ${
-                favorited ? "text-content" : "text-content/30 hover:text-content/70"
+                favorited ? "text-content" : "text-dim hover:text-muted"
               }`}
             >
               <Star

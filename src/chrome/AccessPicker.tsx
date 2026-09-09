@@ -87,7 +87,7 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
         <span className="min-w-0 truncate text-[11.5px]">{RUNTIME_MODE_LABEL[value]}</span>
         <ChevronDown
-          className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
+          className={`size-3 shrink-0 text-faint ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
         />
       </button>
@@ -124,12 +124,12 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
                     : "text-content hover:bg-hover"
                 }`}
               >
-                <ModeIcon className="mt-0.5 size-3.5 shrink-0 text-content/70" strokeWidth={1.75} />
+                <ModeIcon className="mt-0.5 size-3.5 shrink-0 text-muted" strokeWidth={1.75} />
                 <span className="min-w-0">
                   <span className="block text-[13.5px] font-medium leading-5">
                     {RUNTIME_MODE_LABEL[mode]}
                   </span>
-                  <span className="mt-0.5 block text-[11.5px] leading-4 text-content/50">
+                  <span className="mt-0.5 block text-[11.5px] leading-4 text-faint">
                     {RUNTIME_MODE_HINT[mode]}
                   </span>
                 </span>

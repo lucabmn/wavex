@@ -114,7 +114,7 @@ export function SessionFiltersMenu({ x, y, harnesses, filters, onChange, onClose
             role="menuitem"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onChange(DEFAULT_SESSION_SIDEBAR_FILTERS)}
-            className="flex h-7 w-full items-center rounded-lg px-2 text-left text-[13.5px] leading-none text-content/70 hover:bg-hover hover:text-content"
+            className="flex h-7 w-full items-center rounded-lg px-2 text-left text-[13.5px] leading-none text-muted hover:bg-hover hover:text-content"
           >
             Clear filters
           </button>

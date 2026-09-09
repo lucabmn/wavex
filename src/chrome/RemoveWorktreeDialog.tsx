@@ -80,17 +80,17 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
           <h2 className="text-[13.5px] font-medium leading-tight text-content">
             Remove worktree “{label}”?
           </h2>
-          <p className="text-[12.5px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             The folder is deleted. Commits on the branch stay in the repository, and conversations
             held in this worktree are kept.
           </p>
-          <p className="truncate text-[11.5px] leading-tight text-content/40">
+          <p className="truncate text-[11.5px] leading-tight text-dim">
             {prettyCwd(worktree.path)}
           </p>
         </div>
 
         {worktree.branch ? (
-          <label className="flex items-start gap-2 text-[12.5px] leading-snug text-content/70">
+          <label className="flex items-start gap-2 text-[12.5px] leading-snug text-muted">
             <input
               type="checkbox"
               checked={deleteBranch}
@@ -122,7 +122,7 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
             type="button"
             disabled={working}
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40"
           >
             Cancel
           </button>

@@ -300,7 +300,7 @@ export function SearchView({
         className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        <label className="flex min-w-0 flex-1 items-center gap-2 px-3 text-content/50">
+        <label className="flex min-w-0 flex-1 items-center gap-2 px-3 text-faint">
           <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
           <input
             ref={inputRef}
@@ -314,13 +314,10 @@ export function SearchView({
             autoCorrect="off"
             autoCapitalize="off"
             data-tauri-drag-region="false"
-            className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none select-text placeholder:text-content/40"
+            className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none select-text placeholder:text-dim"
           />
           {loading ? (
-            <LoaderCircle
-              className="size-3.5 shrink-0 animate-spin text-content/35"
-              strokeWidth={1.75}
-            />
+            <LoaderCircle className="size-3.5 shrink-0 animate-spin text-dim" strokeWidth={1.75} />
           ) : null}
         </label>
         {!IS_MAC ? <WindowControls /> : null}
@@ -338,7 +335,7 @@ export function SearchView({
               className={`rounded-md px-2 py-1 text-[12.5px] ${
                 selected
                   ? "bg-selected text-content"
-                  : "text-content/50 hover:bg-hover hover:text-content"
+                  : "text-faint hover:bg-hover hover:text-content"
               }`}
             >
               {item.label}
@@ -360,7 +357,7 @@ export function SearchView({
         ) : error && hits.length === 0 ? (
           <p className="px-2 py-1.5 text-[12.5px] text-red-400">{error}</p>
         ) : noResults ? (
-          <p className="px-2 py-1.5 text-[12.5px] text-content/50">No results</p>
+          <p className="px-2 py-1.5 text-[12.5px] text-faint">No results</p>
         ) : (
           <ResultList
             hits={hits}
@@ -393,11 +390,11 @@ function EmptyState() {
           ))}
         </div>
         <div className="absolute grid size-14 place-items-center rounded-2xl bg-content/6 backdrop-blur-sm">
-          <Search className="size-6 text-content/50" strokeWidth={1.75} />
+          <Search className="size-6 text-faint" strokeWidth={1.75} />
         </div>
       </div>
 
-      <p className="max-w-xs text-center text-[13.5px] text-content/45">
+      <p className="max-w-xs text-center text-[13.5px] text-faint">
         Find files, conversations, messages, and projects.
       </p>
     </div>
@@ -469,7 +466,7 @@ function ResultList({
             <span className="grid size-4 shrink-0 place-items-center">{row.icon}</span>
             <span className="min-w-0 flex-1 truncate">{row.title}</span>
             {row.meta ? (
-              <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-content/40">
+              <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-dim">
                 {row.meta}
               </span>
             ) : null}
@@ -493,7 +490,7 @@ function rowCopy(
   }
   if (hit.kind === "message") {
     return {
-      icon: <MessageSquare className="size-3.5 text-content/55" strokeWidth={1.75} />,
+      icon: <MessageSquare className="size-3.5 text-faint" strokeWidth={1.75} />,
       title: <Highlight text={hit.preview || hit.title} query={query} />,
       meta: hit.title,
     };

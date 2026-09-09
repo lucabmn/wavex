@@ -115,7 +115,7 @@ export function MenuBarApp() {
           <span className="text-[12.5px] font-semibold tracking-tight">wavex</span>
           <span
             className={`ml-auto inline-flex items-center gap-1.5 text-[11.5px] ${
-              waiting > 0 ? "text-amber-400" : "text-content/45"
+              waiting > 0 ? "text-amber-400" : "text-faint"
             }`}
           >
             <span
@@ -170,7 +170,7 @@ export function MenuBarApp() {
         )}
 
         <footer className="flex h-10 shrink-0 items-center border-t border-edge px-3">
-          <span className="text-[10px] text-content/45">
+          <span className="text-[10px] text-faint">
             {tab !== "agents"
               ? "From local CLI transcripts"
               : waiting > 0
@@ -180,7 +180,7 @@ export function MenuBarApp() {
           <button
             type="button"
             onClick={() => void invoke("menu_bar_open_app")}
-            className="ml-auto inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[11.5px] text-content/55 hover:bg-hover hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
+            className="ml-auto inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[11.5px] text-faint hover:bg-hover hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
           >
             Open wavex
             <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
@@ -219,7 +219,7 @@ function MenuTabButton({
       className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-md text-[11.5px] font-medium focus-visible:outline-2 focus-visible:outline-accent ${
         selected
           ? "bg-background-base text-content shadow-sm ring-1 ring-content/10"
-          : "text-content/45 hover:text-content/75"
+          : "text-faint hover:text-strong"
       }`}
     >
       {icon}
@@ -244,11 +244,11 @@ function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean 
     >
       {agents.length === 0 ? (
         <div className="grid h-full place-content-center justify-items-center gap-2 px-8 text-center">
-          <span className="grid size-9 place-items-center rounded-full bg-content/[0.06] text-content/35">
+          <span className="grid size-9 place-items-center rounded-full bg-content/[0.06] text-dim">
             <Check className="size-4" strokeWidth={1.8} aria-hidden />
           </span>
-          <p className="text-[12.5px] font-medium text-content/65">No agents are working</p>
-          <p className="text-[11.5px] leading-relaxed text-content/35">
+          <p className="text-[12.5px] font-medium text-muted">No agents are working</p>
+          <p className="text-[11.5px] leading-relaxed text-dim">
             Active sessions and requests for approval will appear here.
           </p>
         </div>
@@ -286,7 +286,7 @@ function AgentsTab({ agents, focused }: { agents: LiveAgent[]; focused: boolean 
 
 function GroupLabel({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="px-1.5 pb-1.5 pt-1 text-[10px] font-medium uppercase tracking-wide text-content/30">
+    <h2 className="px-1.5 pb-1.5 pt-1 text-[10px] font-medium uppercase tracking-wide text-dim">
       {children}
     </h2>
   );
@@ -345,10 +345,10 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
               {question ? "Question" : "Approval"}
             </span>
           </div>
-          <p className="mt-1 line-clamp-3 text-[11.5px] leading-relaxed text-content/70">
+          <p className="mt-1 line-clamp-3 text-[11.5px] leading-relaxed text-muted">
             {approval.label}
           </p>
-          <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-content/35">
+          <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-dim">
             <span className="truncate">{HARNESS_LABEL[agent.harness]}</span>
             <span aria-hidden>·</span>
             <span className="truncate">{project}</span>
@@ -372,7 +372,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
             disabled={answer != null}
             aria-label={`Deny: ${approval.label}`}
             onClick={() => respond("deny")}
-            className="h-6 flex-1 rounded-md bg-content/10 px-2.5 text-[11.5px] font-medium text-content/75 hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
+            className="h-6 flex-1 rounded-md bg-content/10 px-2.5 text-[11.5px] font-medium text-strong hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-45"
           >
             {answer === "deny" ? "Denying…" : "Deny"}
           </button>
@@ -381,7 +381,7 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
             aria-label={`Open ${agent.title} in wavex`}
             title="Open in wavex"
             onClick={() => focusMenuBarAgent(agent.id)}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/40 hover:bg-hover hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-dim hover:bg-hover hover:text-content focus-visible:outline-2 focus-visible:outline-accent"
           >
             <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
           </button>
@@ -391,12 +391,12 @@ export function ApprovalCard({ request }: { request: MenuBarRequest }) {
           <button
             type="button"
             onClick={() => focusMenuBarAgent(agent.id)}
-            className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md bg-content/10 text-[11.5px] font-medium text-content/75 hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent"
+            className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md bg-content/10 text-[11.5px] font-medium text-strong hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent"
           >
             Open session to answer
             <ExternalLink className="size-3" strokeWidth={1.75} aria-hidden />
           </button>
-          <p className="mt-1.5 text-center text-[10px] text-content/35">
+          <p className="mt-1.5 text-center text-[10px] text-dim">
             {question
               ? "This one needs a written answer"
               : "Not enough context to answer from here"}
@@ -437,7 +437,7 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
         </span>
         <span
           className={`mt-1 flex min-w-0 items-center gap-1.5 text-[11.5px] ${
-            agent.done ? "text-emerald-400" : "text-content/50"
+            agent.done ? "text-emerald-400" : "text-faint"
           }`}
         >
           {agent.done ? (
@@ -447,7 +447,7 @@ function AgentRow({ agent, now }: { agent: LiveAgent; now: number }) {
           )}
           <span className="truncate">{activity}</span>
         </span>
-        <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-content/35">
+        <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-dim">
           <span className="truncate">{HARNESS_LABEL[agent.harness]}</span>
           <span aria-hidden>·</span>
           <span className="truncate">{project}</span>
@@ -470,7 +470,7 @@ function UsageTab({ active }: { active: boolean }) {
       className="min-h-0 flex-1 overflow-y-auto overscroll-none px-3 py-3"
     >
       <div className="mb-3 flex items-center gap-1.5">
-        <span className="mr-auto text-[11.5px] text-content/40">Local usage</span>
+        <span className="mr-auto text-[11.5px] text-dim">Local usage</span>
         <div
           role="group"
           aria-label="Usage period"
@@ -483,7 +483,7 @@ function UsageTab({ active }: { active: boolean }) {
               aria-pressed={days === option}
               onClick={() => setDays(option)}
               className={`rounded px-1.5 py-1 text-[10px] leading-none ${
-                days === option ? "bg-background-base text-content shadow-sm" : "text-content/40"
+                days === option ? "bg-background-base text-content shadow-sm" : "text-dim"
               }`}
             >
               {option}d
@@ -496,7 +496,7 @@ function UsageTab({ active }: { active: boolean }) {
           title="Refresh usage"
           disabled={busy}
           onClick={refresh}
-          className="grid size-6 place-items-center rounded-md text-content/40 hover:bg-hover hover:text-content disabled:opacity-40"
+          className="grid size-6 place-items-center rounded-md text-dim hover:bg-hover hover:text-content disabled:opacity-40"
         >
           <RefreshCw
             className={`size-3.5 ${busy ? "animate-spin" : ""}`}
@@ -533,11 +533,11 @@ function UsageSummary({ report }: { report: UsageReport }) {
 
       {report.providers.length === 0 ? (
         <div className="rounded-lg border border-dashed border-edge px-4 py-5 text-center">
-          <p className="text-[11.5px] text-content/45">No usage in this period</p>
+          <p className="text-[11.5px] text-faint">No usage in this period</p>
         </div>
       ) : (
         <div>
-          <div className="mb-1.5 flex items-center justify-between px-1 text-[10px] text-content/30">
+          <div className="mb-1.5 flex items-center justify-between px-1 text-[10px] text-dim">
             <span>Providers</span>
             <span>{report.providers.length} active</span>
           </div>
@@ -554,10 +554,10 @@ function UsageSummary({ report }: { report: UsageReport }) {
                     <span className="min-w-0 flex-1 truncate font-medium">
                       {HARNESS_LABEL[entry.provider]}
                     </span>
-                    <span className="tabular-nums text-content/55">
+                    <span className="tabular-nums text-faint">
                       {formatTokens(entry.totals.totalTokens)}
                     </span>
-                    <span className="w-14 text-right tabular-nums text-content/35">
+                    <span className="w-14 text-right tabular-nums text-dim">
                       {formatUsd(entry.totals.costUsd)}
                     </span>
                   </div>
@@ -584,7 +584,7 @@ function CompactStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 px-2 text-center">
       <div className="truncate text-[13.5px] font-semibold tabular-nums">{value}</div>
-      <div className="mt-0.5 text-[9px] uppercase tracking-wide text-content/30">{label}</div>
+      <div className="mt-0.5 text-[9px] uppercase tracking-wide text-dim">{label}</div>
     </div>
   );
 }

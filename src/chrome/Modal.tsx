@@ -77,10 +77,7 @@ export function ModalPanel({
               {title}
             </h2>
             {description ? (
-              <p
-                id={descriptionId}
-                className="mt-1 truncate text-[12.5px] leading-snug text-content/45"
-              >
+              <p id={descriptionId} className="mt-1 truncate text-[12.5px] leading-snug text-faint">
                 {description}
               </p>
             ) : null}
@@ -91,7 +88,7 @@ export function ModalPanel({
             aria-label="Close"
             disabled={closeDisabled}
             onClick={onClose}
-            className="ui-focus grid size-7 shrink-0 place-items-center rounded-lg text-content/40 transition-colors hover:bg-hover hover:text-content disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
+            className="ui-focus grid size-7 shrink-0 place-items-center rounded-lg text-dim transition-colors hover:bg-hover hover:text-content disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <X className="size-3.5" strokeWidth={1.75} />
           </button>

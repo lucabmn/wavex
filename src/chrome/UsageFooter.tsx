@@ -116,7 +116,7 @@ export function UsageFooter({
   return (
     <footer
       aria-label={ariaLabel}
-      className="flex h-7 shrink-0 items-center gap-3 overflow-x-auto border-t border-edge px-3 text-[11.5px] text-content/55"
+      className="flex h-7 shrink-0 items-center gap-3 overflow-x-auto border-t border-edge px-3 text-[11.5px] text-faint"
     >
       {showUsage ? (
         <>
@@ -138,7 +138,7 @@ export function UsageFooter({
           {showUsage ? (
             <button
               type="button"
-              className="grid size-5 shrink-0 place-items-center rounded text-content/40 hover:bg-hover hover:text-content disabled:opacity-50"
+              className="grid size-5 shrink-0 place-items-center rounded text-dim hover:bg-hover hover:text-content disabled:opacity-50"
               aria-label="Refresh usage"
               title="Refresh usage"
               disabled={refreshing}
@@ -253,7 +253,7 @@ function RunningTerminalChip({
               onClick={() => toggle(terminal.id)}
             >
               <span className="min-w-0 flex-1 truncate">{terminal.process}</span>
-              <span className="max-w-[7rem] shrink-0 truncate text-[11.5px] text-content/40">
+              <span className="max-w-[7rem] shrink-0 truncate text-[11.5px] text-dim">
                 {terminal.label}
               </span>
             </button>
@@ -308,18 +308,18 @@ function ProviderChip({
     >
       <HarnessIcon harness={limits.provider} className="size-3 shrink-0" />
       {loading ? (
-        <span className="animate-pulse text-content/35">···</span>
+        <span className="animate-pulse text-dim">···</span>
       ) : disconnected ? (
-        <span className="text-content/35">not connected</span>
+        <span className="text-dim">not connected</span>
       ) : windows.length === 0 ? (
-        <span className="text-content/35">{emptyUsageLabel(limits)}</span>
+        <span className="text-dim">{emptyUsageLabel(limits)}</span>
       ) : (
         <>
           {tightest ? <MiniBar usedPct={tightest.usedPercent} /> : null}
           <span className="flex min-w-0 items-center gap-1 tabular-nums">
             {windows.map((entry, index) => (
               <span key={entry.key} className="inline-flex items-center gap-1">
-                {index > 0 ? <span className="text-content/25">·</span> : null}
+                {index > 0 ? <span className="text-dim">·</span> : null}
                 <span>
                   {formatUsagePercent(entry.window.usedPercent)}{" "}
                   {formatRateLimitWindowChipLabel(entry.window, now)}

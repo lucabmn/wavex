@@ -54,7 +54,7 @@ export function ProfileSwitchConfirm({
                 <span className="block truncate text-[12.5px] text-content">
                   {sessionDisplayTitle(session.title, session.harness)}
                 </span>
-                <span className="block truncate text-[11.5px] text-content/45">
+                <span className="block truncate text-[11.5px] text-faint">
                   {sessionState(session)} · {basename(session.cwd)}
                 </span>
               </span>
@@ -62,7 +62,7 @@ export function ProfileSwitchConfirm({
           ))}
         </ul>
         {terminalCount > 0 ? (
-          <p className="text-[12.5px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             {terminalCount} open terminal{terminalCount === 1 ? "" : "s"} will also stop.
           </p>
         ) : null}
@@ -70,7 +70,7 @@ export function ProfileSwitchConfirm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             Stay here
           </button>

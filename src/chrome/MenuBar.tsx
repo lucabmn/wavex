@@ -294,9 +294,7 @@ export function MenuBar({
               }
             }}
             className={`rounded px-2 py-0.5 transition-colors ${
-              isActive
-                ? "bg-selected text-content"
-                : "text-content/70 hover:bg-hover hover:text-content"
+              isActive ? "bg-selected text-content" : "text-muted hover:bg-hover hover:text-content"
             }`}
           >
             {label}

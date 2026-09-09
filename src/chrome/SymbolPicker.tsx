@@ -162,7 +162,7 @@ export function SymbolPicker({ open, cwd, path, onOpenFile, onClose }: Props) {
         className="absolute left-1/2 top-[12%] flex w-[min(560px,calc(100vw-24px))] -translate-x-1/2 flex-col overflow-hidden rounded-lg border border-edge bg-content/5 backdrop-blur-xl"
       >
         <div className="pb-1.5">
-          <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
+          <label className="flex items-center gap-2 border-b border-edge px-2 py-2.5 text-faint">
             <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
             <input
               ref={input}
@@ -174,14 +174,14 @@ export function SymbolPicker({ open, cwd, path, onOpenFile, onClose }: Props) {
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none placeholder:text-content/40"
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none placeholder:text-dim"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={onSearchKey}
             />
           </label>
         </div>
         {results.length === 0 ? (
-          <p className="px-3 pt-1 pb-3 text-[12.5px] text-content/50">
+          <p className="px-3 pt-1 pb-3 text-[12.5px] text-faint">
             {emptyLabel({ loading, workspaceMode, hasFile: !!path, term })}
           </p>
         ) : (
@@ -264,7 +264,7 @@ function SymbolList({
               highlighted ? "bg-selected text-content" : "text-content"
             }`}
           >
-            <span className="w-16 shrink-0 truncate font-mono text-[10.5px] text-content/40">
+            <span className="w-16 shrink-0 truncate font-mono text-[10.5px] text-dim">
               {symbol.kind}
             </span>
             <span className="min-w-0 flex-1 truncate">
@@ -274,7 +274,7 @@ function SymbolList({
                 active={symbol.positions.length > 0}
               />
             </span>
-            <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-content/40">
+            <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-dim">
               {showPath ? displayPath(symbol.path, cwd) : symbol.container}
             </span>
           </button>

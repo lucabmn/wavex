@@ -66,7 +66,7 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
                   onOpenChange(false);
                   if (profile.id !== active.id) onSwitch(profile.id);
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-content/80 hover:bg-hover hover:text-content"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-strong hover:bg-hover hover:text-content"
               >
                 <ProfileAvatar profile={profile} />
                 <span className="min-w-0 flex-1 truncate text-[13.5px]">{profile.name}</span>
@@ -100,7 +100,7 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
             </MenuAction>
           </div>
 
-          <p className="px-2 pb-1 pt-2 text-[11.5px] leading-snug text-content/40">
+          <p className="px-2 pb-1 pt-2 text-[11.5px] leading-snug text-dim">
             Profiles separate wavex's own state. Agent CLIs keep their own sign-in, which every
             profile shares.
           </p>
@@ -137,7 +137,7 @@ function MenuAction({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13.5px] text-content/70 hover:bg-hover hover:text-content"
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13.5px] text-muted hover:bg-hover hover:text-content"
     >
       {children}
       <span className="min-w-0 flex-1 truncate">{label}</span>

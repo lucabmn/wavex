@@ -345,7 +345,7 @@ function AgentTranscriptComponent({
           <div className="flex justify-center px-4 py-3">
             <button
               type="button"
-              className="rounded-md bg-content/8 px-2.5 py-1.5 font-sans text-[12.5px] text-content/60 hover:bg-hover hover:text-content"
+              className="rounded-md bg-content/8 px-2.5 py-1.5 font-sans text-[12.5px] text-muted hover:bg-hover hover:text-content"
               onClick={loadEarlier}
             >
               Load earlier messages
@@ -690,7 +690,7 @@ function TurnDuration({
                 : "Agent is working"
             : label
       }
-      className="flex min-w-0 items-center gap-2.5 px-4 pt-1 pb-3 font-sans text-sm text-content/40"
+      className="flex min-w-0 items-center gap-2.5 px-4 pt-1 pb-3 font-sans text-sm text-dim"
     >
       {done ? (
         <span className="flex shrink-0 items-center gap-1">
@@ -713,7 +713,7 @@ function TurnDuration({
               type="button"
               title="Regenerate"
               aria-label="Regenerate"
-              className="rounded-md p-1 text-content/40 hover:bg-hover hover:text-content/70"
+              className="rounded-md p-1 text-dim hover:bg-hover hover:text-muted"
               onClick={onRegenerate}
             >
               <RefreshCw className="size-3.5" strokeWidth={1.75} />
@@ -742,7 +742,7 @@ function TurnDuration({
       {completedAt != null ? (
         <>
           {dot}
-          <span className="shrink-0 text-content/35">{formatClockTime(completedAt)}</span>
+          <span className="shrink-0 text-dim">{formatClockTime(completedAt)}</span>
         </>
       ) : null}
     </div>
@@ -773,7 +773,7 @@ function CopyTurnButton({ text }: { text: string }) {
       type="button"
       title={copied ? "Copied" : "Copy response"}
       aria-label={copied ? "Copied" : "Copy response"}
-      className="-ml-1 rounded-md p-1 text-content/40 hover:bg-hover hover:text-content/70"
+      className="-ml-1 rounded-md p-1 text-dim hover:bg-hover hover:text-muted"
       onClick={() => {
         playCue("copy");
         void copyText(text).then(
@@ -811,7 +811,7 @@ function SaveNoteButton({ text, onSave }: { text: string; onSave: (text: string)
       type="button"
       title={saved ? "Saved to Notes" : "Save as note"}
       aria-label={saved ? "Saved to Notes" : "Save as note"}
-      className="rounded-md p-1 text-content/40 hover:bg-hover hover:text-content/70"
+      className="rounded-md p-1 text-dim hover:bg-hover hover:text-muted"
       onClick={() => {
         playCue("copy");
         onSave(text);
@@ -917,7 +917,7 @@ const TranscriptBlock = memo(function TranscriptBlock({
 
   if (block.role === "system") {
     return (
-      <div className="px-4 py-2 text-content/50">
+      <div className="px-4 py-2 text-faint">
         <pre className="min-w-0 whitespace-pre-wrap break-words">{block.text}</pre>
       </div>
     );
@@ -984,7 +984,7 @@ function ResponseImage({ file }: { file: Attachment }) {
   };
 
   if (!src) {
-    return <p className="py-2 text-sm text-content/45">{file.name} is unavailable.</p>;
+    return <p className="py-2 text-sm text-faint">{file.name} is unavailable.</p>;
   }
 
   return (
@@ -997,7 +997,7 @@ function ResponseImage({ file }: { file: Attachment }) {
       >
         <img src={src} alt={file.name} className="max-h-96 max-w-full object-contain" />
       </button>
-      <div className="mt-1 flex items-center gap-2 text-[11.5px] text-content/45">
+      <div className="mt-1 flex items-center gap-2 text-[11.5px] text-faint">
         <span className="min-w-0 truncate">{file.name}</span>
         <button type="button" onClick={onSave} className="shrink-0 hover:text-content">
           Save…
@@ -1125,7 +1125,7 @@ function UserMessageBlock({
           <div className="mt-1 flex justify-end gap-2 text-[11.5px]">
             <button
               type="button"
-              className="rounded px-2 py-0.5 text-content/50 hover:text-content"
+              className="rounded px-2 py-0.5 text-faint hover:text-content"
               onClick={() => {
                 setEditing(false);
                 setDraft(block.text);
@@ -1156,7 +1156,7 @@ function UserMessageBlock({
           type="button"
           title="Edit and resend"
           aria-label="Edit and resend"
-          className="mt-1 mr-1 hidden h-fit shrink-0 self-start rounded-md p-1 text-content/35 hover:bg-hover hover:text-content/70 group-hover:block"
+          className="mt-1 mr-1 hidden h-fit shrink-0 self-start rounded-md p-1 text-dim hover:bg-hover hover:text-muted group-hover:block"
           onClick={() => {
             setDraft(block.text);
             setEditing(true);
@@ -1403,7 +1403,7 @@ const ActivityPhaseGroup = memo(function ActivityPhaseGroup({
   ) : (
     // Dimmed to sit with the icons: the work is chrome around the answer, and
     // only the answer reads at full strength.
-    <span className="min-w-0 flex-1 truncate font-sans text-sm text-content/50 transition-colors duration-200 group-hover:text-content/80">
+    <span className="min-w-0 flex-1 truncate font-sans text-sm text-faint transition-colors duration-200 group-hover:text-strong">
       {title}
     </span>
   );
@@ -1434,7 +1434,7 @@ const ActivityPhaseGroup = memo(function ActivityPhaseGroup({
         <span className="relative flex size-3.5 shrink-0 items-center justify-center">
           <ActivityPhaseIcon kind={phase.kind} className="group-hover:opacity-0" />
           <ChevronRight
-            className={`absolute size-3.5 text-content/45 opacity-0 transition-transform duration-200 group-hover:opacity-100 ${
+            className={`absolute size-3.5 text-faint opacity-0 transition-transform duration-200 group-hover:opacity-100 ${
               open ? "rotate-90" : ""
             }`}
             strokeWidth={1.75}
@@ -1493,7 +1493,7 @@ function ActivityPhaseIcon({
   className?: string;
 }) {
   const props = {
-    className: `size-3.5 shrink-0 text-content/45 ${className}`,
+    className: `size-3.5 shrink-0 text-faint ${className}`,
     strokeWidth: 1.75,
   };
   if (kind === "edit") return <PenLine {...props} />;
@@ -1594,12 +1594,10 @@ function ActivityThinkingRow({
   // reasoning streams in — the line itself does.
   const pulse = block.streaming ? "zen-thinking-pulse" : "";
   const icon = bare ? null : (
-    <Minus className={`size-3.5 shrink-0 text-content/40 ${pulse}`} strokeWidth={1.75} />
+    <Minus className={`size-3.5 shrink-0 text-dim ${pulse}`} strokeWidth={1.75} />
   );
   const label = (
-    <span
-      className={`min-w-0 flex-1 truncate font-sans text-sm text-content/50 ${bare ? pulse : ""}`}
-    >
+    <span className={`min-w-0 flex-1 truncate font-sans text-sm text-faint ${bare ? pulse : ""}`}>
       {text}
     </span>
   );
@@ -1624,7 +1622,7 @@ function ActivityThinkingRow({
       >
         {icon}
         <span
-          className={`min-w-0 flex-1 truncate font-sans text-sm text-content/50 transition-colors duration-200 group-hover:text-content/75 ${
+          className={`min-w-0 flex-1 truncate font-sans text-sm text-faint transition-colors duration-200 group-hover:text-strong ${
             bare ? pulse : ""
           }`}
         >
@@ -1664,15 +1662,13 @@ function ActivityNoteRow({
 }) {
   const [open, setOpen] = useState(false);
   const text = proseSummary(block.text);
-  const icon = bare ? null : (
-    <Minus className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
-  );
+  const icon = bare ? null : <Minus className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />;
 
   if (!expandable) {
     return (
       <div aria-label={`Agent said: ${text}`} className="flex min-w-0 items-center gap-1.5 py-1">
         {icon}
-        <span className="min-w-0 flex-1 truncate font-sans text-sm text-content/70">{text}</span>
+        <span className="min-w-0 flex-1 truncate font-sans text-sm text-muted">{text}</span>
       </div>
     );
   }
@@ -1687,7 +1683,7 @@ function ActivityNoteRow({
         className="group flex min-w-0 items-center gap-1.5 py-1 text-left"
       >
         {icon}
-        <span className="min-w-0 flex-1 truncate font-sans text-sm text-content/70 transition-colors duration-200 group-hover:text-content">
+        <span className="min-w-0 flex-1 truncate font-sans text-sm text-muted transition-colors duration-200 group-hover:text-content">
           {text}
         </span>
       </button>
@@ -1828,15 +1824,15 @@ function SubagentCard({
         >
           <SubagentStatusIcon status={status} live={live} />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-sans text-sm text-content/80 transition-colors duration-200 group-hover:text-content">
+            <span className="truncate font-sans text-sm text-strong transition-colors duration-200 group-hover:text-content">
               {title}
             </span>
             {metaLine ? (
-              <span className="truncate font-sans text-xs text-content/45">{metaLine}</span>
+              <span className="truncate font-sans text-xs text-faint">{metaLine}</span>
             ) : null}
           </span>
           <ChevronRight
-            className={`size-3.5 shrink-0 text-content/35 transition-transform ${open ? "rotate-90" : ""}`}
+            className={`size-3.5 shrink-0 text-dim transition-transform ${open ? "rotate-90" : ""}`}
             strokeWidth={1.75}
           />
         </button>
@@ -1846,22 +1842,20 @@ function SubagentCard({
             title="Open subagent transcript"
             aria-label={`Open subagent transcript: ${title}`}
             onClick={() => onOpenSubagent(block.id)}
-            className="grid size-6 shrink-0 place-items-center rounded text-content/45 hover:bg-hover hover:text-content"
+            className="grid size-6 shrink-0 place-items-center rounded text-faint hover:bg-hover hover:text-content"
           >
             <PanelRight className="size-3.5" strokeWidth={1.75} />
           </button>
         ) : null}
       </div>
       {showLatest ? (
-        <div className="truncate px-2 pb-1.5 pl-[30px] font-sans text-xs text-content/50">
-          {latest}
-        </div>
+        <div className="truncate px-2 pb-1.5 pl-[30px] font-sans text-xs text-faint">{latest}</div>
       ) : null}
       {open ? (
         <div className="min-w-0 border-t border-edge py-1">
           {meta.prompt?.trim() ? (
             <div className="px-4 py-1">
-              <div className="font-sans text-xs text-content/45">Brief</div>
+              <div className="font-sans text-xs text-faint">Brief</div>
               <AgentMarkdown text={meta.prompt} cwd={cwd} onOpenFile={onOpenFile} />
             </div>
           ) : null}
@@ -1877,7 +1871,7 @@ function SubagentCard({
               onOpenSubagent={onOpenSubagent}
             />
           ) : (
-            <div className="px-4 py-1 font-sans text-xs text-content/45">
+            <div className="px-4 py-1 font-sans text-xs text-faint">
               {running ? "Waiting for the subagent's first step…" : "The subagent left no steps."}
             </div>
           )}
@@ -1901,25 +1895,25 @@ function SubagentStatusIcon({ status, live = false }: { status: SubagentStatus; 
   if (status === "running") {
     return (
       <CircleDashed
-        className={`size-3.5 shrink-0 text-content/40 ${live ? "zen-tool-spin" : ""}`}
+        className={`size-3.5 shrink-0 text-dim ${live ? "zen-tool-spin" : ""}`}
         strokeWidth={1.75}
       />
     );
   }
-  return <Bot className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />;
+  return <Bot className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />;
 }
 
 function ActivityToolIcon({ state, live = false }: { state: ToolCallState; live?: boolean }) {
   if (state === "pending") {
     return (
       <CircleDashed
-        className={`size-3.5 shrink-0 text-content/40 ${live ? "zen-tool-spin" : ""}`}
+        className={`size-3.5 shrink-0 text-dim ${live ? "zen-tool-spin" : ""}`}
         strokeWidth={1.75}
       />
     );
   }
 
-  return <Minus className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />;
+  return <Minus className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />;
 }
 
 /** Failure stays marked. Running and success do not get a trailing icon. */
@@ -2077,7 +2071,7 @@ function ToolCall({
             onOpenFile={onOpenFile}
           />
           <ChevronRight
-            className={`size-3.5 shrink-0 text-content/35 transition-transform ${open ? "rotate-90" : ""}`}
+            className={`size-3.5 shrink-0 text-dim transition-transform ${open ? "rotate-90" : ""}`}
             strokeWidth={1.75}
           />
         </button>
@@ -2097,7 +2091,7 @@ function ToolCall({
         </div>
       )}
       {open && expandable ? (
-        <pre className="mt-1.5 min-w-0 whitespace-pre-wrap break-words px-2.5 font-mono text-[12.5px] leading-5 text-content/55">
+        <pre className="mt-1.5 min-w-0 whitespace-pre-wrap break-words px-2.5 font-mono text-[12.5px] leading-5 text-faint">
           {expanded}
         </pre>
       ) : null}
@@ -2159,7 +2153,7 @@ function ToolCallSummary({
     return (
       <span
         className={`min-w-0 flex-1 truncate font-mono text-[13.5px] ${
-          failed ? "text-red-400" : chip ? "text-content/65" : "text-content/80"
+          failed ? "text-red-400" : chip ? "text-muted" : "text-strong"
         }`}
       >
         {label}
@@ -2177,8 +2171,8 @@ function ToolCallSummary({
     "file";
   const filePath = resolveWorkspacePath(preview?.path || target, cwd);
   const canOpen = interactive && !!onOpenFile && !!filePath;
-  const actionTone = failed ? "text-red-400" : "text-content/50";
-  const targetTone = failed ? "text-red-400" : chip ? "text-content/70" : "text-content/85";
+  const actionTone = failed ? "text-red-400" : "text-faint";
+  const targetTone = failed ? "text-red-400" : chip ? "text-muted" : "text-strong";
 
   return (
     <span className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[13.5px]">
@@ -2229,7 +2223,7 @@ function ToolCallIcon({ state }: { state: ToolCallState }) {
     return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
   }
   if (state === "pending") {
-    return <CircleDashed className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />;
+    return <CircleDashed className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />;
   }
   return null;
 }
@@ -2254,7 +2248,7 @@ function ApprovalControls({
       </button>
       <button
         type="button"
-        className="rounded-md bg-content/10 px-2.5 py-0.5 text-[11.5px] text-content/70 hover:bg-hover"
+        className="rounded-md bg-content/10 px-2.5 py-0.5 text-[11.5px] text-muted hover:bg-hover"
         onClick={() => onApproval?.(approval.requestId, "deny")}
       >
         Deny
@@ -2281,11 +2275,11 @@ function HandoffDivider({ block }: { block: Block }) {
               ? `Preparing a handoff to ${HARNESS_TITLE[meta.to]}`
               : `Continued with ${label}`
           }
-          className="flex max-w-[min(100%,20rem)] items-center gap-1.5 px-1.5 font-sans text-[12.5px] text-content/55"
+          className="flex max-w-[min(100%,20rem)] items-center gap-1.5 px-1.5 font-sans text-[12.5px] text-faint"
         >
           {preparing ? (
             <>
-              <TerminalSpinner className="inline-block w-3.5 shrink-0 select-none text-center text-[11.5px] leading-none text-content/45" />
+              <TerminalSpinner className="inline-block w-3.5 shrink-0 select-none text-center text-[11.5px] leading-none text-faint" />
               <Shimmer duration={1.4}>{label}</Shimmer>
             </>
           ) : (

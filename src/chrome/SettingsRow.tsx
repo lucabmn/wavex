@@ -17,9 +17,7 @@ export function PageHeader({ title, description }: { title: string; description?
         {title}
       </h1>
       {description ? (
-        <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-content/45">
-          {description}
-        </p>
+        <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-faint">{description}</p>
       ) : null}
     </header>
   );
@@ -41,11 +39,9 @@ export function Section({
     <section className="pb-7 last:pb-2">
       <div className="flex items-end justify-between gap-4 pb-2">
         <div className="min-w-0">
-          <h2 className="ui-label text-[11.5px] text-content/45">{title}</h2>
+          <h2 className="ui-label text-[11.5px] text-faint">{title}</h2>
           {description ? (
-            <p className="mt-1 max-w-xl text-[12.5px] leading-relaxed text-content/40">
-              {description}
-            </p>
+            <p className="mt-1 max-w-xl text-[12.5px] leading-relaxed text-dim">{description}</p>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -76,7 +72,7 @@ export function Row({
     <div className="min-w-0 flex-1">
       <div className="text-[13.5px] font-medium text-content">{label}</div>
       {description ? (
-        <p className="mt-1 text-[12.5px] leading-relaxed text-content/45">{description}</p>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-faint">{description}</p>
       ) : null}
     </div>
   );
@@ -160,7 +156,7 @@ export function Segmented<T extends string>({
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
           data-selected={value === option.value ? "true" : undefined}
-          className="ui-segment ui-focus min-w-0 truncate rounded px-1.5 py-1 font-medium text-content/55"
+          className="ui-segment ui-focus min-w-0 truncate rounded px-1.5 py-1 font-medium text-faint"
         >
           {option.label}
         </button>
@@ -201,7 +197,7 @@ export function Slider({
         className="sidebar-opacity-slider min-w-0 flex-1"
         onChange={(event) => onChange(Number(event.target.value))}
       />
-      <span className="w-10 shrink-0 text-right font-mono text-[11.5px] text-content/70 tabular-nums">
+      <span className="w-10 shrink-0 text-right font-mono text-[11.5px] text-muted tabular-nums">
         {display}
       </span>
     </div>
@@ -257,7 +253,7 @@ export function SecondaryButton({
       className={`ui-focus flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-[12.5px] font-medium ${
         danger
           ? "text-red-400 hover:border-red-400/40 hover:bg-red-400/10"
-          : "bg-surface-raised text-content/70 hover:border-edge-strong hover:text-content"
+          : "bg-surface-raised text-muted hover:border-edge-strong hover:text-content"
       } disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
     >
       {children}
@@ -267,5 +263,5 @@ export function SecondaryButton({
 
 /** An empty state inside a section card, where a list would otherwise be. */
 export function EmptyNote({ children }: { children: ReactNode }) {
-  return <p className="px-4 py-3.5 text-[12.5px] text-content/45">{children}</p>;
+  return <p className="px-4 py-3.5 text-[12.5px] text-faint">{children}</p>;
 }

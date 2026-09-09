@@ -301,7 +301,7 @@ export const SessionPane = memo(function SessionPane({
           }}
         >
           {onPaneDragStart ? (
-            <GripVertical className="size-3.5 shrink-0 text-content/35" strokeWidth={1.75} />
+            <GripVertical className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />
           ) : null}
           <span
             className={`size-2 shrink-0 rounded-full ${focused ? "bg-accent" : "bg-transparent"}`}
@@ -314,7 +314,7 @@ export const SessionPane = memo(function SessionPane({
             title={`Close Pane (${MOD}W)`}
             aria-label="Close pane"
             data-no-drag
-            className="grid size-5 shrink-0 place-items-center rounded text-content/50 hover:bg-hover hover:text-content"
+            className="grid size-5 shrink-0 place-items-center rounded text-faint hover:bg-hover hover:text-content"
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {

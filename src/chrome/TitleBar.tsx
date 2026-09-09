@@ -201,7 +201,7 @@ function TabHarnesses({
       ))}
       {extra > 0 ? (
         <span
-          className={`pl-0.5 text-[10px] leading-none ${dimmed ? "text-content/50" : "text-content"}`}
+          className={`pl-0.5 text-[10px] leading-none ${dimmed ? "text-faint" : "text-content"}`}
         >
           +{extra}
         </span>
@@ -287,7 +287,7 @@ function TitleTabItem({
         className={`ui-focus relative flex h-7 min-w-0 flex-1 cursor-default items-center gap-2 rounded-md border px-2.5 text-left ${
           active
             ? "border-edge bg-surface-raised text-content"
-            : "border-transparent text-content/62 hover:bg-hover hover:text-content"
+            : "border-transparent text-muted hover:bg-hover hover:text-content"
         } ${closable ? "pr-7" : "pr-2.5"}`}
       >
         {tab.harnesses.length > 0 ? (
@@ -298,7 +298,7 @@ function TitleTabItem({
           />
         ) : tab.terminal || !fileIcon ? (
           <Terminal
-            className={`size-3.5 shrink-0 ${active ? "text-content" : "text-content/55"}`}
+            className={`size-3.5 shrink-0 ${active ? "text-content" : "text-faint"}`}
             strokeWidth={1.75}
           />
         ) : (
@@ -356,7 +356,7 @@ function TitleTabItem({
             ) : null}
           </span>
           {meta ? (
-            <span className="hidden min-w-0 truncate text-[10px] leading-none text-content/45 @min-[11rem]:block">
+            <span className="hidden min-w-0 truncate text-[10px] leading-none text-faint @min-[11rem]:block">
               {meta}
             </span>
           ) : null}
@@ -375,7 +375,7 @@ function TitleTabItem({
             e.stopPropagation();
             onClose(tab.id);
           }}
-          className="ui-focus absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-md text-content/45 opacity-0 transition-opacity hover:bg-hover hover:text-content group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+          className="ui-focus absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-md text-faint opacity-0 transition-opacity hover:bg-hover hover:text-content group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
         >
           <X className="size-3" strokeWidth={1.75} />
         </button>
@@ -395,7 +395,7 @@ function TabStripChevron({ side, onClick }: { side: "left" | "right"; onClick: (
       data-tauri-drag-region="false"
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`ui-overlay absolute top-1/2 z-40 grid size-6.5 -translate-y-1/2 place-items-center rounded-lg text-content/70 hover:text-content ${
+      className={`ui-overlay absolute top-1/2 z-40 grid size-6.5 -translate-y-1/2 place-items-center rounded-lg text-muted hover:text-content ${
         side === "left" ? "left-1" : "right-1"
       }`}
     >
@@ -433,12 +433,12 @@ export function IconButton({
       }}
       className={`ui-focus grid size-6.5 place-items-center rounded-lg transition-colors ${
         disabled
-          ? "text-content/25"
+          ? "text-dim"
           : accent
             ? "text-accent hover:bg-accent/12"
             : active
               ? "bg-content/8 text-content hover:bg-hover"
-              : "text-content/45 hover:bg-hover hover:text-content"
+              : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       {children}
@@ -796,7 +796,7 @@ function TitleBarComponent({
           onNewTerminal={onNewTerminal}
           buttonClassName="flex h-full min-w-0 max-w-64 shrink items-center gap-2 px-6 text-left text-sm font-medium leading-tight"
         >
-          <span className="min-w-0 truncate text-content/50">No project</span>
+          <span className="min-w-0 truncate text-faint">No project</span>
         </CwdPicker>
       ) : null}
 
@@ -876,7 +876,7 @@ function TitleBarComponent({
 
         {IS_MAC ? null : (
           <div className="flex min-w-0 flex-1 items-center justify-center px-4">
-            <span className="pointer-events-none truncate text-[11.5px] font-medium text-content/40 select-none">
+            <span className="pointer-events-none truncate text-[11.5px] font-medium text-dim select-none">
               {systemTitle}
             </span>
           </div>

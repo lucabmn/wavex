@@ -68,7 +68,7 @@ export function QueueStrip({
   };
 
   return (
-    <div className="px-2 text-content/55" data-message-queue>
+    <div className="px-2 text-faint" data-message-queue>
       <div
         className="relative z-0 rounded-t-[10px] border border-b-0 border-edge bg-content/3 px-2 py-1"
         data-message-queue-card
@@ -144,7 +144,7 @@ export function QueueStrip({
                 </>
               ) : (
                 <>
-                  <span className="min-w-0 flex-1 truncate text-content/80" title={prompt.text}>
+                  <span className="min-w-0 flex-1 truncate text-strong" title={prompt.text}>
                     {label}
                   </span>
                   {steering ? (

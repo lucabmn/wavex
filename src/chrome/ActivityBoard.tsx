@@ -140,7 +140,7 @@ export function ActivityBoard({
 
   if (cards.length === 0) {
     return (
-      <p className="px-4 py-6 text-[13.5px] text-content/45">
+      <p className="px-4 py-6 text-[13.5px] text-faint">
         No saved session matches the sidebar filters.
       </p>
     );
@@ -166,16 +166,14 @@ export function ActivityBoard({
           >
             <header className="flex items-center gap-2 px-3 py-2.5">
               <span className={`size-1.5 shrink-0 rounded-full ${LANE_DOT[lane]}`} aria-hidden />
-              <h2 className="min-w-0 truncate text-[11.5px] font-medium text-content/70">
+              <h2 className="min-w-0 truncate text-[11.5px] font-medium text-muted">
                 {ACTIVITY_BOARD_LANE_LABEL[lane]}
               </h2>
-              <span className="ml-auto shrink-0 text-[11.5px] tabular-nums text-content/35">
-                {total}
-              </span>
+              <span className="ml-auto shrink-0 text-[11.5px] tabular-nums text-dim">{total}</span>
             </header>
             <div className="flex min-h-24 flex-col gap-1.5 px-2 pb-2">
               {laneCards.length === 0 ? (
-                <span className="px-1 py-2 text-[11.5px] text-content/25">{LANE_EMPTY[lane]}</span>
+                <span className="px-1 py-2 text-[11.5px] text-dim">{LANE_EMPTY[lane]}</span>
               ) : (
                 laneCards.map((card) => (
                   <BoardCard
@@ -199,7 +197,7 @@ export function ActivityBoard({
                 ))
               )}
               {hidden > 0 ? (
-                <span className="px-1 pt-1 text-[11.5px] text-content/30">
+                <span className="px-1 pt-1 text-[11.5px] text-dim">
                   {`${hidden} more in the list`}
                 </span>
               ) : null}
@@ -267,7 +265,7 @@ function BoardCard({
     >
       {movable ? (
         <GripVertical
-          className="mt-1 size-3.5 shrink-0 text-content/20 opacity-0 transition-opacity group-hover:opacity-100"
+          className="mt-1 size-3.5 shrink-0 text-dim opacity-0 transition-opacity group-hover:opacity-100"
           strokeWidth={1.75}
           aria-hidden
         />
@@ -289,7 +287,7 @@ function BoardCard({
             {card.session.title}
           </span>
         </span>
-        <span className="flex w-full min-w-0 items-center gap-1.5 text-[11.5px] text-content/40">
+        <span className="flex w-full min-w-0 items-center gap-1.5 text-[11.5px] text-dim">
           {showProject ? (
             <>
               <span className="max-w-24 shrink-0 truncate">{card.projectLabel}</span>
@@ -309,7 +307,7 @@ function BoardCard({
           title="Stop this turn"
           aria-label="Stop this turn"
           onClick={onStop}
-          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
+          className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>

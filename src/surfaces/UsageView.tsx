@@ -120,8 +120,8 @@ export function UsageView({ onClose }: Props) {
         data-tauri-drag-region="deep"
       >
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
-          <span className="shrink-0 text-content/45">Usage</span>
-          <span aria-hidden className="shrink-0 text-content/25">
+          <span className="shrink-0 text-faint">Usage</span>
+          <span aria-hidden className="shrink-0 text-dim">
             /
           </span>
           <span className="min-w-0 truncate text-content">{formatDayRange(window_.dayLabels)}</span>
@@ -151,7 +151,7 @@ export function UsageView({ onClose }: Props) {
             title="Refresh usage"
             disabled={busy}
             onClick={refresh}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <RefreshCw
               className={`size-3.5 ${busy ? "animate-spin" : ""}`}
@@ -220,8 +220,8 @@ function Card({
     <section className="rounded-xl border border-edge p-4">
       {title ? (
         <header className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="text-[12.5px] font-medium text-content/70">{title}</h2>
-          {hint ? <span className="text-[11.5px] text-content/35">{hint}</span> : null}
+          <h2 className="text-[12.5px] font-medium text-muted">{title}</h2>
+          {hint ? <span className="text-[11.5px] text-dim">{hint}</span> : null}
         </header>
       ) : null}
       {children}
@@ -274,11 +274,11 @@ function SummaryCards({ report }: { report: UsageReport }) {
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-edge px-3.5 py-3">
-      <div className="text-[11.5px] text-content/45">{label}</div>
+      <div className="text-[11.5px] text-faint">{label}</div>
       <div className="mt-1 truncate text-[19px] font-medium tabular-nums leading-tight">
         {value}
       </div>
-      <div className="mt-0.5 h-4 truncate text-[11.5px] text-content/35">{hint ?? ""}</div>
+      <div className="mt-0.5 h-4 truncate text-[11.5px] text-dim">{hint ?? ""}</div>
     </div>
   );
 }
@@ -306,13 +306,13 @@ function ProviderTable({
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 <HarnessIcon harness={entry.provider} className="size-3.5 shrink-0" />
                 <span className="truncate">{HARNESS_LABEL[entry.provider]}</span>
-                <span className="shrink-0 text-[11.5px] text-content/30">
+                <span className="shrink-0 text-[11.5px] text-dim">
                   {formatCount(entry.sessions)} sessions
                 </span>
               </span>
               <span className="shrink-0 tabular-nums">
                 {format(value)}
-                <span className="ml-1.5 text-[11.5px] text-content/35">{formatShare(share)}</span>
+                <span className="ml-1.5 text-[11.5px] text-dim">{formatShare(share)}</span>
               </span>
             </div>
             <ShareBar share={share} color={USAGE_PROVIDER_COLOR[entry.provider]} />
@@ -354,7 +354,7 @@ function ModelTable({
               </span>
               <span className="shrink-0 tabular-nums">
                 {unpriced ? (
-                  <span className="text-content/30" title="No published rate for this model">
+                  <span className="text-dim" title="No published rate for this model">
                     unpriced
                   </span>
                 ) : (
@@ -362,15 +362,13 @@ function ModelTable({
                     {format(value)}
                     {partial ? (
                       <span
-                        className="ml-1 text-content/30"
+                        className="ml-1 text-dim"
                         title="Some turns on this model have no published rate, so this is a floor"
                       >
                         +
                       </span>
                     ) : null}
-                    <span className="ml-1.5 text-[11.5px] text-content/35">
-                      {formatShare(share)}
-                    </span>
+                    <span className="ml-1.5 text-[11.5px] text-dim">{formatShare(share)}</span>
                   </>
                 )}
               </span>
@@ -380,7 +378,7 @@ function ModelTable({
         );
       })}
       {entries.length > 12 ? (
-        <li className="text-[11.5px] text-content/35">+{entries.length - 12} more</li>
+        <li className="text-[11.5px] text-dim">+{entries.length - 12} more</li>
       ) : null}
     </ul>
   );
@@ -455,7 +453,7 @@ function Footnotes({
   }
 
   return (
-    <footer className="flex flex-col gap-1 pb-4 text-[11.5px] leading-relaxed text-content/35">
+    <footer className="flex flex-col gap-1 pb-4 text-[11.5px] leading-relaxed text-dim">
       {notes.map((note) => (
         <p key={note}>{note}</p>
       ))}
@@ -484,8 +482,8 @@ function Notice({ children }: { children: React.ReactNode }) {
 function EmptyState({ quiet }: { quiet: number }) {
   return (
     <div className="flex flex-col items-center gap-2 py-24 text-center">
-      <p className="text-[13.5px] text-content/60">No usage in this window</p>
-      <p className="max-w-sm text-[12.5px] text-content/35">
+      <p className="text-[13.5px] text-muted">No usage in this window</p>
+      <p className="max-w-sm text-[12.5px] text-dim">
         {quiet > 0
           ? "Usage is read from each CLI's own session transcripts. Run a turn with one of them, or widen the window."
           : "Widen the window, or run a turn with one of the installed agents."}
@@ -496,7 +494,7 @@ function EmptyState({ quiet }: { quiet: number }) {
 
 function Skeleton() {
   return (
-    <div className="flex flex-col items-center gap-2 py-24 text-content/35">
+    <div className="flex flex-col items-center gap-2 py-24 text-dim">
       <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} aria-hidden />
       <span className="text-[12.5px]">Reading local transcripts…</span>
     </div>

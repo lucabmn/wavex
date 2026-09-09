@@ -52,13 +52,13 @@ export function GitHistoryGraph({
           expanded ? "h-7" : "h-full"
         }`}
       >
-        <span className="text-[10px] font-semibold tracking-[0.04em] text-content/55 uppercase">
+        <span className="text-[10px] font-semibold tracking-[0.04em] text-faint uppercase">
           Graph
         </span>
         {expanded ? (
-          <ChevronDown className="ml-auto size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+          <ChevronDown className="ml-auto size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
         ) : (
-          <ChevronRight className="ml-auto size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+          <ChevronRight className="ml-auto size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
         )}
       </button>
       {expanded ? (
@@ -67,9 +67,9 @@ export function GitHistoryGraph({
           className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-none"
         >
           {!cwd || cwd === "~" ? (
-            <p className="px-3 py-2 text-[12.5px] text-content/45">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No project folder</p>
           ) : commits.length === 0 ? (
-            <p className="px-3 py-2 text-[12.5px] text-content/45">No commits yet</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No commits yet</p>
           ) : (
             <ul className="min-w-0 max-w-full">
               {commits.map((commit, index) => {
@@ -154,7 +154,7 @@ function HistoryRow({
             {commit.subject || commit.shortSha}
           </span>
           {commit.author ? (
-            <span className="ml-2 min-w-0 shrink truncate text-[12.5px] leading-[22px] text-content/45">
+            <span className="ml-2 min-w-0 shrink truncate text-[12.5px] leading-[22px] text-faint">
               {commit.author}
             </span>
           ) : null}
@@ -170,7 +170,7 @@ function RefPill({ refInfo }: { refInfo: GraphRef }) {
   return (
     <span
       className={`ml-1 flex h-3.5 min-w-0 max-w-[6.5rem] shrink-0 self-center items-center gap-0.5 truncate rounded-full px-1.5 text-[10px] leading-none ${
-        refInfo.color ? "" : "bg-content/10 text-content/55"
+        refInfo.color ? "" : "bg-content/10 text-faint"
       }`}
       style={
         refInfo.color

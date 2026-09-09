@@ -53,7 +53,7 @@ function ModeTab({
       role="tab"
       aria-selected={selected}
       className={`rounded px-2 py-0.5 font-mono text-[11.5px] ${
-        selected ? "bg-selected text-content" : "text-content/45 hover:text-content/80"
+        selected ? "bg-selected text-content" : "text-faint hover:text-strong"
       }`}
       onClick={onSelect}
     >

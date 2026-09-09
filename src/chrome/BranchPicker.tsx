@@ -247,10 +247,10 @@ export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }:
           }}
           className={
             missingGit
-              ? "flex min-w-0 cursor-default items-center gap-1.5 text-content/50"
+              ? "flex min-w-0 cursor-default items-center gap-1.5 text-faint"
               : `flex min-w-0 items-center gap-1.5 ${
-                  open ? "text-content" : "text-content/50 hover:text-content"
-                } disabled:opacity-40 disabled:hover:text-content/50`
+                  open ? "text-content" : "text-faint hover:text-content"
+                } disabled:opacity-40 disabled:hover:text-faint`
           }
         >
           <GitBranch className="size-3.5 shrink-0" strokeWidth={1.5} />
@@ -310,7 +310,7 @@ export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }:
             data-branch-picker
             className="flex flex-col overflow-hidden"
           >
-            <label className="flex shrink-0 items-center gap-2 border-b border-edge px-2 py-2.5 text-content/50">
+            <label className="flex shrink-0 items-center gap-2 border-b border-edge px-2 py-2.5 text-faint">
               <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
               <input
                 ref={search}
@@ -323,7 +323,7 @@ export function BranchPicker({ cwd, branch, enabled = true, onChange, onClose }:
                 autoCorrect="off"
                 autoCapitalize="off"
                 disabled={busy}
-                className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-content/40 disabled:opacity-60"
+                className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-dim disabled:opacity-60"
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setActive(0);
@@ -375,7 +375,7 @@ function BranchList({
   }, [active]);
 
   if (rows.length === 0) {
-    return <div className="px-3 py-4 text-[12.5px] text-content/50">{emptyLabel}</div>;
+    return <div className="px-3 py-4 text-[12.5px] text-faint">{emptyLabel}</div>;
   }
 
   return (
@@ -429,13 +429,13 @@ function BranchList({
                 {selected ? (
                   <Check className="size-3.5 shrink-0" strokeWidth={1.75} />
                 ) : (
-                  <GitBranch className="size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+                  <GitBranch className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
                 )}
                 <span className="min-w-0 flex-1 truncate font-mono text-[12.5px]">
                   {row.branch.name}
                 </span>
                 {row.branch.remote ? (
-                  <span className="shrink-0 text-[10px] text-content/40">{row.branch.remote}</span>
+                  <span className="shrink-0 text-[10px] text-dim">{row.branch.remote}</span>
                 ) : null}
               </>
             )}

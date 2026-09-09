@@ -45,9 +45,9 @@ type RunnerFiles = { files: CheckpointFile[]; diffs: Map<string, FileDiff> };
 const STATUS_TONE: Record<RaceRunnerStatus, string> = {
   working: "bg-emerald-400/15 text-emerald-300",
   waiting: "bg-amber-400/15 text-amber-300",
-  done: "bg-content/10 text-content/60",
-  stopped: "bg-content/10 text-content/45",
-  idle: "bg-content/10 text-content/40",
+  done: "bg-content/10 text-muted",
+  stopped: "bg-content/10 text-faint",
+  idle: "bg-content/10 text-dim",
 };
 
 /**
@@ -115,7 +115,7 @@ export function RaceCompare({ race, sessions, onStopOne, onStopAll, onClose }: P
       className="h-[min(760px,calc(100vh-96px))]"
     >
       <div className="flex items-center gap-2 px-4 pb-2 pt-1">
-        <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-content/45">
+        <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-faint">
           Runners share one checkout. Accept stages into the git index; Undo restores the pre-race
           snapshot. Neither touches your commits.
         </p>
@@ -123,7 +123,7 @@ export function RaceCompare({ race, sessions, onStopOne, onStopAll, onClose }: P
           <button
             type="button"
             onClick={onStopAll}
-            className="flex shrink-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+            className="flex shrink-0 items-center gap-1.5 rounded-md bg-content/10 px-2 py-1 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             <Square className="size-2.5 fill-current" strokeWidth={0} />
             Stop all
@@ -236,7 +236,7 @@ function RunnerColumn({
           {RACE_STATUS_LABEL[status]}
         </span>
         {elapsed != null ? (
-          <span className="shrink-0 font-mono text-[11.5px] tabular-nums text-content/40">
+          <span className="shrink-0 font-mono text-[11.5px] tabular-nums text-dim">
             {formatLiveElapsed(0, elapsed)}
           </span>
         ) : null}
@@ -246,7 +246,7 @@ function RunnerColumn({
             title="Stop this runner"
             aria-label="Stop this runner"
             onClick={onStop}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
           >
             <Square className="size-2.5 fill-current" strokeWidth={0} />
           </button>
@@ -259,19 +259,19 @@ function RunnerColumn({
             onClick={() => {
               if (session) void run(session.id, () => undoSessionChanges(session.id, cwd));
             }}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-hover hover:text-content disabled:opacity-40"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content disabled:opacity-40"
           >
             <Undo2 className="size-3.5" strokeWidth={1.75} />
           </button>
         )}
       </header>
-      <p className="shrink-0 truncate px-2.5 pt-1.5 font-mono text-[11.5px] text-content/40">
+      <p className="shrink-0 truncate px-2.5 pt-1.5 font-mono text-[11.5px] text-dim">
         {session?.model ?? choice?.model ?? ""}
         {status === "waiting" ? " · waiting on approval in its pane" : ""}
       </p>
       <div className="min-h-0 flex-1">
         {models.length === 0 ? (
-          <p className="px-3 py-4 text-[12.5px] text-content/45">
+          <p className="px-3 py-4 text-[12.5px] text-faint">
             {running ? "No changes yet — still working." : "No changes against the race baseline."}
           </p>
         ) : (

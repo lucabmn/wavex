@@ -326,21 +326,21 @@ export function WorkView({
             <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-2">
               <div className="flex items-center gap-1">
                 <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2">
-                  <Search className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />
+                  <Search className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />
                   <input
                     ref={searchField}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder={`Search chats (${MOD}F)`}
                     aria-label="Search chats"
-                    className="h-full min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-content/35"
+                    className="h-full min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-dim"
                   />
                   {query ? (
                     <button
                       type="button"
                       aria-label="Clear search"
                       onClick={() => setQuery("")}
-                      className="shrink-0 text-content/40 hover:text-content"
+                      className="shrink-0 text-dim hover:text-content"
                     >
                       <X className="size-3" strokeWidth={2} />
                     </button>
@@ -351,7 +351,7 @@ export function WorkView({
                   title="New project"
                   aria-label="New project"
                   onClick={onNewFolder}
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-muted hover:bg-hover hover:text-content"
                 >
                   <FolderPlus className="size-3.5" strokeWidth={1.75} />
                 </button>
@@ -360,7 +360,7 @@ export function WorkView({
                   title={`New chat (${MOD}T)`}
                   aria-label="New chat"
                   onClick={() => onNewChat()}
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-content/60 hover:bg-hover hover:text-content"
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-muted hover:bg-hover hover:text-content"
                 >
                   <Plus className="size-3.5" strokeWidth={1.75} />
                 </button>
@@ -377,7 +377,7 @@ export function WorkView({
           }`}
         >
           {state.loading && items.length === 0 ? (
-            <p className="px-1 py-2 text-[12.5px] text-content/45">Loading…</p>
+            <p className="px-1 py-2 text-[12.5px] text-faint">Loading…</p>
           ) : null}
           {state.error ? (
             <div role="alert" className="mx-1 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
@@ -389,14 +389,14 @@ export function WorkView({
                 type="button"
                 disabled={state.loading}
                 onClick={() => void reloadWorkChats()}
-                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-hover hover:text-content disabled:opacity-40"
+                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-strong hover:bg-hover hover:text-content disabled:opacity-40"
               >
                 Try again
               </button>
             </div>
           ) : null}
           {!state.loading && entries.length === 0 ? (
-            <p className="px-1 py-2 text-[12.5px] text-content/45">
+            <p className="px-1 py-2 text-[12.5px] text-faint">
               {query ? "No chats match." : "No chats yet."}
             </p>
           ) : null}
@@ -422,7 +422,7 @@ export function WorkView({
                 onDelete={() => setFolderDeleteTarget(entry.folder)}
               >
                 {entry.folder.collapsed ? null : entry.chats.length === 0 ? (
-                  <p className="px-2 py-1.5 text-[11.5px] text-content/35">Drag chats here.</p>
+                  <p className="px-2 py-1.5 text-[11.5px] text-dim">Drag chats here.</p>
                 ) : (
                   entry.chats.map(renderChat)
                 )}
@@ -434,7 +434,7 @@ export function WorkView({
               type="button"
               aria-pressed={showArchived}
               onClick={() => setShowArchived((on) => !on)}
-              className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11.5px] text-content/45 hover:bg-hover hover:text-content/80"
+              className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11.5px] text-faint hover:bg-hover hover:text-strong"
             >
               <Archive className="size-3 shrink-0" strokeWidth={1.75} />
               <span className="min-w-0 flex-1 truncate">
@@ -517,8 +517,8 @@ export function WorkView({
             </>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-              <MessageSquare className="size-6 text-content/25" strokeWidth={1.5} />
-              <p className="text-[13.5px] text-content/50">
+              <MessageSquare className="size-6 text-dim" strokeWidth={1.5} />
+              <p className="text-[13.5px] text-faint">
                 Thinking, drafting, questions — work that is not code.
               </p>
               <button
@@ -545,7 +545,7 @@ export function WorkView({
           closeDisabled={deleting}
         >
           <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-            <p className="text-[12.5px] leading-relaxed text-content/60">
+            <p className="text-[12.5px] leading-relaxed text-muted">
               This permanently removes the conversation and its provider thread. This action cannot
               be undone.
             </p>
@@ -565,7 +565,7 @@ export function WorkView({
                 type="button"
                 disabled={deleting}
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content disabled:opacity-40"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40"
               >
                 Cancel
               </button>
@@ -592,7 +592,7 @@ export function WorkView({
           initialFocusRef={folderDeleteCancelRef}
         >
           <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-            <p className="text-[12.5px] leading-relaxed text-content/60">
+            <p className="text-[12.5px] leading-relaxed text-muted">
               The chats stay in your list, but the project and its shared brief are permanently
               removed.
             </p>
@@ -601,7 +601,7 @@ export function WorkView({
                 ref={folderDeleteCancelRef}
                 type="button"
                 onClick={() => setFolderDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
               >
                 Cancel
               </button>
@@ -701,7 +701,7 @@ function FolderSection({
       ) : (
         <div
           className={`group relative flex items-center gap-1 rounded-md pr-1 ${
-            dropTarget ? "bg-accent/20 text-content" : "text-content/80 hover:bg-hover"
+            dropTarget ? "bg-accent/20 text-content" : "text-strong hover:bg-hover"
           }`}
         >
           <button
@@ -717,26 +717,26 @@ function FolderSection({
             }}
             className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1.5 text-left"
           >
-            <span className="grid size-3.5 shrink-0 place-items-center text-content/55">
+            <span className="grid size-3.5 shrink-0 place-items-center text-faint">
               {folder.collapsed ? (
                 <ChevronRight className="size-3.5" strokeWidth={1.75} />
               ) : (
                 <ChevronDown className="size-3.5" strokeWidth={1.75} />
               )}
             </span>
-            <Folder className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />
+            <Folder className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
             <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium">{folder.name}</span>
             {folder.prompt ? (
-              <StickyNote className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+              <StickyNote className="size-3 shrink-0 text-dim" strokeWidth={1.75} />
             ) : null}
-            <span className="shrink-0 text-[11.5px] tabular-nums text-content/40">{count}</span>
+            <span className="shrink-0 text-[11.5px] tabular-nums text-dim">{count}</span>
           </button>
           <button
             type="button"
             aria-label={`Edit brief for ${folder.name}`}
             title="Project brief"
             onClick={onEditPrompt}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <StickyNote className="size-3" strokeWidth={1.75} />
           </button>
@@ -744,7 +744,7 @@ function FolderSection({
             type="button"
             aria-label={`New chat in ${folder.name}`}
             onClick={onNewChat}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Plus className="size-3" strokeWidth={1.75} />
           </button>
@@ -753,7 +753,7 @@ function FolderSection({
             aria-label={`Delete project ${folder.name}`}
             title="Delete project — its chats are kept"
             onClick={onDelete}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="hidden shrink-0 rounded p-1 text-faint hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Trash2 className="size-3" strokeWidth={1.75} />
           </button>
@@ -778,7 +778,7 @@ function FolderPromptDialog({
   return (
     <Modal title="Project brief" description={folder.name} size="md" onClose={onClose}>
       <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-        <p className="text-[12.5px] leading-snug text-content/55">
+        <p className="text-[12.5px] leading-snug text-faint">
           Sent ahead of every message from a chat in this project, so each agent knows what it is
           working on.
         </p>
@@ -795,7 +795,7 @@ function FolderPromptDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[12.5px] text-content/70 hover:bg-hover hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
@@ -998,9 +998,7 @@ function ChatRow({
               }}
               className="pointer-events-none fixed left-0 top-0 flex items-center gap-1.5 rounded-md border border-edge-strong bg-background-base/90 px-2 py-1.5 text-[12.5px] text-content shadow-lg backdrop-blur-sm"
             >
-              {pinned ? (
-                <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
-              ) : null}
+              {pinned ? <Pin className="size-3 shrink-0 text-faint" strokeWidth={1.75} /> : null}
               <span className="min-w-0 flex-1 truncate">{title}</span>
             </div>,
             document.body,
@@ -1014,7 +1012,7 @@ function ChatRow({
             ? "bg-accent/20 text-content"
             : active
               ? "bg-selected text-content"
-              : "text-content/75 hover:bg-hover"
+              : "text-strong hover:bg-hover"
         } ${dragging ? "opacity-40" : ""} ${archived ? "opacity-60" : ""}`}
       >
         <button
@@ -1029,7 +1027,7 @@ function ChatRow({
           onDoubleClick={onRenameStart}
           className="flex min-w-0 flex-1 touch-none items-center gap-1.5 px-2 py-1.5 text-left text-[12.5px]"
         >
-          {pinned ? <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} /> : null}
+          {pinned ? <Pin className="size-3 shrink-0 text-faint" strokeWidth={1.75} /> : null}
           <span className="min-w-0 flex-1 truncate">{title}</span>
         </button>
         {busy ? (
@@ -1044,7 +1042,7 @@ function ChatRow({
           aria-label={pinned ? `Unpin ${title}` : `Pin ${title}`}
           aria-pressed={pinned}
           onClick={onPin}
-          className={`shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+          className={`shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             pinned ? "block" : "hidden"
           }`}
         >
@@ -1054,7 +1052,7 @@ function ChatRow({
           type="button"
           aria-label={archived ? `Unarchive ${title}` : `Archive ${title}`}
           onClick={onArchive}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {archived ? (
             <Undo2 className="size-3" strokeWidth={1.75} />
@@ -1066,7 +1064,7 @@ function ChatRow({
           type="button"
           aria-label={`Rename ${title}`}
           onClick={onRenameStart}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <PenLine className="size-3" strokeWidth={1.75} />
         </button>
@@ -1074,7 +1072,7 @@ function ChatRow({
           type="button"
           aria-label={`Delete ${title}`}
           onClick={onDelete}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="hidden shrink-0 rounded p-1 text-faint hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Trash2 className="size-3" strokeWidth={1.75} />
         </button>
