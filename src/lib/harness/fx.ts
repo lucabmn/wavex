@@ -1,4 +1,5 @@
 import { projectKey, type HostId } from "../host";
+import { acpMcpServers } from "../mcp/session";
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { AcpClient, type AcpHandlers } from "./acp";
@@ -276,8 +277,9 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
   await spawnChild(input.sessionId, path, fxSpawnArgs(input.model), input.cwd, hostId);
 
   try {
+    let initializeResult: unknown;
     try {
-      await acp.request(
+      initializeResult = await acp.request(
         "initialize",
         {
           protocolVersion: 1,
@@ -289,6 +291,14 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     } catch (error) {
       throw fxStartupError(error);
     }
+
+    // The same list for a resumed session as for a fresh one: a session that
+    // came back with fewer tools than it started with is a bug nobody can see.
+    const mcpServers = await acpMcpServers({
+      cwd: resolved.path,
+      hostId,
+      initializeResult,
+    });
 
     let setup: SessionSetupResult | undefined;
     let acpSessionId: string | undefined;
@@ -311,7 +321,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
             {
               sessionId: resume.acpSessionId,
               cwd: resolved.path,
-              mcpServers: [],
+              mcpServers,
             },
             SESSION_TIMEOUT_MS,
           );
@@ -328,11 +338,20 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     }
 
     if (!acpSessionId) {
-      setup = await acp.request<SessionSetupResult>(
-        "session/new",
-        { cwd: resolved.path, mcpServers: [] },
-        SESSION_TIMEOUT_MS,
-      );
+      const start = (servers: unknown[]) =>
+        acp.request<SessionSetupResult>(
+          "session/new",
+          { cwd: resolved.path, mcpServers: servers },
+          SESSION_TIMEOUT_MS,
+        );
+      try {
+        setup = await start(mcpServers);
+      } catch (error) {
+        // An entry this build of the CLI will not take must not cost the user
+        // the session. Retry once with none, which is what it always got.
+        if (mcpServers.length === 0) throw error;
+        setup = await start([]);
+      }
       acpSessionId = sessionIdFromResult(setup);
     }
     if (!acpSessionId) throw new Error("fx did not return a session id");

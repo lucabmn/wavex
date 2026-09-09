@@ -72,6 +72,19 @@ describe("grok protocol", () => {
     });
   });
 
+  it("carries the MCP servers a session was started with, and none by default", () => {
+    expect(grokSessionNewParams("/repo", "supervised")).toEqual({
+      cwd: "/repo",
+      mcpServers: [],
+    });
+    expect(
+      grokSessionNewParams("/repo", "supervised", [{ name: "context7", command: "npx" }]),
+    ).toEqual({
+      cwd: "/repo",
+      mcpServers: [{ name: "context7", command: "npx" }],
+    });
+  });
+
   it("never authenticates with the browser grok.com method", () => {
     expect(
       grokAuthMethodId({

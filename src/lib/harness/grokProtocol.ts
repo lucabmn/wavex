@@ -113,8 +113,10 @@ export function grokTextSpawnArgs(model: string = TEXT_MODEL): string[] {
 export function grokSessionNewParams(
   cwd: string,
   runtimeMode: RuntimeMode,
+  /** Empty for a helper call: only an interactive session gets the user's servers. */
+  mcpServers: unknown[] = [],
 ): Record<string, unknown> {
-  const params: Record<string, unknown> = { cwd, mcpServers: [] };
+  const params: Record<string, unknown> = { cwd, mcpServers };
   if (runtimeMode === "full-access") {
     params._meta = { yoloMode: true };
   } else if (runtimeMode === "auto") {

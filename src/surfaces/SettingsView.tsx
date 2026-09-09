@@ -16,6 +16,7 @@ import { ArchivePage } from "./settings/ArchivePage";
 import { GeneralPage } from "./settings/GeneralPage";
 import { KeybindingsPage } from "./settings/KeybindingsPage";
 import { LanguageServersPage } from "./settings/LanguageServersPage";
+import { McpPage } from "./settings/McpPage";
 import { ProfilesPage } from "./settings/ProfilesPage";
 import { ProvidersPage } from "./settings/ProvidersPage";
 import { SkillsPage } from "./settings/SkillsPage";
@@ -114,6 +115,7 @@ export function SettingsView({
             {section === "providers" ? <ProvidersPage /> : null}
             {section === "connections" ? <ConnectionsPage /> : null}
             {section === "language-servers" ? <LanguageServersPage /> : null}
+            {section === "mcp" ? <McpPage cwd={cwd} /> : null}
             {section === "archive" ? (
               <ArchivePage
                 cwd={cwd}

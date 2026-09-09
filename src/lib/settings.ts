@@ -13,6 +13,7 @@ export type SettingsSectionId =
   | "connections"
   | "skills"
   | "language-servers"
+  | "mcp"
   | "archive";
 
 /**
@@ -84,6 +85,13 @@ export const SETTINGS_SECTIONS: {
     group: "agents",
     label: "Language servers",
     description: "Language servers wavex can drive in the coding view, and where each one is.",
+  },
+  {
+    id: "mcp",
+    group: "agents",
+    label: "MCP servers",
+    description:
+      "MCP servers the installed agent CLIs have configured, and which of them wavex passes on.",
   },
   {
     id: "archive",
