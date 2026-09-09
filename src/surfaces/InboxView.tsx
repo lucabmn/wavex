@@ -21,7 +21,6 @@ import { InboxFiltersMenu, INBOX_FILTER_MENU_WIDTH } from "../chrome/InboxFilter
 import { InboxProviderMark } from "../chrome/InboxProviderMark";
 import { ProjectLogoIcon } from "../chrome/ProjectLogoIcon";
 import { ProjectMascot } from "../chrome/ProjectMascot";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useDragResize } from "../hooks/useDragResize";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -158,20 +157,11 @@ function InboxDetailTab({
 type Props = {
   cwd: string;
   recents: RecentProject[];
-  besideRail?: boolean;
   onClose?: () => void;
-  onToggleSidebar?: () => void;
   onStart?: (item: InboxItem, body?: string) => void | Promise<void>;
 };
 
-export function InboxView({
-  cwd,
-  recents,
-  besideRail = false,
-  onClose,
-  onToggleSidebar,
-  onStart,
-}: Props) {
+export function InboxView({ cwd, recents, onClose, onStart }: Props) {
   const listLock = useLockOverscroll<HTMLDivElement>();
   const detailLock = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
@@ -475,8 +465,6 @@ export function InboxView({
         className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <Inbox className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
           <span className="min-w-0 truncate text-content">Inbox</span>

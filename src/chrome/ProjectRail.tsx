@@ -41,7 +41,7 @@ import {
   saveProjectRailWidth,
 } from "../lib/appearance";
 import { basename, revealPath, type GitDiffStats } from "../lib/fs";
-import { canRevealPath, IS_MAC, MOD, revealLabel } from "../lib/platform";
+import { canRevealPath, MOD, revealLabel } from "../lib/platform";
 import { hostIdForProject } from "../lib/transport";
 import type { HostId } from "../lib/host";
 import { projectKey } from "../lib/host";
@@ -85,7 +85,6 @@ import { RailAction, RailSearch } from "./RailAction";
 import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
 import { RemoveProjectDialog } from "./RemoveProjectDialog";
-import { DevModeSlot, TabVisitNav } from "./TitleBar";
 import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import { WorkspaceSidebarFooter } from "./WorkspaceSidebarFooter";
 import { SettingsNav } from "./SettingsRail";
@@ -124,10 +123,6 @@ type Props = {
   recents: RecentProject[];
   inboxUnseen?: boolean;
   busyPaths?: Iterable<string>;
-  canGoBack?: boolean;
-  canGoForward?: boolean;
-  onGoBack?: () => void;
-  onGoForward?: () => void;
   onSearch?: () => void;
   searchActive?: boolean;
   onOpenInbox?: () => void;
@@ -141,7 +136,6 @@ type Props = {
   onOpenAutomations?: () => void;
   activityActive?: boolean;
   automationsActive?: boolean;
-  onTogglePanel?: () => void;
   onSelectProject: (path: string) => void;
   onOpenProject: () => void;
   onRemoveProject?: (path: string, options: { purgeData: boolean }) => void;
@@ -173,10 +167,6 @@ export function ProjectRail({
   onModeChange,
   inboxUnseen = false,
   busyPaths,
-  canGoBack = false,
-  canGoForward = false,
-  onGoBack,
-  onGoForward,
   onSearch,
   searchActive = false,
   onOpenInbox,
@@ -190,7 +180,6 @@ export function ProjectRail({
   onOpenAutomations,
   activityActive = false,
   automationsActive = false,
-  onTogglePanel,
   onSelectProject,
   onOpenProject,
   onRemoveProject,
@@ -426,22 +415,6 @@ export function ProjectRail({
       aria-label="Projects"
       className="sidebar-glass relative flex shrink-0 flex-col"
     >
-      <div
-        className="flex h-10 shrink-0 select-none items-center pr-1.5"
-        data-tauri-drag-region="deep"
-      >
-        {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
-        <DevModeSlot />
-        <TabVisitNav
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onGoBack={onGoBack}
-          onGoForward={onGoForward}
-          onTogglePanel={settingsOpen ? undefined : onTogglePanel}
-          panelActive
-        />
-      </div>
-
       {settingsOpen ? (
         <SettingsNav
           section={settingsSection}

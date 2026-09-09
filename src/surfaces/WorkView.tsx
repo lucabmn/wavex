@@ -14,9 +14,8 @@ import { ChatComposer, type ChatComposerHandle } from "../chrome/ChatComposer";
 import { queuedFor } from "../lib/promptQueue";
 import { Modal } from "../chrome/Modal";
 import { ModeSwitch } from "../chrome/ModeSwitch";
-import { DevModeSlot, IconButton, TabVisitNav } from "../chrome/TitleBar";
+import { IconButton } from "../chrome/TitleBar";
 import { WorkspaceSidebarFooter } from "../chrome/WorkspaceSidebarFooter";
-import { WindowControls } from "../chrome/WindowControls";
 import {
   Archive,
   ChevronDown,
@@ -39,7 +38,7 @@ import {
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { setGrabbing, suppressTextSelection } from "../lib/drag";
 import { LAYER } from "../lib/layers";
-import { IS_MAC, MOD } from "../lib/platform";
+import { MOD } from "../lib/platform";
 import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import type { AppMode } from "../lib/workspace/appMode";
 import {
@@ -319,21 +318,6 @@ export function WorkView({
           listOpen ? "flex w-64" : "flex w-auto"
         } shrink-0 flex-col border-r border-edge`}
       >
-        <div
-          className="flex h-10 shrink-0 select-none items-center pr-1.5"
-          data-tauri-drag-region="deep"
-        >
-          {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
-          <DevModeSlot />
-          {/* Work has no tab-visit history, so back and forward stay disabled;
-              they are here to keep the row identical across a mode switch. */}
-          <TabVisitNav
-            onTogglePanel={() => setListOpen((open) => !open)}
-            panelActive={listOpen}
-            panelLabel="Toggle Chats"
-          />
-        </div>
-
         {listOpen ? (
           <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
             <div className="pb-1.5">
@@ -474,22 +458,15 @@ export function WorkView({
       </aside>
 
       <section className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
-        <div
-          className="flex h-10 shrink-0 select-none items-center gap-2 px-3"
-          data-tauri-drag-region="deep"
-        >
+        <div className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-2 px-3">
           {listOpen ? null : (
-            <>
-              <IconButton label="Toggle Chats" onClick={() => setListOpen(true)}>
-                <PanelLeft className="size-3.5" strokeWidth={1.75} />
-              </IconButton>
-              <ModeSwitch mode={mode} onChange={onModeChange} />
-            </>
+            <IconButton label="Toggle Chats" onClick={() => setListOpen(true)}>
+              <PanelLeft className="size-3.5" strokeWidth={1.75} />
+            </IconButton>
           )}
-          <span className="min-w-0 flex-1 truncate text-[13.5px] text-content/70">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-medium">
             {active ? active.title : "Work"}
           </span>
-          {IS_MAC ? null : <WindowControls />}
         </div>
 
         {/* Only the body lifts in on a mode switch: the row above it repeats

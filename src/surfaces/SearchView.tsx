@@ -12,7 +12,6 @@ import { FileTypeIcon } from "../chrome/FileTypeIcon";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { MatchText } from "../chrome/MatchText";
 import { ProjectLogoIcon } from "../chrome/ProjectLogoIcon";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import {
@@ -56,9 +55,7 @@ type Props = {
   history: SessionSummary[];
   sessions: Session[];
   focusToken?: number;
-  besideRail?: boolean;
   onClose: () => void;
-  onToggleSidebar?: () => void;
   onOpenFile: OpenFileFn;
   onOpenSession: (sessionId: string) => void;
   onOpenProject: (path: string) => void;
@@ -71,9 +68,7 @@ export function SearchView({
   history,
   sessions,
   focusToken = 0,
-  besideRail = false,
   onClose,
-  onToggleSidebar,
   onOpenFile,
   onOpenSession,
   onOpenProject,
@@ -305,8 +300,6 @@ export function SearchView({
         className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
         <label className="flex min-w-0 flex-1 items-center gap-2 px-3 text-content/50">
           <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
           <input

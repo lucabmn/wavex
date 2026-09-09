@@ -27,7 +27,7 @@ import {
 } from "react";
 import { loadSidebarTabOrder, saveSidebarTabOrder, type SidebarTabId } from "../lib/appearance";
 import { basename, type GitHistoryCommit } from "../lib/fs";
-import { IS_MAC, MOD } from "../lib/platform";
+import { MOD } from "../lib/platform";
 import { resolveModel } from "../lib/models";
 import { projectName } from "../lib/paths";
 import { sessionDisplayTitle } from "../lib/session";
@@ -111,7 +111,7 @@ import type { AppMode } from "../lib/workspace/appMode";
 import { RailAction } from "./RailAction";
 import { CLOCK_STRIDE_COARSE, useNow } from "../lib/motion";
 import { TerminalSpinner } from "./TerminalSpinner";
-import { DevModeSlot, IconButton, TabVisitNav } from "./TitleBar";
+import { IconButton } from "./TitleBar";
 import { ProjectSearch } from "./ProjectSearch";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 import { ProjectMascot } from "./ProjectMascot";
@@ -176,10 +176,6 @@ type Props = {
   onFilesSearchOpenChange: (open: boolean) => void;
   onOpenFilesSearch?: () => void;
   searchFocusToken?: number;
-  canGoBack?: boolean;
-  canGoForward?: boolean;
-  onGoBack?: () => void;
-  onGoForward?: () => void;
   onOpenDiff?: (path: string) => void;
   onOpenCommit?: (commit: GitHistoryCommit) => void;
   selectedDiffPath?: string;
@@ -209,7 +205,6 @@ type Props = {
   automationsActive?: boolean;
   notesEnabled?: boolean;
   usageActive?: boolean;
-  onToggleProjectRail?: () => void;
   /** Work is in front: it brings its own left column, so this one stands down. */
   workMode?: boolean;
   mode?: AppMode;
@@ -263,10 +258,6 @@ function SidebarComponent({
   onFilesSearchOpenChange,
   onOpenFilesSearch,
   searchFocusToken = 0,
-  canGoBack = false,
-  canGoForward = false,
-  onGoBack,
-  onGoForward,
   onOpenDiff,
   onOpenCommit,
   selectedDiffPath,
@@ -296,7 +287,6 @@ function SidebarComponent({
   automationsActive = false,
   notesEnabled = true,
   usageActive = false,
-  onToggleProjectRail,
   workMode = false,
   mode,
   onModeChange,
@@ -938,11 +928,9 @@ function SidebarComponent({
       ) : (
         <>
           <div
-            className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-1 pr-1.5"
+            className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-1 px-2"
             data-tauri-drag-region="deep"
           >
-            {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
-            <DevModeSlot />
             {onSelectProject ? (
               <SidebarProjectPicker
                 cwd={cwd}
@@ -965,14 +953,6 @@ function SidebarComponent({
                 inboxUnseen={inboxUnseen}
               />
             ) : null}
-            <TabVisitNav
-              canGoBack={canGoBack}
-              canGoForward={canGoForward}
-              onGoBack={onGoBack}
-              onGoForward={onGoForward}
-              onTogglePanel={onToggleProjectRail}
-              panelActive={false}
-            />
           </div>
           <div
             role="tablist"
@@ -1334,10 +1314,6 @@ function SidebarComponent({
           liveAgents={liveAgents}
           activeSessionId={activeSessionId}
           onSelectAgent={onSelectAgent}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onGoBack={onGoBack}
-          onGoForward={onGoForward}
           onSearch={onSearch}
           searchActive={searchActive}
           onOpenInbox={onOpenInbox}
@@ -1351,7 +1327,6 @@ function SidebarComponent({
           activityActive={activityActive}
           onOpenAutomations={onOpenAutomations}
           automationsActive={automationsActive}
-          onTogglePanel={onToggleProjectRail}
           mode={mode}
           onModeChange={onModeChange}
           onSelectProject={onSelectProject}

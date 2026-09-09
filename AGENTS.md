@@ -318,12 +318,19 @@ column bought a third vertical pane before any content. Opened, the rail and
 the panel are one sidebar rather than two, sharing a single rule band with no
 seam between them.
 
-The sidebar has one header row, not three: window controls, the project
-switcher, the destinations, and the visit nav all stand in it, with the tab
-strip below. Three stacked strips before any content is what made the window
-read as a filing cabinet. In the body, a lone tab is not a choice and is not
-drawn as one — it stretches and reads as the title of what is on screen; the
-strip only appears once there is something to choose between.
+One header spans the whole window, above both columns: `TitleBar` mounts at the
+App root, not inside the body. It is the only thing that reserves the macOS
+traffic-light inset, and it carries the visit arrows, the panel toggles, the
+mode switch, what is open, and the window's own actions. Every column used to
+open with a 40px strip of its own — the rail's, the panel's, the body's, and
+the two Work draws — so the top of the window was a stack of headers rather
+than a place. Nothing below the header reserves the traffic lights or draws a
+back arrow again; a surface that wants a title draws a title.
+
+The sidebar keeps one row of its own, for the project switcher and the
+destinations, with the tab strip below it. In the body, a lone tab is not a
+choice and is not drawn as one — it stretches and reads as the title of what is
+on screen; the strip only appears once there is something to choose between.
 
 Corners, Depth and Separators in Settings scale the language rather than
 bolting a second one beside it, which only holds while radius, shadow and rule

@@ -5,7 +5,6 @@ import { HarnessIcon } from "../chrome/HarnessIcon";
 import { Board, CircleAlert, ListView, Square } from "../chrome/icons";
 import { FilterChip } from "../chrome/FilterChip";
 import { Segmented } from "../chrome/Segmented";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useNow } from "../lib/motion";
@@ -34,9 +33,7 @@ type ActivityFilter = "all" | "waiting" | "working" | "done";
 
 type Props = {
   sessions: SessionSummary[];
-  besideRail?: boolean;
   onClose: () => void;
-  onToggleSidebar?: () => void;
   onOpenSession: (sessionId: string) => void;
 };
 
@@ -45,13 +42,7 @@ type Props = {
  * the same native store the menu bar reads, so twenty worktrees in five windows
  * are one list with one truth.
  */
-export function ActivityView({
-  sessions,
-  besideRail = false,
-  onClose,
-  onToggleSidebar,
-  onOpenSession,
-}: Props) {
+export function ActivityView({ sessions, onClose, onOpenSession }: Props) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -171,8 +162,6 @@ export function ActivityView({
         className="flex h-10 shrink-0 items-center border-b border-edge select-none"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <span className="shrink-0 text-content/45">Activity</span>
           <span aria-hidden className="shrink-0 text-content/25">

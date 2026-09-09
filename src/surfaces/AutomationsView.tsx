@@ -17,7 +17,6 @@ import {
   Trash2,
 } from "../chrome/icons";
 import { SecondaryButton } from "../chrome/SettingsRow";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { CLOCK_STRIDE_COARSE, useNow } from "../lib/motion";
@@ -66,9 +65,7 @@ import { formatMoment, upcomingRuns } from "../lib/automations/schedule";
 type Props = {
   /** Projects offered as targets, in the rail's order. */
   projects: readonly string[];
-  besideRail?: boolean;
   onClose: () => void;
-  onToggleSidebar?: () => void;
   /** The host is the automation's: a run's session lives where it ran. */
   onOpenSession: (sessionId: string, hostId: HostId) => void;
 };
@@ -99,13 +96,7 @@ const RUN_TONE: Record<AutomationRun["status"], string> = {
  * automation's history, because the two questions a person brings here are
  * "what is going to run" and "what did that one do last time".
  */
-export function AutomationsView({
-  projects,
-  besideRail = false,
-  onClose,
-  onToggleSidebar,
-  onOpenSession,
-}: Props) {
+export function AutomationsView({ projects, onClose, onOpenSession }: Props) {
   const listLock = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -236,8 +227,6 @@ export function AutomationsView({
         className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <span className="shrink-0 text-content/45">Automations</span>
           <span aria-hidden className="shrink-0 text-content/25">

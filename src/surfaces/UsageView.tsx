@@ -3,7 +3,6 @@ import { HarnessIcon } from "../chrome/HarnessIcon";
 import { LoaderCircle, RefreshCw } from "../chrome/icons";
 import { PlanLimitCards } from "../chrome/PlanLimitCards";
 import { Segmented } from "../chrome/Segmented";
-import { OverlayNav } from "../chrome/TitleBar";
 import { UsageChart, type UsageMetric } from "../chrome/UsageChart";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -40,12 +39,10 @@ let rememberedDays: UsageWindowDays = 30;
 let rememberedMetric: UsageMetric = "cost";
 
 type Props = {
-  besideRail?: boolean;
   onClose: () => void;
-  onToggleSidebar?: () => void;
 };
 
-export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Props) {
+export function UsageView({ onClose }: Props) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -122,8 +119,6 @@ export function UsageView({ besideRail = false, onClose, onToggleSidebar }: Prop
         className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <span className="shrink-0 text-content/45">Usage</span>
           <span aria-hidden className="shrink-0 text-content/25">

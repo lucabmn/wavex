@@ -76,6 +76,13 @@ type Props = {
   onSelectProject?: (path: string) => void;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
+  /** Work draws its own body; the header then carries only the shell. */
+  workMode?: boolean;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
+  onGoBack?: () => void;
+  onGoForward?: () => void;
+  onToggleProjectRail?: () => void;
 };
 
 function sessionMeta(tab: TitleTab): string {
@@ -618,6 +625,12 @@ function TitleBarComponent({
   onSelectProject,
   mode,
   onModeChange,
+  workMode = false,
+  canGoBack = false,
+  canGoForward = false,
+  onGoBack,
+  onGoForward,
+  onToggleProjectRail,
 }: Props) {
   const tabIds = tabs.map((tab) => tab.id);
   const sortable = useSortable(tabIds, onReorder);
@@ -707,7 +720,7 @@ function TitleBarComponent({
   const showProjectButton = railClosed && Boolean(onSelectProject) && !showCurrentProject;
   const trailingControls = (
     <div className="flex h-full shrink-0 items-stretch">
-      <div className="flex items-center gap-0.5 px-2">
+      <div className={`flex items-center gap-0.5 px-2 ${workMode ? "hidden" : ""}`}>
         {projectless && railClosed && onOpenInbox ? (
           <IconButton label="Inbox" onClick={onOpenInbox}>
             <Inbox className="size-3.5" strokeWidth={1.75} />
@@ -756,26 +769,31 @@ function TitleBarComponent({
       className="ui-rule-b flex h-10 shrink-0 select-none items-stretch"
       data-tauri-drag-region="deep"
     >
-      {/* Both the rail and the sidebar step aside without a project, so the
-          title bar takes over the traffic lights and the rail toggle. */}
-      {projectless && railClosed ? (
-        <>
-          <div className="w-[78px] shrink-0" />
-          <div className="flex shrink-0 items-center px-1.5">
-            <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
-              <PanelLeft className="size-3.5" strokeWidth={1.75} />
-            </IconButton>
-          </div>
-        </>
-      ) : null}
-      {/* The rail owns the switch when it is open; this is the fallback for a
-          collapsed rail, matching how Go to File and New session appear there. */}
-      {railClosed && mode && onModeChange ? (
-        <div className="ui-rule-r flex shrink-0 items-center px-2">
+      {/* The header spans the window, so it is the only thing that can hold
+          the traffic lights out of the way. */}
+      {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
+      <div className="flex shrink-0 items-center pl-1">
+        <TabVisitNav
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          onGoBack={onGoBack}
+          onGoForward={onGoForward}
+          onTogglePanel={workMode ? undefined : onToggleProjectRail}
+          panelActive={projectRailOpen}
+        />
+        {workMode ? null : (
+          <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
+            <PanelLeft className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
+        )}
+      </div>
+      {mode && onModeChange ? (
+        <div className="flex shrink-0 items-center px-2">
           <ModeSwitch mode={mode} onChange={onModeChange} />
         </div>
       ) : null}
-      {showProjectButton && onSelectProject ? (
+      <DevModeSlot />
+      {workMode ? null : showProjectButton && onSelectProject ? (
         <CwdPicker
           cwd={cwd}
           recents={recents}
@@ -790,11 +808,12 @@ function TitleBarComponent({
 
       <div
         className={`flex min-w-0 flex-1 items-stretch${
-          showProjectButton ? " border-l border-edge" : ""
+          showProjectButton && !workMode ? " border-l border-edge" : ""
         }`}
       >
+        {workMode ? <div className="min-w-0 flex-1" /> : null}
         <div
-          className="relative h-full min-w-0 flex-1 overflow-hidden"
+          className={`relative h-full min-w-0 flex-1 overflow-hidden ${workMode ? "hidden" : ""}`}
           onWheel={(event) => {
             const el = tabStripRef.current;
             if (!el || el.scrollWidth <= el.clientWidth) return;

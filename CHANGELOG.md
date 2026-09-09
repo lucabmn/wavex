@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Give the window one header instead of five. The title bar spans the whole
+  window above both columns and is the only thing that holds the macOS traffic
+  lights out of the way; the project rail, the workspace panel, Work's two
+  columns and every overlay surface lose the 40px strip each used to open
+  with, along with the back arrow and sidebar toggle each drew again.
 - Open in two columns rather than three. The project rail is closed by default
   — the sidebar's header carries the project switcher and every destination it
   held — and the sidebar itself has one header row instead of three. A lone

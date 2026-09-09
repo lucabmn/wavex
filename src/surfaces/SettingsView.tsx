@@ -24,7 +24,6 @@ type Props = {
   section: SettingsSectionId;
   cwd: string;
   sessions: SessionSummary[];
-  besideRail?: boolean;
   onClose: () => void;
   onOpenSession: (sessionId: string) => void;
   onArchiveSession: (sessionId: string, archived: boolean) => void;
@@ -39,7 +38,6 @@ export function SettingsView({
   section,
   cwd,
   sessions,
-  besideRail = false,
   onClose,
   onOpenSession,
   onArchiveSession,
@@ -77,7 +75,6 @@ export function SettingsView({
         className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
           <span className="shrink-0 text-content/45">Settings</span>
           <span aria-hidden className="shrink-0 text-content/25">
