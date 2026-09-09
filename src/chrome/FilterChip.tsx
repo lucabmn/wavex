@@ -28,11 +28,11 @@ export function FilterChip({
       className={`inline-flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] transition-colors ${
         active
           ? attention
-            ? "bg-amber-400/15 text-amber-300"
-            : "bg-content/12 text-content"
+            ? "bg-warn/15 text-warn"
+            : "bg-selected text-content"
           : attention
-            ? "text-amber-300/80 hover:bg-amber-400/10 hover:text-amber-300"
-            : "text-content/45 hover:bg-content/8 hover:text-content/75"
+            ? "text-warn/80 hover:bg-warn/10 hover:text-warn"
+            : "text-faint hover:bg-hover hover:text-strong"
       }`}
     >
       <span className="truncate">{label}</span>

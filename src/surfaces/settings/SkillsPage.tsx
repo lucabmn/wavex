@@ -98,7 +98,7 @@ export function SkillsPage({ cwd }: { cwd: string }) {
           onChanged={onChanged}
         />
       ) : (
-        <div className="flex min-w-0 flex-1 items-center justify-center px-8 text-[13px] text-content/40">
+        <div className="flex min-w-0 flex-1 items-center justify-center px-8 text-[13.5px] text-dim">
           {details === null ? "Reading skill folders…" : "No skill matches."}
         </div>
       )}
@@ -141,17 +141,17 @@ function SkillList({
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
 
   return (
-    <div className="flex w-64 shrink-0 flex-col border-r border-content/10">
+    <div className="flex w-64 shrink-0 flex-col border-r border-edge">
       <div className="flex shrink-0 flex-col gap-2 p-2">
-        <div className="flex items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2 py-1.5 focus-within:border-content/25">
-          <Search className="size-3.5 shrink-0 text-content/35" strokeWidth={1.75} />
+        <div className="flex items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2 py-1.5 focus-within:border-edge-strong">
+          <Search className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />
           <input
             value={query}
             onChange={(event) => onQuery(event.target.value)}
             spellCheck={false}
             placeholder="Search skills…"
             aria-label="Search skills"
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-content outline-none placeholder:text-content/35"
+            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-content outline-none placeholder:text-dim"
           />
         </div>
         <div className="flex items-center gap-1.5">
@@ -159,7 +159,7 @@ function SkillList({
             aria-label="Filter skills"
             value={filterValue}
             onChange={(event) => onFilter(event.target.value)}
-            className="h-7 min-w-0 flex-1 rounded-md border border-content/10 bg-content/5 px-2 text-[12px] text-content outline-none hover:border-content/20"
+            className="h-7 min-w-0 flex-1 rounded-md border border-edge bg-content/5 px-2 text-[12.5px] text-content outline-none hover:border-edge-strong"
           >
             {filterOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -172,7 +172,7 @@ function SkillList({
             onClick={onAdd}
             aria-label="Add a skill"
             title="Add a skill"
-            className="flex size-7 shrink-0 items-center justify-center rounded-md border border-content/10 bg-content/5 text-content/60 hover:text-content"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md border border-edge bg-content/5 text-muted hover:text-content"
           >
             <Plus className="size-3.5" strokeWidth={1.75} />
           </button>
@@ -186,10 +186,10 @@ function SkillList({
         {groups.map((group) => (
           <div key={group.scope} className="flex flex-col gap-px pb-2">
             <div className="flex items-baseline gap-1.5 px-2 pb-1 pt-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-content/40">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-dim">
                 {group.label}
               </span>
-              <span className="text-[10px] text-content/30">{group.skills.length}</span>
+              <span className="text-[10px] text-dim">{group.skills.length}</span>
             </div>
             {group.skills.map((skill) => (
               <button
@@ -198,22 +198,22 @@ function SkillList({
                 aria-current={skill.name === selectedName ? "true" : undefined}
                 onClick={() => onSelect(skill.name)}
                 className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${
-                  skill.name === selectedName ? "bg-content/10" : "hover:bg-content/5"
+                  skill.name === selectedName ? "bg-content/10" : "hover:bg-hover"
                 }`}
               >
                 <Cube
-                  className={`size-4 shrink-0 ${skill.enabled ? "text-content/50" : "text-content/25"}`}
+                  className={`size-4 shrink-0 ${skill.enabled ? "text-faint" : "text-dim"}`}
                   strokeWidth={1.75}
                 />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span
-                    className={`truncate text-[12px] leading-tight ${
-                      skill.enabled ? "text-content" : "text-content/40 line-through"
+                    className={`truncate text-[12.5px] leading-tight ${
+                      skill.enabled ? "text-content" : "text-dim line-through"
                     }`}
                   >
                     {skill.name}
                   </span>
-                  <span className="truncate text-[11px] leading-tight text-content/40">
+                  <span className="truncate text-[11.5px] leading-tight text-dim">
                     {skill.description || "No description"}
                   </span>
                 </span>
@@ -223,7 +223,7 @@ function SkillList({
         ))}
       </div>
 
-      <div className="shrink-0 border-t border-content/10 px-3 py-2 text-center text-[11px] text-content/35">
+      <div className="shrink-0 border-t border-edge px-3 py-2 text-center text-[11.5px] text-dim">
         {loading ? "Reading…" : count === 1 ? "1 skill" : `${count} skills`}
       </div>
     </div>
@@ -308,13 +308,13 @@ function SkillDetailPane({
       <div className="flex flex-col gap-4 px-6 py-6">
         <header className="flex items-start gap-3">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-content/8">
-            <Cube className="size-4 text-content/60" strokeWidth={1.75} />
+            <Cube className="size-4 text-muted" strokeWidth={1.75} />
           </span>
           <div className="flex min-w-0 flex-1 flex-col">
             <h2 className="truncate text-[16px] font-semibold leading-tight text-content">
               {skill.name}
             </h2>
-            <p className="mt-0.5 truncate text-[12px] leading-tight text-content/45">
+            <p className="mt-0.5 truncate text-[12.5px] leading-tight text-faint">
               {skillSubtitle(skill)}
             </p>
           </div>
@@ -328,12 +328,12 @@ function SkillDetailPane({
         </header>
 
         {skill.description ? (
-          <p className="text-[13px] leading-relaxed text-content/70">{skill.description}</p>
+          <p className="text-[13.5px] leading-relaxed text-muted">{skill.description}</p>
         ) : null}
 
         <dl className="flex flex-col">
           <DetailRow label="Invoke">
-            <code className="font-mono text-[12px] text-content/80">/{skill.name}</code>
+            <code className="font-mono text-[12.5px] text-strong">/{skill.name}</code>
           </DetailRow>
           {skill.installs.map((install) => (
             <DetailRow
@@ -341,7 +341,7 @@ function SkillDetailPane({
               label={skillSourceLabel(install.source)}
               title={install.dir}
             >
-              <span className="truncate font-mono text-[12px] text-content/55">
+              <span className="truncate font-mono text-[12.5px] text-faint">
                 {prettyCwd(install.dir)}
               </span>
             </DetailRow>
@@ -350,15 +350,13 @@ function SkillDetailPane({
           <DetailRow label="Updated">{formatSkillUpdated(skill.updatedMs)}</DetailRow>
           {skill.tools.length > 0 ? (
             <DetailRow label="Tools">
-              <span className="font-mono text-[12px] text-content/55">
-                {skill.tools.join("  ")}
-              </span>
+              <span className="font-mono text-[12.5px] text-faint">{skill.tools.join("  ")}</span>
             </DetailRow>
           ) : null}
         </dl>
 
         {managedBy ? (
-          <p className="rounded-md border border-content/10 bg-content/5 px-3 py-2 text-[12px] leading-snug text-content/50">
+          <p className="rounded-md border border-edge bg-content/5 px-3 py-2 text-[12.5px] leading-snug text-faint">
             {managedBy} wavex lists it so you can see what your agents load; add, update, or remove
             it with the CLI that installed it.
           </p>
@@ -394,10 +392,10 @@ function SkillDetailPane({
           )}
         </div>
 
-        {error ? <p className="text-[12px] leading-snug text-red-300">{error}</p> : null}
+        {error ? <p className="text-[12.5px] leading-snug text-danger">{error}</p> : null}
 
-        <div className="flex flex-col gap-2 border-t border-content/10 pt-4">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-content/30">
+        <div className="flex flex-col gap-2 border-t border-edge pt-4">
+          <span className="font-mono ui-label">
             {source ? source.path.split("/").pop() : "SKILL.md"}
           </span>
           {draft !== null ? (
@@ -406,10 +404,10 @@ function SkillDetailPane({
               onChange={(event) => setDraft(event.target.value)}
               spellCheck={false}
               aria-label={`${skill.name} SKILL.md`}
-              className="min-h-96 w-full resize-y rounded-md border border-content/10 bg-content/5 p-3 font-mono text-[12px] leading-relaxed text-content outline-none focus:border-content/25"
+              className="min-h-96 w-full resize-y rounded-md border border-edge bg-content/5 p-3 font-mono text-[12.5px] leading-relaxed text-content outline-none focus:border-edge-strong"
             />
           ) : body === null ? (
-            <span className="flex items-center gap-1.5 text-[12px] text-content/40">
+            <span className="flex items-center gap-1.5 text-[12.5px] text-dim">
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
               Reading…
             </span>
@@ -440,9 +438,9 @@ function DetailRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline gap-4 border-b border-content/5 py-2 last:border-b-0">
-      <dt className="w-24 shrink-0 text-[12px] text-content/40">{label}</dt>
-      <dd className="min-w-0 flex-1 truncate text-[12px] text-content/70" title={title}>
+    <div className="flex items-baseline gap-4 border-b border-edge py-2 last:border-b-0">
+      <dt className="w-24 shrink-0 text-[12.5px] text-dim">{label}</dt>
+      <dd className="min-w-0 flex-1 truncate text-[12.5px] text-muted" title={title}>
         {children}
       </dd>
     </div>
@@ -467,10 +465,10 @@ function Action({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] disabled:opacity-40 ${
+      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] disabled:opacity-40 ${
         danger
-          ? "border-red-500/25 text-red-300 enabled:hover:bg-red-500/15"
-          : "border-content/10 bg-content/5 text-content/70 enabled:hover:text-content"
+          ? "border-danger/25 text-danger enabled:hover:bg-danger/15"
+          : "border-edge bg-content/5 text-muted enabled:hover:text-content"
       }`}
     >
       {Icon ? <Icon className="size-3.5" strokeWidth={1.75} /> : null}
@@ -504,13 +502,13 @@ function DeleteSkillDialog({
         aria-modal="true"
         aria-label={`Delete ${skill.name}`}
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute left-1/2 top-[22%] flex w-[min(420px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[22%] flex w-[min(420px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-[13px] font-medium leading-tight text-content">
+          <h2 className="text-[13.5px] font-medium leading-tight text-content">
             Delete “{skill.name}”?
           </h2>
-          <p className="text-[12px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             Its folder is removed from every agent directory below. This cannot be undone. Switch
             the skill off instead to keep it and take it out of circulation.
           </p>
@@ -518,7 +516,7 @@ function DeleteSkillDialog({
             {skill.installs.map((install) => (
               <li
                 key={install.dir}
-                className="truncate font-mono text-[11px] leading-tight text-content/40"
+                className="truncate font-mono text-[11.5px] leading-tight text-dim"
               >
                 {prettyCwd(install.dir)}
               </li>
@@ -531,14 +529,14 @@ function DeleteSkillDialog({
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30"
+            className="rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30"
           >
             Delete
           </button>

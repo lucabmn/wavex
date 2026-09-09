@@ -21,10 +21,10 @@ export function UpdateRailCard({ update, onOpen, onDismiss }: Props) {
           <img src="/wavex.png" alt="" aria-hidden className="size-4 object-contain" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12px] font-medium leading-tight text-content">
+          <span className="block truncate text-[12.5px] font-medium leading-tight text-content">
             Updated to {update.version}
           </span>
-          <span className="mt-0.5 block truncate text-[11px] leading-tight text-content/50">
+          <span className="mt-0.5 block truncate text-[11.5px] leading-tight text-faint">
             What's new
           </span>
         </span>
@@ -33,7 +33,7 @@ export function UpdateRailCard({ update, onOpen, onDismiss }: Props) {
         type="button"
         aria-label="Dismiss update notification"
         onClick={onDismiss}
-        className="absolute right-1 top-1 grid size-6 place-items-center rounded-md text-content/45 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="absolute right-1 top-1 grid size-6 place-items-center rounded-md text-faint hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <X className="size-3.5" strokeWidth={1.75} />
       </button>

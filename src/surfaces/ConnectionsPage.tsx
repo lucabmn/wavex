@@ -27,11 +27,11 @@ import {
 } from "../lib/connect";
 
 const PHASE_TONE: Record<string, string> = {
-  connected: "text-emerald-300/80",
-  connecting: "text-content/50",
-  reconnecting: "text-amber-300/80",
-  resynchronizing: "text-amber-300/80",
-  offline: "text-content/40",
+  connected: "text-positive/80",
+  connecting: "text-faint",
+  reconnecting: "text-warn/80",
+  resynchronizing: "text-warn/80",
+  offline: "text-dim",
 };
 
 export function ConnectionsPage() {
@@ -96,7 +96,7 @@ export function ConnectionsPage() {
               port over SSH or a private network; wavex will not bind a public
               address for you."
             >
-              <code className="rounded-md bg-content/8 px-2 py-1 text-[12px] text-content/70">
+              <code className="rounded-md bg-content/8 px-2 py-1 text-[12.5px] text-muted">
                 127.0.0.1:{status?.port}
               </code>
             </Row>
@@ -109,7 +109,7 @@ export function ConnectionsPage() {
                   if (name.trim() && name !== status?.name) void run(() => renameHost(name));
                 }}
                 aria-label="Host name"
-                className="w-56 rounded-md bg-content/8 px-2.5 py-1.5 text-[12px] text-content outline-none focus:bg-content/12"
+                className="w-56 rounded-md bg-content/8 px-2.5 py-1.5 text-[12.5px] text-content outline-none focus:bg-content/12"
               />
             </Row>
 
@@ -122,7 +122,7 @@ export function ConnectionsPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => void run(async () => copyText(await hostPairingCode()))}
-                className="flex items-center gap-1.5 rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15"
+                className="flex items-center gap-1.5 rounded-md bg-content/10 px-2.5 py-1.5 text-[12.5px] font-medium text-content hover:bg-hover"
               >
                 <Copy className="size-3.5" strokeWidth={1.75} />
                 Copy connection code
@@ -138,7 +138,7 @@ export function ConnectionsPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => void run(rotateHostToken)}
-                className="rounded-md px-2.5 py-1.5 text-[12px] text-red-300/80 hover:bg-red-500/15 hover:text-red-300"
+                className="rounded-md px-2.5 py-1.5 text-[12.5px] text-danger/80 hover:bg-danger/15 hover:text-danger"
               >
                 Replace
               </button>
@@ -149,7 +149,7 @@ export function ConnectionsPage() {
               description="Clients attached right now. Closing one does not stop the agents it
               started."
             >
-              <span className="text-[12px] text-content/60">{status?.clients ?? 0}</span>
+              <span className="text-[12.5px] text-muted">{status?.clients ?? 0}</span>
             </Row>
           </>
         ) : null}
@@ -170,9 +170,7 @@ export function ConnectionsPage() {
               label={
                 <span className="flex items-center gap-2">
                   <span className="min-w-0 truncate">{host.name}</span>
-                  <span
-                    className={`shrink-0 text-[11px] ${PHASE_TONE[phase] ?? "text-content/40"}`}
-                  >
+                  <span className={`shrink-0 text-[11.5px] ${PHASE_TONE[phase] ?? "text-dim"}`}>
                     {connectionLabel(state)}
                   </span>
                 </span>
@@ -184,7 +182,7 @@ export function ConnectionsPage() {
                   type="button"
                   disabled={busy}
                   onClick={() => void run(() => connectSavedHost(host.hostId))}
-                  className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15"
+                  className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12.5px] font-medium text-content hover:bg-hover"
                 >
                   Connect
                 </button>
@@ -195,7 +193,7 @@ export function ConnectionsPage() {
                     disconnectSavedHost(host.hostId);
                     void refreshConnect();
                   }}
-                  className="rounded-md px-2.5 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+                  className="rounded-md px-2.5 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
                 >
                   Disconnect
                 </button>
@@ -210,7 +208,7 @@ export function ConnectionsPage() {
                     await removeSavedHost(host.hostId);
                   })
                 }
-                className="rounded-md p-1.5 text-red-300/80 hover:bg-red-500/15 hover:text-red-300"
+                className="rounded-md p-1.5 text-danger/80 hover:bg-danger/15 hover:text-danger"
               >
                 <Trash2 className="size-3.5" strokeWidth={1.75} />
               </button>
@@ -227,7 +225,7 @@ export function ConnectionsPage() {
             onChange={(event) => setCode(event.target.value)}
             placeholder="wavex-connect:…"
             aria-label="Connection code"
-            className="w-72 rounded-md bg-content/8 px-2.5 py-1.5 font-mono text-[12px] text-content outline-none placeholder:text-content/30 focus:bg-content/12"
+            className="w-72 rounded-md bg-content/8 px-2.5 py-1.5 font-mono text-[12.5px] text-content outline-none placeholder:text-dim focus:bg-content/12"
           />
           <button
             type="button"
@@ -238,7 +236,7 @@ export function ConnectionsPage() {
                 setCode("");
               })
             }
-            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12px] font-medium text-content hover:bg-content/15 disabled:cursor-default disabled:text-content/25"
+            className="rounded-md bg-content/10 px-2.5 py-1.5 text-[12.5px] font-medium text-content hover:bg-hover disabled:cursor-default disabled:text-dim"
           >
             Add
           </button>
@@ -246,7 +244,7 @@ export function ConnectionsPage() {
       </Section>
 
       {error ? (
-        <p role="alert" className="text-[12px] text-red-300/80">
+        <p role="alert" className="text-[12.5px] text-danger/80">
           {error}
         </p>
       ) : null}

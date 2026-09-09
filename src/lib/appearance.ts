@@ -40,15 +40,15 @@ const DEFAULT_SIDEBAR_TAB_ORDER: SidebarTabId[] = ["sessions", "inbox", "files",
 
 export const THEME_HUE_MIN = 0;
 export const THEME_HUE_MAX = 360;
-export const THEME_HUE_DEFAULT = 240;
+export const THEME_HUE_DEFAULT = 220;
 
 export const THEME_SATURATION_MIN = 0;
 export const THEME_SATURATION_MAX = 100;
-export const THEME_SATURATION_DEFAULT = 0;
+export const THEME_SATURATION_DEFAULT = 6;
 
 export const SIDEBAR_OPACITY_MIN = 0.15;
 export const SIDEBAR_OPACITY_MAX = 1;
-export const SIDEBAR_OPACITY_DEFAULT = 0.85;
+export const SIDEBAR_OPACITY_DEFAULT = 0.8;
 
 export const SIDEBAR_BLUR_MIN = 1;
 export const SIDEBAR_BLUR_MAX = 64;
@@ -145,6 +145,8 @@ export function initAppearance() {
   applyMonoFont(loadMonoFont());
   applyEditorFontSize(loadEditorFontSize());
   applyCornerRadius(loadCornerRadius());
+  applySurfaceDepth(loadSurfaceDepth());
+  applySeparators(loadSeparators());
   applyReduceMotion(loadReduceMotion());
   applyTranscriptWidth(loadTranscriptWidth());
   applyTranscriptFontSize(loadTranscriptFontSize());
@@ -268,8 +270,16 @@ function isSidebarTabId(value: unknown): value is SidebarTabId {
   return value === "files" || value === "sessions" || value === "changes" || value === "inbox";
 }
 
+/**
+ * Closed by default: the window is two columns, a sidebar and the work.
+ *
+ * A separate nav column beside the list column meant three vertical panes
+ * before any content, and the sidebar already carries the project switcher and
+ * every destination the rail holds. The rail stays one shortcut away for
+ * anyone who wants the projects list permanently on screen.
+ */
 export function loadProjectRailOpen(): boolean {
-  return readFlag(PROJECT_RAIL_OPEN_KEY) ?? true;
+  return readFlag(PROJECT_RAIL_OPEN_KEY) ?? false;
 }
 
 export function saveProjectRailOpen(value: boolean) {
@@ -376,6 +386,8 @@ const TERMINAL_FONT_SIZE_KEY = "wavex.terminalFontSize";
 const TERMINAL_CURSOR_KEY = "wavex.terminalCursor";
 const TERMINAL_CURSOR_BLINK_KEY = "wavex.terminalCursorBlink";
 const CORNER_RADIUS_KEY = "wavex.cornerRadius";
+const SURFACE_DEPTH_KEY = "wavex.surfaceDepth";
+const RULE_KEY = "wavex.separators";
 const REDUCE_MOTION_KEY = "wavex.reduceMotion";
 const BACKGROUND_LIGHTNESS_KEY = "wavex.backgroundLightness";
 const CONTENT_LIGHTNESS_KEY = "wavex.contentLightness";
@@ -399,20 +411,20 @@ export function subscribeAppearance(onStoreChange: () => void) {
 
 export const ACCENT_HUE_MIN = 0;
 export const ACCENT_HUE_MAX = 360;
-export const ACCENT_HUE_DEFAULT = 211;
+export const ACCENT_HUE_DEFAULT = 232;
 
 /** Named stops on the accent wheel, so the common choice is one click. */
 export const ACCENT_PRESETS: { hue: number; label: string }[] = [
-  { hue: 211, label: "Blue" },
-  { hue: 190, label: "Cyan" },
-  { hue: 162, label: "Teal" },
-  { hue: 142, label: "Green" },
-  { hue: 45, label: "Amber" },
-  { hue: 25, label: "Orange" },
-  { hue: 0, label: "Red" },
-  { hue: 330, label: "Pink" },
-  { hue: 280, label: "Violet" },
-  { hue: 250, label: "Indigo" },
+  { hue: 232, label: "Indigo" },
+  { hue: 262, label: "Violet" },
+  { hue: 300, label: "Mauve" },
+  { hue: 338, label: "Rose" },
+  { hue: 12, label: "Clay" },
+  { hue: 38, label: "Amber" },
+  { hue: 88, label: "Olive" },
+  { hue: 152, label: "Green" },
+  { hue: 182, label: "Teal" },
+  { hue: 204, label: "Blue" },
 ];
 
 export function loadAccentHue(): number {
@@ -632,25 +644,28 @@ export type CornerRadius = "sharp" | "soft" | "round";
 export const CORNER_RADIUS_DEFAULT: CornerRadius = "soft";
 
 const RADIUS_SCALE: Record<CornerRadius, number> = {
-  sharp: 0,
+  sharp: 0.3,
   soft: 1,
-  round: 1.8,
+  round: 1.9,
 };
 
 /**
  * Tailwind's `rounded-*` utilities resolve to these theme variables, so one
  * factor moves every corner in the app rather than a hand-picked few.
  * `rounded-full` is a literal 9999px and stays a pill.
+ *
+ * The steps grow faster than Tailwind's so a row, a card and a dialog read as
+ * three sizes of thing rather than three boxes with nearly the same corner.
  */
 const RADIUS_TOKENS: [token: string, rem: number][] = [
   ["--radius-xs", 0.125],
   ["--radius-sm", 0.25],
   ["--radius-md", 0.375],
-  ["--radius-lg", 0.5],
+  ["--radius-lg", 0.5625],
   ["--radius-xl", 0.75],
   ["--radius-2xl", 1],
-  ["--radius-3xl", 1.5],
-  ["--radius-4xl", 2],
+  ["--radius-3xl", 1.25],
+  ["--radius-4xl", 1.5],
 ];
 
 function isCornerRadius(value: unknown): value is CornerRadius {
@@ -686,6 +701,98 @@ export function applyCornerRadius(value: CornerRadius) {
   return next;
 }
 
+/* ------------------------------------------------------------------ *
+ * Depth and the ambient wash — the two rules that decide how much of the
+ * redesign's dimensionality is on. Both are plain display preferences: a
+ * user who wants a flat, quiet window turns them down and every panel in the
+ * app follows, because the shadows and the wash are single tokens rather
+ * than values repeated per component.
+ * ------------------------------------------------------------------ */
+
+export type SurfaceDepth = "flat" | "soft" | "deep";
+
+export const SURFACE_DEPTH_DEFAULT: SurfaceDepth = "soft";
+
+function isSurfaceDepth(value: unknown): value is SurfaceDepth {
+  return value === "flat" || value === "soft" || value === "deep";
+}
+
+export function loadSurfaceDepth(): SurfaceDepth {
+  try {
+    const raw = profileStorage.getItem(SURFACE_DEPTH_KEY);
+    return isSurfaceDepth(raw) ? raw : SURFACE_DEPTH_DEFAULT;
+  } catch {
+    return SURFACE_DEPTH_DEFAULT;
+  }
+}
+
+export function saveSurfaceDepth(value: SurfaceDepth) {
+  try {
+    profileStorage.setItem(
+      SURFACE_DEPTH_KEY,
+      isSurfaceDepth(value) ? value : SURFACE_DEPTH_DEFAULT,
+    );
+  } catch {
+    // private mode / quota
+  }
+}
+
+/**
+ * `soft` is the value the stylesheet already carries, so it is the absence of
+ * a class rather than a third set of shadows to keep in step with the other
+ * two.
+ */
+export function applySurfaceDepth(value: SurfaceDepth) {
+  const next = isSurfaceDepth(value) ? value : SURFACE_DEPTH_DEFAULT;
+  const root = document.documentElement.classList;
+  root.toggle("depth-flat", next === "flat");
+  root.toggle("depth-deep", next === "deep");
+  return next;
+}
+
+export type Separators = "subtle" | "regular" | "firm";
+
+export const SEPARATORS_DEFAULT: Separators = "regular";
+
+/**
+ * How strongly every hairline in the app is drawn. It is a single number the
+ * stylesheet multiplies, rather than a per-component border opacity, because
+ * a rule around every box is the difference between chrome and a wireframe —
+ * and that judgement is the user's, not one to hard-code a hundred times.
+ */
+const RULE_STRENGTH: Record<Separators, number> = {
+  subtle: 0.05,
+  regular: 0.09,
+  firm: 0.15,
+};
+
+function isSeparators(value: unknown): value is Separators {
+  return value === "subtle" || value === "regular" || value === "firm";
+}
+
+export function loadSeparators(): Separators {
+  try {
+    const raw = profileStorage.getItem(RULE_KEY);
+    return isSeparators(raw) ? raw : SEPARATORS_DEFAULT;
+  } catch {
+    return SEPARATORS_DEFAULT;
+  }
+}
+
+export function saveSeparators(value: Separators) {
+  try {
+    profileStorage.setItem(RULE_KEY, isSeparators(value) ? value : SEPARATORS_DEFAULT);
+  } catch {
+    // private mode / quota
+  }
+}
+
+export function applySeparators(value: Separators) {
+  const next = isSeparators(value) ? value : SEPARATORS_DEFAULT;
+  document.documentElement.style.setProperty("--rule", String(RULE_STRENGTH[next]));
+  return next;
+}
+
 export const REDUCE_MOTION_DEFAULT = false;
 
 export function loadReduceMotion(): boolean {
@@ -711,8 +818,8 @@ export const SURFACE_RANGE: Record<
   ColorScheme,
   { background: [min: number, max: number, fallback: number]; content: [number, number, number] }
 > = {
-  dark: { background: [2, 22, 9], content: [70, 100, 92] },
-  light: { background: [86, 100, 97], content: [0, 42, 18] },
+  dark: { background: [2, 26, 13], content: [70, 100, 96] },
+  light: { background: [86, 100, 96], content: [0, 42, 16] },
 };
 
 function schemeKey(key: string, scheme: ColorScheme) {
@@ -781,76 +888,67 @@ export type ThemePreset = {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
-    id: "nord",
-    label: "Nord",
+    id: "graphite",
+    label: "Graphite",
     themeHue: THEME_HUE_DEFAULT,
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
-    dark: { background: 9, content: 92 },
-    light: { background: 97, content: 18 },
+    dark: { background: 13, content: 96 },
+    light: { background: 96, content: 16 },
   },
   {
-    id: "wavex",
-    label: "wavex",
-    themeHue: 220,
-    themeSaturation: 16,
-    accentHue: 197,
-    dark: { background: 13, content: 90 },
-    light: { background: 95, content: 22 },
-  },
-  {
-    id: "gruvbox",
-    label: "Gruvbox",
-    themeHue: 32,
-    themeSaturation: 12,
-    accentHue: 42,
-    dark: { background: 11, content: 88 },
-    light: { background: 94, content: 20 },
-  },
-  {
-    id: "solarized",
-    label: "Solarized",
-    themeHue: 194,
+    id: "midnight",
+    label: "Midnight",
+    themeHue: 232,
     themeSaturation: 14,
-    accentHue: 175,
-    dark: { background: 10, content: 85 },
-    light: { background: 96, content: 24 },
+    accentHue: 214,
+    dark: { background: 11, content: 96 },
+    light: { background: 96, content: 14 },
   },
   {
-    id: "dracula",
-    label: "Dracula",
-    themeHue: 258,
-    themeSaturation: 15,
-    accentHue: 282,
-    dark: { background: 12, content: 92 },
-    light: { background: 96, content: 20 },
+    id: "carbon",
+    label: "Carbon",
+    themeHue: 0,
+    themeSaturation: 0,
+    accentHue: 232,
+    dark: { background: 11, content: 96 },
+    light: { background: 96, content: 12 },
   },
   {
-    id: "rose",
-    label: "Rosé",
-    themeHue: 318,
-    themeSaturation: 10,
-    accentHue: 342,
-    dark: { background: 11, content: 90 },
-    light: { background: 96, content: 22 },
-  },
-  {
-    id: "forest",
-    label: "Forest",
-    themeHue: 152,
-    themeSaturation: 12,
-    accentHue: 148,
-    dark: { background: 9, content: 91 },
-    light: { background: 95, content: 20 },
-  },
-  {
-    id: "paper",
-    label: "Paper",
-    themeHue: 38,
-    themeSaturation: 7,
+    id: "linen",
+    label: "Linen",
+    themeHue: 36,
+    themeSaturation: 8,
     accentHue: 24,
-    dark: { background: 10, content: 90 },
-    light: { background: 98, content: 16 },
+    dark: { background: 11, content: 95 },
+    light: { background: 96, content: 16 },
+  },
+  {
+    id: "moss",
+    label: "Moss",
+    themeHue: 150,
+    themeSaturation: 7,
+    accentHue: 152,
+    dark: { background: 11, content: 95 },
+    light: { background: 96, content: 14 },
+  },
+  {
+    id: "plum",
+    label: "Plum",
+    themeHue: 282,
+    themeSaturation: 9,
+    accentHue: 288,
+    dark: { background: 11, content: 96 },
+    light: { background: 96, content: 14 },
+  },
+  {
+    id: "harbor",
+    label: "Harbor",
+    themeHue: 200,
+    themeSaturation: 10,
+    accentHue: 188,
+    dark: { background: 11, content: 95 },
+    light: { background: 96, content: 14 },
   },
 ];
 
@@ -946,9 +1044,9 @@ export type TranscriptSpacing = "tight" | "normal" | "relaxed";
 export const TRANSCRIPT_SPACING_DEFAULT: TranscriptSpacing = "normal";
 
 const TRANSCRIPT_GAPS: Record<TranscriptSpacing, string> = {
-  tight: "0rem",
-  normal: "0.25rem",
-  relaxed: "1rem",
+  tight: "0.25rem",
+  normal: "1rem",
+  relaxed: "2rem",
 };
 
 function isTranscriptSpacing(value: unknown): value is TranscriptSpacing {

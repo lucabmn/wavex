@@ -41,7 +41,7 @@ import {
   saveProjectRailWidth,
 } from "../lib/appearance";
 import { basename, revealPath, type GitDiffStats } from "../lib/fs";
-import { canRevealPath, IS_MAC, MOD, revealLabel } from "../lib/platform";
+import { canRevealPath, MOD, revealLabel } from "../lib/platform";
 import { hostIdForProject } from "../lib/transport";
 import type { HostId } from "../lib/host";
 import { projectKey } from "../lib/host";
@@ -85,7 +85,6 @@ import { RailAction, RailSearch } from "./RailAction";
 import { ModeSwitch } from "./ModeSwitch";
 import type { AppMode } from "../lib/workspace/appMode";
 import { RemoveProjectDialog } from "./RemoveProjectDialog";
-import { DevModeSlot, TabVisitNav } from "./TitleBar";
 import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import { WorkspaceSidebarFooter } from "./WorkspaceSidebarFooter";
 import { SettingsNav } from "./SettingsRail";
@@ -124,10 +123,6 @@ type Props = {
   recents: RecentProject[];
   inboxUnseen?: boolean;
   busyPaths?: Iterable<string>;
-  canGoBack?: boolean;
-  canGoForward?: boolean;
-  onGoBack?: () => void;
-  onGoForward?: () => void;
   onSearch?: () => void;
   searchActive?: boolean;
   onOpenInbox?: () => void;
@@ -141,7 +136,6 @@ type Props = {
   onOpenAutomations?: () => void;
   activityActive?: boolean;
   automationsActive?: boolean;
-  onTogglePanel?: () => void;
   onSelectProject: (path: string) => void;
   onOpenProject: () => void;
   onRemoveProject?: (path: string, options: { purgeData: boolean }) => void;
@@ -173,10 +167,6 @@ export function ProjectRail({
   onModeChange,
   inboxUnseen = false,
   busyPaths,
-  canGoBack = false,
-  canGoForward = false,
-  onGoBack,
-  onGoForward,
   onSearch,
   searchActive = false,
   onOpenInbox,
@@ -190,7 +180,6 @@ export function ProjectRail({
   onOpenAutomations,
   activityActive = false,
   automationsActive = false,
-  onTogglePanel,
   onSelectProject,
   onOpenProject,
   onRemoveProject,
@@ -424,24 +413,8 @@ export function ProjectRail({
     <nav
       ref={resize.setPaneRef}
       aria-label="Projects"
-      className="sidebar-glass relative flex shrink-0 flex-col border-r border-content/10"
+      className="ui-rule-r relative flex shrink-0 flex-col"
     >
-      <div
-        className="flex h-10 shrink-0 select-none items-center pr-1.5"
-        data-tauri-drag-region="deep"
-      >
-        {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
-        <DevModeSlot />
-        <TabVisitNav
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onGoBack={onGoBack}
-          onGoForward={onGoForward}
-          onTogglePanel={settingsOpen ? undefined : onTogglePanel}
-          panelActive
-        />
-      </div>
-
       {settingsOpen ? (
         <SettingsNav
           section={settingsSection}
@@ -450,12 +423,12 @@ export function ProjectRail({
         />
       ) : (
         <>
-          <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
-            {mode && onModeChange ? (
-              <div className="pb-1.5">
-                <ModeSwitch mode={mode} onChange={onModeChange} stretch />
-              </div>
-            ) : null}
+          {mode && onModeChange ? (
+            <div className="ui-rule-b flex h-10 shrink-0 items-stretch px-2">
+              <ModeSwitch mode={mode} onChange={onModeChange} stretch />
+            </div>
+          ) : null}
+          <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-2">
             <RailSearch
               label="Search"
               icon={Search}
@@ -659,7 +632,7 @@ export function ProjectRail({
         aria-valuemin={PROJECT_RAIL_WIDTH_MIN}
         aria-valuemax={resize.maxWidth}
         className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none focus-visible:bg-accent/60 focus-visible:outline-none ${
-          resize.dragging ? "bg-content/15" : "hover:bg-content/10"
+          resize.dragging ? "bg-content/15" : "hover:bg-hover"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
@@ -719,18 +692,15 @@ function LiveAgentsPreview({
           aria-expanded={!collapsed}
           aria-label={collapsed ? "Expand working agents" : "Collapse working agents"}
           onClick={() => setCollapsed((closed) => !closed)}
-          className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left hover:bg-content/8"
+          className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left hover:bg-hover"
         >
-          <span
-            aria-hidden
-            className="size-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-pulse"
-          />
-          <span className="min-w-0 flex-1 truncate text-xs text-content/50">Working</span>
-          <span className="text-[11px] tabular-nums text-content/40">{agents.length}</span>
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-accent animate-pulse" />
+          <span className="min-w-0 flex-1 truncate text-xs text-faint">Working</span>
+          <span className="text-[11.5px] tabular-nums text-dim">{agents.length}</span>
           {collapsed ? (
-            <ChevronDown className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+            <ChevronDown className="size-3 shrink-0 text-dim" strokeWidth={1.75} />
           ) : (
-            <ChevronUp className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+            <ChevronUp className="size-3 shrink-0 text-dim" strokeWidth={1.75} />
           )}
         </button>
         {collapsed ? null : (
@@ -760,7 +730,7 @@ function LiveAgentsPreview({
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setExpanded((open) => !open)}
-                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11px] text-content/50 hover:bg-content/8 hover:text-content"
+                className="flex w-full items-center justify-center gap-1 px-2 py-1.5 text-[11.5px] text-faint hover:bg-hover hover:text-content"
               >
                 {expanded ? (
                   <ChevronUp className="size-3" strokeWidth={1.75} />
@@ -823,9 +793,8 @@ function LiveAgentCard({
       aria-label={[agent.title, where, activity, elapsed].filter(Boolean).join(", ")}
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect?.(agent.id)}
-      className={`relative flex w-full flex-col rounded-md px-2 py-1.5 text-left ${
-        selected ? "bg-content/10" : "hover:bg-content/8"
-      }`}
+      data-selected={selected ? "true" : undefined}
+      className="ui-row ui-focus relative flex w-full flex-col rounded-md px-2 py-1.5 text-left"
     >
       <span className="flex min-w-0 items-center gap-2">
         <ProjectMascot
@@ -836,22 +805,18 @@ function LiveAgentCard({
           active={live}
         />
         {live ? (
-          <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug">
+          <p className="min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug">
             {agent.title}
           </p>
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug">
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug">
             {agent.title}
           </span>
         )}
       </span>
       <span
-        className={`mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11px] leading-tight ${
-          agent.needsApproval
-            ? "text-amber-400"
-            : agent.done
-              ? "text-emerald-400"
-              : "text-content/50"
+        className={`mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight ${
+          agent.needsApproval ? "text-warn" : agent.done ? "text-positive" : "text-faint"
         }`}
       >
         {agent.needsApproval ? (
@@ -859,15 +824,15 @@ function LiveAgentCard({
         ) : agent.done ? (
           <Check className="size-3 shrink-0" strokeWidth={2.25} />
         ) : (
-          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11px] leading-none" />
+          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11.5px] leading-none" />
         )}
         <span className="min-w-0 truncate">{activity}</span>
       </span>
-      <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11px] leading-tight text-content/45">
+      <span className="mt-1 flex min-w-0 items-center gap-1.5 pl-4 text-[11.5px] leading-tight text-faint">
         <HarnessIcon harness={agent.harness} className="size-3 shrink-0" />
         <span className="min-w-0 flex-1 truncate">
           {project}
-          {worktree ? <span className="text-content/35"> · {worktree}</span> : null}
+          {worktree ? <span className="text-dim"> · {worktree}</span> : null}
         </span>
         {elapsed ? <span className="shrink-0 tabular-nums">{elapsed}</span> : null}
       </span>
@@ -924,21 +889,21 @@ function ProjectSection({
   return (
     <div className="shrink-0 mb-2">
       <div className="flex items-center gap-1 px-3 pb-1.5 pt-1">
-        <span className="min-w-0 flex-1 truncate px-1 text-xs text-content/50">{label}</span>
+        <span className="min-w-0 flex-1 truncate px-1 text-xs text-faint">{label}</span>
         {onAdd ? (
           <button
             type="button"
             title="Open project"
             aria-label="Open project"
             onClick={onAdd}
-            className="grid size-5 shrink-0 place-items-center rounded-md text-content/50 hover:bg-content/8 hover:text-content"
+            className="ui-focus grid size-5 shrink-0 place-items-center rounded-md text-faint transition-colors hover:bg-hover hover:text-content"
           >
             <Plus className="size-3.5" strokeWidth={1.75} />
           </button>
         ) : null}
       </div>
       {items.length === 0 && emptyLabel ? (
-        <p className="px-4 pb-1 text-[11px] leading-tight text-content/40">{emptyLabel}</p>
+        <p className="px-4 pb-1 text-[11.5px] leading-tight text-dim">{emptyLabel}</p>
       ) : null}
       <div className="flex flex-col gap-px px-2">
         {items.map((item, index) => (
@@ -1037,12 +1002,9 @@ function ProjectCard({
   return (
     <div
       ref={(el) => sortable.setItemRef(item.path, el)}
-      className={`group relative flex touch-none items-stretch rounded-md px-2 h-8 ${
-        selected
-          ? "bg-content/12 text-content"
-          : expanded
-            ? "text-content hover:bg-content/5"
-            : "opacity-65 hover:bg-content/5 hover:text-content"
+      data-selected={selected ? "true" : undefined}
+      className={`ui-row group relative flex h-8 touch-none items-stretch rounded-md px-2 ${
+        expanded || selected ? "" : "opacity-75"
       } ${dragging ? "opacity-40" : ""} cursor-default`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -1061,10 +1023,10 @@ function ProjectCard({
       onContextMenu={(event) => onContextMenu(item.path, event)}
     >
       {showStart ? (
-        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-x-2 top-0 z-20 h-0.5 bg-accent" />
       ) : null}
       {showEnd ? (
-        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-x-2 bottom-0 z-20 h-0.5 bg-accent" />
       ) : null}
       <button
         type="button"
@@ -1103,7 +1065,7 @@ function ProjectCard({
           </span>
         ) : stats ? (
           <span
-            className="shrink-0 text-emerald-400/70 group-hover:hidden"
+            className="shrink-0 text-positive/70 group-hover:hidden"
             title="No uncommitted changes"
             aria-label="No uncommitted changes"
           >
@@ -1122,7 +1084,7 @@ function ProjectCard({
           event.stopPropagation();
           onOpenMenu(item.path, event.clientX, event.clientY);
         }}
-        className="absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-content/55 hover:bg-content/8 hover:text-content group-hover:grid"
+        className="ui-focus absolute right-1 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-faint transition-colors hover:bg-hover hover:text-content group-hover:grid"
       >
         <MoreHorizontal className="size-4" strokeWidth={1.75} />
       </button>
@@ -1136,7 +1098,7 @@ function ProjectCard({
           event.stopPropagation();
           onTogglePin(item.path);
         }}
-        className="absolute left-2 top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded-sm text-content/55 opacity-0 pointer-events-none transition-opacity hover:text-content group-hover:pointer-events-auto group-hover:opacity-100"
+        className="absolute left-2 top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded-sm text-faint opacity-0 pointer-events-none transition-opacity hover:text-content group-hover:pointer-events-auto group-hover:opacity-100"
       >
         {pinned ? (
           <PinOff className="size-3.5" strokeWidth={1.75} />
@@ -1178,16 +1140,16 @@ function ProjectDiffStat({
     <span
       title={`${label} uncommitted`}
       aria-label={`${label} uncommitted`}
-      className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[11px] font-semibold tabular-nums"
+      className="flex min-w-0 items-center gap-1 overflow-hidden font-mono text-[11.5px] font-semibold tabular-nums"
     >
       {files > 0 ? (
-        <span className="truncate font-sans font-medium text-content/55">{files} changed</span>
+        <span className="truncate font-sans font-medium text-faint">{files} changed</span>
       ) : null}
       {additions > 0 ? (
-        <span className="shrink-0 text-emerald-400">+{formatCompactCount(additions)}</span>
+        <span className="shrink-0 text-positive">+{formatCompactCount(additions)}</span>
       ) : null}
       {deletions > 0 ? (
-        <span className="shrink-0 text-red-400">-{formatCompactCount(deletions)}</span>
+        <span className="shrink-0 text-danger">-{formatCompactCount(deletions)}</span>
       ) : null}
     </span>
   );

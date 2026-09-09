@@ -5,12 +5,14 @@ import {
   ACCENT_PRESETS,
   applyAccentHue,
   applyBodyGlass,
+  applySeparators,
   applyCornerRadius,
   applyEditorFontSize,
   applyMonoFont,
   applyReduceMotion,
   applySidebarBlur,
   applySidebarOpacity,
+  applySurfaceDepth,
   applySurfaceLightness,
   applyThemePreference,
   applyThemePreset,
@@ -28,6 +30,7 @@ import {
   loadBackgroundLightness,
   loadBodyGlass,
   loadContentLightness,
+  loadSeparators,
   loadCornerRadius,
   EDITOR_CHROME_DEFAULT,
   loadEditorChrome,
@@ -36,6 +39,7 @@ import {
   loadReduceMotion,
   loadSidebarBlur,
   loadSidebarOpacity,
+  loadSurfaceDepth,
   loadTerminalCursor,
   loadTerminalCursorBlink,
   loadTerminalFontSize,
@@ -56,6 +60,7 @@ import {
   saveBackgroundLightness,
   saveBodyGlass,
   saveContentLightness,
+  saveSeparators,
   saveCornerRadius,
   saveEditorChrome,
   saveEditorFontSize,
@@ -63,6 +68,7 @@ import {
   saveReduceMotion,
   saveSidebarBlur,
   saveSidebarOpacity,
+  saveSurfaceDepth,
   saveTerminalCursor,
   saveTerminalCursorBlink,
   saveTerminalFontSize,
@@ -82,6 +88,8 @@ import {
   SIDEBAR_OPACITY_DEFAULT,
   SIDEBAR_OPACITY_MAX,
   SIDEBAR_OPACITY_MIN,
+  SEPARATORS_DEFAULT,
+  SURFACE_DEPTH_DEFAULT,
   SURFACE_RANGE,
   TERMINAL_CURSOR_BLINK_DEFAULT,
   TERMINAL_CURSOR_DEFAULT,
@@ -109,6 +117,8 @@ import {
   type ColorScheme,
   type CornerRadius,
   type EditorChromeSettings,
+  type Separators,
+  type SurfaceDepth,
   type ThemePreset,
   type TranscriptSpacing,
   type TranscriptWidth,
@@ -157,6 +167,8 @@ export function useAppearanceSettings() {
   const [terminalCursor, setTerminalCursor] = useState<TerminalCursor>(loadTerminalCursor);
   const [terminalCursorBlink, setTerminalCursorBlink] = useState(loadTerminalCursorBlink);
   const [cornerRadius, setCornerRadius] = useState<CornerRadius>(loadCornerRadius);
+  const [surfaceDepth, setSurfaceDepth] = useState<SurfaceDepth>(loadSurfaceDepth);
+  const [separators, setSeparators] = useState<Separators>(loadSeparators);
   const [reduceMotion, setReduceMotion] = useState(loadReduceMotion);
   const [transcriptLayout, setTranscriptLayout] = useState<TranscriptLayout>(loadTranscriptLayout);
   const [transcriptAnchor, setTranscriptAnchor] = useState(loadTranscriptAnchor);
@@ -284,6 +296,18 @@ export function useAppearanceSettings() {
     setCornerRadius(next);
   }, []);
 
+  const onSurfaceDepth = useCallback((value: SurfaceDepth) => {
+    const next = applySurfaceDepth(value);
+    saveSurfaceDepth(next);
+    setSurfaceDepth(next);
+  }, []);
+
+  const onSeparators = useCallback((value: Separators) => {
+    const next = applySeparators(value);
+    saveSeparators(next);
+    setSeparators(next);
+  }, []);
+
   const onReduceMotion = useCallback((value: boolean) => {
     applyReduceMotion(value);
     saveReduceMotion(value);
@@ -375,6 +399,8 @@ export function useAppearanceSettings() {
     onTerminalCursor(TERMINAL_CURSOR_DEFAULT);
     onTerminalCursorBlink(TERMINAL_CURSOR_BLINK_DEFAULT);
     onCornerRadius(CORNER_RADIUS_DEFAULT);
+    onSurfaceDepth(SURFACE_DEPTH_DEFAULT);
+    onSeparators(SEPARATORS_DEFAULT);
     onReduceMotion(REDUCE_MOTION_DEFAULT);
     onTranscriptLayout(TRANSCRIPT_LAYOUT_DEFAULT);
     onTranscriptAnchor(TRANSCRIPT_ANCHOR_DEFAULT);
@@ -404,6 +430,8 @@ export function useAppearanceSettings() {
     onMonoFont,
     onOpacity,
     onReduceMotion,
+    onSeparators,
+    onSurfaceDepth,
     onTerminalCursor,
     onTerminalCursorBlink,
     onTerminalFontSize,
@@ -435,6 +463,8 @@ export function useAppearanceSettings() {
     terminalCursor,
     terminalCursorBlink,
     cornerRadius,
+    surfaceDepth,
+    separators,
     reduceMotion,
     transcriptLayout,
     transcriptAnchor,
@@ -458,6 +488,8 @@ export function useAppearanceSettings() {
     onTerminalCursor,
     onTerminalCursorBlink,
     onCornerRadius,
+    onSurfaceDepth,
+    onSeparators,
     onReduceMotion,
     onBackgroundLightness,
     onContentLightness,
@@ -482,7 +514,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
     <>
       <Section
         title="Presets"
-        description="A starting point: one click writes the hue, the accent, and the depth of both themes. Everything below stays free to move afterwards."
+        description="A starting point: one click writes the interface hue, the accent, and the depth of both themes. Everything below stays free to move afterwards."
       >
         <Row label="Palette" layout="stacked">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -491,13 +523,13 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
                 key={preset.id}
                 type="button"
                 onClick={() => appearance.onPreset(preset)}
-                className="flex items-center gap-2 rounded-lg border border-content/10 px-2.5 py-2 text-left text-[12px] text-content/70 hover:border-content/25 hover:bg-content/5 hover:text-content"
+                className="ui-focus flex items-center gap-2 rounded-md border border-edge bg-surface-raised px-2.5 py-2 text-left text-[12.5px] text-muted hover:border-edge-strong hover:text-content"
               >
                 <span
                   aria-hidden
-                  className="size-4 shrink-0 rounded-full border border-content/15"
+                  className="size-4 shrink-0 rounded-full border border-edge-strong"
                   style={{
-                    background: `linear-gradient(135deg, hsl(${preset.accentHue} 92% 62%) 0%, hsl(${preset.themeHue} ${preset.themeSaturation}% ${preset.dark.background}%) 100%)`,
+                    background: `linear-gradient(to right, hsl(${preset.accentHue} 62% 58%) 0 50%, hsl(${preset.themeHue} ${preset.themeSaturation}% ${preset.dark.background + 4}%) 50% 100%)`,
                   }}
                 />
                 <span className="min-w-0 truncate">{preset.label}</span>
@@ -528,7 +560,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
         </Row>
         <Row
           label="Accent"
-          description="The color of switches, focus rings, links, and the terminal caret."
+          description="The one saturated colour in the window: the selected row, the live tab, focus, links, and the single filled action a surface is allowed."
           layout="stacked"
         >
           <AccentSwatches value={appearance.accentHue} onChange={appearance.onAccentHue} />
@@ -570,7 +602,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
 
       <Section
         title="Surfaces"
-        description={`Depth and contrast are kept per theme, so these two are the ${schemeWord} theme's.`}
+        description={`The window's own planes: how deep it sits, how far things stand off it, how firmly they are ruled apart, and how much of the desktop shows through. Background and contrast are kept per theme, so those two are the ${schemeWord} theme's.`}
       >
         <Row
           label="Background depth"
@@ -599,11 +631,41 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
           />
         </Row>
         <Row
-          label="Sidebar opacity"
-          description="How much of the desktop shows through the sidebar and the project rail."
+          label="Depth"
+          description="How far raised surfaces stand off the ones behind them. Flat keeps a hairline where the shadow was."
+        >
+          <Segmented
+            label="Depth"
+            value={appearance.surfaceDepth}
+            options={[
+              { value: "flat", label: "Flat" },
+              { value: "soft", label: "Soft" },
+              { value: "deep", label: "Deep" },
+            ]}
+            onChange={appearance.onSurfaceDepth}
+          />
+        </Row>
+        <Row
+          label="Separators"
+          description="How strongly every hairline in the app is drawn. Subtle leans on the difference between one surface and the next; firm draws the line."
+        >
+          <Segmented
+            label="Separators"
+            value={appearance.separators}
+            options={[
+              { value: "subtle", label: "Subtle" },
+              { value: "regular", label: "Regular" },
+              { value: "firm", label: "Firm" },
+            ]}
+            onChange={appearance.onSeparators}
+          />
+        </Row>
+        <Row
+          label="Window opacity"
+          description="How much of the desktop shows through wavex. It applies to the whole chrome — the header, the sidebar, and the project rail — and to the main pane as well when Main pane glass is on."
         >
           <Slider
-            label="Sidebar opacity"
+            label="Window opacity"
             value={percent}
             display={`${percent}%`}
             min={Math.round(SIDEBAR_OPACITY_MIN * 100)}
@@ -883,7 +945,9 @@ function AccentSwatches({ value, onChange }: { value: number; onChange: (hue: nu
             className={`size-6 rounded-full border-2 border-background-base transition-shadow ${
               selected ? "ring-2 ring-content/70" : "ring-1 ring-content/15 hover:ring-content/40"
             }`}
-            style={{ background: `hsl(${preset.hue} 92% var(--accent-lightness, 62%))` }}
+            style={{
+              background: `hsl(${preset.hue} var(--accent-saturation, 62%) var(--accent-lightness, 58%))`,
+            }}
           />
         );
       })}

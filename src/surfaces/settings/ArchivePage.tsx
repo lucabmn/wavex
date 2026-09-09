@@ -70,13 +70,11 @@ export function ArchivePage({
           archivedProjects.map((project) => (
             <div
               key={project.path}
-              className="flex items-center gap-3 border-b border-content/8 px-4 py-2.5 last:border-b-0"
+              className="flex items-center gap-3 border-b border-edge px-4 py-2.5 last:border-b-0"
             >
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px]">{archivedProjectLabel(project.path)}</div>
-                <div className="truncate text-[11px] text-content/40">
-                  {prettyCwd(project.path)}
-                </div>
+                <div className="truncate text-[13.5px]">{archivedProjectLabel(project.path)}</div>
+                <div className="truncate text-[11.5px] text-dim">{prettyCwd(project.path)}</div>
               </div>
               {onRestoreProject ? (
                 <SecondaryButton onClick={() => onRestoreProject(project.path)}>
@@ -104,17 +102,17 @@ export function ArchivePage({
           archived.map((session) => (
             <div
               key={session.id}
-              className="flex items-center gap-3 border-b border-content/8 px-4 py-2.5 last:border-b-0"
+              className="flex items-center gap-3 border-b border-edge px-4 py-2.5 last:border-b-0"
             >
               <HarnessIcon harness={session.harness} className="size-3.5 shrink-0" />
               <button
                 type="button"
                 onClick={() => onOpenSession(session.id)}
-                className="min-w-0 flex-1 truncate text-left text-[13px] hover:text-content"
+                className="min-w-0 flex-1 truncate text-left text-[13.5px] hover:text-content"
               >
                 {sessionDisplayTitle(session.title, session.harness)}
               </button>
-              <span className="shrink-0 text-[11px] text-content/35 tabular-nums">
+              <span className="shrink-0 text-[11.5px] text-dim tabular-nums">
                 {formatDate(session.updatedAt)}
               </span>
               <SecondaryButton onClick={() => onArchiveSession(session.id, false)}>

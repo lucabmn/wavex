@@ -76,6 +76,12 @@ type Props = {
   onSelectProject?: (path: string) => void;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
+  /** Work draws its own body; the header then carries only the shell. */
+  workMode?: boolean;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
+  onGoBack?: () => void;
+  onGoForward?: () => void;
 };
 
 function sessionMeta(tab: TitleTab): string {
@@ -187,7 +193,7 @@ function TabHarnesses({
           }`}
         >
           {busy.has(harness) ? (
-            <TerminalSpinner className="inline-block w-3.5 select-none text-center text-[11px] leading-none text-accent" />
+            <TerminalSpinner className="inline-block w-3.5 select-none text-center text-[11.5px] leading-none text-accent" />
           ) : (
             <HarnessIcon harness={harness} className="size-3.5 shrink-0" />
           )}
@@ -195,7 +201,7 @@ function TabHarnesses({
       ))}
       {extra > 0 ? (
         <span
-          className={`pl-0.5 text-[10px] leading-none ${dimmed ? "text-content/50" : "text-content"}`}
+          className={`pl-0.5 text-[10px] leading-none ${dimmed ? "text-faint" : "text-content"}`}
         >
           +{extra}
         </span>
@@ -261,10 +267,10 @@ function TitleTabItem({
       }}
     >
       {showStart ? (
-        <div className="pointer-events-none absolute inset-y-1.5 left-0 z-20 w-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5 bg-accent" />
       ) : null}
       {showEnd ? (
-        <div className="pointer-events-none absolute inset-y-1.5 right-0 z-20 w-0.5 rounded-full bg-accent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-0.5 bg-accent" />
       ) : null}
       <button
         type="button"
@@ -278,13 +284,11 @@ function TitleTabItem({
           if (sortable.consumeClick()) return;
           onSelect(tab.id);
         }}
-        className={`relative flex h-7.5 min-w-0 flex-1 cursor-default items-center gap-1.5 self-center rounded-md px-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-          closable ? "pr-7" : "pr-2.5"
-        } ${
+        className={`ui-focus relative flex h-7 min-w-0 flex-1 cursor-default items-center gap-2 rounded-md border px-2.5 text-left ${
           active
-            ? "bg-content/10 text-content"
-            : "text-content/50 hover:bg-content/5 hover:text-content"
-        }`}
+            ? "border-transparent bg-selected text-content"
+            : "border-transparent text-muted hover:bg-hover hover:text-content"
+        } ${closable ? "pr-7" : "pr-2.5"}`}
       >
         {tab.harnesses.length > 0 ? (
           <TabHarnesses
@@ -294,7 +298,7 @@ function TitleTabItem({
           />
         ) : tab.terminal || !fileIcon ? (
           <Terminal
-            className={`size-3.5 shrink-0 ${active ? "text-content" : "text-content/55"}`}
+            className={`size-3.5 shrink-0 ${active ? "text-content" : "text-faint"}`}
             strokeWidth={1.75}
           />
         ) : (
@@ -307,8 +311,8 @@ function TitleTabItem({
             <span
               className={`min-w-0 truncate leading-none ${
                 meta
-                  ? "text-[13px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
-                  : "text-[13px]"
+                  ? "text-[13.5px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
+                  : "text-[13.5px]"
               }`}
             >
               {headline}
@@ -322,7 +326,7 @@ function TitleTabItem({
             ) : null}
             {tab.needsApproval ? (
               <span
-                className="flex shrink-0 items-center gap-0.5 text-amber-400"
+                className="flex shrink-0 items-center gap-0.5 text-warn"
                 title="Agent needs approval to continue"
                 aria-label="Agent needs approval to continue"
               >
@@ -332,7 +336,7 @@ function TitleTabItem({
             ) : null}
             {tab.hasUnread ? (
               <span
-                className="flex shrink-0 items-center gap-0.5 text-emerald-400"
+                className="flex shrink-0 items-center gap-0.5 text-positive"
                 title="Agent finished — new reply to read"
                 aria-label="Agent finished, new reply to read"
               >
@@ -342,7 +346,7 @@ function TitleTabItem({
             ) : null}
             {(tab.checkErrors ?? 0) > 0 ? (
               <span
-                className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-red-400"
+                className="flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-danger"
                 title={checkLabel(tab.checkErrors ?? 0)}
                 aria-label={checkLabel(tab.checkErrors ?? 0)}
               >
@@ -352,7 +356,7 @@ function TitleTabItem({
             ) : null}
           </span>
           {meta ? (
-            <span className="hidden min-w-0 truncate text-[10px] leading-none text-content/45 @min-[11rem]:block">
+            <span className="hidden min-w-0 truncate text-[10px] leading-none text-faint @min-[11rem]:block">
               {meta}
             </span>
           ) : null}
@@ -371,7 +375,7 @@ function TitleTabItem({
             e.stopPropagation();
             onClose(tab.id);
           }}
-          className="absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 opacity-0 hover:bg-content/10 hover:text-content group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="ui-focus absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-md text-faint opacity-0 transition-opacity hover:bg-hover hover:text-content group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
         >
           <X className="size-3" strokeWidth={1.75} />
         </button>
@@ -391,7 +395,7 @@ function TabStripChevron({ side, onClick }: { side: "left" | "right"; onClick: (
       data-tauri-drag-region="false"
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`absolute top-1/2 z-40 grid size-6.5 -translate-y-1/2 place-items-center rounded-md bg-content/10 backdrop-blur-xl text-content/70 hover:bg-content/15 hover:text-content ${
+      className={`ui-overlay absolute top-1/2 z-40 grid size-6.5 -translate-y-1/2 place-items-center rounded-lg text-muted hover:text-content ${
         side === "left" ? "left-1" : "right-1"
       }`}
     >
@@ -427,14 +431,14 @@ export function IconButton({
         if (disabled) return;
         onClick?.();
       }}
-      className={`grid size-6.5 place-items-center rounded-md ${
+      className={`ui-focus grid size-6.5 place-items-center rounded-lg transition-colors ${
         disabled
-          ? "text-content/25"
+          ? "text-dim"
           : accent
-            ? "text-accent hover:bg-content/10"
+            ? "text-accent hover:bg-accent/12"
             : active
-              ? "text-content hover:bg-content/10"
-              : "text-content/50 hover:bg-content/10 hover:text-content"
+              ? "bg-content/8 text-content hover:bg-hover"
+              : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       {children}
@@ -447,7 +451,7 @@ export function DevModeLabel() {
   return (
     <span
       title="Development build"
-      className="mr-1 min-w-0 truncate rounded-md bg-skill/15 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-skill"
+      className="mr-1 min-w-0 truncate rounded-full border border-skill/25 bg-skill/12 px-2 py-0.5 text-[10px] font-medium tracking-wide text-skill"
     >
       Development
     </span>
@@ -616,6 +620,11 @@ function TitleBarComponent({
   onSelectProject,
   mode,
   onModeChange,
+  workMode = false,
+  canGoBack = false,
+  canGoForward = false,
+  onGoBack,
+  onGoForward,
 }: Props) {
   const tabIds = tabs.map((tab) => tab.id);
   const sortable = useSortable(tabIds, onReorder);
@@ -705,7 +714,10 @@ function TitleBarComponent({
   const showProjectButton = railClosed && Boolean(onSelectProject) && !showCurrentProject;
   const trailingControls = (
     <div className="flex h-full shrink-0 items-stretch">
-      <div className="flex items-center gap-0.5 px-2">
+      <div className="flex shrink-0 items-center pr-1">
+        <DevModeLabel />
+      </div>
+      <div className={`flex items-center gap-0.5 px-2 ${workMode ? "hidden" : ""}`}>
         {projectless && railClosed && onOpenInbox ? (
           <IconButton label="Inbox" onClick={onOpenInbox}>
             <Inbox className="size-3.5" strokeWidth={1.75} />
@@ -751,29 +763,31 @@ function TitleBarComponent({
   // exempts buttons, links and inputs on its own.
   return (
     <header
-      className="flex h-10 shrink-0 select-none items-stretch border-b border-content/10"
+      className="ui-rule-b flex h-10 shrink-0 select-none items-stretch"
       data-tauri-drag-region="deep"
     >
-      {/* Both the rail and the sidebar step aside without a project, so the
-          title bar takes over the traffic lights and the rail toggle. */}
-      {projectless && railClosed ? (
-        <>
-          <div className="w-[78px] shrink-0" />
-          <div className="flex shrink-0 items-center px-1.5">
-            <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
-              <PanelLeft className="size-3.5" strokeWidth={1.75} />
-            </IconButton>
-          </div>
-        </>
-      ) : null}
-      {/* The rail owns the switch when it is open; this is the fallback for a
-          collapsed rail, matching how Go to File and New session appear there. */}
+      {/* The header spans the window, so it is the only thing that can hold
+          the traffic lights out of the way. */}
+      {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
+      <div className="flex shrink-0 items-center pl-1">
+        <TabVisitNav
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          onGoBack={onGoBack}
+          onGoForward={onGoForward}
+        />
+        {workMode ? null : (
+          <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
+            <PanelLeft className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
+        )}
+      </div>
       {railClosed && mode && onModeChange ? (
-        <div className="flex shrink-0 items-center border-r border-content/10 px-2">
+        <div className="flex shrink-0 items-stretch px-2">
           <ModeSwitch mode={mode} onChange={onModeChange} />
         </div>
       ) : null}
-      {showProjectButton && onSelectProject ? (
+      {workMode ? null : showProjectButton && onSelectProject ? (
         <CwdPicker
           cwd={cwd}
           recents={recents}
@@ -782,17 +796,18 @@ function TitleBarComponent({
           onNewTerminal={onNewTerminal}
           buttonClassName="flex h-full min-w-0 max-w-64 shrink items-center gap-2 px-6 text-left text-sm font-medium leading-tight"
         >
-          <span className="min-w-0 truncate text-content/50">No project</span>
+          <span className="min-w-0 truncate text-faint">No project</span>
         </CwdPicker>
       ) : null}
 
       <div
         className={`flex min-w-0 flex-1 items-stretch${
-          showProjectButton ? " border-l border-content/10" : ""
+          showProjectButton && !workMode ? " border-l border-edge" : ""
         }`}
       >
+        {workMode ? <div className="min-w-0 flex-1" /> : null}
         <div
-          className="relative h-full min-w-0 flex-1 overflow-hidden"
+          className={`relative h-full min-w-0 flex-1 overflow-hidden ${workMode ? "hidden" : ""}`}
           onWheel={(event) => {
             const el = tabStripRef.current;
             if (!el || el.scrollWidth <= el.clientWidth) return;
@@ -811,7 +826,7 @@ function TitleBarComponent({
             ref={setTabStripRef}
             role="tablist"
             aria-label="Workspace tabs"
-            className="scrollbar-none flex h-full min-w-0 cursor-default items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-none px-1.5"
+            className="scrollbar-none flex h-full min-w-0 cursor-default items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-none px-2"
             onKeyDown={(event) => {
               const current = (event.target as HTMLElement).closest<HTMLButtonElement>(
                 '[role="tab"]',
@@ -829,7 +844,12 @@ function TitleBarComponent({
             {tabs.map((tab, index) => (
               <div
                 key={tab.id}
-                className="relative flex h-full w-56 min-w-28 shrink cursor-default items-center"
+                /*
+                 * Wider than the 11rem the container queries below switch on,
+                 * so a tab at its resting width never sits exactly on that
+                 * boundary and flips its meta line on sub-pixel rounding.
+                 */
+                className="relative flex h-full w-52 min-w-24 shrink cursor-default items-center"
                 data-tauri-drag-region="false"
               >
                 <TitleTabItem
@@ -856,7 +876,7 @@ function TitleBarComponent({
 
         {IS_MAC ? null : (
           <div className="flex min-w-0 flex-1 items-center justify-center px-4">
-            <span className="pointer-events-none truncate text-[11.5px] font-medium text-content/40 select-none">
+            <span className="pointer-events-none truncate text-[11.5px] font-medium text-dim select-none">
               {systemTitle}
             </span>
           </div>

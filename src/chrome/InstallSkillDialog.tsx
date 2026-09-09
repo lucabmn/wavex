@@ -102,18 +102,18 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
         aria-modal="true"
         aria-label="Add a skill"
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute left-1/2 top-[14%] flex w-[min(560px,calc(100vw-24px))] flex-col gap-4 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[14%] flex w-[min(560px,calc(100vw-24px))] flex-col gap-4 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-[13px] font-medium leading-tight text-content">Add a skill</h2>
-          <p className="text-[12px] leading-snug text-content/55">
+          <h2 className="text-[13.5px] font-medium leading-tight text-content">Add a skill</h2>
+          <p className="text-[12.5px] leading-snug text-faint">
             wavex runs the <code className="font-mono">skills</code> CLI. It writes the skill once
             and links it into each agent directory you pick.
           </p>
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12px] text-content/60">Package</span>
+          <span className="text-[12.5px] text-muted">Package</span>
           <input
             ref={packageRef}
             value={pkg}
@@ -122,12 +122,12 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
             autoCapitalize="off"
             autoCorrect="off"
             placeholder="owner/repo or a GitHub URL"
-            className="rounded-md border border-content/10 bg-content/5 px-2 py-1.5 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-content/25"
+            className="rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[13.5px] text-content outline-none placeholder:text-dim focus:border-edge-strong"
           />
         </label>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[12px] text-content/60">Agents</span>
+          <span className="text-[12.5px] text-muted">Agents</span>
           <div className="flex flex-wrap gap-1.5">
             {SKILL_CLI_AGENTS.map((agent) => {
               const on = agents.includes(agent.id);
@@ -138,10 +138,10 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
                   role="switch"
                   aria-checked={on}
                   onClick={() => toggleAgent(agent.id)}
-                  className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] ${
+                  className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12.5px] ${
                     on
                       ? "border-accent/40 bg-accent/15 text-content"
-                      : "border-content/10 bg-content/5 text-content/55 hover:text-content"
+                      : "border-edge bg-content/5 text-faint hover:text-content"
                   }`}
                 >
                   <HarnessIcon harness={agent.harness} className="size-3.5" />
@@ -153,7 +153,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12px] text-content/60">Skills</span>
+          <span className="text-[12.5px] text-muted">Skills</span>
           <input
             value={skills}
             onChange={(event) => setSkills(event.target.value)}
@@ -161,12 +161,12 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
             autoCapitalize="off"
             autoCorrect="off"
             placeholder="Every skill in the package"
-            className="rounded-md border border-content/10 bg-content/5 px-2 py-1.5 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-content/25"
+            className="rounded-md border border-edge bg-content/5 px-2 py-1.5 text-[13.5px] text-content outline-none placeholder:text-dim focus:border-edge-strong"
           />
         </label>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[12px] text-content/60">Scope</span>
+          <span className="text-[12.5px] text-muted">Scope</span>
           <div className="flex gap-1.5">
             <ScopeButton
               label="This project"
@@ -184,20 +184,18 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
           </div>
         </div>
 
-        <pre className="overflow-x-auto rounded-md bg-content/5 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-content/60">
+        <pre className="overflow-x-auto rounded-md bg-content/5 px-2 py-1.5 font-mono text-[11.5px] leading-relaxed text-muted">
           {command}
         </pre>
 
-        {error ? <p className="text-[12px] leading-snug text-red-300">{error}</p> : null}
+        {error ? <p className="text-[12.5px] leading-snug text-danger">{error}</p> : null}
         {result ? (
           <div className="flex flex-col gap-1">
-            <p
-              className={`text-[12px] leading-snug ${result.ok ? "text-content/70" : "text-red-300"}`}
-            >
+            <p className={`text-[12.5px] leading-snug ${result.ok ? "text-muted" : "text-danger"}`}>
               {result.ok ? "Installed." : "The skills CLI reported a problem."}
             </p>
             {result.output ? (
-              <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-content/5 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-content/55">
+              <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-content/5 px-2 py-1.5 font-mono text-[11.5px] leading-relaxed text-faint">
                 {result.output}
               </pre>
             ) : null}
@@ -206,7 +204,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
 
         <div className="flex items-center justify-end gap-2">
           {busy ? (
-            <span className="mr-auto flex items-center gap-1.5 text-[12px] text-content/50">
+            <span className="mr-auto flex items-center gap-1.5 text-[12.5px] text-faint">
               <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
               Running the skills CLI…
             </span>
@@ -214,7 +212,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             {result?.ok ? "Done" : "Cancel"}
           </button>
@@ -222,7 +220,7 @@ export function InstallSkillDialog({ cwd, onCancel, onInstalled }: Props) {
             type="button"
             disabled={!ready}
             onClick={() => void install()}
-            className="rounded-md bg-accent/20 px-3 py-1.5 text-[12px] font-medium text-content disabled:opacity-40 enabled:hover:bg-accent/30"
+            className="rounded-md bg-accent/20 px-3 py-1.5 text-[12.5px] font-medium text-content disabled:opacity-40 enabled:hover:bg-accent/30"
           >
             Add
           </button>
@@ -255,11 +253,11 @@ function ScopeButton({
       className={`flex min-w-0 flex-1 flex-col items-start gap-0.5 rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${
         on
           ? "border-accent/40 bg-accent/15 text-content"
-          : "border-content/10 bg-content/5 text-content/55 enabled:hover:text-content"
+          : "border-edge bg-content/5 text-faint enabled:hover:text-content"
       }`}
     >
-      <span className="text-[12px] font-medium">{label}</span>
-      <span className="w-full truncate text-[11px] text-content/40">{detail}</span>
+      <span className="text-[12.5px] font-medium">{label}</span>
+      <span className="w-full truncate text-[11.5px] text-dim">{detail}</span>
     </button>
   );
 }

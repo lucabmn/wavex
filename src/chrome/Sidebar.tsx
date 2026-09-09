@@ -9,6 +9,7 @@ import {
   Folder,
   Inbox,
   ListFilter,
+  PanelLeft,
   Pin,
   Plus,
   Search,
@@ -27,7 +28,7 @@ import {
 } from "react";
 import { loadSidebarTabOrder, saveSidebarTabOrder, type SidebarTabId } from "../lib/appearance";
 import { basename, type GitHistoryCommit } from "../lib/fs";
-import { IS_MAC, MOD } from "../lib/platform";
+import { MOD } from "../lib/platform";
 import { resolveModel } from "../lib/models";
 import { projectName } from "../lib/paths";
 import { sessionDisplayTitle } from "../lib/session";
@@ -111,7 +112,7 @@ import type { AppMode } from "../lib/workspace/appMode";
 import { RailAction } from "./RailAction";
 import { CLOCK_STRIDE_COARSE, useNow } from "../lib/motion";
 import { TerminalSpinner } from "./TerminalSpinner";
-import { DevModeSlot, IconButton, TabVisitNav } from "./TitleBar";
+import { IconButton } from "./TitleBar";
 import { ProjectSearch } from "./ProjectSearch";
 import { ProjectLogoIcon } from "./ProjectLogoIcon";
 import { ProjectMascot } from "./ProjectMascot";
@@ -123,7 +124,7 @@ import { nextTabIndex } from "../lib/tabNavigation";
 
 const MIN_WIDTH = 260;
 const MAX_WIDTH = 560;
-const DEFAULT_WIDTH = 260;
+const DEFAULT_WIDTH = 320;
 
 let rememberedWidth = DEFAULT_WIDTH;
 
@@ -176,10 +177,6 @@ type Props = {
   onFilesSearchOpenChange: (open: boolean) => void;
   onOpenFilesSearch?: () => void;
   searchFocusToken?: number;
-  canGoBack?: boolean;
-  canGoForward?: boolean;
-  onGoBack?: () => void;
-  onGoForward?: () => void;
   onOpenDiff?: (path: string) => void;
   onOpenCommit?: (commit: GitHistoryCommit) => void;
   selectedDiffPath?: string;
@@ -209,12 +206,12 @@ type Props = {
   automationsActive?: boolean;
   notesEnabled?: boolean;
   usageActive?: boolean;
-  onToggleProjectRail?: () => void;
   /** Work is in front: it brings its own left column, so this one stands down. */
   workMode?: boolean;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
   projectRailOpen?: boolean;
+  onToggleProjectRail?: () => void;
   unseenFinishedIds?: Set<string>;
   /** Project-level diff stats shared by every session in this project. */
   gitState?: GitState | null;
@@ -263,10 +260,6 @@ function SidebarComponent({
   onFilesSearchOpenChange,
   onOpenFilesSearch,
   searchFocusToken = 0,
-  canGoBack = false,
-  canGoForward = false,
-  onGoBack,
-  onGoForward,
   onOpenDiff,
   onOpenCommit,
   selectedDiffPath,
@@ -296,11 +289,11 @@ function SidebarComponent({
   automationsActive = false,
   notesEnabled = true,
   usageActive = false,
-  onToggleProjectRail,
   workMode = false,
   mode,
   onModeChange,
   projectRailOpen = true,
+  onToggleProjectRail,
   unseenFinishedIds: unseenFinishedIdsProp,
   gitState: gitStateProp,
   checkErrors = 0,
@@ -799,7 +792,7 @@ function SidebarComponent({
           setSearchQuery("");
         }
       }}
-      className="h-full w-full min-w-0 rounded-md bg-transparent py-0 pl-7 pr-2 text-[12px] text-content outline-none placeholder:text-content/35"
+      className="h-full w-full min-w-0 rounded-md bg-transparent py-0 pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-dim"
     />
   );
 
@@ -886,18 +879,17 @@ function SidebarComponent({
             if (sortable.consumeClick()) return;
             onTabPick(itemId);
           }}
-          className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center overflow-hidden rounded-md px-2 text-[12px] leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-            active
-              ? "bg-content/10 text-content"
-              : "text-content/50 hover:bg-content/5 hover:text-content"
-          } ${canDragTabs ? "cursor-grab active:cursor-grabbing" : ""}`}
+          data-selected={active ? "true" : undefined}
+          className={`ui-tab ui-focus flex h-full min-w-0 flex-1 items-center justify-center overflow-hidden px-2 text-[12.5px] font-medium leading-none ${
+            canDragTabs ? "cursor-grab active:cursor-grabbing" : ""
+          }`}
         >
           {isChangesTab && hasUncommitted ? (
             <DiffStat additions={changeAdditions} deletions={changeDeletions} files={changeFiles} />
           ) : isChangesTab ? (
             <span className="flex min-w-0 items-center gap-1">
               <span className="block truncate">{TAB_LABELS[itemId]}</span>
-              <Check className="size-3 shrink-0 text-emerald-400/80" strokeWidth={2.25} />
+              <Check className="size-3 shrink-0 text-positive/80" strokeWidth={2.25} />
             </span>
           ) : (
             <span className="block truncate">{TAB_LABELS[itemId]}</span>
@@ -908,73 +900,70 @@ function SidebarComponent({
   });
 
   const sidebarContent = (
-    <aside
-      ref={resize.setPaneRef}
-      className="sidebar-glass relative flex h-full min-h-0 shrink-0 flex-col border-r border-content/10"
-    >
+    <aside ref={resize.setPaneRef} className="relative flex h-full min-h-0 shrink-0 flex-col">
       {railVisible ? (
-        <>
-          <div
-            className="flex h-10 shrink-0 select-none items-center gap-1 border-b border-content/10 pl-3 pr-1.5"
-            data-tauri-drag-region="deep"
-          >
-            <span className="min-w-0 flex-1 truncate text-sm font-medium leading-tight">
-              Workspace
-            </span>
-            <WorkspaceTitleActions onSearch={onGoToFile} onNew={onNew} />
-          </div>
+        /*
+         * One band across the whole sidebar. The rail's own top row is the
+         * left half of it, so the tab strip stands at the same height with no
+         * "Workspace" title above it: the rail and this panel are one sidebar
+         * with a nav column and a list column, not two stacked panels each
+         * with a header of its own.
+         */
+        <div
+          className="ui-rule-b flex h-10 shrink-0 items-stretch pr-1.5"
+          data-tauri-drag-region="deep"
+        >
           <div
             role="tablist"
             aria-label="Workspace"
-            className="flex h-9 shrink-0 items-center gap-px border-b border-content/10 px-2"
+            className="flex min-w-0 flex-1 items-stretch gap-0.5 pl-1"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
           </div>
-        </>
+          <div className="flex shrink-0 items-center">
+            <WorkspaceTitleActions
+              onSearch={onGoToFile}
+              onNew={onNew}
+              projectRailOpen={projectRailOpen}
+              onToggleProjectRail={onToggleProjectRail}
+            />
+          </div>
+        </div>
       ) : (
         <>
           <div
-            className="flex h-10 shrink-0 select-none items-center border-b border-content/10 pr-1.5"
+            className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-1 px-2"
             data-tauri-drag-region="deep"
           >
-            {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
-            <DevModeSlot />
-            <TabVisitNav
-              canGoBack={canGoBack}
-              canGoForward={canGoForward}
-              onGoBack={onGoBack}
-              onGoForward={onGoForward}
-              onTogglePanel={onToggleProjectRail}
-              panelActive={false}
-            />
+            {onSelectProject ? (
+              <SidebarProjectPicker
+                cwd={cwd}
+                recents={recents}
+                busy={projectPathBusy(busyProjectPaths, cwd)}
+                onSelectProject={onSelectProject}
+                onNewTerminal={onNewTerminal}
+                onSearch={onSearch}
+                onOpenInbox={onOpenInbox}
+                onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+                onOpenUsage={onOpenUsage}
+                onOpenActivity={onOpenActivity}
+                onOpenAutomations={onOpenAutomations}
+                searchActive={searchActive}
+                inboxActive={inboxActive}
+                notesActive={notesActive}
+                usageActive={usageActive}
+                activityActive={activityActive}
+                automationsActive={automationsActive}
+                inboxUnseen={inboxUnseen}
+                onToggleProjectRail={onToggleProjectRail}
+              />
+            ) : null}
           </div>
-          {onSelectProject ? (
-            <SidebarProjectPicker
-              cwd={cwd}
-              recents={recents}
-              busy={projectPathBusy(busyProjectPaths, cwd)}
-              onSelectProject={onSelectProject}
-              onNewTerminal={onNewTerminal}
-              onSearch={onSearch}
-              onOpenInbox={onOpenInbox}
-              onOpenNotes={notesEnabled ? onOpenNotes : undefined}
-              onOpenUsage={onOpenUsage}
-              onOpenActivity={onOpenActivity}
-              onOpenAutomations={onOpenAutomations}
-              searchActive={searchActive}
-              inboxActive={inboxActive}
-              notesActive={notesActive}
-              usageActive={usageActive}
-              activityActive={activityActive}
-              automationsActive={automationsActive}
-              inboxUnseen={inboxUnseen}
-            />
-          ) : null}
           <div
             role="tablist"
             aria-label="Workspace"
-            className="flex h-9 shrink-0 items-center gap-px overflow-visible border-b border-content/10 px-2"
+            className="ui-rule-b flex h-10 shrink-0 items-stretch gap-0.5 overflow-visible px-2"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
@@ -1010,11 +999,11 @@ function SidebarComponent({
               />
             </div>
           ) : (
-            <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No project folder</p>
           )}
         </div>
         {tab === "sessions" && cwd && cwd !== "~" ? (
-          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-2">
+          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-2">
             <div className="relative flex h-7 min-w-0 flex-1 items-center">
               <Search className="pointer-events-none absolute left-2 size-3 shrink-0 opacity-50" />
               {sessionSearchInput}
@@ -1040,7 +1029,7 @@ function SidebarComponent({
           }`}
         >
           {!cwd || cwd === "~" ? (
-            <p className="px-3 py-2 text-[12px] text-content/50">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No project folder</p>
           ) : (
             <div>
               {/*
@@ -1051,8 +1040,8 @@ function SidebarComponent({
               cannot claim "No sessions yet" before the rows have landed.
             */}
               {pendingFirstLoad ? null : status === "error" && sessions.length === 0 ? (
-                <div role="alert" className="m-2 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
-                  <span className="flex items-center gap-2 text-[12px] text-red-300">
+                <div role="alert" className="m-2 flex flex-col gap-2 rounded-lg bg-danger/8 p-2.5">
+                  <span className="flex items-center gap-2 text-[12.5px] text-danger">
                     <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
                     Couldn’t load sessions
                   </span>
@@ -1060,7 +1049,7 @@ function SidebarComponent({
                     <button
                       type="button"
                       onClick={onRetrySessions}
-                      className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-content/15 hover:text-content"
+                      className="ui-focus self-start rounded-md border border-edge bg-surface-raised px-2.5 py-1 text-[11.5px] font-medium text-strong hover:text-content"
                     >
                       Try again
                     </button>
@@ -1071,7 +1060,7 @@ function SidebarComponent({
                 // just typed, so it stays a quiet line of text. Only the genuine
                 // "this project has nothing in it" case earns the illustration.
                 narrowedByUser ? (
-                  <p className="px-3 py-2 text-[12px] text-content/50">
+                  <p className="px-3 py-2 text-[12.5px] text-faint">
                     {searchNarrowed ? "No matching sessions" : "No sessions match these filters"}
                   </p>
                 ) : (
@@ -1190,7 +1179,7 @@ function SidebarComponent({
                                   ))}
                                 </ul>
                                 {onNew ? (
-                                  <div className="border-t border-content/10 p-1">
+                                  <div className="border-t border-edge p-1">
                                     <button
                                       type="button"
                                       data-no-drag
@@ -1198,10 +1187,10 @@ function SidebarComponent({
                                       title="New session"
                                       aria-label="New session"
                                       onClick={() => onNewInFolder(entry.folder.id)}
-                                      className="relative flex w-full items-center gap-1 rounded-md border border-transparent px-2.5 py-1.5 text-left text-content/45 hover:bg-content/10 hover:text-content"
+                                      className="relative flex w-full items-center gap-1 rounded-md border border-transparent px-2.5 py-1.5 text-left text-faint hover:bg-hover hover:text-content"
                                     >
                                       <Plus className="size-3 shrink-0" strokeWidth={1.75} />
-                                      <span className="text-[13px] font-semibold leading-snug">
+                                      <span className="text-[13.5px] font-semibold leading-snug">
                                         New session
                                       </span>
                                     </button>
@@ -1305,7 +1294,7 @@ function SidebarComponent({
         aria-valuemin={MIN_WIDTH}
         aria-valuemax={resize.maxWidth}
         className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none focus-visible:bg-accent/60 focus-visible:outline-none ${
-          resize.dragging ? "bg-content/15" : "hover:bg-content/10"
+          resize.dragging ? "bg-content/15" : "hover:bg-hover"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
@@ -1331,10 +1320,6 @@ function SidebarComponent({
           liveAgents={liveAgents}
           activeSessionId={activeSessionId}
           onSelectAgent={onSelectAgent}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onGoBack={onGoBack}
-          onGoForward={onGoForward}
           onSearch={onSearch}
           searchActive={searchActive}
           onOpenInbox={onOpenInbox}
@@ -1348,7 +1333,6 @@ function SidebarComponent({
           activityActive={activityActive}
           onOpenAutomations={onOpenAutomations}
           automationsActive={automationsActive}
-          onTogglePanel={onToggleProjectRail}
           mode={mode}
           onModeChange={onModeChange}
           onSelectProject={onSelectProject}
@@ -1377,6 +1361,7 @@ function SidebarComponent({
 export const Sidebar = memo(SidebarComponent);
 
 function SidebarProjectPicker({
+  onToggleProjectRail,
   cwd,
   recents,
   busy,
@@ -1413,6 +1398,7 @@ function SidebarProjectPicker({
   activityActive?: boolean;
   usageActive?: boolean;
   automationsActive?: boolean;
+  onToggleProjectRail?: () => void;
   inboxUnseen?: boolean;
 }) {
   const [groupLabels] = useState(loadTabGroupLabels);
@@ -1426,10 +1412,7 @@ function SidebarProjectPicker({
   const color = resolveTabGroupColor(projectKey, groupColors, groupCustomColors, projectKey);
 
   return (
-    <div
-      className="flex h-9 items-center gap-0.5 border-b border-content/10 px-2"
-      data-tauri-drag-region="deep"
-    >
+    <>
       <CwdPicker
         cwd={cwd}
         recents={recents}
@@ -1437,8 +1420,8 @@ function SidebarProjectPicker({
         chevron
         onCwdChange={onSelectProject}
         onNewTerminal={onNewTerminal}
-        className="min-w-0 items-center"
-        buttonClassName="flex h-6.5 w-full items-center gap-1.5 rounded-md px-2 text-[12px] leading-none text-content/50 hover:text-content"
+        className="min-w-0 flex-1 items-center"
+        buttonClassName="flex h-7 w-full items-center gap-2 rounded-md px-2 text-[13px] font-medium leading-none text-content hover:bg-hover"
       >
         {logoPath ? (
           <ProjectLogoIcon
@@ -1457,7 +1440,12 @@ function SidebarProjectPicker({
         )}
         <span className="min-w-0 truncate">{label}</span>
       </CwdPicker>
-      <div className="flex items-center ml-auto">
+      <div className="flex shrink-0 items-center" data-tauri-drag-region="false">
+        {onToggleProjectRail ? (
+          <IconButton label="Toggle Projects" onClick={onToggleProjectRail}>
+            <PanelLeft className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
+        ) : null}
         {onSearch ? (
           <IconButton label={`Search (${MOD}K)`} active={searchActive} onClick={onSearch}>
             <Search className="size-3.5" strokeWidth={1.75} />
@@ -1501,14 +1489,29 @@ function SidebarProjectPicker({
           </IconButton>
         ) : null}
       </div>
-    </div>
+    </>
   );
 }
 
-function WorkspaceTitleActions({ onSearch, onNew }: { onSearch?: () => void; onNew?: () => void }) {
-  if (!onSearch && !onNew) return null;
+function WorkspaceTitleActions({
+  onSearch,
+  onNew,
+  projectRailOpen,
+  onToggleProjectRail,
+}: {
+  onSearch?: () => void;
+  onNew?: () => void;
+  projectRailOpen?: boolean;
+  onToggleProjectRail?: () => void;
+}) {
+  if (!onSearch && !onNew && !onToggleProjectRail) return null;
   return (
     <div className="flex shrink-0 items-center gap-0.5" data-tauri-drag-region="false">
+      {onToggleProjectRail ? (
+        <IconButton label="Toggle Projects" active={projectRailOpen} onClick={onToggleProjectRail}>
+          <PanelLeft className="size-3.5" strokeWidth={1.75} />
+        </IconButton>
+      ) : null}
       {onSearch ? (
         <IconButton label={`Go to File (${MOD}P)`} onClick={onSearch}>
           <Search className="size-3.5" strokeWidth={1.75} />
@@ -1547,8 +1550,8 @@ function SessionsHeaderButton({
       aria-haspopup={hasPopup ? "menu" : undefined}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`relative z-50 grid size-6 place-items-center rounded-md text-content/50 hover:bg-content/10 hover:text-content ${
-        open || active ? "bg-content/10 text-content" : ""
+      className={`ui-focus relative z-50 grid size-6 place-items-center rounded-lg text-faint transition-colors hover:bg-hover hover:text-content ${
+        open || active ? "bg-selected text-content" : ""
       }`}
     >
       {children}
@@ -1658,17 +1661,15 @@ function FolderRow({
         dropTarget
           ? "text-content"
           : expanded
-            ? "text-content hover:bg-content/10"
-            : "text-content/80 hover:bg-content/10 hover:text-content"
+            ? "text-content hover:bg-hover"
+            : "text-strong hover:bg-hover hover:text-content"
       }`}
     >
       {dropTarget ? (
-        <div className="pointer-events-none absolute inset-0 rounded-md bg-accent/20" />
+        <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/20" />
       ) : null}
       <span
-        className={`relative grid size-4 shrink-0 place-items-center ${
-          accent ? "" : "text-content/50"
-        }`}
+        className={`relative grid size-4 shrink-0 place-items-center ${accent ? "" : "text-faint"}`}
         style={accent ? { color: accent } : undefined}
       >
         {expanded ? (
@@ -1688,16 +1689,16 @@ function FolderRow({
           </>
         )}
       </span>
-      <span className="relative min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug text-content">
+      <span className="relative min-w-0 flex-1 truncate text-[13.5px] font-semibold leading-snug text-content">
         {folder.name}
       </span>
-      <span className="relative flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-content/45">
+      <span className="relative flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-faint">
         {!expanded && needsApproval ? (
-          <CircleAlert className="size-3 text-amber-400" strokeWidth={1.75} />
+          <CircleAlert className="size-3 text-warn" strokeWidth={1.75} />
         ) : !expanded && busy ? (
-          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11px] leading-none text-accent" />
+          <TerminalSpinner className="inline-block w-3 select-none text-center text-[11.5px] leading-none text-accent" />
         ) : !expanded && done ? (
-          <Check className="size-3 text-emerald-400" strokeWidth={2.25} />
+          <Check className="size-3 text-positive" strokeWidth={2.25} />
         ) : null}
         <span>{count}</span>
       </span>
@@ -1754,7 +1755,7 @@ function FolderRenameRow({
       {dropTarget ? (
         <div className="pointer-events-none absolute inset-0 rounded-md bg-accent/20" />
       ) : null}
-      <span className="relative grid size-4 shrink-0 place-items-center text-content/50">
+      <span className="relative grid size-4 shrink-0 place-items-center text-faint">
         <ChevronDown className="size-3.5" strokeWidth={1.75} />
       </span>
       <input
@@ -1773,11 +1774,9 @@ function FolderRenameRow({
             finish(false);
           }
         }}
-        className="relative min-w-0 flex-1 rounded bg-content/10 px-2 py-0.5 text-[13px] font-semibold leading-snug text-content outline-none ring-1 ring-accent/40"
+        className="relative min-w-0 flex-1 rounded-md bg-surface-sunken px-2 py-0.5 text-[13.5px] font-semibold leading-snug text-content outline-none"
       />
-      <span className="relative shrink-0 text-[11px] tabular-nums text-content/45">
-        {memberCount}
-      </span>
+      <span className="relative shrink-0 text-[11.5px] tabular-nums text-faint">{memberCount}</span>
     </div>
   );
 }
@@ -1836,7 +1835,7 @@ function SessionCard({
   });
   const status =
     agent === "idle" ? (
-      <span className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums text-content/45">
+      <span className="flex shrink-0 items-center gap-1 text-[11.5px] tabular-nums text-faint">
         <span>{time}</span>
       </span>
     ) : (
@@ -1968,16 +1967,17 @@ function SessionCard({
       }}
       onContextMenu={onContextMenu}
       onKeyDown={onKeyDown}
-      className={`relative border flex w-full touch-none flex-col rounded-md px-2.5 text-left ${
+      data-selected={!dropTarget && !needsApproval && isActive ? "true" : undefined}
+      className={`ui-row relative flex w-full touch-none flex-col rounded-lg border px-2.5 text-left transition-colors ${
         compact ? "py-1.5" : "py-2"
       } ${dragging ? "opacity-40" : ""} ${
         dropTarget
-          ? "text-content border-transparent"
+          ? "border-transparent text-content"
           : needsApproval
-            ? "bg-content/20 text-content border-content/30 border-dashed"
+            ? "border-dashed border-warn/45 bg-warn/10 text-content"
             : isActive
-              ? "bg-content/10 text-content border-transparent"
-              : "text-content/80 hover:bg-content/5 hover:text-content border-transparent"
+              ? "border-transparent text-content"
+              : "border-transparent text-strong hover:bg-hover hover:text-content"
       }`}
     >
       {dropTarget ? (
@@ -1987,16 +1987,14 @@ function SessionCard({
         <span className="relative flex items-center gap-2">
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
             <HarnessIcon harness={session.harness} className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate text-[11px] text-content/50">{model}</span>
+            <span className="min-w-0 truncate text-[11.5px] text-faint">{model}</span>
           </span>
           {status}
         </span>
       )}
       <span className={`relative flex min-w-0 items-center gap-1.5 ${compact ? "" : "mt-1"}`}>
-        {session.pinned ? (
-          <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
-        ) : null}
-        <span className="min-w-0 flex-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
+        {session.pinned ? <Pin className="size-3 shrink-0 text-faint" strokeWidth={1.75} /> : null}
+        <span className="min-w-0 flex-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
           {title}
         </span>
         {compact ? status : null}
@@ -2076,12 +2074,9 @@ function SessionRenameRow({
 
   return (
     <div
-      className={`flex w-full flex-col rounded-md px-2.5 py-2 ${
-        needsApproval
-          ? "bg-amber-400/10 text-content"
-          : isActive
-            ? "bg-content/10 text-content"
-            : "text-content/80"
+      data-selected={!needsApproval && isActive ? "true" : undefined}
+      className={`ui-row flex w-full flex-col rounded-lg px-2.5 py-2 ${
+        needsApproval ? "bg-warn/10 text-content" : isActive ? "text-content" : "text-strong"
       }`}
     >
       <input
@@ -2091,7 +2086,7 @@ function SessionRenameRow({
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => finish(true)}
         onKeyDown={onKeyDown}
-        className="w-full rounded bg-content/10 px-2 py-1 text-[13px] font-semibold leading-snug text-content outline-none ring-1 ring-accent/40"
+        className="w-full rounded-md bg-surface-sunken px-2 py-1 text-[13.5px] font-semibold leading-snug text-content outline-none"
       />
     </div>
   );
@@ -2119,11 +2114,11 @@ function DiffStat({
   return (
     <span
       title={`${label} uncommitted`}
-      className="flex min-w-0 items-center gap-1.5 overflow-hidden font-mono text-[11px] font-semibold tabular-nums"
+      className="flex min-w-0 items-center gap-1.5 overflow-hidden font-mono text-[11.5px] font-semibold tabular-nums"
     >
-      {files > 0 ? <span className="truncate text-content/60">{files} changed</span> : null}
-      {additions > 0 ? <span className="shrink-0 text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="shrink-0 text-red-400">-{deletions}</span> : null}
+      {files > 0 ? <span className="truncate text-muted">{files} changed</span> : null}
+      {additions > 0 ? <span className="shrink-0 text-positive">+{additions}</span> : null}
+      {deletions > 0 ? <span className="shrink-0 text-danger">-{deletions}</span> : null}
     </span>
   );
 }

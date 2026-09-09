@@ -67,6 +67,12 @@ pub fn enable_window_glass(window: WebviewWindow) {
     }
 }
 
+/// The dark theme's own background, `hsl(220 6% 13%)`. The shade painted over a
+/// profile switch has to match what the document paints on the far side of the
+/// reload, or the swap flashes a darker frame.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+const OPAQUE_SHADE: Color = Color(31, 32, 35, 255);
+
 /// Paints the window opaque again for the length of a profile switch. The
 /// reload tears the document down, and a transparent window over that gap
 /// shows the webview's own blank frame instead of the app.
@@ -74,13 +80,13 @@ pub fn enable_window_glass(window: WebviewWindow) {
 pub fn disable_window_glass(window: WebviewWindow) {
     #[cfg(target_os = "macos")]
     {
-        let _ = window.set_background_color(Some(Color(23, 23, 23, 255)));
+        let _ = window.set_background_color(Some(OPAQUE_SHADE));
         crate::macos::disable_glass(&window);
     }
     #[cfg(target_os = "windows")]
     {
         let _ = window.set_effects(EffectsBuilder::new().build());
-        let _ = window.set_background_color(Some(Color(23, 23, 23, 255)));
+        let _ = window.set_background_color(Some(OPAQUE_SHADE));
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {

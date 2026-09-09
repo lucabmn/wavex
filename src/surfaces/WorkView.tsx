@@ -14,9 +14,8 @@ import { ChatComposer, type ChatComposerHandle } from "../chrome/ChatComposer";
 import { queuedFor } from "../lib/promptQueue";
 import { Modal } from "../chrome/Modal";
 import { ModeSwitch } from "../chrome/ModeSwitch";
-import { DevModeSlot, IconButton, TabVisitNav } from "../chrome/TitleBar";
+import { IconButton } from "../chrome/TitleBar";
 import { WorkspaceSidebarFooter } from "../chrome/WorkspaceSidebarFooter";
-import { WindowControls } from "../chrome/WindowControls";
 import {
   Archive,
   ChevronDown,
@@ -39,7 +38,7 @@ import {
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { setGrabbing, suppressTextSelection } from "../lib/drag";
 import { LAYER } from "../lib/layers";
-import { IS_MAC, MOD } from "../lib/platform";
+import { MOD } from "../lib/platform";
 import type { InstalledUpdate } from "../lib/updates/updateNotice";
 import type { AppMode } from "../lib/workspace/appMode";
 import {
@@ -309,79 +308,63 @@ export function WorkView({
       className="flex h-full min-h-0 min-w-0 flex-1 text-content"
     >
       {/* Work replaces the project rail rather than sitting beside it, so this
-          column owns the traffic lights and carries the mode switch itself.
-          `sidebar-glass` is what makes it opaque — without it the window's
-          macOS vibrancy shows whatever is behind wavex.
+          column owns the traffic lights and carries the mode switch itself. It
+          draws no ground of its own: the window root paints the one chrome
+          plane the header and the sidebar also stand on.
           The header repeats the rail's row exactly so switching modes does not
           move the traffic lights, the dev badge, or the nav icons. */}
-      <aside
-        className={`sidebar-glass ${
-          listOpen ? "flex w-64" : "flex w-auto"
-        } shrink-0 flex-col border-r border-content/10`}
-      >
-        <div
-          className="flex h-10 shrink-0 select-none items-center pr-1.5"
-          data-tauri-drag-region="deep"
-        >
-          {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
-          <DevModeSlot />
-          {/* Work has no tab-visit history, so back and forward stay disabled;
-              they are here to keep the row identical across a mode switch. */}
-          <TabVisitNav
-            onTogglePanel={() => setListOpen((open) => !open)}
-            panelActive={listOpen}
-            panelLabel="Toggle Chats"
-          />
-        </div>
-
+      <aside className={`${listOpen ? "flex w-64" : "flex w-auto"} shrink-0 flex-col`}>
         {listOpen ? (
-          <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
-            <div className="pb-1.5">
+          <>
+            {/* The same 40px band the workspace rail gives it, so switching
+                modes does not move the switch or its rule. */}
+            <div className="ui-rule-b flex h-10 shrink-0 items-stretch px-2">
               <ModeSwitch mode={mode} onChange={onModeChange} stretch />
             </div>
-
-            <div className="flex items-center gap-1">
-              <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-content/10 bg-content/5 px-2">
-                <Search className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />
-                <input
-                  ref={searchField}
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={`Search chats (${MOD}F)`}
-                  aria-label="Search chats"
-                  className="h-full min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-content/35"
-                />
-                {query ? (
-                  <button
-                    type="button"
-                    aria-label="Clear search"
-                    onClick={() => setQuery("")}
-                    className="shrink-0 text-content/40 hover:text-content"
-                  >
-                    <X className="size-3" strokeWidth={2} />
-                  </button>
-                ) : null}
+            <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-2">
+              <div className="flex items-center gap-1">
+                <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-edge bg-content/5 px-2">
+                  <Search className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />
+                  <input
+                    ref={searchField}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={`Search chats (${MOD}F)`}
+                    aria-label="Search chats"
+                    className="h-full min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-dim"
+                  />
+                  {query ? (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => setQuery("")}
+                      className="shrink-0 text-dim hover:text-content"
+                    >
+                      <X className="size-3" strokeWidth={2} />
+                    </button>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  title="New project"
+                  aria-label="New project"
+                  onClick={onNewFolder}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-muted hover:bg-hover hover:text-content"
+                >
+                  <FolderPlus className="size-3.5" strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  title={`New chat (${MOD}T)`}
+                  aria-label="New chat"
+                  onClick={() => onNewChat()}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-edge text-muted hover:bg-hover hover:text-content"
+                >
+                  <Plus className="size-3.5" strokeWidth={1.75} />
+                </button>
               </div>
-              <button
-                type="button"
-                title="New project"
-                aria-label="New project"
-                onClick={onNewFolder}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
-              >
-                <FolderPlus className="size-3.5" strokeWidth={1.75} />
-              </button>
-              <button
-                type="button"
-                title={`New chat (${MOD}T)`}
-                aria-label="New chat"
-                onClick={() => onNewChat()}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-content/10 text-content/60 hover:bg-content/10 hover:text-content"
-              >
-                <Plus className="size-3.5" strokeWidth={1.75} />
-              </button>
             </div>
-          </div>
+          </>
         ) : null}
 
         <div
@@ -392,11 +375,11 @@ export function WorkView({
           }`}
         >
           {state.loading && items.length === 0 ? (
-            <p className="px-1 py-2 text-[12px] text-content/45">Loading…</p>
+            <p className="px-1 py-2 text-[12.5px] text-faint">Loading…</p>
           ) : null}
           {state.error ? (
-            <div role="alert" className="mx-1 flex flex-col gap-2 rounded-lg bg-red-500/8 p-2.5">
-              <span className="flex items-start gap-2 text-[12px] leading-snug text-red-300">
+            <div role="alert" className="mx-1 flex flex-col gap-2 rounded-lg bg-danger/8 p-2.5">
+              <span className="flex items-start gap-2 text-[12.5px] leading-snug text-danger">
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.75} />
                 <span className="min-w-0 flex-1 break-words">{state.error}</span>
               </span>
@@ -404,14 +387,14 @@ export function WorkView({
                 type="button"
                 disabled={state.loading}
                 onClick={() => void reloadWorkChats()}
-                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-content/75 hover:bg-content/15 hover:text-content disabled:opacity-40"
+                className="self-start rounded-md bg-content/10 px-2 py-1 text-[11.5px] font-medium text-strong hover:bg-hover hover:text-content disabled:opacity-40"
               >
                 Try again
               </button>
             </div>
           ) : null}
           {!state.loading && entries.length === 0 ? (
-            <p className="px-1 py-2 text-[12px] text-content/45">
+            <p className="px-1 py-2 text-[12.5px] text-faint">
               {query ? "No chats match." : "No chats yet."}
             </p>
           ) : null}
@@ -437,7 +420,7 @@ export function WorkView({
                 onDelete={() => setFolderDeleteTarget(entry.folder)}
               >
                 {entry.folder.collapsed ? null : entry.chats.length === 0 ? (
-                  <p className="px-2 py-1.5 text-[11.5px] text-content/35">Drag chats here.</p>
+                  <p className="px-2 py-1.5 text-[11.5px] text-dim">Drag chats here.</p>
                 ) : (
                   entry.chats.map(renderChat)
                 )}
@@ -449,7 +432,7 @@ export function WorkView({
               type="button"
               aria-pressed={showArchived}
               onClick={() => setShowArchived((on) => !on)}
-              className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11.5px] text-content/45 hover:bg-content/5 hover:text-content/80"
+              className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11.5px] text-faint hover:bg-hover hover:text-strong"
             >
               <Archive className="size-3 shrink-0" strokeWidth={1.75} />
               <span className="min-w-0 flex-1 truncate">
@@ -473,23 +456,16 @@ export function WorkView({
         ) : null}
       </aside>
 
-      <section className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
-        <div
-          className="flex h-10 shrink-0 select-none items-center gap-2 px-3"
-          data-tauri-drag-region="deep"
-        >
+      <section className="body-glass m-1.5 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-edge">
+        <div className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-2 px-3">
           {listOpen ? null : (
-            <>
-              <IconButton label="Toggle Chats" onClick={() => setListOpen(true)}>
-                <PanelLeft className="size-3.5" strokeWidth={1.75} />
-              </IconButton>
-              <ModeSwitch mode={mode} onChange={onModeChange} />
-            </>
+            <IconButton label="Toggle Chats" onClick={() => setListOpen(true)}>
+              <PanelLeft className="size-3.5" strokeWidth={1.75} />
+            </IconButton>
           )}
-          <span className="min-w-0 flex-1 truncate text-[13px] text-content/70">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-medium">
             {active ? active.title : "Work"}
           </span>
-          {IS_MAC ? null : <WindowControls />}
         </div>
 
         {/* Only the body lifts in on a mode switch: the row above it repeats
@@ -539,14 +515,14 @@ export function WorkView({
             </>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-              <MessageSquare className="size-6 text-content/25" strokeWidth={1.5} />
-              <p className="text-[13px] text-content/50">
+              <MessageSquare className="size-6 text-dim" strokeWidth={1.5} />
+              <p className="text-[13.5px] text-faint">
                 Thinking, drafting, questions — work that is not code.
               </p>
               <button
                 type="button"
                 onClick={() => onNewChat()}
-                className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12.5px]"
               >
                 New chat
               </button>
@@ -567,17 +543,17 @@ export function WorkView({
           closeDisabled={deleting}
         >
           <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-            <p className="text-[12px] leading-relaxed text-content/60">
+            <p className="text-[12.5px] leading-relaxed text-muted">
               This permanently removes the conversation and its provider thread. This action cannot
               be undone.
             </p>
             {deleteTarget.busy ? (
-              <p className="rounded-md bg-amber-400/10 px-2.5 py-2 text-[11.5px] leading-snug text-amber-300">
+              <p className="rounded-md bg-warn/10 px-2.5 py-2 text-[11.5px] leading-snug text-warn">
                 The current turn will be stopped before the chat is removed.
               </p>
             ) : null}
             {deleteError ? (
-              <p role="alert" className="max-h-24 overflow-y-auto text-[11.5px] text-red-300">
+              <p role="alert" className="max-h-24 overflow-y-auto text-[11.5px] text-danger">
                 {deleteError}
               </p>
             ) : null}
@@ -587,7 +563,7 @@ export function WorkView({
                 type="button"
                 disabled={deleting}
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content disabled:opacity-40"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40"
               >
                 Cancel
               </button>
@@ -595,7 +571,7 @@ export function WorkView({
                 type="button"
                 disabled={deleting}
                 onClick={() => void confirmDelete()}
-                className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30 disabled:opacity-40"
               >
                 {deleting ? <Loader className="size-3.5 animate-spin" strokeWidth={1.75} /> : null}
                 {deleteTarget.busy ? "Stop & delete" : "Delete chat"}
@@ -614,7 +590,7 @@ export function WorkView({
           initialFocusRef={folderDeleteCancelRef}
         >
           <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-            <p className="text-[12px] leading-relaxed text-content/60">
+            <p className="text-[12.5px] leading-relaxed text-muted">
               The chats stay in your list, but the project and its shared brief are permanently
               removed.
             </p>
@@ -623,7 +599,7 @@ export function WorkView({
                 ref={folderDeleteCancelRef}
                 type="button"
                 onClick={() => setFolderDeleteTarget(null)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
               >
                 Cancel
               </button>
@@ -633,7 +609,7 @@ export function WorkView({
                   deleteChatFolder(folderDeleteTarget.id);
                   setFolderDeleteTarget(null);
                 }}
-                className="rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30"
+                className="rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30"
               >
                 Delete project
               </button>
@@ -723,7 +699,7 @@ function FolderSection({
       ) : (
         <div
           className={`group relative flex items-center gap-1 rounded-md pr-1 ${
-            dropTarget ? "bg-accent/20 text-content" : "text-content/80 hover:bg-content/5"
+            dropTarget ? "bg-accent/20 text-content" : "text-strong hover:bg-hover"
           }`}
         >
           <button
@@ -739,26 +715,26 @@ function FolderSection({
             }}
             className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1.5 text-left"
           >
-            <span className="grid size-3.5 shrink-0 place-items-center text-content/55">
+            <span className="grid size-3.5 shrink-0 place-items-center text-faint">
               {folder.collapsed ? (
                 <ChevronRight className="size-3.5" strokeWidth={1.75} />
               ) : (
                 <ChevronDown className="size-3.5" strokeWidth={1.75} />
               )}
             </span>
-            <Folder className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />
+            <Folder className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
             <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium">{folder.name}</span>
             {folder.prompt ? (
-              <StickyNote className="size-3 shrink-0 text-content/40" strokeWidth={1.75} />
+              <StickyNote className="size-3 shrink-0 text-dim" strokeWidth={1.75} />
             ) : null}
-            <span className="shrink-0 text-[11px] tabular-nums text-content/40">{count}</span>
+            <span className="shrink-0 text-[11.5px] tabular-nums text-dim">{count}</span>
           </button>
           <button
             type="button"
             aria-label={`Edit brief for ${folder.name}`}
             title="Project brief"
             onClick={onEditPrompt}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <StickyNote className="size-3" strokeWidth={1.75} />
           </button>
@@ -766,7 +742,7 @@ function FolderSection({
             type="button"
             aria-label={`New chat in ${folder.name}`}
             onClick={onNewChat}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Plus className="size-3" strokeWidth={1.75} />
           </button>
@@ -775,7 +751,7 @@ function FolderSection({
             aria-label={`Delete project ${folder.name}`}
             title="Delete project — its chats are kept"
             onClick={onDelete}
-            className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="hidden shrink-0 rounded p-1 text-faint hover:text-danger group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Trash2 className="size-3" strokeWidth={1.75} />
           </button>
@@ -800,7 +776,7 @@ function FolderPromptDialog({
   return (
     <Modal title="Project brief" description={folder.name} size="md" onClose={onClose}>
       <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-        <p className="text-[12px] leading-snug text-content/55">
+        <p className="text-[12.5px] leading-snug text-faint">
           Sent ahead of every message from a chat in this project, so each agent knows what it is
           working on.
         </p>
@@ -811,20 +787,20 @@ function FolderPromptDialog({
           aria-label="Project brief"
           placeholder="We are redesigning the onboarding flow. Prefer short answers and cite files."
           onChange={(event) => setDraft(event.target.value)}
-          className="h-48 w-full resize-none rounded-lg border border-content/10 bg-content/5 px-3 py-2 text-[12.5px] leading-relaxed outline-none focus-visible:border-content/25"
+          className="h-48 w-full resize-none rounded-lg border border-edge bg-content/5 px-3 py-2 text-[12.5px] leading-relaxed outline-none focus-visible:border-edge-strong"
         />
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onSave(draft)}
-            className="rounded-md bg-content px-3 py-1.5 text-[12px] text-background-base hover:bg-content/80"
+            className="rounded-md ui-fill px-3 py-1.5 text-[12.5px]"
           >
             Save
           </button>
@@ -866,7 +842,7 @@ function RenameField({
         }
       }}
       onBlur={() => onCommit(draft)}
-      className="w-full rounded-md border border-content/20 bg-content/5 px-2 py-1.5 text-[12.5px] outline-none"
+      className="w-full rounded-md border border-edge-strong bg-content/5 px-2 py-1.5 text-[12.5px] outline-none"
     />
   );
 }
@@ -1018,11 +994,9 @@ function ChatRow({
                 transform: ghostTransform(point.current, grab.current),
                 zIndex: LAYER.drag,
               }}
-              className="pointer-events-none fixed left-0 top-0 flex items-center gap-1.5 rounded-md border border-content/15 bg-background-base/90 px-2 py-1.5 text-[12.5px] text-content shadow-lg backdrop-blur-sm"
+              className="pointer-events-none fixed left-0 top-0 flex items-center gap-1.5 rounded-md border border-edge-strong bg-background-base/90 px-2 py-1.5 text-[12.5px] text-content shadow-lg backdrop-blur-sm"
             >
-              {pinned ? (
-                <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} />
-              ) : null}
+              {pinned ? <Pin className="size-3 shrink-0 text-faint" strokeWidth={1.75} /> : null}
               <span className="min-w-0 flex-1 truncate">{title}</span>
             </div>,
             document.body,
@@ -1035,8 +1009,8 @@ function ChatRow({
           dropTarget
             ? "bg-accent/20 text-content"
             : active
-              ? "bg-content/10 text-content"
-              : "text-content/75 hover:bg-content/5"
+              ? "bg-selected text-content"
+              : "text-strong hover:bg-hover"
         } ${dragging ? "opacity-40" : ""} ${archived ? "opacity-60" : ""}`}
       >
         <button
@@ -1051,7 +1025,7 @@ function ChatRow({
           onDoubleClick={onRenameStart}
           className="flex min-w-0 flex-1 touch-none items-center gap-1.5 px-2 py-1.5 text-left text-[12.5px]"
         >
-          {pinned ? <Pin className="size-3 shrink-0 text-content/45" strokeWidth={1.75} /> : null}
+          {pinned ? <Pin className="size-3 shrink-0 text-faint" strokeWidth={1.75} /> : null}
           <span className="min-w-0 flex-1 truncate">{title}</span>
         </button>
         {busy ? (
@@ -1066,7 +1040,7 @@ function ChatRow({
           aria-label={pinned ? `Unpin ${title}` : `Pin ${title}`}
           aria-pressed={pinned}
           onClick={onPin}
-          className={`shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+          className={`shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             pinned ? "block" : "hidden"
           }`}
         >
@@ -1076,7 +1050,7 @@ function ChatRow({
           type="button"
           aria-label={archived ? `Unarchive ${title}` : `Archive ${title}`}
           onClick={onArchive}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {archived ? (
             <Undo2 className="size-3" strokeWidth={1.75} />
@@ -1088,7 +1062,7 @@ function ChatRow({
           type="button"
           aria-label={`Rename ${title}`}
           onClick={onRenameStart}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="hidden shrink-0 rounded p-1 text-faint hover:text-content group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <PenLine className="size-3" strokeWidth={1.75} />
         </button>
@@ -1096,7 +1070,7 @@ function ChatRow({
           type="button"
           aria-label={`Delete ${title}`}
           onClick={onDelete}
-          className="hidden shrink-0 rounded p-1 text-content/45 hover:text-red-400 group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="hidden shrink-0 rounded p-1 text-faint hover:text-danger group-hover:block group-focus-within:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Trash2 className="size-3" strokeWidth={1.75} />
         </button>

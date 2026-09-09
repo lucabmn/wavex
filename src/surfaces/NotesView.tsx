@@ -11,7 +11,6 @@ import {
 import { useMarkdownMode } from "../chrome/MarkdownModeToggle";
 import { ProjectLogoIcon } from "../chrome/ProjectLogoIcon";
 import { ProjectMascot } from "../chrome/ProjectMascot";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useDragResize } from "../hooks/useDragResize";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -48,13 +47,11 @@ let rememberedWidth = DEFAULT_WIDTH;
 let rememberedNoteId: string | null = null;
 
 type Props = {
-  besideRail?: boolean;
   cwd?: string;
   onClose: () => void;
-  onToggleSidebar?: () => void;
 };
 
-export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }: Props) {
+export function NotesView({ cwd, onClose }: Props) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const listLock = useLockOverscroll<HTMLDivElement>();
@@ -184,9 +181,9 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
   const list = (
     <div
       ref={resize.setPaneRef}
-      className="relative flex h-full min-h-0 shrink-0 flex-col border-r border-content/10"
+      className="relative flex h-full min-h-0 shrink-0 flex-col border-r border-edge"
     >
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-2">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-2">
         <div className="relative flex h-7 min-w-0 flex-1 items-center">
           <Search className="pointer-events-none absolute left-2 size-3 shrink-0 opacity-50" />
           <input
@@ -196,7 +193,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
             aria-label="Filter notes"
             spellCheck={false}
             autoComplete="off"
-            className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12px] text-content outline-none placeholder:text-content/40"
+            className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-dim"
           />
         </div>
         <button
@@ -205,7 +202,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
           aria-label="New note"
           disabled={creating}
           onClick={() => void onCreate()}
-          className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+          className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content disabled:opacity-40"
         >
           {creating ? (
             <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
@@ -216,13 +213,13 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
       </div>
       <div ref={listLock} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
         {error && notes.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-content/50">{error}</p>
+          <p className="px-3 py-2 text-[12.5px] text-faint">{error}</p>
         ) : loading && notes.length === 0 ? (
-          <div className="flex justify-center py-10 text-content/40">
+          <div className="flex justify-center py-10 text-dim">
             <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
           </div>
         ) : visible.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-content/50">
+          <p className="px-3 py-2 text-[12.5px] text-faint">
             {query.trim()
               ? "No matching notes"
               : "No notes yet. Save a turn from the transcript, or create one here."}
@@ -250,7 +247,7 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
         aria-orientation="vertical"
         aria-label="Resize notes list"
         className={`absolute inset-y-0 -right-px z-10 w-1.5 cursor-col-resize touch-none ${
-          resize.dragging ? "bg-content/15" : "hover:bg-content/10"
+          resize.dragging ? "bg-content/15" : "hover:bg-hover"
         }`}
         onPointerDown={resize.onPointerDown}
         onDoubleClick={resize.onDoubleClick}
@@ -266,13 +263,11 @@ export function NotesView({ besideRail = false, cwd, onClose, onToggleSidebar }:
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 select-none items-center border-b border-content/10"
+        className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
-          <File className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
+          <File className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
           <span className="min-w-0 truncate text-content">Notes</span>
         </div>
         {IS_MAC ? null : <WindowControls />}
@@ -347,8 +342,8 @@ function NoteDetailTab({
       role="tab"
       aria-selected={selected}
       onClick={onSelect}
-      className={`relative flex h-9 items-center text-[12px] leading-none ${
-        selected ? "text-content" : "text-content/50 hover:text-content"
+      className={`relative flex h-9 items-center text-[12.5px] leading-none ${
+        selected ? "text-content" : "text-faint hover:text-content"
       }`}
     >
       {label}
@@ -382,13 +377,13 @@ function NoteCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-content/10 text-content"
-          : "border-transparent text-content/80 hover:bg-content/5 hover:text-content"
+          ? "border-transparent bg-selected text-content"
+          : "border-transparent text-strong hover:bg-hover hover:text-content"
       }`}
     >
       <span className="flex items-center gap-2">
         {project ? (
-          <span className="min-w-0 flex-1 text-[11px] text-content/50">
+          <span className="min-w-0 flex-1 text-[11.5px] text-faint">
             <NoteProjectMark
               project={project}
               logos={logos}
@@ -401,16 +396,14 @@ function NoteCard({
           <span className="min-w-0 flex-1" />
         )}
         {time ? (
-          <span className="shrink-0 text-[11px] tabular-nums text-content/45">{time}</span>
+          <span className="shrink-0 text-[11.5px] tabular-nums text-faint">{time}</span>
         ) : null}
       </span>
-      <span className="mt-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
+      <span className="mt-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
         {note.title}
       </span>
       {preview ? (
-        <span className="mt-1 line-clamp-1 text-[12px] leading-snug text-content/45">
-          {preview}
-        </span>
+        <span className="mt-1 line-clamp-1 text-[12.5px] leading-snug text-faint">{preview}</span>
       ) : null}
     </button>
   );
@@ -434,8 +427,8 @@ function NoteDetail({
   if (!note) {
     return (
       <div className="flex h-full min-w-0 flex-1 flex-col items-center justify-center px-6 text-center">
-        <File className="mb-3 size-6 text-content/30" strokeWidth={1.75} />
-        <p className="text-[13px] text-content/45">Select a note</p>
+        <File className="mb-3 size-6 text-dim" strokeWidth={1.75} />
+        <p className="text-[13.5px] text-faint">Select a note</p>
       </div>
     );
   }
@@ -549,7 +542,7 @@ function NoteEditor({
     <div ref={lockOverscroll} className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-none">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-8 py-8">
         <header className="flex flex-col gap-3">
-          <div className="flex min-w-0 items-center gap-2 text-[12px] text-content/50">
+          <div className="flex min-w-0 items-center gap-2 text-[12.5px] text-faint">
             <File className="size-3.5 shrink-0" strokeWidth={1.75} />
             <span>Note</span>
             {note.slug ? <span className="min-w-0 truncate">{note.slug}</span> : null}
@@ -576,16 +569,16 @@ function NoteEditor({
             }}
             onKeyDown={onTitleKeyDown}
             aria-label="Note title"
-            className="w-full border-0 bg-transparent p-0 text-[20px] font-semibold leading-tight text-content outline-none placeholder:text-content/35"
+            className="w-full border-0 bg-transparent p-0 text-[20px] font-semibold leading-tight text-content outline-none placeholder:text-dim"
             placeholder="Untitled"
           />
-          {time ? <div className="text-[12px] text-content/50">Updated {time}</div> : null}
+          {time ? <div className="text-[12.5px] text-faint">Updated {time}</div> : null}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
               disabled={!canAddToChat}
               onClick={() => onAddToChat(draft)}
-              className="inline-flex items-center gap-1 rounded-md bg-content px-3 h-6.5 text-[12px] text-background-base hover:bg-content/80 disabled:cursor-default disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-md ui-fill px-3 h-6.5 text-[12.5px] disabled:cursor-default disabled:opacity-40"
             >
               Add to chat
             </button>
@@ -596,18 +589,18 @@ function NoteEditor({
                 if (saveTimer.current != null) window.clearTimeout(saveTimer.current);
                 void onDelete(note.id);
               }}
-              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12px] text-content/70 hover:bg-content/10 hover:text-red-400"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 h-7 text-[12.5px] text-muted hover:bg-hover hover:text-danger"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
               Delete
             </button>
           </div>
-          {saveError ? <p className="text-[12px] text-red-400/90">{saveError}</p> : null}
+          {saveError ? <p className="text-[12.5px] text-danger/90">{saveError}</p> : null}
         </header>
         <div
           role="tablist"
           aria-label="Note sections"
-          className="flex h-9 items-stretch gap-4 border-b border-content/10"
+          className="flex h-9 items-stretch gap-4 border-b border-edge"
         >
           <NoteDetailTab
             label="Preview"
@@ -632,7 +625,7 @@ function NoteEditor({
         ) : body.trim() ? (
           <AgentMarkdown text={body} cwd={note.sourceCwd} />
         ) : (
-          <p className="text-[13px] text-content/45">No description</p>
+          <p className="text-[13.5px] text-faint">No description</p>
         )}
       </div>
     </div>
@@ -656,14 +649,14 @@ function NoteSource({
     <div className="relative min-h-[448px]">
       <div
         aria-hidden
-        className="pointer-events-none grid font-mono text-[13px] leading-5 text-content/85"
+        className="pointer-events-none grid font-mono text-[13.5px] leading-5 text-strong"
         style={{
           gridTemplateColumns: `${gutterWidth} minmax(0, 1fr)`,
         }}
       >
         {lines.map((line, index) => (
           <Fragment key={index}>
-            <div className="select-none pr-2 text-right tabular-nums whitespace-nowrap text-content/40">
+            <div className="select-none pr-2 text-right tabular-nums whitespace-nowrap text-dim">
               {index + 1}
             </div>
             <div className="min-h-5 min-w-0 pl-3 whitespace-pre-wrap wrap-break-word">
@@ -674,7 +667,7 @@ function NoteSource({
       </div>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 w-px bg-content/10"
+        className="pointer-events-none absolute inset-y-0 w-px bg-edge"
         style={{ left: gutterWidth }}
       />
       <textarea
@@ -683,7 +676,7 @@ function NoteSource({
         onChange={(event) => onChange(event.target.value)}
         spellCheck={false}
         placeholder="Write markdown…"
-        className="markdown-source-field absolute inset-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent py-0 pr-0 font-mono text-[13px] leading-5 whitespace-pre-wrap wrap-break-word outline-none"
+        className="markdown-source-field absolute inset-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent py-0 pr-0 font-mono text-[13.5px] leading-5 whitespace-pre-wrap wrap-break-word outline-none"
         style={{ paddingLeft: textOffset }}
       />
     </div>

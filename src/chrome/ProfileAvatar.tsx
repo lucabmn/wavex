@@ -2,7 +2,7 @@ import { profileColor, profileInitial, type Profile } from "../lib/profiles/prof
 
 const SIZE = {
   sm: "size-5 text-[10px] rounded-[6px]",
-  md: "size-7 text-[13px] rounded-lg",
+  md: "size-7 text-[13.5px] rounded-lg",
 } as const;
 
 /** The colored initial that stands for a profile everywhere in the chrome. */

@@ -165,7 +165,7 @@ export function TabGroupMenu({
         onChange={(e) => setName(e.target.value)}
         onBlur={commitName}
         aria-label="Group name"
-        className="mb-2 w-full rounded-lg border border-content/10 bg-content/5 px-2.5 py-1.5 text-[13px] text-content outline-none ring-accent/40 focus:ring-1"
+        className="mb-2 w-full rounded-lg border border-edge bg-content/5 px-2.5 py-1.5 text-[13.5px] text-content outline-none ring-accent/40 focus:ring-1"
       />
 
       {logoProject ? (
@@ -187,7 +187,7 @@ export function TabGroupMenu({
                 }
               })();
             }}
-            className="grid size-9 shrink-0 place-items-center rounded-lg border border-content/10 bg-content/5 hover:bg-content/10"
+            className="grid size-9 shrink-0 place-items-center rounded-lg border border-edge bg-content/5 hover:bg-hover"
           >
             <ProjectLogoIcon
               path={logoPath}
@@ -198,8 +198,8 @@ export function TabGroupMenu({
             />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-content/50">Project logo</p>
-            <p className="truncate text-[12px] text-content/70">
+            <p className="text-[11.5px] text-faint">Project logo</p>
+            <p className="truncate text-[12.5px] text-muted">
               {logoPath ? "Shown in tabs and composer" : "Optional — replaces folder icon"}
             </p>
           </div>
@@ -212,7 +212,7 @@ export function TabGroupMenu({
               onClick={() => {
                 void clearProjectLogo(logoProject).then(onLogoChange);
               }}
-              className="grid size-7 shrink-0 place-items-center rounded-md text-content/50 hover:bg-content/10 hover:text-content"
+              className="grid size-7 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
             </button>
@@ -242,7 +242,7 @@ export function TabGroupMenu({
       ) : null}
 
       <div className="mb-2 px-0.5">
-        <p className="mb-1 text-[11px] text-content/50">Mascot</p>
+        <p className="mb-1 text-[11.5px] text-faint">Mascot</p>
         <div className="flex items-center justify-between gap-1">
           {PROJECT_MASCOTS.map((mascot) => (
             <MascotSwatch
@@ -251,11 +251,7 @@ export function TabGroupMenu({
               selected={shownMascot === mascot.name}
               onPick={() => onMascotChange(groupId, mascot.name)}
             >
-              <ProjectMascot
-                project={groupId}
-                name={mascot.name}
-                className="size-3 text-content/75"
-              />
+              <ProjectMascot project={groupId} name={mascot.name} className="size-3 text-strong" />
             </MascotSwatch>
           ))}
         </div>
@@ -263,7 +259,7 @@ export function TabGroupMenu({
 
       {showActions ? (
         <>
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
 
           {ITEMS.slice(0, 2).map((item) => (
             <MenuRow
@@ -273,7 +269,7 @@ export function TabGroupMenu({
             />
           ))}
 
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
 
           {ITEMS.slice(2, 4).map((item) => (
             <MenuRow
@@ -283,7 +279,7 @@ export function TabGroupMenu({
             />
           ))}
 
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
 
           {ITEMS.slice(4).map((item) => (
             <MenuRow
@@ -297,10 +293,10 @@ export function TabGroupMenu({
 
       {extraItems && extraItems.length > 0 ? (
         <>
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
           {extraItems.map((item) => (
             <Fragment key={item.id}>
-              {item.sepBefore ? <div role="separator" className="my-1 h-px bg-content/10" /> : null}
+              {item.sepBefore ? <div role="separator" className="my-1 h-px bg-edge" /> : null}
               <MenuRow
                 item={item}
                 onPick={() => {
@@ -336,7 +332,7 @@ function MascotSwatch({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPick}
       className={`grid size-5 shrink-0 place-items-center rounded-md ${
-        selected ? "bg-content/15 ring-1 ring-content/50" : "hover:bg-content/8"
+        selected ? "bg-content/15 ring-1 ring-content/50" : "hover:bg-hover"
       }`}
     >
       {children}
@@ -352,14 +348,14 @@ function MenuRow({ item, onPick }: { item: MenuItem; onPick: () => void }) {
       role="menuitem"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPick}
-      className={`flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] leading-none ${
-        item.danger ? "text-red-300/90 hover:bg-red-500/15" : "text-content hover:bg-content/5"
+      className={`flex h-8 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13.5px] leading-none ${
+        item.danger ? "text-danger/90 hover:bg-danger/15" : "text-content hover:bg-hover"
       }`}
     >
-      <Icon className="size-3.5 shrink-0 text-content/55" strokeWidth={1.75} />
+      <Icon className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.shortcut ? (
-        <span className="shrink-0 text-[11px] text-content/40">{item.shortcut}</span>
+        <span className="shrink-0 text-[11.5px] text-dim">{item.shortcut}</span>
       ) : null}
     </button>
   );

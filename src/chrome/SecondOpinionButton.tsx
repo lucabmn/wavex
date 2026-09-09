@@ -216,9 +216,7 @@ export function SecondOpinionButton({
         aria-expanded={open}
         disabled={disabled}
         className={`rounded-md p-1 disabled:pointer-events-none disabled:opacity-40 ${
-          open
-            ? "bg-content/8 text-content/70"
-            : "text-content/40 hover:bg-content/8 hover:text-content/70"
+          open ? "bg-content/8 text-muted" : "text-dim hover:bg-hover hover:text-muted"
         }`}
         onClick={() => {
           if (disabled) return;
@@ -245,13 +243,11 @@ export function SecondOpinionButton({
             className="p-1 font-sans"
           >
             <div className="px-1.5 pb-2 pt-1.5">
-              <p className="text-[11px] leading-3 text-content/50 text-balance">{description}</p>
+              <p className="text-[11.5px] leading-3 text-faint text-balance">{description}</p>
             </div>
-            <div className="mx-1 mb-1 h-px bg-content/10" />
+            <div className="mx-1 mb-1 h-px bg-edge" />
             {targets.length === 0 ? (
-              <div className="px-2.5 py-2 text-[12px] leading-4 text-content/50">
-                {disabledTitle}
-              </div>
+              <div className="px-2.5 py-2 text-[12.5px] leading-4 text-faint">{disabledTitle}</div>
             ) : (
               targets.map((harness, index) => {
                 const highlighted = index === active;
@@ -274,21 +270,18 @@ export function SecondOpinionButton({
                       if (!available && probed) return;
                       pickPreferred(harness);
                     }}
-                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
+                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none ${
                       !available && probed
-                        ? "text-content/30"
+                        ? "text-dim"
                         : highlighted
-                          ? "bg-content/10 text-content"
-                          : "text-content hover:bg-content/5"
+                          ? "bg-selected text-content"
+                          : "text-content hover:bg-hover"
                     }`}
                   >
                     <HarnessIcon harness={harness} className="size-3.5" />
                     <span className="min-w-0 flex-1 truncate">{HARNESS_TITLE[harness]}</span>
                     {enabledModelsFor(harness).length > 0 ? (
-                      <ChevronRight
-                        className="size-3.5 shrink-0 text-content/40"
-                        strokeWidth={1.75}
-                      />
+                      <ChevronRight className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />
                     ) : null}
                   </button>
                 );
@@ -325,13 +318,13 @@ export function SecondOpinionButton({
                       setModelActive(index);
                     }}
                     onClick={() => pick(activeHarness, model.id)}
-                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] leading-none ${
-                      highlighted ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13.5px] leading-none ${
+                      highlighted ? "bg-selected text-content" : "text-content hover:bg-hover"
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate">{model.name}</span>
                     {model.id === preferred ? (
-                      <Check className="size-3 shrink-0 text-content/45" strokeWidth={2} />
+                      <Check className="size-3 shrink-0 text-faint" strokeWidth={2} />
                     ) : null}
                   </button>
                 );

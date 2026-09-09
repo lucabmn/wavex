@@ -47,19 +47,19 @@ export function ProfileDialog({
         }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12px] font-medium text-content/60">Name</span>
+          <span className="text-[12.5px] font-medium text-muted">Name</span>
           <input
             ref={inputRef}
             value={name}
             maxLength={PROFILE_NAME_MAX}
             placeholder="Work"
             onChange={(event) => setName(event.target.value)}
-            className="h-9 rounded-lg border border-content/10 bg-content/5 px-3 text-[13px] text-content outline-none placeholder:text-content/30 focus:border-accent/60"
+            className="h-9 rounded-lg border border-edge bg-content/5 px-3 text-[13.5px] text-content outline-none placeholder:text-dim focus:border-accent/60"
           />
         </label>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-[12px] font-medium text-content/60">Color</legend>
+          <legend className="text-[12.5px] font-medium text-muted">Color</legend>
           <div className="flex flex-wrap gap-2">
             {PROFILE_COLORS.map((value, index) => (
               <button
@@ -83,14 +83,14 @@ export function ProfileDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!clean}
-            className="rounded-md bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40"
+            className="ui-fill ui-focus rounded-lg px-3.5 py-1.5 text-[12.5px] font-medium disabled:opacity-40"
           >
             {confirmLabel}
           </button>

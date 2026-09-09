@@ -275,6 +275,176 @@ Use the existing custom chrome primitives and Tailwind 4 tokens. This is not a
 shadcn project. Import application icons from `src/chrome/icons.tsx`; that file
 deep-imports Hugeicons deliberately so the full catalog is not bundled.
 
+### The design language
+
+`src/index.css` is the whole design system; components spend its tokens rather
+than inventing colors, shadows, or corners of their own.
+
+The window is nearly colourless, and that is the point: colour that appears
+everywhere stops meaning anything, and in a tool that is mostly text the job of
+the surface is to disappear. Four planes come off the one background lightness
+the user controls — `--surface-0` sunken, `--surface-1` the page, `--surface-2`
+raised, `--surface-3` overlay — as `bg-surface-sunken`, `bg-surface`,
+`bg-surface-raised`, `bg-surface-overlay`. The ladder is shallow on purpose:
+separating everything by shade leaves the window looking quilted, so most of
+the app sits on one plane and a step is spent only on the sidebar behind the
+work, a card above the page, and an overlay above everything. Shallow means
+about three points of perceived lightness to the sidebar, five to a card and
+eight to an overlay. Wider than that and the window stops reading as one
+surface: the work sheet looked cut out of the chrome around it and the composer
+looked pasted onto the sheet. Every plane still has an edge or a shadow of its
+own, so the tone only has to say which way is up. Paper climbs the
+same way: the sidebar is greyer than the page and a card is whiter than it,
+ending at white. Paper has a ceiling graphite does not, so its ladder is built
+_downwards_ from `--paper-top` — capped at 100%, four points above the page —
+and never upwards from the page. Deriving upwards meant a saved lightness near
+100 clamped the two rungs above the page onto it: a card came out the same
+colour as the sheet it was supposed to sit on, and an overlay had only its
+shadow to stand on. The cap is why a stored 100 now behaves like the default
+rather than collapsing the ladder — and stored values do reach production,
+because a preset writes both schemes and outlives any change to the defaults.
+
+A shadow on paper is a shadow, not a hole: the single dark alpha that reads as
+depth over graphite reads as dirt under a white card, so each light elevation is
+two layers instead — a tight contact shadow and a wide soft one. They are also
+the whole lifting job on paper rather than a hint on top of the surface step,
+because that step is the thing the ceiling takes away: graphite separates a card
+from the page by around five points of perceived lightness and paper has under
+two to spend, so a shadow faint enough to disappear leaves the light theme one
+flat field with hairlines drawn on it. The four points of headroom go 2.5 to the
+card and 1.5 to the overlay for the same reason — two planes a point apart are
+one plane drawn twice — and every rung carries the same saturation, because a
+ladder that tints as it climbs shifts colour temperature across the one seam the
+eye is already reading as a step. Both ends of the Depth scale are restated for
+light — the theme block is declared after the `depth-flat` and `depth-deep` arms
+and matches their specificity, so without a light arm of its own the setting
+would do nothing on paper.
+
+The work sheet keeps a softer edge on paper and takes a shadow instead. A
+hairline at ink strength, with six pixels of the sidebar's own tone either side
+of it, reads as a cut through the window rather than as the place two planes
+meet.
+
+Tailwind's `dark:` is bound to `html:not(.theme-light)` rather than to
+`prefers-color-scheme`. Nothing in `src` writes `dark:` itself; the variant
+exists for the markdown renderer's vendored classes, which ship syntax colours
+as `dark:text-[var(--shiki-dark,…)]` and otherwise paint a dark desktop's
+palette onto a white card.
+
+Status has four meanings and one tone each — `danger`, `warn`, `positive`,
+`note` — spent as `text-danger`, `bg-warn/15`, `border-danger/30`. Never reach
+into Tailwind's palette for a status: a `-400` rung is picked for whichever
+theme its author had open, and the shades that read on graphite wash out to
+illegible pastel on paper. These carry a value per theme instead, each tuned to
+land near the contrast its counterpart does, so one class is right in both.
+
+Text speaks in four strengths — `text-strong`, `text-muted`, `text-faint`,
+`text-dim` — never a hand-picked `text-content/N`. Opacity is not symmetric
+between the themes: 45% of near-white on graphite is 4.1:1, and the same 45%
+of near-black on paper is 2.6:1, which is why light used to read as washed out
+however dark its ink. The light rungs are therefore higher than the dark ones,
+tuned so each lands on the contrast its counterpart does. `--glass` floors the
+window's translucency on paper for the same reason: the desktop behind a light
+window is usually darker than it, so the setting that reads as tinted glass
+over graphite reads as a smear over paper.
+
+Hairlines are `border-edge` and `border-edge-strong`, never a hand-picked
+`border-content/N`: the Separators setting scales all of them through one
+`--rule`. Hover is `bg-hover` and selection `bg-selected`, one tone each for
+the whole app, so a row in the file tree answers the pointer exactly like a row
+in a menu. Nothing in the chrome uses a gradient and nothing glows; shadows
+(`shadow-raise`, `shadow-float`, `shadow-cast`) are for things that float.
+
+The accent is not the colour of the app, it is the colour of "this one". It
+appears on the icon of the selected row, a primary button, focus, and a link,
+and nowhere else. Selection is therefore `ui-row` with `data-selected="true"`:
+a flat step and full-strength text, with the accent spent on the row's icon —
+one glyph rather than a band of colour, which is what a list of forty can
+afford. Exclusive choices are `ui-tab` with the same attribute (flush, named by
+a rule along the bottom edge); `ui-segment` is the variant for a boxed track.
+`ui-fill` is the one filled action a surface is allowed, `ui-tint` its quieter
+sibling. Overlays take `ui-overlay`, cards `ui-pane`, focus `ui-focus`, group
+headings `ui-label`, the user's own turn in a transcript `ui-prompt`, and a
+seam between two strips of chrome `ui-rule-b` / `ui-rule-r`.
+
+The window is two columns: a sidebar and the work. The project rail is a third
+column and is closed by default — the sidebar's own header already carries the
+project switcher and every destination the rail holds, so a permanent nav
+column bought a third vertical pane before any content. Opened, it keeps its
+own right-hand rule: without one the projects list and the sessions list run
+together into a single field of rows with no telling where one ends.
+
+One header spans the whole window, above both columns: `TitleBar` mounts at the
+App root, not inside the body. It is the only thing that reserves the macOS
+traffic-light inset, and it carries the visit arrows, the panel toggles, the
+mode switch, what is open, and the window's own actions. Every column used to
+open with a 40px strip of its own — the rail's, the panel's, the body's, and
+the two Work draws — so the top of the window was a stack of headers rather
+than a place. Nothing below the header reserves the traffic lights or draws a
+back arrow again; a surface that wants a title draws a title.
+
+The mode switch belongs to the rail whenever the rail is open; the header
+carries it only for a collapsed rail. Rendering it in both put it on screen
+twice. Nothing that lays out in a narrow column may be dropped into the header
+unchanged for the same reason — `DevModeSlot` is a `flex-1` spacer built for
+the rail, and in a full-width header it swallowed the row and pushed the tabs
+to the far edge.
+
+The toolbar holds one panel toggle, for the sidebar. Showing and hiding the
+projects column belongs to the sidebar's own header, in both of its variants:
+side by side in the toolbar the two drew the same glyph and read as one control
+duplicated.
+
+Every strip of tabs is a 40px band whose tabs are `h-full`, so the rule under
+the live one always lands on the bottom edge of the row it belongs to. That
+includes the mode switch at the top of the rail _and_ the one Work draws: each
+stands beside a strip in the next column, so each gets a band of its own rather
+than sitting inside the padded column below it, and a mode switch does not move
+when the mode does. A strip sized to its content instead puts two rules at two
+heights, and two strips side by side stop reading as one row.
+
+A tab in the header is a chip, not an underlined tab: it sits in a toolbar
+rather than on top of the content it selects, so an underline has nothing to
+point at. The underline idiom (`ui-tab`) stays where it does point at
+something — the sidebar's own strip and the mode switch.
+
+One open session is still a session, and is drawn as the same chip at the same
+width as any other. Stretching a lone tab into a heading put two type sizes in
+a 40px band and read as a broken title rather than as a tab. The chip is also
+deliberately wider than the 11rem its container queries switch on, so a tab at
+rest never sits exactly on that boundary and flips its meta line on sub-pixel
+rounding.
+
+The window ground is the sunken plane. The sidebar sits directly on it and
+needs no rule of its own, and the work floats above it as an inset sheet with
+a radius and an edge — the gap is the separation.
+
+That ground is painted once, by `chrome-glass` on the App root, and the header,
+the sidebar, the rail and Work's own column draw none of their own. A column
+that paints its own ground is a rectangle the moment the window is translucent:
+the root used to sit at a fraction of the sidebar's glass, so a 0.48 alpha step
+ran along the header's bottom edge across the whole window and the sidebar was
+the only chrome painted solid. It also put the header's translucency out of
+reach of the opacity setting, which says it governs how much of the desktop
+shows through wavex.
+
+The live tab in the header takes a flat step and full-strength text, like a
+selected row — `bg-selected`, the same tone the sidebar spends on the row it has
+open. It carried a border and a two-rung plane step instead, which made it the
+one bordered thing in the top row and gave it a material the header it sits in
+does not have.
+
+The composer spends the same control vocabulary as the rest of the chrome: its
+model, effort and access triggers are ghost until hovered, and open is
+`bg-selected`. A permanent `bg-content/10` on every one of them is `bg-selected`
+always on, which spends selection's tone where nothing is selected and left the
+one row of the app that carries a fill on every control. The send button is the
+exception the language already allows — the one filled action a surface gets.
+
+Corners, Depth and Separators in Settings scale the language rather than
+bolting a second one beside it, which only holds while radius, shadow and rule
+strength each stay a single token.
+
 Long transcripts, file lists, and live streaming are performance-sensitive.
 Avoid unbounded rendering, unnecessary global subscriptions, continuously
 repainting decoration, and work repeated for every streamed token.

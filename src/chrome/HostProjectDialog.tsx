@@ -56,7 +56,7 @@ export function HostProjectDialog({ onCancel, onOpen, onPickLocal }: Props) {
         description="No connected host"
         size="sm"
       >
-        <div className="px-4 pb-4 pt-2 text-[13px] leading-relaxed text-content/60">
+        <div className="px-4 pb-4 pt-2 text-[13.5px] leading-relaxed text-muted">
           Pair a host in Settings → Connections, connect to it, and its projects can be opened here
           alongside the ones on this device.
         </div>
@@ -76,7 +76,7 @@ export function HostProjectDialog({ onCancel, onOpen, onPickLocal }: Props) {
           <button
             type="button"
             onClick={onPickLocal}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-content/55 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] text-faint hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <FolderOpen className="size-3.5" strokeWidth={1.75} />
             This device
@@ -86,10 +86,10 @@ export function HostProjectDialog({ onCancel, onOpen, onPickLocal }: Props) {
               key={host.hostId}
               type="button"
               onClick={() => setHostId(host.hostId)}
-              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 host.hostId === hostId
-                  ? "bg-content/10 text-content"
-                  : "text-content/55 hover:bg-content/8 hover:text-content"
+                  ? "bg-selected text-content"
+                  : "text-faint hover:bg-hover hover:text-content"
               }`}
             >
               <Connection className="size-3.5" strokeWidth={1.75} />
@@ -168,29 +168,29 @@ function HostBrowser({
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-2 border-b border-content/8 px-4 pb-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-edge px-4 pb-2">
         <button
           type="button"
           onClick={goUp}
           disabled={!cwd || parentPath(cwd) === cwd}
-          className="rounded-md px-1.5 py-0.5 text-[12px] text-content/55 hover:bg-content/8 hover:text-content disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="rounded-md px-1.5 py-0.5 text-[12.5px] text-faint hover:bg-hover hover:text-content disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           Up
         </button>
-        <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-content/70">
+        <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-muted">
           {cwd ?? status}
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
         {error ? (
-          <p className="px-2 py-3 text-[12px] leading-relaxed text-red-400/90">{error}</p>
+          <p className="px-2 py-3 text-[12.5px] leading-relaxed text-danger/90">{error}</p>
         ) : entries == null ? (
-          <p className="flex items-center gap-2 px-2 py-3 text-[12px] text-content/50">
+          <p className="flex items-center gap-2 px-2 py-3 text-[12.5px] text-faint">
             <Loader className="size-3.5 animate-spin" strokeWidth={1.75} />
             Reading the host…
           </p>
         ) : entries.length === 0 ? (
-          <p className="px-2 py-3 text-[12px] text-content/50">No folders here.</p>
+          <p className="px-2 py-3 text-[12.5px] text-faint">No folders here.</p>
         ) : (
           entries.map((entry) => (
             <button
@@ -198,21 +198,21 @@ function HostBrowser({
               type="button"
               onClick={() => setCwd(entry.path)}
               onDoubleClick={() => onOpen(entry.path)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-content/80 hover:bg-content/8 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13.5px] text-strong hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <Folder className="size-4 shrink-0 text-content/45" strokeWidth={1.75} />
+              <Folder className="size-4 shrink-0 text-faint" strokeWidth={1.75} />
               <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-              <ChevronRight className="size-3.5 shrink-0 text-content/30" strokeWidth={1.75} />
+              <ChevronRight className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />
             </button>
           ))
         )}
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t border-content/8 px-4 py-3">
+      <div className="flex shrink-0 justify-end gap-2 border-t border-edge px-4 py-3">
         <button
           type="button"
           disabled={!canOpen}
           onClick={() => cwd && onOpen(cwd)}
-          className="rounded-md bg-accent px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="ui-fill ui-focus rounded-lg px-3.5 py-1.5 text-[12.5px] font-medium disabled:opacity-40"
         >
           Open this folder
         </button>

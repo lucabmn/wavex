@@ -59,10 +59,10 @@ export function FileMentionPicker({
   return (
     <div
       data-mention-picker
-      className="overflow-hidden rounded-lg border border-content/10 bg-content/5 backdrop-blur-xl"
+      className="overflow-hidden rounded-lg border border-edge bg-content/5 backdrop-blur-xl"
     >
       {files.length === 0 ? (
-        <p className="px-3 py-2.5 text-[12px] text-content/50">
+        <p className="px-3 py-2.5 text-[12.5px] text-faint">
           {loading
             ? "Indexing files…"
             : query.trim()
@@ -100,8 +100,8 @@ export function FileMentionPicker({
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => onRowEnter(index)}
                 onClick={() => onPick(file)}
-                className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] leading-none ${
-                  highlighted ? "bg-content/10 text-content" : "text-content"
+                className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-[13.5px] leading-none ${
+                  highlighted ? "bg-selected text-content" : "text-content"
                 }`}
               >
                 <span className="shrink-0">
@@ -120,9 +120,9 @@ export function FileMentionPicker({
                   {file.isDir ? "/" : null}
                 </span>
                 {note ? (
-                  <span className="shrink-0 font-mono text-[11px] text-content/40">Note</span>
+                  <span className="shrink-0 font-mono text-[11.5px] text-dim">Note</span>
                 ) : dir ? (
-                  <span className="min-w-0 max-w-[45%] truncate font-mono text-[11px] text-content/40">
+                  <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-dim">
                     <MatchText
                       text={dir}
                       positions={file.positions.filter((pos) => pos < slash)}

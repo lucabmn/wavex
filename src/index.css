@@ -3,15 +3,67 @@
 @source "../node_modules/@streamdown/code/dist/*.js";
 @source "../node_modules/@streamdown/mermaid/dist/*.js";
 
+/*
+ * `dark:` follows the app's own scheme, not the desktop's. Tailwind's default
+ * binds it to `prefers-color-scheme`, and the markdown renderer ships its
+ * syntax colours as `dark:text-[var(--shiki-dark,…)]` — so a light window on a
+ * dark desktop painted github-dark tokens onto a white card. Nothing in `src`
+ * writes `dark:` itself; this exists for the vendored classes above.
+ */
+@custom-variant dark (&:where(html:not(.theme-light), html:not(.theme-light) *));
+
+/*
+ * ── The wavex surface ──────────────────────────────────────────────────────
+ *
+ * The app is drawn as planes of colour separated by space, not as boxes drawn
+ * with rules. Four surfaces come off the one background lightness the user
+ * controls — sunken, the panel plane, raised, and overlay — and a step between
+ * two of them is what says one thing sits on another. A hairline is the
+ * exception, kept for a genuine input and the edge of something that floats,
+ * because a rule around every box turns a window into a wireframe of itself.
+ *
+ * Nothing here uses a gradient, and nothing glows. Colour carries meaning:
+ * the accent marks what is selected and what is about to happen, and it is
+ * the only saturated thing on screen, which is what makes it readable at a
+ * glance in a window full of text.
+ */
 @theme {
   --color-background-base: hsl(
     var(--theme-hue) var(--theme-saturation) var(--background-lightness)
   );
   --color-content: hsl(var(--theme-hue) var(--theme-saturation) var(--content-lightness));
   --color-accent: hsl(var(--accent-hue) var(--accent-saturation) var(--accent-lightness));
-  --color-skill: #e8c547;
-  --color-template: #c084fc;
-  --color-mention: #38bdf8;
+  --color-surface: var(--surface-1);
+  --color-surface-sunken: var(--surface-0);
+  --color-surface-raised: var(--surface-2);
+  --color-surface-overlay: var(--surface-3);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  /* One hover tone and one selected tone for the whole app, so a row in the
+     file tree answers the pointer exactly like a row in a menu. */
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-strong: var(--text-strong);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-dim: var(--text-dim);
+  --color-skill: #d9a441;
+  --color-template: #9a8cd8;
+  --color-mention: #5ba3a0;
+  /*
+   * Status has four meanings and one tone each, because a palette shade
+   * picked per component is a palette tuned for whichever theme its author
+   * had open. Tailwind's `-400` rungs read on graphite and wash out to a
+   * pastel on paper; these carry a value per theme instead, so `text-danger`
+   * is legible in both.
+   */
+  --color-danger: var(--status-danger);
+  --color-warn: var(--status-warn);
+  --color-positive: var(--status-positive);
+  --color-note: var(--status-note);
+  --shadow-raise: var(--elevation-1);
+  --shadow-float: var(--elevation-2);
+  --shadow-cast: var(--elevation-3);
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
@@ -21,38 +73,183 @@
 }
 
 :root {
-  --theme-hue: 240;
-  --theme-saturation: 0%;
-  --accent-hue: 211;
-  --accent-saturation: 92%;
+  /*
+   * Near-monochrome, a few degrees cool. The window is almost colourless on
+   * purpose: colour that appears everywhere stops meaning anything, and in a
+   * tool that is mostly text the job of the surface is to disappear.
+   */
+  --theme-hue: 220;
+  --theme-saturation: 6%;
+  /*
+   * The accent appears on maybe a dozen pixels of a full screen — the icon of
+   * the live nav row, a primary button, focus, a link. It is not the colour of
+   * the app; it is the colour of "this one".
+   */
+  --accent-hue: 232;
+  --accent-saturation: 48%;
   --accent-lightness: 62%;
-  --sidebar-opacity: 0.85;
-  --background-lightness: 9%;
-  --content-lightness: 92%;
+  --sidebar-opacity: 0.8;
+  --glass: var(--sidebar-opacity);
+  --background-lightness: 13%;
+  --content-lightness: 96%;
+
+  /*
+   * Four planes. The steps are small and the ladder is shallow: a window that
+   * separates everything by shade ends up looking quilted, so most of the app
+   * sits on one plane and the step is spent where it matters — the sidebar
+   * behind the work, a card above the page, an overlay above everything.
+   *
+   * Shallow means about three points of perceived lightness to the sidebar,
+   * five to a card and eight to an overlay. Wider than that and the window
+   * stops reading as one surface: the sheet looked cut out of the chrome
+   * around it and the composer looked pasted onto the sheet. Each plane is
+   * still doing its job at these steps because it has an edge or a shadow of
+   * its own; the tone only has to say which way is up.
+   */
+  --surface-0: hsl(
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 2.5%)
+  );
+  --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
+  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 4%));
+  --surface-3: hsl(
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 6.5%)
+  );
+
+  /*
+   * `--rule` is the strength of every hairline in the app, exposed as the
+   * Separators setting. One number, because a hundred hand-picked border
+   * opacities is how chrome turns into a wireframe of itself.
+   */
+  --rule: 0.12;
+  --edge: color-mix(in srgb, var(--color-content) calc(100% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(180% * var(--rule)), transparent);
+
+  /*
+   * The text ladder. These are the four strengths the whole app speaks in,
+   * and they are per theme because opacity is not symmetric: the light values
+   * are higher so that each rung lands on the same contrast ratio it does on
+   * graphite.
+   */
+  --text-strong: color-mix(in srgb, var(--color-content) 82%, transparent);
+  --text-muted: color-mix(in srgb, var(--color-content) 68%, transparent);
+  --text-faint: color-mix(in srgb, var(--color-content) 50%, transparent);
+  --text-dim: color-mix(in srgb, var(--color-content) 38%, transparent);
+
+  --status-danger: hsl(2 76% 70%);
+  --status-warn: hsl(38 88% 60%);
+  --status-positive: hsl(154 56% 56%);
+  --status-note: hsl(258 62% 72%);
+  /* The Windows close button's own red, which belongs to the platform's
+     control rather than to this palette, so it does not follow the theme. */
+  --close-red: #c42b1c;
+
+  --hover: color-mix(in srgb, var(--color-content) 7%, transparent);
+  /* Selection is a flat step, not a tint: the accent is busy meaning something
+     else, and a coloured row is a decoration a list of forty cannot afford. */
+  --selected: color-mix(in srgb, var(--color-content) 12%, transparent);
+
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.2);
+  --elevation-2: 0 4px 12px rgb(0 0 0 / 0.24);
+  --elevation-3: 0 12px 32px rgb(0 0 0 / 0.36);
+
   --editor-font-size: 13px;
   --transcript-width: 56rem;
-  --transcript-font-size: 13px;
+  --transcript-font-size: 14px;
   --transcript-gap: 0.25rem;
-  --link-color: hsl(var(--accent-hue) 92% 75%);
-  --color-skill: #e8c547;
-  --color-template: #c084fc;
-  --color-mention: #38bdf8;
-  --color-markdown-heading: #f9a8c9;
+  --link-color: hsl(var(--accent-hue) 60% 72%);
+  --color-skill: #d3b06b;
+  --color-template: #9b8ede;
+  --color-mention: #6fa8c9;
+  --color-markdown-heading: #c3c8d4;
 }
 
 html {
   color-scheme: dark;
 }
 
+/*
+ * Depth. `soft` is the ladder above, so it needs no class of its own; these
+ * two are the ends of the same rule. Flat keeps a hairline where the shadow
+ * was, because a plane with neither shadow nor edge stops being a plane.
+ */
+html.depth-flat {
+  --elevation-1: none;
+  --elevation-2: 0 0 0 1px var(--edge);
+  --elevation-3: 0 0 0 1px var(--edge-strong);
+}
+
+html.depth-deep {
+  --elevation-1: 0 1px 3px rgb(0 0 0 / 0.28);
+  --elevation-2: 0 8px 22px rgb(0 0 0 / 0.36);
+  --elevation-3: 0 24px 56px rgb(0 0 0 / 0.5);
+}
+
 html.theme-light {
-  --background-lightness: 97%;
-  --content-lightness: 18%;
-  --accent-lightness: 52%;
-  --link-color: hsl(var(--accent-hue) 92% 40%);
-  --color-skill: #a07c10;
-  --color-template: #7c3aed;
-  --color-mention: #0284c7;
-  --color-markdown-heading: #be185d;
+  --background-lightness: 96%;
+  --content-lightness: 16%;
+  --accent-saturation: 56%;
+  --accent-lightness: 48%;
+  /*
+   * Paper climbs the same way graphite does — sidebar behind the page, card
+   * above it, overlay above everything — but it has a ceiling graphite does
+   * not: white. So the ladder is built downwards from a top rung and never
+   * upwards from the page. Deriving upwards meant a saved lightness near 100
+   * clamped the two rungs above the page onto it, and a card came out the
+   * same colour as the sheet it was supposed to sit on. `--paper-top` also
+   * caps at 100 rather than being pinned there, so the page keeps meaning
+   * "the lightness you chose" everywhere below that.
+   *
+   * Every rung carries the same saturation. A ladder that tints as it climbs
+   * shifts colour temperature across the one seam the eye is already reading
+   * as a step, and the sidebar came out bluer than the page it abuts.
+   *
+   * The four points of headroom are spent 2.5 on the card and 1.5 on the
+   * overlay rather than 3 and 1: a card and a menu one point apart are the
+   * same plane twice, and the overlay has a shadow to fall back on where the
+   * card does not.
+   */
+  --paper-top: min(calc(var(--background-lightness) + 4%), 100%);
+  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 7%));
+  --surface-1: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 4%));
+  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 1.5%));
+  --surface-3: hsl(var(--theme-hue) var(--theme-saturation) var(--paper-top));
+  /* Ink on paper needs a firmer line than light on graphite to read at all. */
+  --edge: color-mix(in srgb, var(--color-content) calc(150% * var(--rule)), transparent);
+  --edge-strong: color-mix(in srgb, var(--color-content) calc(260% * var(--rule)), transparent);
+  --glass: max(var(--sidebar-opacity), 0.94);
+  --text-strong: color-mix(in srgb, var(--color-content) 90%, transparent);
+  --text-muted: color-mix(in srgb, var(--color-content) 80%, transparent);
+  --text-faint: color-mix(in srgb, var(--color-content) 66%, transparent);
+  --text-dim: color-mix(in srgb, var(--color-content) 55%, transparent);
+  --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
+  --selected: color-mix(in srgb, var(--color-content) 9%, transparent);
+  /*
+   * A shadow on paper is a shadow, not a hole: a single dark alpha that reads
+   * as depth over graphite reads as dirt under a white card. So each of these
+   * is two layers — a tight contact shadow that says the thing is touching
+   * something, and a wide soft one that says how far above it sits — rather
+   * than one heavy blur.
+   *
+   * They are also the whole lifting job on paper, not a hint on top of the
+   * surface step. Graphite separates a card from the page by around five
+   * points of perceived lightness; the ceiling leaves paper under two, so a
+   * shadow faint enough to disappear left the light theme one flat field with
+   * hairlines drawn on it.
+   */
+  --elevation-1: 0 1px 2px rgb(15 23 42 / 0.08), 0 2px 6px rgb(15 23 42 / 0.05);
+  --elevation-2: 0 1px 2px rgb(15 23 42 / 0.1), 0 8px 20px rgb(15 23 42 / 0.1);
+  --elevation-3: 0 2px 6px rgb(15 23 42 / 0.1), 0 18px 44px rgb(15 23 42 / 0.16);
+  /* Darker than their graphite counterparts by as much as the ground is
+     lighter, so each status lands on the contrast its dark twin does. */
+  --status-danger: hsl(2 68% 44%);
+  --status-warn: hsl(32 88% 33%);
+  --status-positive: hsl(154 66% 27%);
+  --status-note: hsl(258 52% 44%);
+  --link-color: hsl(var(--accent-hue) 60% 46%);
+  --color-skill: #8a6a1c;
+  --color-template: #5a4bc4;
+  --color-mention: #2f6f92;
+  --color-markdown-heading: #3a4152;
   color-scheme: light;
 }
 
@@ -83,21 +280,27 @@ html:not(.is-mac) #root {
 }
 
 html:not(.is-mac) ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-track {
   background: transparent;
 }
 
+/*
+ * The thumb is inset by a transparent border rather than being a thin bar, so
+ * it floats in the gutter instead of touching the panel edge.
+ */
 html:not(.is-mac) ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-content) 16%, transparent);
+  border: 2px solid transparent;
   border-radius: 9999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--color-content) 18%, transparent);
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-content) 32%, transparent);
+  background-color: color-mix(in srgb, var(--color-content) 34%, transparent);
 }
 
 html:not(.is-mac) ::-webkit-scrollbar-corner {
@@ -113,8 +316,20 @@ html.has-native-glass #root {
 /* The inline rule in `index.html` paints the shade dark, because first paint
    happens before this file exists. By the time it does, `initAppearance` has
    settled the scheme, so a light install stops covering itself in black. */
+html.theme-light.depth-flat {
+  --elevation-1: none;
+  --elevation-2: 0 0 0 1px var(--edge);
+  --elevation-3: 0 0 0 1px var(--edge-strong);
+}
+
+html.theme-light.depth-deep {
+  --elevation-1: 0 1px 3px rgb(15 23 42 / 0.12), 0 3px 8px rgb(15 23 42 / 0.08);
+  --elevation-2: 0 2px 4px rgb(15 23 42 / 0.12), 0 12px 28px rgb(15 23 42 / 0.14);
+  --elevation-3: 0 4px 10px rgb(15 23 42 / 0.14), 0 28px 64px rgb(15 23 42 / 0.22);
+}
+
 html.theme-light #boot-splash {
-  background: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
+  background: var(--surface-1);
 }
 
 /*
@@ -134,22 +349,39 @@ html.reduce-motion *::after {
   scroll-behavior: auto !important;
 }
 
-.sidebar-glass {
-  background: color-mix(in srgb, var(--color-background-base) 90%, black);
+/*
+ * The window's one chrome plane: the header, the ground the sidebar stands on,
+ * and the gap around the work sheet. It is painted once at the root rather
+ * than per column, because a column that paints its own ground is a rectangle
+ * the moment the surface behind it is translucent — the header was left at a
+ * fraction of the sidebar's glass and the step between them cut the window in
+ * half. The working area sits one rung above this, and that step is the whole
+ * separation: no rule between them, because two planes that differ already
+ * read as two planes and a line between them only adds a seam.
+ */
+.chrome-glass {
+  background-color: var(--surface-0);
 }
 
-html.theme-light .sidebar-glass {
-  background: color-mix(in srgb, var(--color-background-base) 93%, black 7%);
-}
-
-html.has-native-glass .sidebar-glass {
-  background: hsl(
-    var(--theme-hue) var(--theme-saturation) var(--background-lightness) / var(--sidebar-opacity)
-  );
+html.has-native-glass .chrome-glass {
+  background-color: color-mix(in srgb, var(--surface-0) calc(var(--glass) * 100%), transparent);
 }
 
 .body-glass {
-  background: var(--color-background-base);
+  background-color: var(--surface-1);
+}
+
+/*
+ * On paper the sheet lies on the desk. The hairline that separates it from the
+ * sidebar on graphite is, at ink strength against a step the eye already
+ * reads, a cut rather than an edge — and with six pixels of the same tone
+ * either side of it, the seam was the loudest line in the window. So the sheet
+ * keeps a softer edge here and takes a shadow instead, which is what a lighter
+ * plane sitting on a darker one actually does.
+ */
+html.theme-light .body-glass {
+  border-color: color-mix(in srgb, var(--color-content) calc(80% * var(--rule)), transparent);
+  box-shadow: var(--elevation-1);
 }
 
 .transcript-turn {
@@ -176,11 +408,7 @@ html.has-native-glass .sidebar-glass {
 }
 
 html.has-native-glass.glass-body .body-glass {
-  background: color-mix(
-    in srgb,
-    var(--color-background-base) calc(var(--sidebar-opacity) * 100%),
-    transparent
-  );
+  background-color: color-mix(in srgb, var(--surface-1) calc(var(--glass) * 100%), transparent);
 }
 
 textarea,
@@ -299,21 +527,31 @@ header[data-tauri-drag-region] button {
   height: 100%;
 }
 
+/*
+ * The settings slider: a sunken track and a flat clay thumb. No gradient and
+ * no ring — the thumb is already the only saturated thing in the row.
+ */
 .sidebar-opacity-slider {
   appearance: none;
   height: 4px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-content) 15%, transparent);
+  background: var(--surface-0);
+  box-shadow: inset 0 0 0 1px var(--edge);
   outline: none;
 }
 
 .sidebar-opacity-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 999px;
-  background: var(--color-content);
+  background: var(--color-accent);
   cursor: pointer;
+}
+
+.sidebar-opacity-slider:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .agent-markdown [data-streamdown="code-block"],
@@ -1053,8 +1291,8 @@ header[data-tauri-drag-region] button {
   }
 }
 
-/* Status-bar mark for a running terminal: three orange bars that light
-   one after another. */
+/* Status-bar mark for a running terminal: three bars in the warn tone that
+   light one after another. */
 .terminal-live {
   display: inline-flex;
   align-items: flex-end;
@@ -1067,7 +1305,7 @@ header[data-tauri-drag-region] button {
   width: 4px;
   height: 8px;
   border-radius: 0;
-  background: #e39b4a;
+  background: var(--color-warn);
   opacity: 0.4;
 }
 
@@ -1156,4 +1394,260 @@ header[data-tauri-drag-region] button {
 [data-session-review-shell] + [data-message-queue] [data-message-queue-card] {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+/* ── Surface primitives ────────────────────────────────────────────────────
+ *
+ * The handful of shapes the chrome is made of. They live here rather than as
+ * repeated utility strings because each is two or three properties that only
+ * mean anything together, and because one definition is what keeps a row in
+ * the file tree behaving like a row in a menu.
+ */
+
+/* A card inside a page: a step up from the plane behind it, and a rule
+   because a settings card has to hold a list of rows apart from the page. */
+.ui-pane {
+  border: 1px solid var(--edge);
+  background: var(--surface-2);
+}
+
+/* Something that genuinely floats: menu, popover, dialog. */
+.ui-overlay {
+  border: 1px solid var(--edge);
+  background: var(--surface-3);
+  box-shadow: var(--elevation-3);
+}
+
+/*
+ * A row in a list. Selected is a flat step and full-strength text — no tint
+ * and no coloured bar. The accent is spent on the row's *icon* instead, which
+ * is one glyph rather than a whole band of colour, and is enough to find the
+ * live row in a list of forty without turning the list into a chart.
+ */
+.ui-row {
+  color: var(--text-muted);
+}
+
+.ui-row:hover {
+  background: var(--hover);
+  color: var(--color-content);
+}
+
+.ui-row[data-selected="true"] {
+  background: var(--selected);
+  color: var(--color-content);
+}
+
+.ui-row[data-selected="true"] svg {
+  color: var(--color-accent);
+}
+
+/* The one filled action a surface is allowed. */
+.ui-fill {
+  background: var(--color-accent);
+  color: white;
+}
+
+.ui-fill:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: hsl(var(--accent-hue) var(--accent-saturation) calc(var(--accent-lightness) + 5%));
+}
+
+.ui-fill:active:not(:disabled):not([aria-disabled="true"]) {
+  background: hsl(var(--accent-hue) var(--accent-saturation) calc(var(--accent-lightness) - 4%));
+}
+
+/* Its quieter sibling: the accent as text on a tinted ground. */
+.ui-tint {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  color: var(--color-accent);
+}
+
+.ui-tint:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+/*
+ * Section headings. Sentence case at the app's smallest size, not uppercase
+ * with wide tracking: a sidebar has several of these and shouting each one
+ * competes with the rows underneath, which are the thing being read.
+ */
+.ui-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-faint);
+}
+
+/* Focus: a ring inset by a pixel so it lands inside the control's own bounds
+   instead of pushing the layout around. */
+.ui-focus:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+/*
+ * A tab. Flush with the strip, no fill and no border: the live one is named
+ * by a rule along its bottom edge and by its text going to full strength.
+ */
+.ui-tab {
+  position: relative;
+  color: var(--text-muted);
+}
+
+.ui-tab:hover {
+  color: var(--text-strong);
+}
+
+.ui-tab[data-selected="true"] {
+  color: var(--color-content);
+}
+
+.ui-tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.5px;
+  background: var(--color-content);
+  opacity: 0;
+}
+
+.ui-tab[data-selected="true"]::after {
+  opacity: 1;
+}
+
+/* A tab inside a boxed track — a settings segmented control — where there is
+   no strip edge for the rule to sit on, so the live one takes a fill. */
+.ui-segment[data-selected="true"] {
+  background: var(--surface-3);
+  color: var(--color-content);
+  box-shadow: var(--elevation-1);
+}
+
+/*
+ * Rules. Both one pixel at `--rule` strength, drawn as a pseudo-element
+ * rather than a border so a translucent window does not stack a second line
+ * where two panels meet.
+ */
+.ui-rule-b,
+.ui-rule-r {
+  position: relative;
+}
+
+.ui-rule-b::after,
+.ui-rule-r::after {
+  content: "";
+  position: absolute;
+  background: var(--edge);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ui-rule-b::after {
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+}
+
+.ui-rule-r::after {
+  inset-block: 0;
+  right: 0;
+  width: 1px;
+}
+
+/*
+ * The composer. A plain card on the page's own plane with a rule around it —
+ * it is where the cursor lives, so it earns an edge, and nothing more.
+ */
+.ui-composer {
+  border: 1px solid var(--edge-strong);
+  background: var(--surface-2);
+}
+
+.ui-composer:focus-within {
+  border-color: color-mix(in srgb, var(--color-content) 28%, transparent);
+}
+
+/* Scroll areas inside the chrome get the same thumb on every platform. */
+.ui-scroll::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.ui-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ui-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--color-content) 16%, transparent);
+}
+
+.ui-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-content) 30%, transparent);
+}
+
+/*
+ * Typography. The UI runs tight; code and terminals keep their own metrics,
+ * where tracking is alignment rather than style.
+ */
+html,
+body,
+#root {
+  letter-spacing: -0.011em;
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono,
+.wavex-terminal,
+.cm-editor,
+[data-streamdown="code-block-body"] {
+  letter-spacing: normal;
+}
+
+/*
+ * The transcript is prose. Its markdown therefore runs in the UI face like
+ * everything else, and only the things that are genuinely code — fenced
+ * blocks, inline spans, tables — keep the monospace metrics that make them
+ * legible as code.
+ */
+.agent-markdown {
+  font-family: var(--font-sans);
+}
+
+.agent-markdown code,
+.agent-markdown pre,
+.agent-markdown [data-streamdown="code-block-body"],
+.agent-markdown [data-streamdown="table"] {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent);
+  color: var(--color-content);
+}
+
+/*
+ * The user's own turn in a transcript: a card on the raised plane, aligned
+ * with everything else in the column. It reads as a message rather than as a
+ * marked-up quotation, which is what a leading bar or a tint would make it.
+ */
+.ui-prompt {
+  position: relative;
+  border: 1px solid var(--edge);
+  background: var(--surface-2);
+}
+
+/* Chat layout floats it as a bubble on the right. */
+.ui-prompt.rounded-xl,
+.ui-prompt.rounded-full {
+  border-color: transparent;
+  background: var(--surface-3);
 }

@@ -34,22 +34,22 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
 
   return (
     <section
-      className="flex flex-col rounded-xl border border-content/10 px-4 py-3.5"
+      className="flex flex-col rounded-xl border border-edge px-4 py-3.5"
       aria-label={`${HARNESS_LABEL[limits.provider]} plan limits`}
     >
       <header className="flex items-center gap-2">
         <HarnessIcon harness={limits.provider} className="size-4 shrink-0" />
-        <span className="min-w-0 truncate text-[12px] font-medium">
+        <span className="min-w-0 truncate text-[12.5px] font-medium">
           {HARNESS_LABEL[limits.provider]}
         </span>
         {limits.plan ? (
-          <span className="shrink-0 rounded-full bg-content/[0.08] px-1.5 py-0.5 text-[10px] text-content/55">
+          <span className="shrink-0 rounded-full bg-content/[0.08] px-1.5 py-0.5 text-[10px] text-faint">
             {limits.plan}
           </span>
         ) : null}
         {limits.status === "ok" && tightest ? (
           <span
-            className={`ml-auto shrink-0 text-[11px] tabular-nums ${severityText(tightest.usedPercent)}`}
+            className={`ml-auto shrink-0 text-[11.5px] tabular-nums ${severityText(tightest.usedPercent)}`}
             title={`Highest window: ${tightest.label}`}
           >
             {formatPercent(tightest.usedPercent)} used
@@ -68,13 +68,13 @@ function PlanLimitCard({ limits, now }: { limits: PlanLimits; now: number }) {
           <ul className="flex flex-col gap-3">
             {limits.windows.map((window) => (
               <li key={window.id} className="flex flex-col gap-1.5">
-                <div className="flex items-baseline justify-between gap-3 text-[11px]">
-                  <span className="min-w-0 truncate text-content/60">{window.label}</span>
+                <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
+                  <span className="min-w-0 truncate text-muted">{window.label}</span>
                   <span className="shrink-0 tabular-nums">
                     <span className={severityText(window.usedPercent)}>
                       {formatPercent(window.usedPercent)}
                     </span>
-                    <span className="ml-1.5 text-content/35">
+                    <span className="ml-1.5 text-dim">
                       {formatResetLabel(window.resetsAt, now)}
                     </span>
                   </span>
@@ -116,7 +116,7 @@ function Placeholder({
   tone?: "muted" | "error";
 }) {
   return (
-    <p className={`text-[11px] ${tone === "error" ? "text-red-400/80" : "text-content/35"}`}>
+    <p className={`text-[11.5px] ${tone === "error" ? "text-danger/80" : "text-dim"}`}>
       {children}
     </p>
   );
@@ -124,14 +124,14 @@ function Placeholder({
 
 function severityText(usedPercent: number): string {
   const severity = limitSeverity(usedPercent);
-  if (severity === "critical") return "text-red-400";
-  if (severity === "high") return "text-amber-400";
+  if (severity === "critical") return "text-danger";
+  if (severity === "high") return "text-warn";
   return "text-content";
 }
 
 function severityFill(usedPercent: number): string {
   const severity = limitSeverity(usedPercent);
-  if (severity === "critical") return "bg-red-400";
-  if (severity === "high") return "bg-amber-400";
+  if (severity === "critical") return "bg-danger";
+  if (severity === "high") return "bg-warn";
   return "bg-content/45";
 }

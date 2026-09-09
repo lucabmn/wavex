@@ -98,12 +98,12 @@ export function ExplorerMenu({
       {header ? (
         <>
           {header}
-          <div role="separator" className="my-1 h-px bg-content/10" />
+          <div role="separator" className="my-1 h-px bg-edge" />
         </>
       ) : null}
       {items.map((item, index) => {
         if (item.kind === "sep") {
-          return <div key={`sep-${index}`} role="separator" className="my-1 h-px bg-content/10" />;
+          return <div key={`sep-${index}`} role="separator" className="my-1 h-px bg-edge" />;
         }
         const highlighted = index === active;
         return (
@@ -118,23 +118,23 @@ export function ExplorerMenu({
             onClick={() => {
               if (!item.disabled) onPick(item.id);
             }}
-            className={`flex h-7 w-full items-center gap-3 rounded-lg px-2 text-left text-[13px] leading-none ${
+            className={`flex h-7 w-full items-center gap-3 rounded-lg px-2 text-left text-[13.5px] leading-none ${
               item.disabled
-                ? "text-content/30"
+                ? "text-dim"
                 : item.danger
                   ? highlighted
-                    ? "bg-red-500/20 text-red-300"
-                    : "text-red-300/90 hover:bg-red-500/15"
+                    ? "bg-danger/20 text-danger"
+                    : "text-danger/90 hover:bg-danger/15"
                   : highlighted
-                    ? "bg-content/10 text-content"
-                    : "text-content hover:bg-content/5"
+                    ? "bg-selected text-content"
+                    : "text-content hover:bg-hover"
             }`}
           >
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
             {item.checked ? (
               <Check className="size-3.5 shrink-0" strokeWidth={2.25} />
             ) : item.shortcut ? (
-              <span className="shrink-0 text-[11px] text-content/40">{item.shortcut}</span>
+              <span className="shrink-0 text-[11.5px] text-dim">{item.shortcut}</span>
             ) : null}
           </button>
         );

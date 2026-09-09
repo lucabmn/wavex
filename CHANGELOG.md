@@ -4,6 +4,54 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+- Give secondary text four named strengths with their own value per theme, so
+  the light interface stops reading as washed out. The same opacity is not the
+  same contrast on paper as on graphite — the app's most common muted level sat
+  at 2.6:1 in light against 4.1:1 in dark — and every rung now lands on the
+  same ratio in both. Window translucency gets a floor on paper for the same
+  reason.
+- Rebuild the light theme so its surfaces climb like the dark theme's: the page
+  no longer sits pinned at white with cards darker than it and overlays on the
+  same white, and its rules and text are firm enough to read on paper.
+- Rename Sidebar opacity to Window opacity — one number drives the sidebar and,
+  with Main pane glass on, the main pane too.
+- Give the projects rail its own edge again, so the projects list and the
+  sessions list no longer run together, and stand its mode switch in a band
+  matching the panel's strip beside it so both rules sit on one line.
+- Lift the dark theme off near-black: the ladder had five percent of lightness
+  to work with and read as one flat sheet, so the ground, the planes, the rules
+  and the muted text all come up together.
+- Float the work as an inset, rounded sheet on the window's own ground, with
+  the sidebar sitting directly on that ground rather than behind a rule.
+- Give the window one header instead of five. The title bar spans the whole
+  window above both columns and is the only thing that holds the macOS traffic
+  lights out of the way; the project rail, the workspace panel, Work's two
+  columns and every overlay surface lose the 40px strip each used to open
+  with, along with the back arrow and sidebar toggle each drew again.
+- Open in two columns rather than three. The project rail is closed by default
+  — the sidebar's header carries the project switcher and every destination it
+  held — and the sidebar itself has one header row instead of three.
+- Redesign the whole interface. The project rail and the workspace panel are
+  one sidebar with a single header band rather than two panels each with a
+  header of its own; the window is nearly colourless, separated by planes and
+  space instead of a rule around every box; tabs are flush and named by a rule
+  under the live one; and the accent appears only on the icon of the selected
+  row, a primary button, focus, and links. Nothing in the chrome uses a
+  gradient and nothing glows. Transparent mode keeps working throughout.
+- Every hairline, hover and selected state in the app resolves to one shared
+  token, and the type scale steps up so the hierarchy is carried by size and
+  weight rather than by borders.
+- Read the transcript as prose. It ran monospace throughout, which made a
+  conversation read as a log; it now runs in the interface face at a larger
+  size with real space between turns, and only the parts that are genuinely
+  code keep monospace metrics. Links take the accent instead of a hard-coded
+  blue.
+- Add two appearance rules: Depth, which sets how far raised surfaces stand off
+  the ones behind them, and Separators, which sets how strongly every hairline
+  in the app is drawn.
+
 ## [0.13.0] - 2026-09-08
 
 - Schedule recurring agent tasks from the new Automations surface. Each run

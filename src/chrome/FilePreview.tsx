@@ -74,13 +74,13 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
   const label = path ? displayPath(path, cwd) : fileName || preview.title || "File";
 
   return (
-    <div className="overflow-hidden rounded-[10px] border border-content/10 bg-content/6">
+    <div className="overflow-hidden rounded-[10px] border border-edge bg-content/6">
       <div className="flex items-center gap-2 px-2.5 py-2">
         <FileTypeIcon name={fileName || "file"} isDir={false} />
         {filePath && onOpenFile ? (
           <button
             type="button"
-            className="min-w-0 flex-1 truncate text-left font-mono text-[12px] font-medium text-content/85 hover:text-sky-300 hover:underline"
+            className="min-w-0 flex-1 truncate text-left font-mono text-[12.5px] font-medium text-strong hover:text-accent hover:underline"
             title={path}
             onClick={() => onOpenFile(filePath)}
           >
@@ -88,17 +88,17 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
           </button>
         ) : (
           <span
-            className="min-w-0 flex-1 truncate font-mono text-[12px] font-medium text-content/85"
+            className="min-w-0 flex-1 truncate font-mono text-[12.5px] font-medium text-strong"
             title={path}
           >
             {label}
           </span>
         )}
         {added > 0 || deleted > 0 ? (
-          <span className="shrink-0 font-mono text-[11px] font-semibold">
-            {added > 0 ? <span className="text-emerald-400">+{added}</span> : null}
+          <span className="shrink-0 font-mono text-[11.5px] font-semibold">
+            {added > 0 ? <span className="text-positive">+{added}</span> : null}
             {added > 0 && deleted > 0 ? " " : null}
-            {deleted > 0 ? <span className="text-red-400">-{deleted}</span> : null}
+            {deleted > 0 ? <span className="text-danger">-{deleted}</span> : null}
           </span>
         ) : (
           <StatusIcon status={status} />
@@ -123,21 +123,21 @@ export function FilePreview({ preview, status, cwd, onOpenFile }: Props) {
 }
 
 function PreviewLine({ line, showGutter }: { line: ToolPreviewLine; showGutter: boolean }) {
-  const bg = line.kind === "add" ? "bg-teal-800/20" : line.kind === "del" ? "bg-rose-800/20" : "";
+  const bg = line.kind === "add" ? "bg-positive/20" : line.kind === "del" ? "bg-danger/20" : "";
   const bar =
-    line.kind === "add" ? "bg-teal-400" : line.kind === "del" ? "bg-rose-400" : "bg-transparent";
+    line.kind === "add" ? "bg-positive" : line.kind === "del" ? "bg-danger" : "bg-transparent";
   const mark = line.kind === "add" ? "+" : line.kind === "del" ? "−" : " ";
   const markColor =
     line.kind === "add"
-      ? "text-teal-400"
+      ? "text-positive"
       : line.kind === "del"
-        ? "text-rose-400"
+        ? "text-danger"
         : "text-transparent";
 
   return (
     <div className={`relative flex items-baseline ${bg}`}>
       <span className={`absolute inset-y-0 left-0 w-0.5 ${bar}`} />
-      <span className="w-7 shrink-0 pr-1 text-right font-mono text-[10px] text-content/35">
+      <span className="w-7 shrink-0 pr-1 text-right font-mono text-[10px] text-dim">
         {line.number ?? " "}
       </span>
       {showGutter ? (
@@ -145,7 +145,7 @@ function PreviewLine({ line, showGutter }: { line: ToolPreviewLine; showGutter: 
           {mark}
         </span>
       ) : null}
-      <span className="min-w-0 flex-1 truncate pr-2 font-mono text-[11px] leading-4.5">
+      <span className="min-w-0 flex-1 truncate pr-2 font-mono text-[11.5px] leading-4.5">
         {highlight(line.text, line.kind === "context")}
       </span>
     </div>
@@ -154,10 +154,10 @@ function PreviewLine({ line, showGutter }: { line: ToolPreviewLine; showGutter: 
 
 function StatusIcon({ status }: { status: Status }) {
   if (status === "rejected") {
-    return <X className="size-3.5 shrink-0 text-red-400" strokeWidth={2} />;
+    return <X className="size-3.5 shrink-0 text-danger" strokeWidth={2} />;
   }
   if (status === "pending") {
-    return <CircleDashed className="size-3.5 shrink-0 text-content/40" strokeWidth={1.75} />;
+    return <CircleDashed className="size-3.5 shrink-0 text-dim" strokeWidth={1.75} />;
   }
   return null;
 }
@@ -166,7 +166,7 @@ function highlight(text: string, dimmed: boolean) {
   const dim = dimmed ? "opacity-70" : "";
   const trimmed = text.trimStart();
   if (trimmed.startsWith("//") || trimmed.startsWith("///") || trimmed.startsWith("#")) {
-    return <span className={`text-content/45 ${dim}`}>{text}</span>;
+    return <span className={`text-faint ${dim}`}>{text}</span>;
   }
 
   const parts: { text: string; color: string }[] = [];
@@ -179,9 +179,9 @@ function highlight(text: string, dimmed: boolean) {
     }
     const token = match[1];
     const color = KEYWORDS.has(token)
-      ? "text-teal-300"
+      ? "text-positive"
       : /^[A-Z]/.test(token)
-        ? "text-amber-200/90"
+        ? "text-warn/90"
         : "";
     parts.push({ text: token, color });
     last = match.index + token.length;
@@ -189,7 +189,7 @@ function highlight(text: string, dimmed: boolean) {
   if (last < text.length) parts.push({ text: text.slice(last), color: "" });
 
   return (
-    <span className={`text-content/80 ${dim}`}>
+    <span className={`text-strong ${dim}`}>
       {parts.map((part, index) =>
         part.color ? (
           <span key={index} className={part.color}>

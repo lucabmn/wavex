@@ -17,7 +17,6 @@ import {
   Trash2,
 } from "../chrome/icons";
 import { SecondaryButton } from "../chrome/SettingsRow";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { CLOCK_STRIDE_COARSE, useNow } from "../lib/motion";
@@ -66,9 +65,7 @@ import { formatMoment, upcomingRuns } from "../lib/automations/schedule";
 type Props = {
   /** Projects offered as targets, in the rail's order. */
   projects: readonly string[];
-  besideRail?: boolean;
   onClose: () => void;
-  onToggleSidebar?: () => void;
   /** The host is the automation's: a run's session lives where it ran. */
   onOpenSession: (sessionId: string, hostId: HostId) => void;
 };
@@ -77,19 +74,19 @@ const FILTERS: AutomationFilter[] = ["all", "active", "running", "failing", "pau
 
 const STATUS_TONE: Record<AutomationListStatus, string> = {
   running: "bg-accent",
-  active: "bg-emerald-400",
-  failing: "bg-amber-400",
+  active: "bg-positive",
+  failing: "bg-warn",
   paused: "bg-content/30",
   finished: "bg-content/20",
 };
 
 const RUN_TONE: Record<AutomationRun["status"], string> = {
   running: "text-accent",
-  success: "text-emerald-400",
-  failed: "text-red-400",
-  cancelled: "text-content/45",
-  "needs-attention": "text-amber-300",
-  interrupted: "text-content/45",
+  success: "text-positive",
+  failed: "text-danger",
+  cancelled: "text-faint",
+  "needs-attention": "text-warn",
+  interrupted: "text-faint",
 };
 
 /**
@@ -99,13 +96,7 @@ const RUN_TONE: Record<AutomationRun["status"], string> = {
  * automation's history, because the two questions a person brings here are
  * "what is going to run" and "what did that one do last time".
  */
-export function AutomationsView({
-  projects,
-  besideRail = false,
-  onClose,
-  onToggleSidebar,
-  onOpenSession,
-}: Props) {
+export function AutomationsView({ projects, onClose, onOpenSession }: Props) {
   const listLock = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -233,14 +224,12 @@ export function AutomationsView({
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 select-none items-center border-b border-content/10"
+        className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
-          <span className="shrink-0 text-content/45">Automations</span>
-          <span aria-hidden className="shrink-0 text-content/25">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
+          <span className="shrink-0 text-faint">Automations</span>
+          <span aria-hidden className="shrink-0 text-dim">
             /
           </span>
           <span className="min-w-0 truncate text-content">
@@ -256,8 +245,8 @@ export function AutomationsView({
             onClick={() => void pauseAllAutomations(!state.allPaused).catch(() => undefined)}
             className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               state.allPaused
-                ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/22"
-                : "text-content/60 hover:bg-content/8 hover:text-content"
+                ? "bg-warn/15 text-warn hover:bg-warn/22"
+                : "text-muted hover:bg-hover hover:text-content"
             }`}
           >
             <Pause className="size-3.5" strokeWidth={1.75} />
@@ -268,20 +257,18 @@ export function AutomationsView({
       </div>
 
       {state.allPaused ? (
-        <p className="flex items-center gap-2 border-b border-content/10 bg-amber-400/8 px-4 py-1.5 text-[11.5px] text-amber-300">
+        <p className="flex items-center gap-2 border-b border-edge bg-warn/8 px-4 py-1.5 text-[11.5px] text-warn">
           <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
           Every automation is held. Nothing runs until you release the pause.
         </p>
       ) : null}
       {state.error ? (
-        <p className="border-b border-content/10 px-4 py-1.5 text-[11.5px] text-red-400">
-          {state.error}
-        </p>
+        <p className="border-b border-edge px-4 py-1.5 text-[11.5px] text-danger">{state.error}</p>
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1">
-        <div className="flex min-h-0 w-70 shrink-0 flex-col border-r border-content/10">
-          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-content/10 px-2">
+        <div className="flex min-h-0 w-70 shrink-0 flex-col border-r border-edge">
+          <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge px-2">
             <div className="relative flex h-7 min-w-0 flex-1 items-center">
               <Search className="pointer-events-none absolute left-2 size-3 shrink-0 opacity-50" />
               <input
@@ -291,7 +278,7 @@ export function AutomationsView({
                 aria-label="Filter automations"
                 spellCheck={false}
                 autoComplete="off"
-                className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12px] text-content outline-none placeholder:text-content/40"
+                className="h-7 w-full rounded-md bg-transparent pl-7 pr-2 text-[12.5px] text-content outline-none placeholder:text-dim"
               />
             </div>
             <button
@@ -300,7 +287,7 @@ export function AutomationsView({
               aria-label="New automation"
               disabled={projects.length === 0}
               onClick={openNew}
-              className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content disabled:opacity-40"
+              className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content disabled:opacity-40"
             >
               <Plus className="size-3.5" strokeWidth={1.75} />
             </button>
@@ -311,7 +298,7 @@ export function AutomationsView({
               <div
                 role="group"
                 aria-label="Filter automations by state"
-                className="sticky top-0 z-10 flex flex-col gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
+                className="sticky top-0 z-10 flex flex-col gap-1 border-b border-edge bg-background-base/90 px-3 py-2 backdrop-blur-md"
               >
                 <div className="flex flex-wrap gap-1">
                   {FILTERS.map((entry) => (
@@ -330,7 +317,7 @@ export function AutomationsView({
                     value={project}
                     aria-label="Filter by project"
                     onChange={(event) => setProject(event.target.value)}
-                    className="w-full rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[11.5px] text-content outline-none hover:border-content/20"
+                    className="w-full rounded-md border border-edge bg-content/5 px-2 py-1 text-[11.5px] text-content outline-none hover:border-edge-strong"
                   >
                     <option value="">Every project</option>
                     {projectFilters.map(([key, cwd]) => (
@@ -344,17 +331,17 @@ export function AutomationsView({
             ) : null}
 
             {state.loading && empty ? (
-              <div className="flex justify-center py-10 text-content/40">
+              <div className="flex justify-center py-10 text-dim">
                 <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
               </div>
             ) : empty ? (
-              <p className="px-3 py-2 text-[12px] text-content/50">
+              <p className="px-3 py-2 text-[12.5px] text-faint">
                 {projects.length > 0
                   ? "No automations yet. An automation is a prompt, a project, and a schedule."
                   : "No automations yet. Open a project first — an automation runs in a real checkout."}
               </p>
             ) : visible.length === 0 ? (
-              <p className="px-3 py-2 text-[12px] text-content/50">No matching automations</p>
+              <p className="px-3 py-2 text-[12.5px] text-faint">No matching automations</p>
             ) : (
               <ul className="flex flex-col gap-0.5 p-1.5">
                 {visible.map((automation) => (
@@ -400,8 +387,8 @@ export function AutomationsView({
             />
           ) : (
             <div className="flex h-full min-w-0 flex-1 flex-col items-center justify-center px-6 text-center">
-              <Clock className="mb-3 size-6 text-content/30" strokeWidth={1.75} />
-              <p className="text-[13px] text-content/45">Select an automation</p>
+              <Clock className="mb-3 size-6 text-dim" strokeWidth={1.75} />
+              <p className="text-[13.5px] text-faint">Select an automation</p>
             </div>
           )}
         </div>
@@ -440,8 +427,8 @@ function AutomationCard({
       onClick={onSelect}
       className={`flex w-full flex-col rounded-md border px-2.5 py-2 text-left ${
         active
-          ? "border-transparent bg-content/10 text-content"
-          : "border-transparent text-content/80 hover:bg-content/5 hover:text-content"
+          ? "border-transparent bg-selected text-content"
+          : "border-transparent text-strong hover:bg-hover hover:text-content"
       }`}
     >
       <span className="flex items-center gap-2">
@@ -449,10 +436,10 @@ function AutomationCard({
         <span className="min-w-0 flex-1 truncate text-[12.5px]">{automation.name}</span>
         <HarnessIcon harness={automation.harness} className="size-3 shrink-0" />
       </span>
-      <span className="mt-0.5 truncate text-[11px] leading-tight text-content/45">
+      <span className="mt-0.5 truncate text-[11.5px] leading-tight text-faint">
         {projectName(automation.cwd)} · {scheduleLine(automation)}
       </span>
-      <span className="truncate text-[11px] leading-tight text-content/35">
+      <span className="truncate text-[11.5px] leading-tight text-dim">
         {nextRunLine(automation, status, now)}
       </span>
     </button>
@@ -504,10 +491,8 @@ function Detail({
           <h2 className="truncate text-[15px] font-medium leading-tight text-content">
             {automation.name}
           </h2>
-          <p className="mt-0.5 text-[12px] leading-snug text-content/55">
-            {scheduleLine(automation)}
-          </p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] leading-snug text-content/40">
+          <p className="mt-0.5 text-[12.5px] leading-snug text-faint">{scheduleLine(automation)}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] leading-snug text-dim">
             {status === "running" ? (
               <LoaderCircle className="size-3 shrink-0 animate-spin" strokeWidth={1.75} />
             ) : null}
@@ -550,13 +535,13 @@ function Detail({
       </header>
 
       {host && host.phase !== "connected" ? (
-        <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-amber-300">
+        <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-warn">
           <CircleAlert className="mt-px size-3 shrink-0" strokeWidth={1.75} />
           {host.name} is not connected. This automation cannot run until it is.
         </p>
       ) : null}
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-[12px] leading-tight">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-[12.5px] leading-tight">
         <Row label="Runs in">{prettyCwd(automation.cwd)}</Row>
         <Row label="On">{host ? host.name : "This device"}</Row>
         <Row label="Agent">
@@ -571,7 +556,7 @@ function Detail({
       </dl>
 
       <Section title="Prompt">
-        <p className="whitespace-pre-wrap rounded-md bg-content/5 px-2.5 py-2 font-mono text-[11.5px] leading-5 text-content/75">
+        <p className="whitespace-pre-wrap rounded-md bg-content/5 px-2.5 py-2 font-mono text-[11.5px] leading-5 text-strong">
           {automation.prompt}
         </p>
       </Section>
@@ -580,9 +565,9 @@ function Detail({
         <Section title="Upcoming">
           <ul className="flex flex-col gap-0.5">
             {upcoming.map((run) => (
-              <li key={run} className="text-[11.5px] leading-tight text-content/55">
+              <li key={run} className="text-[11.5px] leading-tight text-faint">
                 {formatMoment(run, automation.timeZone)}
-                <span className="ml-1.5 text-content/30">{relativeMoment(run, now)}</span>
+                <span className="ml-1.5 text-dim">{relativeMoment(run, now)}</span>
               </li>
             ))}
           </ul>
@@ -591,7 +576,7 @@ function Detail({
 
       <Section title="History">
         {runs.length === 0 ? (
-          <p className="text-[12px] text-content/45">
+          <p className="text-[12.5px] text-faint">
             This automation has not run yet. Use Run now to try it before it goes on the schedule.
           </p>
         ) : (
@@ -599,17 +584,17 @@ function Detail({
             {runs.map((run) => (
               <li
                 key={run.id}
-                className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-content/5"
+                className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-hover"
               >
                 <span className={`w-24 shrink-0 text-[11.5px] ${RUN_TONE[run.status]}`}>
                   {RUN_STATUS_LABEL[run.status]}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[11.5px] leading-tight text-content/60">
+                  <span className="block text-[11.5px] leading-tight text-muted">
                     {formatMoment(run.startedAt, automation.timeZone)} · {runDurationText(run, now)}
                   </span>
                   {run.error || run.summary ? (
-                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-content/40">
+                    <span className="mt-0.5 line-clamp-2 block text-[11.5px] leading-snug text-dim">
                       {run.error ?? run.summary}
                     </span>
                   ) : null}
@@ -618,7 +603,7 @@ function Detail({
                   <button
                     type="button"
                     onClick={onRunNow}
-                    className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] text-faint hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <RefreshCw className="size-3" strokeWidth={1.75} />
                     Retry
@@ -628,7 +613,7 @@ function Detail({
                   <button
                     type="button"
                     onClick={() => onOpenSession(run.sessionId!, automation.hostId)}
-                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-content/50 hover:bg-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] text-faint hover:bg-hover hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     Open
                   </button>
@@ -645,7 +630,7 @@ function Detail({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="pb-2 text-[13px] font-semibold uppercase tracking-[0.07em] text-content/50">
+      <h3 className="pb-2 text-[13.5px] font-semibold uppercase tracking-[0.07em] text-faint">
         {title}
       </h3>
       {children}
@@ -656,8 +641,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <>
-      <dt className="text-content/40">{label}</dt>
-      <dd className="min-w-0 truncate text-content/70">{children}</dd>
+      <dt className="text-dim">{label}</dt>
+      <dd className="min-w-0 truncate text-muted">{children}</dd>
     </>
   );
 }

@@ -60,10 +60,10 @@ import { ExplorerMenu, type ExplorerMenuItem } from "./ExplorerMenu";
 import { FileTypeIcon } from "./FileTypeIcon";
 
 const GIT_STATUS_COLOR: Record<string, string> = {
-  modified: "text-amber-400",
-  added: "text-emerald-400",
-  untracked: "text-emerald-400",
-  deleted: "text-red-400",
+  modified: "text-warn",
+  added: "text-positive",
+  untracked: "text-positive",
+  deleted: "text-danger",
 };
 
 type Props = {
@@ -593,7 +593,7 @@ export function FileTree({
         onContextMenu={onBackgroundMenu}
       >
         <div
-          className="flex h-9 shrink-0 items-center gap-px overflow-visible border-b border-content/10 px-2"
+          className="flex h-9 shrink-0 items-center gap-px overflow-visible border-b border-edge px-2"
           onContextMenu={(e) => e.stopPropagation()}
         >
           <HeaderIcon label="New File" onClick={() => startCreate(false)}>
@@ -643,21 +643,21 @@ export function FileTree({
             }}
             className={`flex min-w-0 flex-1 items-center gap-1 h-full pl-2 text-left`}
           >
-            <span className="grid size-4 shrink-0 place-items-center text-content/50">
+            <span className="grid size-4 shrink-0 place-items-center text-faint">
               {rootOpen ? (
                 <ChevronDown className="size-3.5" strokeWidth={1.75} />
               ) : (
                 <ChevronRight className="size-3.5" strokeWidth={1.75} />
               )}
             </span>
-            <span className="min-w-0 truncate text-[11px] font-semibold tracking-[0.08em] text-content/50 uppercase">
+            <span className="min-w-0 truncate text-[11.5px] font-semibold tracking-[0.08em] text-faint uppercase">
               {name}
             </span>
           </button>
         </div>
         <div ref={lockOverscroll} className="min-h-0 flex-1 overflow-y-auto overscroll-none">
           {opError ? (
-            <p className="px-3 py-1 text-[12px] leading-4 text-red-400">{opError}</p>
+            <p className="px-3 py-1 text-[12.5px] leading-4 text-danger">{opError}</p>
           ) : null}
           {rootOpen ? (
             <div role="tree" aria-label={`${name} files`}>
@@ -709,9 +709,7 @@ function HeaderIcon({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active
-          ? "bg-content/10 text-content"
-          : "text-content/50 hover:bg-content/5 hover:text-content"
+        active ? "bg-selected text-content" : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       {children}
@@ -756,15 +754,13 @@ function FileTreeDiffButton({
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={`relative flex h-6 min-w-0 flex-1 items-center justify-center self-center rounded-md ${
-        active
-          ? "bg-content/10 text-content"
-          : "text-content/50 hover:bg-content/5 hover:text-content"
+        active ? "bg-selected text-content" : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       <span className="relative">
         <GitCompare className="size-3.5" strokeWidth={1.75} />
         {files > 0 ? (
-          <span className="pointer-events-none absolute -top-1.5 -right-2 grid min-h-3.5 min-w-3.5 place-items-center rounded-full bg-accent px-0.5 text-[7px] font-semibold leading-none text-white tabular-nums">
+          <span className="ui-fill pointer-events-none absolute -top-1.5 -right-2 grid min-h-3.5 min-w-3.5 place-items-center rounded-full px-0.5 text-[7px] font-semibold leading-none tabular-nums">
             {badge}
           </span>
         ) : null}
@@ -807,13 +803,13 @@ function TreeChildren({
   return (
     <>
       {error ? (
-        <p className="truncate pr-2 text-[12px] text-content/50" style={pad}>
+        <p className="truncate pr-2 text-[12.5px] text-faint" style={pad}>
           {error}
         </p>
       ) : null}
       {show && ctx.creating?.isDir ? row : null}
       {loading && !error ? (
-        <p className="pr-2 text-[12px] text-content/50" style={pad}>
+        <p className="pr-2 text-[12.5px] text-faint" style={pad}>
           …
         </p>
       ) : null}
@@ -915,10 +911,10 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
           onContextMenu={(e) => onItemContextMenu(entry, e)}
           style={{ paddingLeft: 8 + depth * 12 }}
           className={`flex h-7.5 w-full cursor-default items-center gap-1 pr-2 text-left text-[14px] leading-none ${
-            selected ? "bg-content/10 text-content" : "text-content hover:bg-content/5"
+            selected ? "bg-selected text-content" : "text-content hover:bg-hover"
           } ${cutPath === entry.path ? "opacity-50" : ""}`}
         >
-          <span className="grid size-4 shrink-0 place-items-center text-content/50">
+          <span className="grid size-4 shrink-0 place-items-center text-faint">
             {entry.isDir ? (
               open ? (
                 <ChevronDown className="size-3.5" strokeWidth={1.75} />
@@ -931,9 +927,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }) {
             <FileTypeIcon name={entry.name} isDir={entry.isDir} isOpen={open} />
           </span>
           <span
-            className={`min-w-0 truncate ${
-              entry.ignored ? "italic text-content/50" : (gitColor ?? "")
-            }`}
+            className={`min-w-0 truncate ${entry.ignored ? "italic text-faint" : (gitColor ?? "")}`}
           >
             {entry.name}
           </span>
@@ -1024,7 +1018,7 @@ function NameRow({
         style={{ paddingLeft: 8 + depth * 12 }}
         className="flex h-7.5 w-full items-center gap-1 bg-content/10 pr-2"
       >
-        <span className="grid size-4 shrink-0 place-items-center text-content/50">
+        <span className="grid size-4 shrink-0 place-items-center text-faint">
           {isDir ? <ChevronRight className="size-3.5" strokeWidth={1.75} /> : null}
         </span>
         <span className="shrink-0">
@@ -1109,7 +1103,7 @@ function NameIssueView({
   const error = Boolean(fallback) || !issue || issue.severity === "error";
   return (
     <p
-      className={`pr-2 pb-1 text-[12px] leading-4 ${error ? "text-red-400" : "text-amber-400"}`}
+      className={`pr-2 pb-1 text-[12.5px] leading-4 ${error ? "text-danger" : "text-warn"}`}
       style={{ paddingLeft: 28 + depth * 12 }}
     >
       {body}

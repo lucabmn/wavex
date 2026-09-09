@@ -74,23 +74,23 @@ export function QuestionForm({ prompt, onReply }: Props) {
   return (
     <div className="px-1.5 pb-1.5" data-question-form>
       <form
-        className="rounded-lg border border-content/10 bg-content/3 px-3 py-2.5"
+        className="rounded-lg border border-edge bg-content/3 px-3 py-2.5"
         onSubmit={(event) => {
           event.preventDefault();
           continueCurrent();
         }}
       >
         <div className="flex items-center gap-1.5">
-          <MessageSquare className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
-          <span className="min-w-0 flex-1 truncate text-[11px] text-content/50">{title}</span>
+          <MessageSquare className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
+          <span className="min-w-0 flex-1 truncate text-[11.5px] text-faint">{title}</span>
           {total > 1 ? (
-            <span className="shrink-0 text-[11px] text-content/40">
+            <span className="shrink-0 text-[11.5px] text-dim">
               {index + 1} of {total}
             </span>
           ) : null}
           <button
             type="button"
-            className="h-6 shrink-0 rounded-md px-1.5 text-[11px] text-content/55 hover:bg-content/10 hover:text-content"
+            className="h-6 shrink-0 rounded-md px-1.5 text-[11.5px] text-faint hover:bg-hover hover:text-content"
             onClick={skipCurrent}
           >
             Skip
@@ -131,7 +131,7 @@ export function QuestionForm({ prompt, onReply }: Props) {
           <button
             type="submit"
             disabled={!ready}
-            className="h-6 rounded-md bg-content px-2.5 text-[11px] font-medium text-background-base hover:bg-content/80 disabled:opacity-40"
+            className="h-6 rounded-md ui-fill px-2.5 text-[11.5px] font-medium disabled:opacity-40"
           >
             Continue
           </button>
@@ -160,16 +160,16 @@ function QuestionFields({
 
   return (
     <fieldset className="min-w-0" aria-label={question.header || question.prompt}>
-      <p className="text-[13px] font-medium leading-snug text-content">{question.prompt}</p>
+      <p className="text-[13.5px] font-medium leading-snug text-content">{question.prompt}</p>
       {question.multiSelect ? (
-        <p className="mt-0.5 text-[11px] text-content/40">Select all that apply</p>
+        <p className="mt-0.5 text-[11.5px] text-dim">Select all that apply</p>
       ) : null}
       {options.length === 0 && question.allowCustom ? (
         <input
           value={custom}
           onChange={(event) => onCustom(event.target.value)}
           placeholder="Type your answer"
-          className="mt-1.5 w-full rounded-md border border-content/15 bg-transparent px-2 py-1 text-[12px] text-content outline-none placeholder:text-content/35 focus:border-content/30"
+          className="mt-1.5 w-full rounded-md border border-edge-strong bg-transparent px-2 py-1 text-[12.5px] text-content outline-none placeholder:text-dim focus:border-edge-strong"
         />
       ) : (
         <div className="mt-1.5 flex max-h-52 flex-col gap-1 overflow-y-auto" role="group">
@@ -183,29 +183,23 @@ function QuestionFields({
                   aria-pressed={active}
                   onClick={() => onSelect(option.id)}
                   className={`flex w-full items-start gap-2 rounded-md border px-2 py-1.5 text-left ${
-                    active
-                      ? "border-content/35 bg-content/10"
-                      : "border-content/10 hover:bg-content/5"
+                    active ? "border-edge-strong bg-content/10" : "border-edge hover:bg-hover"
                   }`}
                 >
                   <span
                     aria-hidden
                     className={`mt-0.5 grid size-3.5 shrink-0 place-items-center border ${
                       question.multiSelect ? "rounded-[3px]" : "rounded-full"
-                    } ${
-                      active
-                        ? "border-content bg-content text-background-base"
-                        : "border-content/30"
-                    }`}
+                    } ${active ? "border-content ui-fill" : "border-edge-strong"}`}
                   >
                     {active ? <Check className="size-2.5" strokeWidth={2.5} /> : null}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] leading-snug text-content">
+                    <span className="block text-[12.5px] leading-snug text-content">
                       {option.label}
                     </span>
                     {option.description ? (
-                      <span className="mt-0.5 block text-[11px] leading-snug text-content/50">
+                      <span className="mt-0.5 block text-[11.5px] leading-snug text-faint">
                         {option.description}
                       </span>
                     ) : null}
@@ -216,7 +210,7 @@ function QuestionFields({
                     value={custom}
                     onChange={(event) => onCustom(event.target.value)}
                     placeholder="Type your answer"
-                    className="mt-1 w-full rounded-md border border-content/15 bg-transparent px-2 py-1 text-[12px] text-content outline-none placeholder:text-content/35 focus:border-content/30"
+                    className="mt-1 w-full rounded-md border border-edge-strong bg-transparent px-2 py-1 text-[12.5px] text-content outline-none placeholder:text-dim focus:border-edge-strong"
                     onClick={(event) => event.stopPropagation()}
                     onFocus={() => {
                       if (!customSelected) onSelect(customId);

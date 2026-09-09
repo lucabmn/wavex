@@ -370,7 +370,7 @@ export function FileEditor({
 
   if (loadState.status === "loading") {
     return (
-      <div className="grid h-full place-items-center text-[12px] text-content/45">
+      <div className="grid h-full place-items-center text-[12.5px] text-faint">
         Opening {basename(path)}…
       </div>
     );
@@ -380,13 +380,13 @@ export function FileEditor({
     return (
       <div className="grid h-full place-items-center p-6">
         <div className="max-w-md text-center">
-          <AlertCircle className="mx-auto mb-3 size-5 text-red-400" />
-          <p className="text-[13px] text-content">Couldn’t open {basename(path)}</p>
-          <p className="mt-1 text-[12px] leading-5 text-content/50">{loadState.message}</p>
+          <AlertCircle className="mx-auto mb-3 size-5 text-danger" />
+          <p className="text-[13.5px] text-content">Couldn’t open {basename(path)}</p>
+          <p className="mt-1 text-[12.5px] leading-5 text-faint">{loadState.message}</p>
           <button
             type="button"
             onClick={() => setReloadKey((value) => value + 1)}
-            className="mx-auto mt-4 flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12px] text-content hover:bg-content/15"
+            className="mx-auto mt-4 flex h-7 items-center gap-1.5 rounded-md bg-content/10 px-2.5 text-[12.5px] text-content hover:bg-hover"
           >
             <RotateCcw className="size-3" strokeWidth={1.75} />
             Retry
@@ -447,7 +447,7 @@ export function FileEditor({
           lspCommands={lspCommands}
         />
       )}
-      <footer className="flex h-6 shrink-0 items-center border-t border-content/10 px-2.5 font-mono text-[10.5px] text-content/40">
+      <footer className="flex h-6 shrink-0 items-center border-t border-edge px-2.5 font-mono text-[10.5px] text-dim">
         <span className="min-w-0 flex-1 truncate" title={path}>
           {relativePath}
         </span>
@@ -456,7 +456,7 @@ export function FileEditor({
         ) : saveState.status === "saved" ? (
           <span>Saved</span>
         ) : saveState.status === "error" ? (
-          <span className="max-w-64 truncate text-red-400" title={saveState.message}>
+          <span className="max-w-64 truncate text-danger" title={saveState.message}>
             Save failed: {saveState.message}
           </span>
         ) : null}
@@ -959,7 +959,7 @@ function CodeMirrorEditor({
       {notice ? (
         <div
           role="status"
-          className="pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit max-w-[80%] truncate rounded-md bg-background-base/90 px-2.5 py-1 text-[11.5px] text-content/70 shadow-lg ring-1 ring-content/10"
+          className="pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit max-w-[80%] truncate rounded-md bg-background-base/90 px-2.5 py-1 text-[11.5px] text-muted shadow-lg ring-1 ring-content/10"
         >
           {notice}
         </div>
@@ -1000,7 +1000,7 @@ function DiffChunkNav({
 }) {
   return (
     <header
-      className="flex h-8 shrink-0 items-center justify-between gap-3 border-b border-content/10 px-3 pr-1"
+      className="flex h-8 shrink-0 items-center justify-between gap-3 border-b border-edge px-3 pr-1"
       role="toolbar"
       aria-label="Jump between changes"
     >
@@ -1013,11 +1013,11 @@ function DiffChunkNav({
           disabled={total === 0 || index <= 0}
           onMouseDown={(event) => event.preventDefault()}
           onClick={onPrev}
-          className="grid size-6 place-items-center rounded text-content/70 hover:bg-content/10 hover:text-content disabled:opacity-35"
+          className="grid size-6 place-items-center rounded text-muted hover:bg-hover hover:text-content disabled:opacity-35"
         >
           <ChevronUp className="size-3.5" strokeWidth={1.75} />
         </button>
-        <span className="min-w-10 px-0.5 text-center font-mono text-[10.5px] font-medium tabular-nums text-content/55 select-none">
+        <span className="min-w-10 px-0.5 text-center font-mono text-[10.5px] font-medium tabular-nums text-faint select-none">
           {total === 0 ? "0/0" : `${index + 1}/${total}`}
         </span>
         <button
@@ -1027,7 +1027,7 @@ function DiffChunkNav({
           disabled={total === 0 || index >= total - 1}
           onMouseDown={(event) => event.preventDefault()}
           onClick={onNext}
-          className="grid size-6 place-items-center rounded text-content/70 hover:bg-content/10 hover:text-content disabled:opacity-35"
+          className="grid size-6 place-items-center rounded text-muted hover:bg-hover hover:text-content disabled:opacity-35"
         >
           <ChevronDown className="size-3.5" strokeWidth={1.75} />
         </button>
@@ -1041,9 +1041,9 @@ function DiffChunkStat({ additions, deletions }: { additions: number; deletions:
     return <span className="min-w-0 flex-1" />;
   }
   return (
-    <span className="flex min-w-0 shrink-0 items-center gap-1.5 font-mono text-[11px] font-semibold tabular-nums">
-      {additions > 0 ? <span className="text-emerald-400">+{additions}</span> : null}
-      {deletions > 0 ? <span className="text-red-400">-{deletions}</span> : null}
+    <span className="flex min-w-0 shrink-0 items-center gap-1.5 font-mono text-[11.5px] font-semibold tabular-nums">
+      {additions > 0 ? <span className="text-positive">+{additions}</span> : null}
+      {deletions > 0 ? <span className="text-danger">-{deletions}</span> : null}
     </span>
   );
 }

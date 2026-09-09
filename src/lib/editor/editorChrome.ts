@@ -73,8 +73,8 @@ function editorThemeStyles(dark: boolean) {
         outline: "1px solid color-mix(in srgb, var(--color-content) 28%, transparent)",
       },
       ".cm-nonmatchingBracket": {
-        backgroundColor: "color-mix(in srgb, #f87171 32%, transparent)",
-        outline: "1px solid color-mix(in srgb, #f87171 55%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--color-danger) 32%, transparent)",
+        outline: "1px solid color-mix(in srgb, var(--color-danger) 55%, transparent)",
       },
       ".cm-panels, .cm-tooltip": {
         backgroundColor: "var(--color-background-base)",

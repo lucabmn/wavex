@@ -170,7 +170,7 @@ export function ColorPickerPopover({ value, onChange }: Props) {
   const hueColor = hsvToHex(hsv.h, 100, 100);
 
   return (
-    <div className="mt-2 rounded-lg border border-content/10 bg-content/5 p-2">
+    <div className="mt-2 rounded-lg border border-edge bg-content/5 p-2">
       <div
         ref={svRef}
         role="slider"
@@ -218,7 +218,7 @@ export function ColorPickerPopover({ value, onChange }: Props) {
 
       <div className="mt-2 flex items-center gap-2">
         <span
-          className="size-7 shrink-0 rounded-md border border-content/10"
+          className="size-7 shrink-0 rounded-md border border-edge"
           style={{ background: preview }}
           aria-hidden
         />
@@ -228,7 +228,7 @@ export function ColorPickerPopover({ value, onChange }: Props) {
           spellCheck={false}
           aria-label="Hex color"
           onChange={(e) => onHexInput(e.target.value)}
-          className="min-w-0 flex-1 rounded-md border border-content/10 bg-content/5 px-2 py-1 font-mono text-[12px] text-content outline-none ring-accent/40 focus:ring-1"
+          className="min-w-0 flex-1 rounded-md border border-edge bg-content/5 px-2 py-1 font-mono text-[12.5px] text-content outline-none ring-accent/40 focus:ring-1"
         />
       </div>
     </div>

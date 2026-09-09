@@ -65,7 +65,7 @@ export function UsageChart({
         ) : null}
       </div>
 
-      <div className="flex select-none gap-px text-[10px] text-content/35" aria-hidden>
+      <div className="flex select-none gap-px text-[10px] text-dim" aria-hidden>
         {days.map((day, index) => (
           <span key={day.day} className="min-w-0 flex-1 truncate text-center">
             {labelledIndexes.has(index) ? formatDayShort(day.day) : ""}
@@ -76,14 +76,14 @@ export function UsageChart({
       {providers.length > 0 ? (
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           {providers.map((provider) => (
-            <span key={provider} className="inline-flex items-center gap-1.5 text-[11px]">
+            <span key={provider} className="inline-flex items-center gap-1.5 text-[11.5px]">
               <span
                 aria-hidden
                 className="size-2 shrink-0 rounded-[2px]"
                 style={{ background: USAGE_PROVIDER_COLOR[provider] }}
               />
               <HarnessIcon harness={provider} className="size-3 shrink-0 opacity-60" />
-              <span className="text-content/55">{usageProviderLabel(provider)}</span>
+              <span className="text-faint">{usageProviderLabel(provider)}</span>
             </span>
           ))}
         </div>
@@ -160,22 +160,22 @@ function Tooltip({
 
   return (
     <div
-      className="pointer-events-none absolute bottom-full z-10 mb-2 w-max max-w-[15rem] rounded-lg border border-content/10 bg-[var(--color-background-base)] px-2.5 py-2 text-[11px] shadow-lg"
+      className="pointer-events-none absolute bottom-full z-10 mb-2 w-max max-w-[15rem] rounded-lg border border-edge bg-[var(--color-background-base)] px-2.5 py-2 text-[11.5px] shadow-lg"
       style={{ left: `${centre}%`, transform: `translateX(${shift})` }}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
-        <span className="text-content/55">{formatDayLong(day.day)}</span>
+        <span className="text-faint">{formatDayLong(day.day)}</span>
         <span className="font-medium tabular-nums text-content">
           {format(totalsValue(day.totals, metric))}
         </span>
       </div>
       {day.providers.length === 0 ? (
-        <div className="text-content/35">No usage</div>
+        <div className="text-dim">No usage</div>
       ) : (
         <div className="flex flex-col gap-1">
           {day.providers.map((slice) => (
             <div key={slice.provider} className="flex items-center justify-between gap-4">
-              <span className="inline-flex items-center gap-1.5 text-content/60">
+              <span className="inline-flex items-center gap-1.5 text-muted">
                 <span
                   aria-hidden
                   className="size-2 shrink-0 rounded-[2px]"
@@ -183,7 +183,7 @@ function Tooltip({
                 />
                 {usageProviderLabel(slice.provider)}
               </span>
-              <span className="tabular-nums text-content/80">
+              <span className="tabular-nums text-strong">
                 {format(totalsValue(slice.totals, metric))}
               </span>
             </div>

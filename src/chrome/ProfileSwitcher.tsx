@@ -36,16 +36,11 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
         title={`${active.name} — switch profile (${shortcut})`}
         aria-label={`Profile ${active.name}, switch profile (${shortcut})`}
         onClick={() => onOpenChange(!open)}
-        className={`flex w-full items-center gap-2 rounded-md px-2 h-8 text-left ${
-          open
-            ? "bg-content/10 text-content"
-            : "text-content/50 hover:bg-content/10 hover:text-content"
-        }`}
+        data-selected={open ? "true" : undefined}
+        className="ui-row ui-focus flex h-8 w-full items-center gap-2 rounded-md px-2 text-left"
       >
         <ProfileAvatar profile={active} />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium leading-tight">
-          {active.name}
-        </span>
+        <span className="min-w-0 flex-1 truncate text-[13.5px] leading-tight">{active.name}</span>
         <ChevronUp className="size-3.5 shrink-0 opacity-60" strokeWidth={1.75} />
       </button>
 
@@ -71,10 +66,10 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
                   onOpenChange(false);
                   if (profile.id !== active.id) onSwitch(profile.id);
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-content/80 hover:bg-content/10 hover:text-content"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-strong hover:bg-hover hover:text-content"
               >
                 <ProfileAvatar profile={profile} />
-                <span className="min-w-0 flex-1 truncate text-[13px]">{profile.name}</span>
+                <span className="min-w-0 flex-1 truncate text-[13.5px]">{profile.name}</span>
                 {profile.id === active.id ? (
                   <Check className="size-3.5 shrink-0 text-accent" strokeWidth={2} />
                 ) : null}
@@ -82,7 +77,7 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
             ))}
           </div>
 
-          <div className="my-1 h-px bg-content/10" />
+          <div className="my-1 h-px bg-edge" />
 
           <div className="flex flex-col gap-px">
             <MenuAction
@@ -105,7 +100,7 @@ export function ProfileSwitcher({ open, onOpenChange, onSwitch, onManage }: Prop
             </MenuAction>
           </div>
 
-          <p className="px-2 pb-1 pt-2 text-[11px] leading-snug text-content/40">
+          <p className="px-2 pb-1 pt-2 text-[11.5px] leading-snug text-dim">
             Profiles separate wavex's own state. Agent CLIs keep their own sign-in, which every
             profile shares.
           </p>
@@ -142,7 +137,7 @@ function MenuAction({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-content/70 hover:bg-content/10 hover:text-content"
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13.5px] text-muted hover:bg-hover hover:text-content"
     >
       {children}
       <span className="min-w-0 flex-1 truncate">{label}</span>

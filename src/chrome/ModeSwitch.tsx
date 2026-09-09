@@ -21,9 +21,9 @@ type Props = {
  * move between the modes the way a keyboard user expects, and so the current
  * surface is announced.
  *
- * Plain pills, not a boxed segmented control: it sits directly above the rail's
- * own tab strip, and every tab row in the app is a filled pill on the bare
- * surface rather than a bordered track.
+ * Flush tabs, not a boxed segmented control: it sits directly above the rail's
+ * own tab strip, and every exclusive choice in the app is named by a clay rule
+ * under the live one rather than by a chip around it.
  */
 export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
   const tabs = useRef(new Map<AppMode, HTMLButtonElement | null>());
@@ -59,12 +59,9 @@ export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
             tabIndex={selected ? 0 : -1}
             title={`${APP_MODE_LABEL[value]} — ${APP_MODE_DESCRIPTION[value]} (${MOD}${SHIFT}M)`}
             aria-label={`${APP_MODE_LABEL[value]}: ${APP_MODE_DESCRIPTION[value]}`}
-            className={`flex h-6 items-center justify-center rounded-md px-2 text-[12px] leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-              stretch ? "flex-1" : ""
-            } ${
-              selected
-                ? "bg-content/10 text-content"
-                : "text-content/50 hover:bg-content/5 hover:text-content"
+            data-selected={selected ? "true" : undefined}
+            className={`ui-tab ui-focus flex items-center justify-center px-2.5 text-[12.5px] font-medium leading-none ${
+              stretch ? "h-full flex-1" : "h-full"
             }`}
             onClick={() => onChange(value)}
           >

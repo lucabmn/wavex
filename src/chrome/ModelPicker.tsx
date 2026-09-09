@@ -241,14 +241,14 @@ export function ModelPicker({
         }}
         className={`flex items-center rounded-md ${
           fill ? "h-8 w-full gap-2 px-2" : "h-6.5 max-w-52 gap-1 px-1.5"
-        } ${open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"}`}
+        } ${open ? "bg-selected text-content" : "text-content hover:bg-hover"}`}
       >
         <HarnessIcon harness={current.harness} className="size-4 shrink-0" />
-        <span className={`min-w-0 truncate ${fill ? "text-[13px]" : "text-[11px]"}`}>
+        <span className={`min-w-0 truncate ${fill ? "text-[13.5px]" : "text-[11.5px]"}`}>
           {current.name}
         </span>
         <ChevronDown
-          className={`size-3 shrink-0 text-content/50 ${fill ? "ml-auto" : ""} ${open ? "rotate-180" : ""}`}
+          className={`size-3 shrink-0 text-faint ${fill ? "ml-auto" : ""} ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
         />
       </button>
@@ -272,7 +272,7 @@ export function ModelPicker({
             aria-label="Providers"
             aria-keyshortcuts="ArrowLeft ArrowRight"
             aria-orientation="horizontal"
-            className="flex w-full shrink-0 items-stretch border-b border-content/10"
+            className="flex w-full shrink-0 items-stretch border-b border-edge"
           >
             <ProviderTabButton
               title="Favorites"
@@ -346,12 +346,12 @@ function ProviderTabButton({
         if (disabled) return;
         onSelect();
       }}
-      className={`relative flex min-w-0 flex-1 items-center justify-center gap-1 px-2 py-3 text-[11px] leading-4 ${
+      className={`relative flex min-w-0 flex-1 items-center justify-center gap-1 px-2 py-3 text-[11.5px] leading-4 ${
         disabled
-          ? "cursor-not-allowed text-content/25"
+          ? "cursor-not-allowed text-dim"
           : selected
-            ? "bg-content/10 text-content"
-            : "text-content/50 hover:bg-content/5 hover:text-content"
+            ? "bg-selected text-content"
+            : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       <span className="shrink-0">{children}</span>

@@ -667,7 +667,7 @@ const findTheme = EditorView.theme(
       backgroundColor: "color-mix(in srgb, var(--color-content) 6%, transparent)",
     },
     ".cm-find.is-empty .cm-find-search, .cm-find.is-invalid .cm-find-search": {
-      borderColor: "color-mix(in srgb, #f87171 55%, transparent)",
+      borderColor: "color-mix(in srgb, var(--color-danger) 55%, transparent)",
     },
     ".cm-find input": {
       minWidth: "0",
@@ -698,7 +698,7 @@ const findTheme = EditorView.theme(
       whiteSpace: "nowrap",
     },
     ".cm-find-count[data-state=empty], .cm-find-count[data-state=invalid]": {
-      color: "#f87171",
+      color: "var(--color-danger)",
     },
     ".cm-find-toggles, .cm-find-nav, .cm-find-replace-actions": {
       display: "flex",
@@ -726,7 +726,7 @@ const findTheme = EditorView.theme(
       fontSize: "11px",
     },
     ".cm-searchMatch": {
-      backgroundColor: "color-mix(in srgb, #e2c08d 46%, transparent)",
+      backgroundColor: "color-mix(in srgb, var(--color-warn) 46%, transparent)",
     },
     ".cm-searchMatch-selected": {
       backgroundColor: "color-mix(in srgb, var(--color-accent) 52%, transparent)",

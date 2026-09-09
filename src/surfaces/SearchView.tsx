@@ -12,7 +12,6 @@ import { FileTypeIcon } from "../chrome/FileTypeIcon";
 import { HarnessIcon } from "../chrome/HarnessIcon";
 import { MatchText } from "../chrome/MatchText";
 import { ProjectLogoIcon } from "../chrome/ProjectLogoIcon";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import {
@@ -56,9 +55,7 @@ type Props = {
   history: SessionSummary[];
   sessions: Session[];
   focusToken?: number;
-  besideRail?: boolean;
   onClose: () => void;
-  onToggleSidebar?: () => void;
   onOpenFile: OpenFileFn;
   onOpenSession: (sessionId: string) => void;
   onOpenProject: (path: string) => void;
@@ -71,9 +68,7 @@ export function SearchView({
   history,
   sessions,
   focusToken = 0,
-  besideRail = false,
   onClose,
-  onToggleSidebar,
   onOpenFile,
   onOpenSession,
   onOpenProject,
@@ -302,12 +297,10 @@ export function SearchView({
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 select-none items-center border-b border-content/10"
+        className="flex h-10 shrink-0 select-none items-center border-b border-edge"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <label className="flex min-w-0 flex-1 items-center gap-2 px-3 text-content/50">
+        <label className="flex min-w-0 flex-1 items-center gap-2 px-3 text-faint">
           <Search className="size-3.5 shrink-0" strokeWidth={1.75} />
           <input
             ref={inputRef}
@@ -321,19 +314,16 @@ export function SearchView({
             autoCorrect="off"
             autoCapitalize="off"
             data-tauri-drag-region="false"
-            className="min-w-0 flex-1 bg-transparent text-[13px] text-content outline-none select-text placeholder:text-content/40"
+            className="min-w-0 flex-1 bg-transparent text-[13.5px] text-content outline-none select-text placeholder:text-dim"
           />
           {loading ? (
-            <LoaderCircle
-              className="size-3.5 shrink-0 animate-spin text-content/35"
-              strokeWidth={1.75}
-            />
+            <LoaderCircle className="size-3.5 shrink-0 animate-spin text-dim" strokeWidth={1.75} />
           ) : null}
         </label>
         {!IS_MAC ? <WindowControls /> : null}
       </div>
 
-      <div className="flex h-9 shrink-0 items-center gap-px border-b border-content/10 px-3">
+      <div className="flex h-9 shrink-0 items-center gap-px border-b border-edge px-3">
         {SCOPES.map((item) => {
           const selected = scope === item.id;
           return (
@@ -342,10 +332,10 @@ export function SearchView({
               type="button"
               aria-pressed={selected}
               onClick={() => setScope(item.id)}
-              className={`rounded-md px-2 py-1 text-[12px] ${
+              className={`rounded-md px-2 py-1 text-[12.5px] ${
                 selected
-                  ? "bg-content/10 text-content"
-                  : "text-content/50 hover:bg-content/5 hover:text-content"
+                  ? "bg-selected text-content"
+                  : "text-faint hover:bg-hover hover:text-content"
               }`}
             >
               {item.label}
@@ -365,9 +355,9 @@ export function SearchView({
         {empty ? (
           <EmptyState />
         ) : error && hits.length === 0 ? (
-          <p className="px-2 py-1.5 text-[12px] text-red-400">{error}</p>
+          <p className="px-2 py-1.5 text-[12.5px] text-danger">{error}</p>
         ) : noResults ? (
-          <p className="px-2 py-1.5 text-[12px] text-content/50">No results</p>
+          <p className="px-2 py-1.5 text-[12.5px] text-faint">No results</p>
         ) : (
           <ResultList
             hits={hits}
@@ -400,11 +390,11 @@ function EmptyState() {
           ))}
         </div>
         <div className="absolute grid size-14 place-items-center rounded-2xl bg-content/6 backdrop-blur-sm">
-          <Search className="size-6 text-content/50" strokeWidth={1.75} />
+          <Search className="size-6 text-faint" strokeWidth={1.75} />
         </div>
       </div>
 
-      <p className="max-w-xs text-center text-[13px] text-content/45">
+      <p className="max-w-xs text-center text-[13.5px] text-faint">
         Find files, conversations, messages, and projects.
       </p>
     </div>
@@ -469,14 +459,14 @@ function ResultList({
             onMouseDown={(event) => event.preventDefault()}
             onMouseEnter={() => onRowEnter(index)}
             onClick={() => onOpen(hit)}
-            className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] leading-none ${
-              highlighted ? "bg-content/10 text-content" : "text-content"
+            className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-[13.5px] leading-none ${
+              highlighted ? "bg-selected text-content" : "text-content"
             }`}
           >
             <span className="grid size-4 shrink-0 place-items-center">{row.icon}</span>
             <span className="min-w-0 flex-1 truncate">{row.title}</span>
             {row.meta ? (
-              <span className="min-w-0 max-w-[45%] truncate font-mono text-[11px] text-content/40">
+              <span className="min-w-0 max-w-[45%] truncate font-mono text-[11.5px] text-dim">
                 {row.meta}
               </span>
             ) : null}
@@ -500,7 +490,7 @@ function rowCopy(
   }
   if (hit.kind === "message") {
     return {
-      icon: <MessageSquare className="size-3.5 text-content/55" strokeWidth={1.75} />,
+      icon: <MessageSquare className="size-3.5 text-faint" strokeWidth={1.75} />,
       title: <Highlight text={hit.preview || hit.title} query={query} />,
       meta: hit.title,
     };

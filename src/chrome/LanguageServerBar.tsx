@@ -50,7 +50,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
     if (failure?.state !== "failed") return null;
     return (
       <Bar>
-        <span className="min-w-0 flex-1 truncate text-content/70" title={failure.message}>
+        <span className="min-w-0 flex-1 truncate text-muted" title={failure.message}>
           {failure.message}
         </span>
         <BarButton
@@ -82,7 +82,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
 
   return (
     <Bar>
-      <span className="min-w-0 flex-1 truncate text-content/70">
+      <span className="min-w-0 flex-1 truncate text-muted">
         {installed ? (
           <>
             Use <span className="font-medium text-content">{server.name}</span> for this project?
@@ -91,7 +91,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
         ) : (
           <>
             <span className="font-medium text-content">{server.name}</span> isn’t installed —{" "}
-            <span className="font-mono text-content/55">{server.installHint}</span>
+            <span className="font-mono text-faint">{server.installHint}</span>
           </>
         )}
       </span>
@@ -109,7 +109,7 @@ export function LanguageServerBar({ server, onAnswered, onRetry }: Props) {
 
 function Bar({ children }: { children: ReactNode }) {
   return (
-    <header className="flex h-8 shrink-0 items-center gap-2 border-b border-content/10 px-3 text-[11.5px]">
+    <header className="flex h-8 shrink-0 items-center gap-2 border-b border-edge px-3 text-[11.5px]">
       {children}
     </header>
   );
@@ -120,7 +120,7 @@ function BarButton({ onClick, children }: { onClick: () => void; children: React
     <button
       type="button"
       onClick={onClick}
-      className="h-6 shrink-0 rounded-md bg-accent px-2 text-[11.5px] font-medium text-white"
+      className="ui-fill ui-focus h-6 shrink-0 rounded-lg px-2.5 text-[11.5px] font-medium"
     >
       {children}
     </button>
@@ -142,7 +142,7 @@ function BarDismiss({
       onClick={onClick}
       aria-label={label}
       title={title}
-      className="grid size-6 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/8 hover:text-content"
+      className="grid size-6 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
     >
       <X className="size-3" strokeWidth={1.75} />
     </button>

@@ -13,9 +13,11 @@ import { playCue } from "../lib/sounds";
 export function PageHeader({ title, description }: { title: string; description?: string }) {
   return (
     <header className="pb-5">
-      <h1 className="text-[20px] font-semibold leading-tight text-content">{title}</h1>
+      <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-content">
+        {title}
+      </h1>
       {description ? (
-        <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-content/45">{description}</p>
+        <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-faint">{description}</p>
       ) : null}
     </header>
   );
@@ -37,20 +39,14 @@ export function Section({
     <section className="pb-7 last:pb-2">
       <div className="flex items-end justify-between gap-4 pb-2">
         <div className="min-w-0">
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.07em] text-content/50">
-            {title}
-          </h2>
+          <h2 className="ui-label text-[11.5px] text-faint">{title}</h2>
           {description ? (
-            <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-content/40">
-              {description}
-            </p>
+            <p className="mt-1 max-w-xl text-[12.5px] leading-relaxed text-dim">{description}</p>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
-      <div className="overflow-hidden rounded-xl border border-content/10 bg-content/[0.025]">
-        {children}
-      </div>
+      <div className="ui-pane overflow-hidden rounded-xl">{children}</div>
     </section>
   );
 }
@@ -74,16 +70,16 @@ export function Row({
 }) {
   const text = (
     <div className="min-w-0 flex-1">
-      <div className="text-[13px] font-medium text-content">{label}</div>
+      <div className="text-[13.5px] font-medium text-content">{label}</div>
       {description ? (
-        <p className="mt-1 text-[12px] leading-relaxed text-content/45">{description}</p>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-faint">{description}</p>
       ) : null}
     </div>
   );
 
   if (layout === "stacked") {
     return (
-      <div className="border-b border-content/8 px-4 py-3.5 last:border-b-0">
+      <div className="border-b border-edge px-4 py-3.5 last:border-b-0">
         {text}
         {children ? <div className="pt-3">{children}</div> : null}
       </div>
@@ -91,7 +87,7 @@ export function Row({
   }
 
   return (
-    <div className="flex items-start gap-6 border-b border-content/8 px-4 py-3.5 last:border-b-0">
+    <div className="flex items-start gap-6 border-b border-edge px-4 py-3.5 last:border-b-0">
       {text}
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>
     </div>
@@ -121,8 +117,8 @@ export function Toggle({
         playCue("switch");
         onChange(!on);
       }}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
-        on ? "bg-accent" : "bg-content/20"
+      className={`ui-focus relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-35 ${
+        on ? "bg-accent" : "bg-content/15"
       }`}
     >
       <span
@@ -149,7 +145,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="grid gap-0.5 rounded-md border border-content/10 p-0.5 text-[12px]"
+      className="grid gap-0.5 rounded-md border border-edge bg-surface-sunken p-0.5 text-[12.5px]"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(3.75rem, 1fr))` }}
     >
       {options.map((option) => (
@@ -159,11 +155,8 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`min-w-0 truncate rounded-[5px] px-1.5 py-1 ${
-            value === option.value
-              ? "bg-content/10 text-content"
-              : "text-content/50 hover:text-content"
-          }`}
+          data-selected={value === option.value ? "true" : undefined}
+          className="ui-segment ui-focus min-w-0 truncate rounded px-1.5 py-1 font-medium text-faint"
         >
           {option.label}
         </button>
@@ -204,7 +197,7 @@ export function Slider({
         className="sidebar-opacity-slider min-w-0 flex-1"
         onChange={(event) => onChange(Number(event.target.value))}
       />
-      <span className="w-10 shrink-0 text-right text-[12px] text-content tabular-nums">
+      <span className="w-10 shrink-0 text-right font-mono text-[11.5px] text-muted tabular-nums">
         {display}
       </span>
     </div>
@@ -230,7 +223,7 @@ export function Select({
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
-      className="max-w-52 rounded-md border border-content/10 bg-content/5 px-2 py-1 text-[12px] text-content outline-none hover:border-content/20 disabled:opacity-40"
+      className="ui-focus max-w-52 rounded-md border border-edge bg-surface-raised px-2.5 py-1.5 text-[12.5px] text-content outline-none hover:border-edge-strong disabled:opacity-40"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -257,10 +250,10 @@ export function SecondaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex shrink-0 items-center gap-1.5 rounded-md border border-content/10 px-2.5 py-1 text-[12px] ${
+      className={`ui-focus flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-[12.5px] font-medium ${
         danger
-          ? "text-red-400 hover:border-red-400/40 hover:bg-red-400/10"
-          : "text-content/70 hover:bg-content/10 hover:text-content"
+          ? "text-danger hover:border-danger/40 hover:bg-danger/10"
+          : "bg-surface-raised text-muted hover:border-edge-strong hover:text-content"
       } disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
     >
       {children}
@@ -270,5 +263,5 @@ export function SecondaryButton({
 
 /** An empty state inside a section card, where a list would otherwise be. */
 export function EmptyNote({ children }: { children: ReactNode }) {
-  return <p className="px-4 py-3.5 text-[12px] text-content/45">{children}</p>;
+  return <p className="px-4 py-3.5 text-[12.5px] text-faint">{children}</p>;
 }

@@ -134,7 +134,7 @@ export function SurfaceTabs({
   }, [activeFileId, sortable.draggingId]);
 
   return (
-    <div className="flex h-9 min-w-0 shrink-0 border-b border-content/10 bg-content/2">
+    <div className="ui-rule-b flex h-9 min-w-0 shrink-0 bg-surface-sunken">
       <div
         ref={lockOverscroll}
         role="tablist"
@@ -159,7 +159,7 @@ export function SurfaceTabs({
             title="Drag to reorder pane"
             aria-label="Drag to reorder pane"
             tabIndex={-1}
-            className="grid h-full w-5 shrink-0 cursor-grab place-items-center text-content/35 hover:bg-content/5 hover:text-content/70 active:cursor-grabbing touch-none"
+            className="grid h-full w-5 shrink-0 cursor-grab place-items-center text-dim hover:bg-hover hover:text-muted active:cursor-grabbing touch-none"
             onPointerDown={(event) => {
               if (event.button !== 0) return;
               event.preventDefault();
@@ -198,8 +198,9 @@ export function SurfaceTabs({
                 sortable.setItemRef(file.id, el);
                 if (el && file.id === activeFileId) activeTabRef.current = el;
               }}
-              className={`group relative flex w-52 min-w-28 shrink touch-none items-stretch border-r border-content/10 ${
-                active ? "bg-content/8" : "hover:bg-content/5"
+              data-selected={active ? "true" : undefined}
+              className={`ui-tab group relative flex w-52 min-w-28 shrink touch-none items-stretch ${
+                active ? "" : "hover:bg-hover"
               } ${dragging ? "opacity-40" : ""} ${
                 canDrag ? "cursor-grab active:cursor-grabbing" : ""
               }`}
@@ -228,9 +229,9 @@ export function SurfaceTabs({
                   if (sortable.consumeClick()) return;
                   onSelectFile(file.id);
                 }}
-                className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
+                className={`flex min-w-0 flex-1 items-center gap-1.5 px-3 pr-8 text-left text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                   canDrag ? "cursor-grab active:cursor-grabbing" : ""
-                } ${active ? "text-content" : "text-content/55 hover:text-content"}`}
+                } ${active ? "font-medium" : ""}`}
               >
                 {terminal ? (
                   <Terminal className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -245,8 +246,8 @@ export function SurfaceTabs({
                   className={`min-w-0 flex-1 truncate ${review ? "italic" : ""} ${
                     errors
                       ? active
-                        ? "text-red-400"
-                        : "text-red-400/75 group-hover:text-red-400"
+                        ? "text-danger"
+                        : "text-danger/75 group-hover:text-danger"
                       : ""
                   }`}
                 >
@@ -254,7 +255,7 @@ export function SurfaceTabs({
                 </span>
                 {errors > 0 ? (
                   <span
-                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold tabular-nums text-red-400"
+                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold tabular-nums text-danger"
                     title={checkLabel(errors)}
                     aria-label={checkLabel(errors)}
                   >
@@ -263,7 +264,7 @@ export function SurfaceTabs({
                   </span>
                 ) : !terminal && !changes && !commit ? (
                   <span
-                    className="shrink-0 text-emerald-400/60"
+                    className="shrink-0 text-positive/60"
                     title={checkLabel(0)}
                     aria-label={checkLabel(0)}
                   >
@@ -289,7 +290,7 @@ export function SurfaceTabs({
                   event.stopPropagation();
                   onCloseFile(file.id);
                 }}
-                className={`absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-content/50 hover:bg-content/10 hover:text-content ${
+                className={`absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-faint hover:bg-hover hover:text-content ${
                   active
                     ? "opacity-100"
                     : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"

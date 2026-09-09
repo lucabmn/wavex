@@ -5,7 +5,6 @@ import { HarnessIcon } from "../chrome/HarnessIcon";
 import { Board, CircleAlert, ListView, Square } from "../chrome/icons";
 import { FilterChip } from "../chrome/FilterChip";
 import { Segmented } from "../chrome/Segmented";
-import { OverlayNav } from "../chrome/TitleBar";
 import { WindowControls } from "../chrome/WindowControls";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
 import { useNow } from "../lib/motion";
@@ -34,9 +33,7 @@ type ActivityFilter = "all" | "waiting" | "working" | "done";
 
 type Props = {
   sessions: SessionSummary[];
-  besideRail?: boolean;
   onClose: () => void;
-  onToggleSidebar?: () => void;
   onOpenSession: (sessionId: string) => void;
 };
 
@@ -45,13 +42,7 @@ type Props = {
  * the same native store the menu bar reads, so twenty worktrees in five windows
  * are one list with one truth.
  */
-export function ActivityView({
-  sessions,
-  besideRail = false,
-  onClose,
-  onToggleSidebar,
-  onOpenSession,
-}: Props) {
+export function ActivityView({ sessions, onClose, onOpenSession }: Props) {
   const lockOverscroll = useLockOverscroll<HTMLDivElement>();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -168,14 +159,12 @@ export function ActivityView({
       className="flex min-h-0 min-w-0 flex-1 flex-col text-content"
     >
       <div
-        className="flex h-10 shrink-0 items-center border-b border-content/10 select-none"
+        className="flex h-10 shrink-0 items-center border-b border-edge select-none"
         data-tauri-drag-region="deep"
       >
-        {IS_MAC && !besideRail ? <div className="w-[78px] shrink-0" /> : null}
-        {besideRail ? null : <OverlayNav onBack={onClose} onToggleSidebar={onToggleSidebar} />}
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13px]">
-          <span className="shrink-0 text-content/45">Activity</span>
-          <span aria-hidden className="shrink-0 text-content/25">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[13.5px]">
+          <span className="shrink-0 text-faint">Activity</span>
+          <span aria-hidden className="shrink-0 text-dim">
             /
           </span>
           <span className="min-w-0 truncate text-content">{status}</span>
@@ -188,7 +177,7 @@ export function ActivityView({
                 const next = agents.find((agent) => agent.needsApproval);
                 if (next) focusMenuBarAgent(next.id);
               }}
-              className="hidden shrink-0 items-center gap-1.5 rounded-md bg-amber-400/12 px-2 py-1 text-[11.5px] font-medium text-amber-300 hover:bg-amber-400/18 sm:flex"
+              className="hidden shrink-0 items-center gap-1.5 rounded-md bg-warn/12 px-2 py-1 text-[11.5px] font-medium text-warn hover:bg-warn/18 sm:flex"
             >
               <CircleAlert className="size-3.5" strokeWidth={1.75} />
               Review next
@@ -212,7 +201,7 @@ export function ActivityView({
           <div
             role="group"
             aria-label="Filter agent activity"
-            className="sticky top-0 z-10 flex items-center gap-1 border-b border-content/10 bg-background-base/90 px-3 py-2 backdrop-blur-md"
+            className="sticky top-0 z-10 flex items-center gap-1 border-b border-edge bg-background-base/90 px-3 py-2 backdrop-blur-md"
           >
             <FilterChip
               label="All"
@@ -242,7 +231,7 @@ export function ActivityView({
           </div>
         ) : null}
         {error ? (
-          <p className="flex items-center gap-2 px-4 pt-3 text-[12px] text-amber-300">
+          <p className="flex items-center gap-2 px-4 pt-3 text-[12.5px] text-warn">
             <CircleAlert className="size-3.5 shrink-0" strokeWidth={1.75} />
             {error}
           </p>
@@ -263,16 +252,16 @@ export function ActivityView({
             onStop={(card) => card.live && stop(card.live)}
           />
         ) : agents.length === 0 ? (
-          <p className="px-4 py-6 text-[13px] text-content/45">
+          <p className="px-4 py-6 text-[13.5px] text-faint">
             No agent is working right now. Turns from every window show up here while they run.
           </p>
         ) : filteredAgents.length === 0 ? (
           <div className="flex flex-col items-start gap-2 px-4 py-6">
-            <p className="text-[13px] text-content/45">Nothing matches this filter.</p>
+            <p className="text-[13.5px] text-faint">Nothing matches this filter.</p>
             <button
               type="button"
               onClick={() => setFilter("all")}
-              className="rounded-md bg-content/10 px-2 py-1 text-[11.5px] text-content/70 hover:bg-content/15 hover:text-content"
+              className="rounded-md bg-content/10 px-2 py-1 text-[11.5px] text-muted hover:bg-hover hover:text-content"
             >
               Show all activity
             </button>
@@ -281,7 +270,7 @@ export function ActivityView({
           <div className="flex flex-col gap-4 p-3">
             {projects.map(([cwd, rows]) => (
               <section key={cwd} className="flex flex-col gap-1">
-                <h2 className="px-1 text-[11px] font-medium tracking-wide text-content/40 uppercase">
+                <h2 className="px-1 text-[11.5px] font-medium tracking-wide text-dim uppercase">
                   {projectName(cwd)}
                 </h2>
                 {rows.map((agent) => (
@@ -323,7 +312,7 @@ function AgentRow({
       : null;
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-content/10 bg-content/[0.03] px-2.5 py-2">
+    <div className="flex items-center gap-2 rounded-lg border border-edge bg-content/[0.03] px-2.5 py-2">
       <button
         type="button"
         onClick={onOpen}
@@ -332,18 +321,18 @@ function AgentRow({
       >
         <HarnessIcon harness={agent.harness} className="size-4 shrink-0" />
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[13px] text-content">{agent.title}</span>
-          <span className="truncate text-[12px] text-content/45">{agent.activity}</span>
+          <span className="truncate text-[13.5px] text-content">{agent.title}</span>
+          <span className="truncate text-[12.5px] text-faint">{agent.activity}</span>
         </span>
       </button>
       {waiting > 0 ? (
-        <span className="shrink-0 rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] text-amber-300">
+        <span className="shrink-0 rounded-full bg-warn/15 px-2 py-0.5 text-[11.5px] text-warn">
           {waiting === 1 ? "1 needs you" : `${waiting} need you`}
         </span>
       ) : null}
-      <span className="shrink-0 text-[11px] text-content/35">{HARNESS_LABEL[agent.harness]}</span>
+      <span className="shrink-0 text-[11.5px] text-dim">{HARNESS_LABEL[agent.harness]}</span>
       {elapsed ? (
-        <span className="w-12 shrink-0 text-right font-mono text-[11px] tabular-nums text-content/40">
+        <span className="w-12 shrink-0 text-right font-mono text-[11.5px] tabular-nums text-dim">
           {elapsed}
         </span>
       ) : null}
@@ -353,7 +342,7 @@ function AgentRow({
           title="Stop this turn"
           aria-label="Stop this turn"
           onClick={onStop}
-          className="grid size-6.5 shrink-0 place-items-center rounded-md text-content/45 hover:bg-content/10 hover:text-content"
+          className="grid size-6.5 shrink-0 place-items-center rounded-md text-faint hover:bg-hover hover:text-content"
         >
           <Square className="size-2.5 fill-current" strokeWidth={0} />
         </button>

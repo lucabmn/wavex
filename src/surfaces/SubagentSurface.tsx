@@ -31,7 +31,7 @@ export function SubagentSurface({
   if (!session || !parent || !meta) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
-        <p className="text-[13px] text-content/70">This subagent is no longer in the session.</p>
+        <p className="text-[13.5px] text-muted">This subagent is no longer in the session.</p>
       </div>
     );
   }
@@ -59,14 +59,14 @@ export function SubagentSurface({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-content/10 px-4 py-2.5">
-        <Bot className="size-4 shrink-0 text-content/50" strokeWidth={1.75} />
+      <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-edge px-4 py-2.5">
+        <Bot className="size-4 shrink-0 text-faint" strokeWidth={1.75} />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="truncate font-sans text-sm text-content">
             {source?.title.trim() || parent.tool?.title || "Subagent"}
           </div>
           {headerLine ? (
-            <div className="truncate font-sans text-xs text-content/50">{headerLine}</div>
+            <div className="truncate font-sans text-xs text-faint">{headerLine}</div>
           ) : null}
         </div>
         {running ? (

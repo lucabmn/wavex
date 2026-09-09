@@ -55,7 +55,7 @@ export function SkillPicker({
   return (
     <div
       data-skill-picker
-      className="overflow-hidden rounded-lg border border-content/10 bg-content/5 backdrop-blur-xl"
+      className="overflow-hidden rounded-lg border border-edge bg-content/5 backdrop-blur-xl"
     >
       {creating ? (
         <CreateSkillForm
@@ -76,7 +76,7 @@ export function SkillPicker({
             onPick={onPick}
             onEditTemplate={onEditTemplate}
           />
-          <div className="flex items-center gap-1 border-t border-content/10 px-1 py-1">
+          <div className="flex items-center gap-1 border-t border-edge px-1 py-1">
             <FooterAction
               label="New template"
               disabled={!templatesEnabled}
@@ -89,9 +89,7 @@ export function SkillPicker({
             />
             <FooterAction label="New skill" onClick={onStartCreate} />
             {entries[active]?.kind === "template" ? (
-              <span className="shrink-0 px-1.5 text-[11px] text-content/40">
-                {EDIT_SHORTCUT} edit
-              </span>
+              <span className="shrink-0 px-1.5 text-[11.5px] text-dim">{EDIT_SHORTCUT} edit</span>
             ) : null}
           </div>
         </>
@@ -118,7 +116,7 @@ function FooterAction({
       title={title}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="flex flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12px] text-content/70 hover:bg-content/10 hover:text-content disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content/70"
+      className="flex flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted"
     >
       <Plus className="size-3.5 shrink-0" strokeWidth={1.75} />
       {label}
@@ -174,7 +172,7 @@ function PickerList({
 
   if (entries.length === 0) {
     return (
-      <p className="px-3 py-2.5 text-[12px] text-content/50">
+      <p className="px-3 py-2.5 text-[12.5px] text-faint">
         {query.trim() ? "No matching templates or skills" : "No templates or skills yet"}
       </p>
     );
@@ -224,7 +222,7 @@ function PickerList({
             >
               <span className="flex min-w-0 items-baseline gap-2 pr-6">
                 <span
-                  className={`truncate font-mono text-[13px] ${
+                  className={`truncate font-mono text-[13.5px] ${
                     highlighted
                       ? template
                         ? "font-medium text-template"
@@ -236,14 +234,14 @@ function PickerList({
                 </span>
                 <span
                   className={`shrink-0 text-[10px] uppercase tracking-wide ${
-                    template ? "text-template/70" : "text-content/40"
+                    template ? "text-template/70" : "text-dim"
                   }`}
                 >
                   {row.badge}
                 </span>
               </span>
               {row.detail ? (
-                <span className="line-clamp-2 pr-6 text-[11px] leading-4 text-content/50">
+                <span className="line-clamp-2 pr-6 text-[11.5px] leading-4 text-faint">
                   {row.detail}
                 </span>
               ) : null}
@@ -256,7 +254,7 @@ function PickerList({
                 aria-label={`Edit template ${template.name}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onEditTemplate(template)}
-                className={`absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-content/50 hover:bg-content/15 hover:text-content ${
+                className={`absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-faint hover:bg-hover hover:text-content ${
                   highlighted ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 }`}
               >
@@ -306,7 +304,7 @@ function CreateSkillForm({
 
   return (
     <form onSubmit={submit} className="px-2.5 py-2">
-      <p className="mb-2 text-[11px] text-content/50">Writes a starter SKILL.md you can edit.</p>
+      <p className="mb-2 text-[11.5px] text-faint">Writes a starter SKILL.md you can edit.</p>
       <input
         ref={input}
         value={name}
@@ -320,7 +318,7 @@ function CreateSkillForm({
           e.preventDefault();
           onCancel();
         }}
-        className="mb-2 w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13px] text-content outline-none placeholder:text-content/40"
+        className="mb-2 w-full rounded-md bg-content/10 px-2 py-1.5 font-mono text-[13.5px] text-content outline-none placeholder:text-dim"
       />
       <div className="mb-2 flex gap-1">
         <ScopeButton
@@ -339,9 +337,9 @@ function CreateSkillForm({
         />
       </div>
       {error ? (
-        <p className="mb-2 text-[12px] text-content/70">{error}</p>
+        <p className="mb-2 text-[12.5px] text-muted">{error}</p>
       ) : !name.trim() || valid ? null : (
-        <p className="mb-2 text-[12px] text-content/50">
+        <p className="mb-2 text-[12.5px] text-faint">
           Use lowercase letters, numbers, and hyphens.
         </p>
       )}
@@ -350,14 +348,14 @@ function CreateSkillForm({
           type="button"
           disabled={busy}
           onClick={onCancel}
-          className="rounded-md px-2 py-1 text-[12px] text-content/50 hover:bg-content/10 hover:text-content"
+          className="rounded-md px-2 py-1 text-[12.5px] text-faint hover:bg-hover hover:text-content"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={!valid || busy}
-          className="rounded-md bg-content/20 px-2 py-1 text-[12px] text-content disabled:opacity-40"
+          className="rounded-md bg-content/20 px-2 py-1 text-[12.5px] text-content disabled:opacity-40"
         >
           {busy ? "Creating…" : "Create"}
         </button>
@@ -385,11 +383,11 @@ function ScopeButton({
       disabled={disabled}
       onClick={onClick}
       className={`flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 text-left ${
-        selected ? "bg-content/20 text-content" : "bg-content/10 text-content/70"
+        selected ? "bg-content/20 text-content" : "bg-content/10 text-muted"
       } disabled:opacity-40`}
     >
-      <span className="text-[12px]">{label}</span>
-      <span className="truncate font-mono text-[10px] text-content/40">{hint}</span>
+      <span className="text-[12.5px]">{label}</span>
+      <span className="truncate font-mono text-[10px] text-dim">{hint}</span>
     </button>
   );
 }

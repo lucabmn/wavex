@@ -81,13 +81,13 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
           setOpen(true);
         }}
         className={`flex h-6.5 max-w-52 items-center gap-1 rounded-md px-1.5 ${
-          open ? "bg-content/10 text-content" : "bg-content/10 text-content hover:bg-content/15"
+          open ? "bg-selected text-content" : "text-content hover:bg-hover"
         }`}
       >
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
-        <span className="min-w-0 truncate text-[11px]">{RUNTIME_MODE_LABEL[value]}</span>
+        <span className="min-w-0 truncate text-[11.5px]">{RUNTIME_MODE_LABEL[value]}</span>
         <ChevronDown
-          className={`size-3 shrink-0 text-content/50 ${open ? "rotate-180" : ""}`}
+          className={`size-3 shrink-0 text-faint ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
         />
       </button>
@@ -120,16 +120,16 @@ export function AccessPicker({ value, onChange, onClose }: Props) {
                 onClick={() => pick(mode)}
                 className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left ${
                   highlighted || selected
-                    ? "bg-content/10 text-content"
-                    : "text-content hover:bg-content/5"
+                    ? "bg-selected text-content"
+                    : "text-content hover:bg-hover"
                 }`}
               >
-                <ModeIcon className="mt-0.5 size-3.5 shrink-0 text-content/70" strokeWidth={1.75} />
+                <ModeIcon className="mt-0.5 size-3.5 shrink-0 text-muted" strokeWidth={1.75} />
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-medium leading-5">
+                  <span className="block text-[13.5px] font-medium leading-5">
                     {RUNTIME_MODE_LABEL[mode]}
                   </span>
-                  <span className="mt-0.5 block text-[11px] leading-4 text-content/50">
+                  <span className="mt-0.5 block text-[11.5px] leading-4 text-faint">
                     {RUNTIME_MODE_HINT[mode]}
                   </span>
                 </span>

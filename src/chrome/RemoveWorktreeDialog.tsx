@@ -74,23 +74,23 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
         aria-busy={working}
         aria-label={`Remove worktree ${label}`}
         onMouseDown={(event) => event.stopPropagation()}
-        className="absolute left-1/2 top-[22%] flex w-[min(440px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-content/10 bg-content/5 p-4 shadow-xl backdrop-blur-xl"
+        className="absolute left-1/2 top-[22%] flex w-[min(440px,calc(100vw-24px))] -translate-x-1/2 flex-col gap-3 rounded-lg border border-edge bg-content/5 p-4 shadow-xl backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-[13px] font-medium leading-tight text-content">
+          <h2 className="text-[13.5px] font-medium leading-tight text-content">
             Remove worktree “{label}”?
           </h2>
-          <p className="text-[12px] leading-snug text-content/55">
+          <p className="text-[12.5px] leading-snug text-faint">
             The folder is deleted. Commits on the branch stay in the repository, and conversations
             held in this worktree are kept.
           </p>
-          <p className="truncate text-[11px] leading-tight text-content/40">
+          <p className="truncate text-[11.5px] leading-tight text-dim">
             {prettyCwd(worktree.path)}
           </p>
         </div>
 
         {worktree.branch ? (
-          <label className="flex items-start gap-2 text-[12px] leading-snug text-content/70">
+          <label className="flex items-start gap-2 text-[12.5px] leading-snug text-muted">
             <input
               type="checkbox"
               checked={deleteBranch}
@@ -107,11 +107,11 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
         ) : null}
 
         {busy ? (
-          <p className="text-[11px] leading-4 text-amber-400">
+          <p className="text-[11.5px] leading-4 text-warn">
             An agent is still working here. Stop its turn before removing the folder it writes to.
           </p>
         ) : error ? (
-          <p className="max-h-24 overflow-y-auto whitespace-pre-wrap text-[11px] leading-4 text-red-400/90">
+          <p className="max-h-24 overflow-y-auto whitespace-pre-wrap text-[11.5px] leading-4 text-danger/90">
             {dirty ? "This worktree still has uncommitted changes." : error}
           </p>
         ) : null}
@@ -122,7 +122,7 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
             type="button"
             disabled={working}
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/8 hover:text-content disabled:opacity-40"
+            className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content disabled:opacity-40"
           >
             Cancel
           </button>
@@ -130,7 +130,7 @@ export function RemoveWorktreeDialog({ repoPath, worktree, busy, onCancel, onRem
             type="button"
             disabled={working || busy}
             onClick={() => void remove(dirty)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-[12px] font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md bg-danger/20 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/30 disabled:opacity-40"
           >
             {working ? <Loader className="size-3.5 animate-spin" strokeWidth={1.75} /> : null}
             {dirty ? "Discard changes & remove" : "Remove"}

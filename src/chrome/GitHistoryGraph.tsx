@@ -48,17 +48,17 @@ export function GitHistoryGraph({
         onClick={onToggleExpanded}
         aria-expanded={expanded}
         aria-label={expanded ? "Collapse graph" : "Expand graph"}
-        className={`flex w-full shrink-0 items-center gap-1 px-3 text-left leading-none hover:bg-content/5 ${
+        className={`flex w-full shrink-0 items-center gap-1 px-3 text-left leading-none hover:bg-hover ${
           expanded ? "h-7" : "h-full"
         }`}
       >
-        <span className="text-[10px] font-semibold tracking-[0.04em] text-content/55 uppercase">
+        <span className="text-[10px] font-semibold tracking-[0.04em] text-faint uppercase">
           Graph
         </span>
         {expanded ? (
-          <ChevronDown className="ml-auto size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+          <ChevronDown className="ml-auto size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
         ) : (
-          <ChevronRight className="ml-auto size-3.5 shrink-0 text-content/50" strokeWidth={1.75} />
+          <ChevronRight className="ml-auto size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
         )}
       </button>
       {expanded ? (
@@ -67,9 +67,9 @@ export function GitHistoryGraph({
           className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-none"
         >
           {!cwd || cwd === "~" ? (
-            <p className="px-3 py-2 text-[12px] text-content/45">No project folder</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No project folder</p>
           ) : commits.length === 0 ? (
-            <p className="px-3 py-2 text-[12px] text-content/45">No commits yet</p>
+            <p className="px-3 py-2 text-[12.5px] text-faint">No commits yet</p>
           ) : (
             <ul className="min-w-0 max-w-full">
               {commits.map((commit, index) => {
@@ -115,7 +115,7 @@ function HistoryRow({
         aria-pressed={active}
         className={`git-history-item flex h-[22px] min-w-0 w-full items-stretch overflow-visible pr-2 text-left ${
           row.kind === "HEAD" ? "is-head" : ""
-        } ${active ? "is-selected bg-content/10 text-content" : "text-content hover:bg-content/5"}`}
+        } ${active ? "is-selected bg-selected text-content" : "text-content hover:bg-hover"}`}
       >
         <svg
           aria-hidden
@@ -147,14 +147,14 @@ function HistoryRow({
         </svg>
         <span className="ml-1 flex min-w-0 flex-1 items-center overflow-hidden">
           <span
-            className={`min-w-0 truncate text-[12px] leading-[22px] ${
+            className={`min-w-0 truncate text-[12.5px] leading-[22px] ${
               row.kind === "HEAD" ? "font-semibold" : ""
             }`}
           >
             {commit.subject || commit.shortSha}
           </span>
           {commit.author ? (
-            <span className="ml-2 min-w-0 shrink truncate text-[12px] leading-[22px] text-content/45">
+            <span className="ml-2 min-w-0 shrink truncate text-[12.5px] leading-[22px] text-faint">
               {commit.author}
             </span>
           ) : null}
@@ -170,7 +170,7 @@ function RefPill({ refInfo }: { refInfo: GraphRef }) {
   return (
     <span
       className={`ml-1 flex h-3.5 min-w-0 max-w-[6.5rem] shrink-0 self-center items-center gap-0.5 truncate rounded-full px-1.5 text-[10px] leading-none ${
-        refInfo.color ? "" : "bg-content/10 text-content/55"
+        refInfo.color ? "" : "bg-content/10 text-faint"
       }`}
       style={
         refInfo.color
@@ -345,7 +345,7 @@ export function GraphResizeSash({
       aria-label="Resize graph"
       aria-valuenow={height}
       className={`z-10 h-1.5 shrink-0 cursor-row-resize touch-none ${
-        dragging ? "bg-content/15" : "hover:bg-content/10"
+        dragging ? "bg-content/15" : "hover:bg-hover"
       }`}
       onPointerDown={onPointerDown}
       onDoubleClick={() => commitRef.current(clamp(GRAPH_PANEL_DEFAULT))}

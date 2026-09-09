@@ -33,22 +33,22 @@ export function NoteMiniCard({ card, onDismiss, embedded = false }: Props) {
 
   const inner = (
     <div
-      className={`relative rounded-md border border-content/10 bg-content/6 px-2.5 py-2 ${
+      className={`relative rounded-md border border-edge bg-content/6 px-2.5 py-2 ${
         onDismiss ? "pr-8" : ""
       }`}
     >
       <div className="flex w-full flex-col text-left">
         <span className="flex min-w-0 items-center gap-1.5">
-          <File className="size-3.5 shrink-0 text-content/45" strokeWidth={1.75} />
-          <span className="min-w-0 truncate text-[11px] text-content/50">
+          <File className="size-3.5 shrink-0 text-faint" strokeWidth={1.75} />
+          <span className="min-w-0 truncate text-[11.5px] text-faint">
             Note{!embedded && card.slug ? ` · ${card.slug}` : ""}
           </span>
         </span>
-        <span className="mt-1 line-clamp-1 text-[13px] font-semibold leading-snug text-content">
+        <span className="mt-1 line-clamp-1 text-[13.5px] font-semibold leading-snug text-content">
           {card.title || "Untitled"}
         </span>
         {!embedded && project ? (
-          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-content/45">
+          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11.5px] text-faint">
             {logoPath ? (
               <ProjectLogoIcon
                 path={logoPath}
@@ -73,7 +73,7 @@ export function NoteMiniCard({ card, onDismiss, embedded = false }: Props) {
           title="Remove"
           aria-label={`Remove note ${card.title || "Untitled"}`}
           onClick={onDismiss}
-          className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-content/40 hover:bg-content/10 hover:text-content"
+          className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded text-dim hover:bg-hover hover:text-content"
         >
           <X className="size-3" strokeWidth={2} />
         </button>

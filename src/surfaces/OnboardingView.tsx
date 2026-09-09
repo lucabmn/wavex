@@ -41,15 +41,15 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"
-        className="flex w-[min(480px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-content/10 bg-background-base shadow-2xl"
+        className="flex w-[min(480px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-edge bg-background-base shadow-2xl"
       >
         <div className="flex items-center gap-1.5 px-5 pt-4">
           {STEPS.map((label, index) => (
             <div key={label} className="flex flex-1 items-center gap-1.5">
               <div className="flex flex-1 flex-col gap-1">
                 <span
-                  className={`text-[11px] font-medium ${
-                    index === step ? "text-content" : "text-content/35"
+                  className={`text-[11.5px] font-medium ${
+                    index === step ? "text-content" : "text-dim"
                   }`}
                 >
                   {label}
@@ -72,14 +72,14 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-content/10 px-5 py-3">
-          <span className="text-[11px] text-content/35">Step {step + 1} of 3</span>
+        <div className="flex items-center justify-between gap-2 border-t border-edge px-5 py-3">
+          <span className="text-[11.5px] text-dim">Step {step + 1} of 3</span>
           <div className="flex gap-2">
             {step > 0 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="rounded-md px-3 py-1.5 text-[12px] text-content/70 hover:bg-content/5 hover:text-content"
+                className="rounded-md px-3 py-1.5 text-[12.5px] text-muted hover:bg-hover hover:text-content"
               >
                 Back
               </button>
@@ -88,7 +88,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
-                className="rounded-md bg-content px-3 py-1.5 text-[12px] font-medium text-background-base hover:bg-content/80"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12.5px] font-medium"
               >
                 {step === 0 && !project ? "Continue without a project" : "Continue"}
               </button>
@@ -98,7 +98,7 @@ export function OnboardingView({ cwd, onPickProject, onComplete }: Props) {
                 // oxlint-disable-next-line jsx-a11y/no-autofocus -- the dialog exists to finish setup
                 autoFocus
                 onClick={onComplete}
-                className="rounded-md bg-content px-3 py-1.5 text-[12px] font-medium text-background-base hover:bg-content/80"
+                className="rounded-md ui-fill px-3 py-1.5 text-[12.5px] font-medium"
               >
                 Start working
               </button>
@@ -122,24 +122,24 @@ function ProjectStep({
       <h1 id="onboarding-title" className="text-lg font-semibold text-content">
         Where is your code?
       </h1>
-      <p className="text-[12.5px] leading-relaxed text-content/60">
+      <p className="text-[12.5px] leading-relaxed text-muted">
         wavex works in your real checkout — pick the project folder you want to start in. You can
         switch projects anytime afterwards.
       </p>
       <button
         type="button"
         onClick={onPickProject}
-        className="flex items-center justify-between rounded-lg border border-content/15 bg-content/5 px-3 py-2.5 text-left hover:bg-content/10"
+        className="flex items-center justify-between rounded-lg border border-edge-strong bg-content/5 px-3 py-2.5 text-left hover:bg-hover"
       >
         <span className="min-w-0">
           <span className="block text-[12.5px] font-medium text-content">
             {project ?? "Choose a project folder…"}
           </span>
-          <span className="block text-[11.5px] text-content/45">
+          <span className="block text-[11.5px] text-faint">
             {project ? "Looks good, or pick a different folder" : "Opens a folder picker"}
           </span>
         </span>
-        <span aria-hidden className="shrink-0 text-content/40">
+        <span aria-hidden className="shrink-0 text-dim">
           →
         </span>
       </button>
@@ -180,12 +180,12 @@ function AgentsStep() {
               .catch(() => undefined)
               .finally(() => setProbing(false));
           }}
-          className="shrink-0 text-[12px] text-content/55 hover:text-content disabled:opacity-50"
+          className="shrink-0 text-[12.5px] text-faint hover:text-content disabled:opacity-50"
         >
           {probing ? "Scanning…" : "Rescan"}
         </button>
       </div>
-      <p className="text-[12.5px] leading-relaxed text-content/60">
+      <p className="text-[12.5px] leading-relaxed text-muted">
         wavex uses your own subscriptions — sign in stays in the CLI, never in wavex.{" "}
         {found.length === 0 && !probing ? "Nothing found yet." : ""}
       </p>
@@ -195,7 +195,7 @@ function AgentsStep() {
           return (
             <li
               key={id}
-              className="flex items-center gap-2 rounded-md border border-content/10 bg-content/5 px-2.5 py-1.5"
+              className="flex items-center gap-2 rounded-md border border-edge bg-content/5 px-2.5 py-1.5"
             >
               <HarnessIcon harness={id} className="size-4 shrink-0" />
               <span className="min-w-0 flex-1">
@@ -203,14 +203,14 @@ function AgentsStep() {
                   {HARNESS_TITLE[id]}
                 </span>
                 {!available && hasProbedHarnessAvailability() ? (
-                  <span className="block truncate font-mono text-[11px] text-content/45">
+                  <span className="block truncate font-mono text-[11.5px] text-faint">
                     {harnessUnavailableHint(id)}
                   </span>
                 ) : null}
               </span>
               <span
                 className={`size-2 shrink-0 rounded-full ${
-                  available ? "bg-green-500" : "bg-content/20"
+                  available ? "bg-positive" : "bg-content/20"
                 }`}
                 aria-label={available ? "Installed" : "Not found"}
                 title={available ? "Installed" : "Not found"}
@@ -219,7 +219,7 @@ function AgentsStep() {
           );
         })}
       </ul>
-      <p className="text-[11.5px] leading-snug text-content/45">
+      <p className="text-[11.5px] leading-snug text-faint">
         Missing one? Install it, then hit Rescan. You can finish setup now and add CLIs later.
       </p>
     </div>
@@ -232,8 +232,8 @@ function ReadyStep({ project }: { project: string | null }) {
       <h1 id="onboarding-title" className="text-lg font-semibold text-content">
         You are set{project ? ` for ${project}` : ""}
       </h1>
-      <p className="text-[12.5px] leading-relaxed text-content/60">A few things worth knowing:</p>
-      <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-content/70">
+      <p className="text-[12.5px] leading-relaxed text-muted">A few things worth knowing:</p>
+      <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-muted">
         <li>
           <span className="font-mono text-content">⌘K</span> runs any command —{" "}
           <span className="font-mono text-content">@</span> jumps to a file,{" "}
