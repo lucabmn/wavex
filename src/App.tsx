@@ -134,6 +134,7 @@ import {
   type DockSurface,
   type ProjectDock,
 } from "./lib/workspace/projectDock";
+import { setFocusedEditorPath } from "./lib/workspace/focusedFile";
 import type { BrowserHistory } from "./lib/workspace/browserHistory";
 import {
   applyGroupedReorder,
@@ -956,6 +957,10 @@ export default function App({
   }, [activeTab]);
   const focusedEditorPathRef = useRef(focusedEditorPath);
   focusedEditorPathRef.current = focusedEditorPath;
+  useEffect(() => {
+    // Prompt preparation runs outside the tree and reads this for `{{file}}`.
+    setFocusedEditorPath(focusedEditorPath);
+  }, [focusedEditorPath]);
 
   const nextApprovalSessionIds = useMemo(() => {
     const ids = new Set<string>();

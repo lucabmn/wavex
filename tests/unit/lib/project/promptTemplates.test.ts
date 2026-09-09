@@ -163,4 +163,11 @@ describe("file mentions inside a template", () => {
     );
     expect(await applyFileMentionsToTurn(inserted, "/repo")).toContain("- @App.tsx → src/App.tsx");
   });
+
+  it("ignore the bare `@` a `{{file}}` with nothing open leaves behind", async () => {
+    mocks.loadProjectFiles.mockResolvedValue([
+      { name: "App.tsx", path: "/repo/src/App.tsx", relative: "src/App.tsx" },
+    ]);
+    expect(await applyFileMentionsToTurn("Explain @ please", "/repo")).toBe("Explain @ please");
+  });
 });

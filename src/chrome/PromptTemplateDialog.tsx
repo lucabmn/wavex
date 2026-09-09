@@ -10,6 +10,7 @@ import {
   type PromptTemplate,
   type PromptTemplateDraft,
 } from "../lib/project/promptTemplates";
+import { TEMPLATE_VARIABLE_HELP, TEMPLATE_VARIABLES } from "../lib/project/templateVariables";
 import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = {
@@ -98,8 +99,16 @@ export function PromptTemplateDialog({ draft, existing, onClose, onSaved, onDele
             Saved with this project and inserted from the composer with{" "}
             <span className="font-mono text-content/70">/</span>. It is plain text, so{" "}
             <span className="font-mono text-content/70">@file</span> mentions work the same as when
-            you type them.
+            you type them. These placeholders are filled in when the turn is sent:
           </p>
+          <ul className="mt-0.5 flex flex-col gap-0.5">
+            {TEMPLATE_VARIABLES.map((variable) => (
+              <li key={variable} className="flex gap-2 text-[11px] leading-tight text-content/45">
+                <span className="shrink-0 font-mono text-content/70">{`{{${variable}}}`}</span>
+                <span className="truncate">{TEMPLATE_VARIABLE_HELP[variable]}</span>
+              </li>
+            ))}
+          </ul>
           <p className="truncate text-[11px] leading-tight text-content/40">
             {prettyCwd(draft.projectPath)}
           </p>
