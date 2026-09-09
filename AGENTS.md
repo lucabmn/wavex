@@ -43,7 +43,8 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/harness/`: provider adapters, protocol parsers, and the registry
 - `src/lib/sessions/`: session collections, history, filters, and persistence
 - `src/lib/workspace/`: tabs, panes, splits, groups, snapshots, and the
-  project dock — the side panel holding the browser, terminals, files, and review
+  project dock — the side panel holding the session list, browser, terminals,
+  files, and review
 - `src/lib/terminal/`: PTY plumbing and terminal tab state
 - `src/lib/transport/`: the host transport seam and its remote connection
 - `src/lib/editor/`: editor documents, git gutter, lint, and search

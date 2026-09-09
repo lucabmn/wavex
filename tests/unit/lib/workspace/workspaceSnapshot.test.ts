@@ -113,7 +113,7 @@ describe("collectWorkspaceSnapshot", () => {
 
   it("stores the project terminal dock", () => {
     const term = newTerminalFile("/tmp/a", "zsh");
-    const dock = createProjectDock("/tmp/a", { file: term });
+    const dock = createProjectDock("/tmp/a", { file: term, side: "bottom" });
     const snapshot = collectWorkspaceSnapshot([{ ...newTab("s1"), id: "t1" }], [], "t1", "/tmp/a", [
       dock,
     ]);

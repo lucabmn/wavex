@@ -22,9 +22,11 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 import { basename } from "../lib/fs";
+import { projectName } from "../lib/paths";
 import { looksLikeProject } from "../lib/recents";
 import type { HarnessId } from "../lib/session";
 import { CwdPicker } from "./CwdPicker";
@@ -65,7 +67,8 @@ type Props = {
   dockSurface?: DockSurface | null;
   dockOpen?: boolean;
   onShowDockSurface?: (surface: DockSurface) => void;
-  onHideDock?: () => void;
+  /** ⌘J itself, so the button and the shortcut can never drift apart. */
+  onToggleDock?: () => void;
   onOpenSettings?: () => void;
   onOpenInbox?: () => void;
   onOpenNotes?: () => void;
@@ -406,6 +409,7 @@ export function IconButton({
   accent,
   disabled,
   onClick,
+  onContextMenu,
   children,
 }: {
   label: string;
@@ -413,6 +417,7 @@ export function IconButton({
   accent?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   children: ReactNode;
 }) {
   return (
@@ -427,6 +432,7 @@ export function IconButton({
         if (disabled) return;
         onClick?.();
       }}
+      onContextMenu={onContextMenu}
       className={`grid size-6.5 place-items-center rounded-md ${
         disabled
           ? "text-content/25"
@@ -523,50 +529,49 @@ export function OverlayNav({
 }
 
 /**
- * The panel control: one button that opens the project's side panel on the
- * surface the user picks, and puts it away again. Which four surfaces exist is
- * the panel's own vocabulary, so the menu is built from it rather than repeated
- * here.
+ * The panel control: one button that puts the project's side panel away and
+ * brings it back on whatever surface it was last showing — a panel is opened to
+ * get at something, and asking which one first put a menu in front of every
+ * open. The surface is still switchable from the panel's own tab row, and from
+ * a right-click here, so nothing is lost by not asking.
  */
 function DockSurfaceButton({
   surface,
   open,
   terminalRunning,
+  onToggle,
   onShow,
-  onHide,
 }: {
   surface: DockSurface | null;
   open: boolean;
   terminalRunning?: boolean;
+  onToggle: () => void;
   onShow: (surface: DockSurface) => void;
-  onHide: () => void;
 }) {
   const anchor = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
-  const items: ExplorerMenuItem[] = [
-    ...DOCK_SURFACES.map((value) => ({
-      kind: "item" as const,
-      id: value,
-      label: DOCK_SURFACE_LABEL[value],
-      shortcut: value === "terminal" ? `${MOD}\`` : undefined,
-      checked: open && value === surface,
-    })),
-    ...(open
-      ? [
-          { kind: "sep" as const },
-          { kind: "item" as const, id: "hide", label: "Hide Panel", shortcut: `${MOD}J` },
-        ]
-      : []),
-  ];
+  // A project that has never opened the panel has no remembered surface, and
+  // Sessions is what the panel is mostly opened for.
+  const target = surface ?? "sessions";
+
+  const items: ExplorerMenuItem[] = DOCK_SURFACES.map((value) => ({
+    kind: "item" as const,
+    id: value,
+    label: DOCK_SURFACE_LABEL[value],
+    shortcut: value === "terminal" ? `${MOD}\`` : undefined,
+    checked: open && value === surface,
+  }));
 
   return (
     <div ref={anchor}>
       <IconButton
-        label={open ? `Panel (${MOD}J)` : `Show Panel (${MOD}J)`}
+        label={open ? `Hide Panel (${MOD}J)` : `Show ${DOCK_SURFACE_LABEL[target]} Panel (${MOD}J)`}
         active={open}
         accent={terminalRunning && !open}
-        onClick={() => {
+        onClick={onToggle}
+        onContextMenu={(event) => {
+          event.preventDefault();
           const rect = anchor.current?.getBoundingClientRect();
           if (!rect) return;
           setMenu({ x: Math.max(8, rect.right - 228), y: rect.bottom + 6 });
@@ -582,8 +587,7 @@ function DockSurfaceButton({
           items={items}
           onPick={(id) => {
             setMenu(null);
-            if (id === "hide") onHide();
-            else if (isDockSurface(id)) onShow(id);
+            if (isDockSurface(id)) onShow(id);
           }}
           onClose={() => setMenu(null)}
         />
@@ -599,7 +603,7 @@ function TitleBarComponent({
   dockSurface,
   dockOpen,
   onShowDockSurface,
-  onHideDock,
+  onToggleDock,
   projectRailOpen = true,
   onToggleSidebar,
   onSelect,
@@ -697,46 +701,41 @@ function TitleBarComponent({
 
   const railClosed = !projectRailOpen;
   const showCurrentProject = looksLikeProject(cwd);
-  // Until a project is picked, the rail and the sidebar hide, so nothing
-  // project-scoped is actionable and the window controls need room.
+  // Until a project is picked, the rail hides, so nothing project-scoped is
+  // actionable and the window controls need room.
   const projectless = !showCurrentProject;
-  // An open project is labeled in the sidebar, above Sessions / Explorer /
-  // Changes. Without a project that sidebar is gone, so the picker stays here.
-  const showProjectButton = railClosed && Boolean(onSelectProject) && !showCurrentProject;
+  // The rail is the only thing that names the open project and switches it, so
+  // a collapsed rail hands both back here — with or without a project open.
+  const showProjectButton = railClosed && Boolean(onSelectProject);
   const trailingControls = (
     <div className="flex h-full shrink-0 items-stretch">
       <div className="flex items-center gap-0.5 px-2">
-        {projectless && railClosed && onOpenInbox ? (
+        {railClosed && onOpenInbox ? (
           <IconButton label="Inbox" onClick={onOpenInbox}>
             <Inbox className="size-3.5" strokeWidth={1.75} />
           </IconButton>
         ) : null}
-        {projectless && railClosed && onOpenNotes ? (
+        {railClosed && onOpenNotes ? (
           <IconButton label="Notes" onClick={onOpenNotes}>
             <StickyNote className="size-3.5" strokeWidth={1.75} />
           </IconButton>
         ) : null}
         {railClosed && !projectless ? (
-          <>
-            <IconButton label={`Go to File (${MOD}P)`} onClick={onGoToFile}>
-              <Search className="size-3.5" strokeWidth={1.75} />
-            </IconButton>
-            <IconButton label={`New session (${MOD}T)`} onClick={onNew}>
-              <Plus className="size-3.5" strokeWidth={1.75} />
-            </IconButton>
-          </>
+          <IconButton label={`Go to File (${MOD}P)`} onClick={onGoToFile}>
+            <Search className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
         ) : null}
-        {!projectless && onShowDockSurface && onHideDock ? (
+        {!projectless && onShowDockSurface && onToggleDock ? (
           <DockSurfaceButton
             surface={dockSurface ?? null}
             open={dockOpen ?? false}
             terminalRunning={projectDockActive}
+            onToggle={onToggleDock}
             onShow={onShowDockSurface}
-            onHide={onHideDock}
           />
         ) : null}
         {!projectless ? <OpenWithMenu cwd={cwd} /> : null}
-        {!projectRailOpen && !showCurrentProject && onOpenSettings ? (
+        {railClosed && onOpenSettings ? (
           <IconButton label={`Settings (${MOD},)`} onClick={onOpenSettings}>
             <Settings className="size-3.5" strokeWidth={1.75} />
           </IconButton>
@@ -782,7 +781,11 @@ function TitleBarComponent({
           onNewTerminal={onNewTerminal}
           buttonClassName="flex h-full min-w-0 max-w-64 shrink items-center gap-2 px-6 text-left text-sm font-medium leading-tight"
         >
-          <span className="min-w-0 truncate text-content/50">No project</span>
+          {showCurrentProject ? (
+            <span className="min-w-0 truncate">{projectName(cwd)}</span>
+          ) : (
+            <span className="min-w-0 truncate text-content/50">No project</span>
+          )}
         </CwdPicker>
       ) : null}
 
@@ -809,9 +812,7 @@ function TitleBarComponent({
           ) : null}
           <div
             ref={setTabStripRef}
-            role="tablist"
-            aria-label="Workspace tabs"
-            className="scrollbar-none flex h-full min-w-0 cursor-default items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-none px-1.5"
+            className="scrollbar-none flex h-full min-w-0 cursor-default items-center overflow-x-auto overflow-y-hidden overscroll-none px-1.5"
             onKeyDown={(event) => {
               const current = (event.target as HTMLElement).closest<HTMLButtonElement>(
                 '[role="tab"]',
@@ -826,31 +827,46 @@ function TitleBarComponent({
               buttons[next]?.click();
             }}
           >
-            {tabs.map((tab, index) => (
-              <div
-                key={tab.id}
-                className="relative flex h-full w-56 min-w-28 shrink cursor-default items-center"
-                data-tauri-drag-region="false"
-              >
-                <TitleTabItem
-                  tab={tab}
-                  index={index}
-                  active={tab.id === activeId}
-                  closable={closable}
-                  canDrag={canDrag}
-                  sortable={sortable}
-                  onSelect={onSelect}
-                  onClose={onClose}
-                  itemRef={
-                    tab.id === activeId
-                      ? (el) => {
-                          activeTabRef.current = el;
-                        }
-                      : undefined
-                  }
-                />
+            <div
+              role="tablist"
+              aria-label="Workspace tabs"
+              className="flex h-full min-w-0 items-center gap-0.5"
+            >
+              {tabs.map((tab, index) => (
+                <div
+                  key={tab.id}
+                  className="relative flex h-full w-56 min-w-28 shrink cursor-default items-center"
+                  data-tauri-drag-region="false"
+                >
+                  <TitleTabItem
+                    tab={tab}
+                    index={index}
+                    active={tab.id === activeId}
+                    closable={closable}
+                    canDrag={canDrag}
+                    sortable={sortable}
+                    onSelect={onSelect}
+                    onClose={onClose}
+                    itemRef={
+                      tab.id === activeId
+                        ? (el) => {
+                            activeTabRef.current = el;
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+            {/* New tabs land at the end of the strip, so the control that makes
+                one sits there too rather than off in the trailing controls. */}
+            {onNew ? (
+              <div className="flex h-full shrink-0 items-center pl-1 pr-1">
+                <IconButton label={`New session (${MOD}T)`} onClick={onNew}>
+                  <Plus className="size-3.5" strokeWidth={1.75} />
+                </IconButton>
               </div>
-            ))}
+            ) : null}
           </div>
         </div>
 

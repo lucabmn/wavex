@@ -7,6 +7,7 @@ import {
   clampDocksToViewport,
   closeTerminalInDock,
   createProjectDock,
+  defaultDockSize,
   dockGridStyle,
   findProjectDock,
   mapProjectDock,
@@ -37,11 +38,11 @@ function chat(id: string, cwd: string): Session {
 }
 
 describe("createProjectDock", () => {
-  it("opens a bottom dock with the first terminal focused", () => {
+  it("opens the panel with the first terminal focused", () => {
     const file = newTerminalFile("/tmp/a");
     const dock = createProjectDock("/tmp/a/", { file });
     expect(dock.projectPath).toBe("/tmp/a");
-    expect(dock.side).toBe("bottom");
+    expect(dock.side).toBe("right");
     expect(dock.open).toBe(true);
     expect(dock.pane.files).toEqual([file]);
     expect(dock.pane.activeFileId).toBe(file.id);
@@ -89,6 +90,12 @@ describe("closeTerminalInDock", () => {
 });
 
 describe("dock surfaces", () => {
+  it("opens on the sessions list when nothing asked for a surface", () => {
+    const dock = createProjectDock("/tmp/a");
+    expect(dock.surface).toBe("sessions");
+    expect(dock.side).toBe("right");
+  });
+
   it("opens on the browser when nothing asked for a terminal", () => {
     const dock = createProjectDock("/tmp/a", { surface: "browser" });
     expect(dock.surface).toBe("browser");
@@ -97,10 +104,16 @@ describe("dock surfaces", () => {
     expect(dock.browser).toEqual(EMPTY_BROWSER_HISTORY);
   });
 
-  it("keeps a terminal at the bottom, where it has always been", () => {
+  it("opens a terminal on the panel's side like every other surface", () => {
     const dock = createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") });
     expect(dock.surface).toBe("terminal");
+    expect(dock.side).toBe("right");
+  });
+
+  it("opens where the caller asked, which is where the user last moved one", () => {
+    const dock = createProjectDock("/tmp/a", { side: "bottom" });
     expect(dock.side).toBe("bottom");
+    expect(dock.size).toBe(defaultDockSize("bottom"));
   });
 
   it("shows the terminals a new one was just added to", () => {
@@ -111,7 +124,7 @@ describe("dock surfaces", () => {
   });
 
   it("leaves the side where the user put it when the surface changes", () => {
-    const dock = createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a") });
+    const dock = createProjectDock("/tmp/a", { file: newTerminalFile("/tmp/a"), side: "bottom" });
     expect(withDockSurface(dock, "browser").side).toBe("bottom");
     expect(withDockSurface(dock, "terminal")).toBe(dock);
   });

@@ -160,8 +160,6 @@ type Props = {
   updateNotice?: InstalledUpdate | null;
   onOpenWhatsNew?: (version: string) => void;
   onDismissUpdate?: () => void;
-  /** The session/files sidebar is visible beside this rail. */
-  besideSidebar?: boolean;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
 };
@@ -209,15 +207,10 @@ export function ProjectRail({
   updateNotice = null,
   onOpenWhatsNew,
   onDismissUpdate,
-  besideSidebar = false,
 }: Props) {
   const resize = useDragResize({
     min: PROJECT_RAIL_WIDTH_MIN,
-    max: () =>
-      Math.min(
-        PROJECT_RAIL_WIDTH_MAX,
-        Math.floor(window.innerWidth * (besideSidebar ? 0.225 : 0.35)),
-      ),
+    max: () => Math.min(PROJECT_RAIL_WIDTH_MAX, Math.floor(window.innerWidth * 0.35)),
     defaultWidth: PROJECT_RAIL_WIDTH_DEFAULT,
     initial: loadProjectRailWidth(),
     onCommit: saveProjectRailWidth,
