@@ -288,7 +288,12 @@ raised, `--surface-3` overlay — as `bg-surface-sunken`, `bg-surface`,
 `bg-surface-raised`, `bg-surface-overlay`. The ladder is shallow on purpose:
 separating everything by shade leaves the window looking quilted, so most of
 the app sits on one plane and a step is spent only on the sidebar behind the
-work, a card above the page, and an overlay above everything. Paper climbs the
+work, a card above the page, and an overlay above everything. Shallow means
+about three points of perceived lightness to the sidebar, five to a card and
+eight to an overlay. Wider than that and the window stops reading as one
+surface: the work sheet looked cut out of the chrome around it and the composer
+looked pasted onto the sheet. Every plane still has an edge or a shadow of its
+own, so the tone only has to say which way is up. Paper climbs the
 same way: the sidebar is greyer than the page and a card is whiter than it,
 ending at white. Paper has a ceiling graphite does not, so its ladder is built
 _downwards_ from `--paper-top` — capped at 100%, four points above the page —
@@ -299,12 +304,26 @@ shadow to stand on. The cap is why a stored 100 now behaves like the default
 rather than collapsing the ladder — and stored values do reach production,
 because a preset writes both schemes and outlives any change to the defaults.
 
-A shadow on paper is a shadow, not a hole: the alpha that reads as depth over
-graphite reads as dirt under a white card, so light carries its own elevations
-and relies on the surface step above to do the lifting. Both ends of the Depth
-scale are therefore restated for light — the theme block is declared after the
-`depth-flat` and `depth-deep` arms and matches their specificity, so without a
-light arm of its own the setting would do nothing on paper.
+A shadow on paper is a shadow, not a hole: the single dark alpha that reads as
+depth over graphite reads as dirt under a white card, so each light elevation is
+two layers instead — a tight contact shadow and a wide soft one. They are also
+the whole lifting job on paper rather than a hint on top of the surface step,
+because that step is the thing the ceiling takes away: graphite separates a card
+from the page by around five points of perceived lightness and paper has under
+two to spend, so a shadow faint enough to disappear leaves the light theme one
+flat field with hairlines drawn on it. The four points of headroom go 2.5 to the
+card and 1.5 to the overlay for the same reason — two planes a point apart are
+one plane drawn twice — and every rung carries the same saturation, because a
+ladder that tints as it climbs shifts colour temperature across the one seam the
+eye is already reading as a step. Both ends of the Depth scale are restated for
+light — the theme block is declared after the `depth-flat` and `depth-deep` arms
+and matches their specificity, so without a light arm of its own the setting
+would do nothing on paper.
+
+The work sheet keeps a softer edge on paper and takes a shadow instead. A
+hairline at ink strength, with six pixels of the sidebar's own tone either side
+of it, reads as a cut through the window rather than as the place two planes
+meet.
 
 Tailwind's `dark:` is bound to `html:not(.theme-light)` rather than to
 `prefers-color-scheme`. Nothing in `src` writes `dark:` itself; the variant

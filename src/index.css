@@ -98,12 +98,21 @@
    * separates everything by shade ends up looking quilted, so most of the app
    * sits on one plane and the step is spent where it matters — the sidebar
    * behind the work, a card above the page, an overlay above everything.
+   *
+   * Shallow means about three points of perceived lightness to the sidebar,
+   * five to a card and eight to an overlay. Wider than that and the window
+   * stops reading as one surface: the sheet looked cut out of the chrome
+   * around it and the composer looked pasted onto the sheet. Each plane is
+   * still doing its job at these steps because it has an edge or a shadow of
+   * its own; the tone only has to say which way is up.
    */
-  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 4%));
+  --surface-0: hsl(
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 2.5%)
+  );
   --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
-  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 7%));
+  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 4%));
   --surface-3: hsl(
-    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 11%)
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 6.5%)
   );
 
   /*
@@ -189,11 +198,20 @@ html.theme-light {
    * same colour as the sheet it was supposed to sit on. `--paper-top` also
    * caps at 100 rather than being pinned there, so the page keeps meaning
    * "the lightness you chose" everywhere below that.
+   *
+   * Every rung carries the same saturation. A ladder that tints as it climbs
+   * shifts colour temperature across the one seam the eye is already reading
+   * as a step, and the sidebar came out bluer than the page it abuts.
+   *
+   * The four points of headroom are spent 2.5 on the card and 1.5 on the
+   * overlay rather than 3 and 1: a card and a menu one point apart are the
+   * same plane twice, and the overlay has a shadow to fall back on where the
+   * card does not.
    */
   --paper-top: min(calc(var(--background-lightness) + 4%), 100%);
-  --surface-0: hsl(var(--theme-hue) calc(var(--theme-saturation) + 3%) calc(var(--paper-top) - 9%));
-  --surface-1: hsl(var(--theme-hue) calc(var(--theme-saturation) + 1%) calc(var(--paper-top) - 4%));
-  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 1%));
+  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 7%));
+  --surface-1: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 4%));
+  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--paper-top) - 1.5%));
   --surface-3: hsl(var(--theme-hue) var(--theme-saturation) var(--paper-top));
   /* Ink on paper needs a firmer line than light on graphite to read at all. */
   --edge: color-mix(in srgb, var(--color-content) calc(150% * var(--rule)), transparent);
@@ -206,13 +224,21 @@ html.theme-light {
   --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
   --selected: color-mix(in srgb, var(--color-content) 9%, transparent);
   /*
-   * A shadow on paper is a shadow, not a hole: the same alpha that reads as
-   * depth over graphite reads as dirt under a white card, so these are much
-   * lighter and rely on the surface step above to do the lifting.
+   * A shadow on paper is a shadow, not a hole: a single dark alpha that reads
+   * as depth over graphite reads as dirt under a white card. So each of these
+   * is two layers — a tight contact shadow that says the thing is touching
+   * something, and a wide soft one that says how far above it sits — rather
+   * than one heavy blur.
+   *
+   * They are also the whole lifting job on paper, not a hint on top of the
+   * surface step. Graphite separates a card from the page by around five
+   * points of perceived lightness; the ceiling leaves paper under two, so a
+   * shadow faint enough to disappear left the light theme one flat field with
+   * hairlines drawn on it.
    */
-  --elevation-1: 0 1px 2px rgb(15 23 42 / 0.06);
-  --elevation-2: 0 4px 14px rgb(15 23 42 / 0.08);
-  --elevation-3: 0 14px 36px rgb(15 23 42 / 0.13);
+  --elevation-1: 0 1px 2px rgb(15 23 42 / 0.08), 0 2px 6px rgb(15 23 42 / 0.05);
+  --elevation-2: 0 1px 2px rgb(15 23 42 / 0.1), 0 8px 20px rgb(15 23 42 / 0.1);
+  --elevation-3: 0 2px 6px rgb(15 23 42 / 0.1), 0 18px 44px rgb(15 23 42 / 0.16);
   /* Darker than their graphite counterparts by as much as the ground is
      lighter, so each status lands on the contrast its dark twin does. */
   --status-danger: hsl(2 68% 44%);
@@ -297,9 +323,9 @@ html.theme-light.depth-flat {
 }
 
 html.theme-light.depth-deep {
-  --elevation-1: 0 1px 3px rgb(15 23 42 / 0.1);
-  --elevation-2: 0 8px 24px rgb(15 23 42 / 0.14);
-  --elevation-3: 0 24px 56px rgb(15 23 42 / 0.2);
+  --elevation-1: 0 1px 3px rgb(15 23 42 / 0.12), 0 3px 8px rgb(15 23 42 / 0.08);
+  --elevation-2: 0 2px 4px rgb(15 23 42 / 0.12), 0 12px 28px rgb(15 23 42 / 0.14);
+  --elevation-3: 0 4px 10px rgb(15 23 42 / 0.14), 0 28px 64px rgb(15 23 42 / 0.22);
 }
 
 html.theme-light #boot-splash {
@@ -343,6 +369,19 @@ html.has-native-glass .chrome-glass {
 
 .body-glass {
   background-color: var(--surface-1);
+}
+
+/*
+ * On paper the sheet lies on the desk. The hairline that separates it from the
+ * sidebar on graphite is, at ink strength against a step the eye already
+ * reads, a cut rather than an edge — and with six pixels of the same tone
+ * either side of it, the seam was the loudest line in the window. So the sheet
+ * keeps a softer edge here and takes a shadow instead, which is what a lighter
+ * plane sitting on a darker one actually does.
+ */
+html.theme-light .body-glass {
+  border-color: color-mix(in srgb, var(--color-content) calc(80% * var(--rule)), transparent);
+  box-shadow: var(--elevation-1);
 }
 
 .transcript-turn {
