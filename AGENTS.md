@@ -314,9 +314,9 @@ seam between two strips of chrome `ui-rule-b` / `ui-rule-r`.
 The window is two columns: a sidebar and the work. The project rail is a third
 column and is closed by default — the sidebar's own header already carries the
 project switcher and every destination the rail holds, so a permanent nav
-column bought a third vertical pane before any content. Opened, the rail and
-the panel are one sidebar rather than two, sharing a single rule band with no
-seam between them.
+column bought a third vertical pane before any content. Opened, it keeps its
+own right-hand rule: without one the projects list and the sessions list run
+together into a single field of rows with no telling where one ends.
 
 One header spans the whole window, above both columns: `TitleBar` mounts at the
 App root, not inside the body. It is the only thing that reserves the macOS
@@ -340,9 +340,11 @@ side by side in the toolbar the two drew the same glyph and read as one control
 duplicated.
 
 Every strip of tabs is a 40px band whose tabs are `h-full`, so the rule under
-the live one always lands on the bottom edge of the row it belongs to. A strip
-sized to its content instead — `h-7` in one place, `h-full` in another — puts
-two rules at two heights and the strips stop looking like the same control.
+the live one always lands on the bottom edge of the row it belongs to. That
+includes the mode switch at the top of the rail: it stands beside the panel's
+strip, so it gets a band of its own rather than sitting inside the padded
+column below it. A strip sized to its content instead puts two rules at two
+heights, and two strips side by side stop reading as one row.
 
 A tab in the header is a chip, not an underlined tab: it sits in a toolbar
 rather than on top of the content it selects, so an underline has nothing to

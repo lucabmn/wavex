@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Give the projects rail its own edge again, so the projects list and the
+  sessions list no longer run together, and stand its mode switch in a band
+  matching the panel's strip beside it so both rules sit on one line.
 - Lift the dark theme off near-black: the ladder had five percent of lightness
   to work with and read as one flat sheet, so the ground, the planes, the rules
   and the muted text all come up together.

@@ -65,7 +65,7 @@
   --accent-saturation: 48%;
   --accent-lightness: 62%;
   --sidebar-opacity: 0.8;
-  --background-lightness: 9%;
+  --background-lightness: 13%;
   --content-lightness: 96%;
 
   /*
@@ -74,14 +74,12 @@
    * sits on one plane and the step is spent where it matters — the sidebar
    * behind the work, a card above the page, an overlay above everything.
    */
-  --surface-0: hsl(
-    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 2.5%)
-  );
+  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 4%));
   --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
-  --surface-2: hsl(
-    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 5.5%)
+  --surface-2: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 7%));
+  --surface-3: hsl(
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 11%)
   );
-  --surface-3: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 9%));
 
   /*
    * `--rule` is the strength of every hairline in the app, exposed as the

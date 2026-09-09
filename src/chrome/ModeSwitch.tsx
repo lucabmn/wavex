@@ -61,7 +61,7 @@ export function ModeSwitch({ mode, onChange, stretch = false }: Props) {
             aria-label={`${APP_MODE_LABEL[value]}: ${APP_MODE_DESCRIPTION[value]}`}
             data-selected={selected ? "true" : undefined}
             className={`ui-tab ui-focus flex items-center justify-center px-2.5 text-[12.5px] font-medium leading-none ${
-              stretch ? "h-7 flex-1" : "h-full"
+              stretch ? "h-full flex-1" : "h-full"
             }`}
             onClick={() => onChange(value)}
           >

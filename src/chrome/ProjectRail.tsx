@@ -413,7 +413,7 @@ export function ProjectRail({
     <nav
       ref={resize.setPaneRef}
       aria-label="Projects"
-      className="sidebar-glass relative flex shrink-0 flex-col"
+      className="sidebar-glass ui-rule-r relative flex shrink-0 flex-col"
     >
       {settingsOpen ? (
         <SettingsNav
@@ -423,12 +423,12 @@ export function ProjectRail({
         />
       ) : (
         <>
-          <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
-            {mode && onModeChange ? (
-              <div className="pb-1.5">
-                <ModeSwitch mode={mode} onChange={onModeChange} stretch />
-              </div>
-            ) : null}
+          {mode && onModeChange ? (
+            <div className="ui-rule-b flex h-10 shrink-0 items-stretch px-2">
+              <ModeSwitch mode={mode} onChange={onModeChange} stretch />
+            </div>
+          ) : null}
+          <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-2">
             <RailSearch
               label="Search"
               icon={Search}

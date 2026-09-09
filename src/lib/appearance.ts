@@ -818,7 +818,7 @@ export const SURFACE_RANGE: Record<
   ColorScheme,
   { background: [min: number, max: number, fallback: number]; content: [number, number, number] }
 > = {
-  dark: { background: [2, 22, 9], content: [70, 100, 96] },
+  dark: { background: [2, 26, 13], content: [70, 100, 96] },
   light: { background: [86, 100, 100], content: [0, 42, 12] },
 };
 
@@ -893,7 +893,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: THEME_HUE_DEFAULT,
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
-    dark: { background: 9, content: 96 },
+    dark: { background: 13, content: 96 },
     light: { background: 100, content: 12 },
   },
   {
@@ -902,7 +902,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: 232,
     themeSaturation: 14,
     accentHue: 214,
-    dark: { background: 7, content: 96 },
+    dark: { background: 11, content: 96 },
     light: { background: 100, content: 14 },
   },
   {
@@ -911,7 +911,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: 0,
     themeSaturation: 0,
     accentHue: 232,
-    dark: { background: 4, content: 96 },
+    dark: { background: 11, content: 96 },
     light: { background: 100, content: 12 },
   },
   {
@@ -920,7 +920,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: 36,
     themeSaturation: 8,
     accentHue: 24,
-    dark: { background: 7, content: 95 },
+    dark: { background: 11, content: 95 },
     light: { background: 99, content: 16 },
   },
   {
@@ -929,7 +929,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: 150,
     themeSaturation: 7,
     accentHue: 152,
-    dark: { background: 6, content: 95 },
+    dark: { background: 11, content: 95 },
     light: { background: 100, content: 14 },
   },
   {
@@ -938,7 +938,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: 282,
     themeSaturation: 9,
     accentHue: 288,
-    dark: { background: 6, content: 96 },
+    dark: { background: 11, content: 96 },
     light: { background: 100, content: 14 },
   },
   {
@@ -947,7 +947,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: 200,
     themeSaturation: 10,
     accentHue: 188,
-    dark: { background: 6, content: 95 },
+    dark: { background: 11, content: 95 },
     light: { background: 100, content: 14 },
   },
 ];
