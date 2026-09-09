@@ -123,7 +123,7 @@ import { nextTabIndex } from "../lib/tabNavigation";
 
 const MIN_WIDTH = 260;
 const MAX_WIDTH = 560;
-const DEFAULT_WIDTH = 260;
+const DEFAULT_WIDTH = 320;
 
 let rememberedWidth = DEFAULT_WIDTH;
 
@@ -938,11 +938,33 @@ function SidebarComponent({
       ) : (
         <>
           <div
-            className="ui-rule-b flex h-10 shrink-0 select-none items-center pr-1.5"
+            className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-1 pr-1.5"
             data-tauri-drag-region="deep"
           >
             {IS_MAC ? <div className="w-[78px] shrink-0" /> : null}
             <DevModeSlot />
+            {onSelectProject ? (
+              <SidebarProjectPicker
+                cwd={cwd}
+                recents={recents}
+                busy={projectPathBusy(busyProjectPaths, cwd)}
+                onSelectProject={onSelectProject}
+                onNewTerminal={onNewTerminal}
+                onSearch={onSearch}
+                onOpenInbox={onOpenInbox}
+                onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+                onOpenUsage={onOpenUsage}
+                onOpenActivity={onOpenActivity}
+                onOpenAutomations={onOpenAutomations}
+                searchActive={searchActive}
+                inboxActive={inboxActive}
+                notesActive={notesActive}
+                usageActive={usageActive}
+                activityActive={activityActive}
+                automationsActive={automationsActive}
+                inboxUnseen={inboxUnseen}
+              />
+            ) : null}
             <TabVisitNav
               canGoBack={canGoBack}
               canGoForward={canGoForward}
@@ -952,28 +974,6 @@ function SidebarComponent({
               panelActive={false}
             />
           </div>
-          {onSelectProject ? (
-            <SidebarProjectPicker
-              cwd={cwd}
-              recents={recents}
-              busy={projectPathBusy(busyProjectPaths, cwd)}
-              onSelectProject={onSelectProject}
-              onNewTerminal={onNewTerminal}
-              onSearch={onSearch}
-              onOpenInbox={onOpenInbox}
-              onOpenNotes={notesEnabled ? onOpenNotes : undefined}
-              onOpenUsage={onOpenUsage}
-              onOpenActivity={onOpenActivity}
-              onOpenAutomations={onOpenAutomations}
-              searchActive={searchActive}
-              inboxActive={inboxActive}
-              notesActive={notesActive}
-              usageActive={usageActive}
-              activityActive={activityActive}
-              automationsActive={automationsActive}
-              inboxUnseen={inboxUnseen}
-            />
-          ) : null}
           <div
             role="tablist"
             aria-label="Workspace"
@@ -1429,10 +1429,7 @@ function SidebarProjectPicker({
   const color = resolveTabGroupColor(projectKey, groupColors, groupCustomColors, projectKey);
 
   return (
-    <div
-      className="flex h-9 items-center gap-0.5 border-b border-edge px-2"
-      data-tauri-drag-region="deep"
-    >
+    <>
       <CwdPicker
         cwd={cwd}
         recents={recents}
@@ -1440,8 +1437,8 @@ function SidebarProjectPicker({
         chevron
         onCwdChange={onSelectProject}
         onNewTerminal={onNewTerminal}
-        className="min-w-0 items-center"
-        buttonClassName="flex h-6.5 w-full items-center gap-1.5 rounded-md px-2 text-[12.5px] leading-none text-content/50 hover:text-content"
+        className="min-w-0 flex-1 items-center"
+        buttonClassName="flex h-7 w-full items-center gap-2 rounded-md px-2 text-[13px] font-medium leading-none text-content hover:bg-hover"
       >
         {logoPath ? (
           <ProjectLogoIcon
@@ -1460,7 +1457,7 @@ function SidebarProjectPicker({
         )}
         <span className="min-w-0 truncate">{label}</span>
       </CwdPicker>
-      <div className="flex items-center ml-auto">
+      <div className="flex shrink-0 items-center" data-tauri-drag-region="false">
         {onSearch ? (
           <IconButton label={`Search (${MOD}K)`} active={searchActive} onClick={onSearch}>
             <Search className="size-3.5" strokeWidth={1.75} />
@@ -1504,7 +1501,7 @@ function SidebarProjectPicker({
           </IconButton>
         ) : null}
       </div>
-    </div>
+    </>
   );
 }
 

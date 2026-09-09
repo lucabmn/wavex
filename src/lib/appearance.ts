@@ -270,8 +270,16 @@ function isSidebarTabId(value: unknown): value is SidebarTabId {
   return value === "files" || value === "sessions" || value === "changes" || value === "inbox";
 }
 
+/**
+ * Closed by default: the window is two columns, a sidebar and the work.
+ *
+ * A separate nav column beside the list column meant three vertical panes
+ * before any content, and the sidebar already carries the project switcher and
+ * every destination the rail holds. The rail stays one shortcut away for
+ * anyone who wants the projects list permanently on screen.
+ */
 export function loadProjectRailOpen(): boolean {
-  return readFlag(PROJECT_RAIL_OPEN_KEY) ?? true;
+  return readFlag(PROJECT_RAIL_OPEN_KEY) ?? false;
 }
 
 export function saveProjectRailOpen(value: boolean) {

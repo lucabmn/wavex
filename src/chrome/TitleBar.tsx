@@ -216,6 +216,7 @@ function TitleTabItem({
   onSelect,
   onClose,
   itemRef,
+  solo = false,
 }: {
   tab: TitleTab;
   index: number;
@@ -226,6 +227,8 @@ function TitleTabItem({
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   itemRef?: (el: HTMLDivElement | null) => void;
+  /** The only tab open: a title, not one of several choices. */
+  solo?: boolean;
 }) {
   const dragging = canDrag && sortable.draggingId === tab.id;
   const { headline, meta, tooltip } = tabCopy(tab);
@@ -278,10 +281,10 @@ function TitleTabItem({
           if (sortable.consumeClick()) return;
           onSelect(tab.id);
         }}
-        data-selected={active ? "true" : undefined}
-        className={`ui-tab ui-focus relative flex h-full min-w-0 flex-1 cursor-default items-center gap-1.5 px-3 text-left ${
-          closable ? "pr-7" : "pr-3"
-        }`}
+        data-selected={active && !solo ? "true" : undefined}
+        className={`ui-focus relative flex h-full min-w-0 flex-1 cursor-default items-center gap-2 text-left ${
+          solo ? "px-4 text-content" : "ui-tab px-3"
+        } ${closable ? "pr-7" : solo ? "pr-4" : "pr-3"}`}
       >
         {tab.harnesses.length > 0 ? (
           <TabHarnesses
@@ -303,9 +306,11 @@ function TitleTabItem({
           <span className="flex min-w-0 items-center gap-1">
             <span
               className={`min-w-0 truncate leading-none ${
-                meta
-                  ? "text-[13.5px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
-                  : "text-[13.5px]"
+                solo
+                  ? "text-[14px] font-medium"
+                  : meta
+                    ? "text-[13.5px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
+                    : "text-[13.5px]"
               }`}
             >
               {headline}
@@ -826,13 +831,22 @@ function TitleBarComponent({
             {tabs.map((tab, index) => (
               <div
                 key={tab.id}
-                className="relative flex h-full w-56 min-w-28 shrink cursor-default items-center"
+                /*
+                 * A lone tab is not a choice, so it is not drawn as one: it
+                 * stretches and reads as the title of what is on screen. A
+                 * strip of one chip with empty space beside it is the shape
+                 * that made every window look like a browser.
+                 */
+                className={`relative flex h-full shrink cursor-default items-center ${
+                  tabs.length === 1 ? "min-w-0 flex-1" : "w-56 min-w-28"
+                }`}
                 data-tauri-drag-region="false"
               >
                 <TitleTabItem
                   tab={tab}
                   index={index}
                   active={tab.id === activeId}
+                  solo={tabs.length === 1}
                   closable={closable}
                   canDrag={canDrag}
                   sortable={sortable}

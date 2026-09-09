@@ -311,11 +311,19 @@ sibling. Overlays take `ui-overlay`, cards `ui-pane`, focus `ui-focus`, group
 headings `ui-label`, the user's own turn in a transcript `ui-prompt`, and a
 seam between two strips of chrome `ui-rule-b` / `ui-rule-r`.
 
-The project rail and the workspace panel are one sidebar, not two: one rule
-band across both, no seam between them, and the same row idiom throughout — a
-nav column and a list column, with the body beyond. Keep it that way; the
-duplicate header each of them used to carry is what made the window read as a
-stack of panels.
+The window is two columns: a sidebar and the work. The project rail is a third
+column and is closed by default — the sidebar's own header already carries the
+project switcher and every destination the rail holds, so a permanent nav
+column bought a third vertical pane before any content. Opened, the rail and
+the panel are one sidebar rather than two, sharing a single rule band with no
+seam between them.
+
+The sidebar has one header row, not three: window controls, the project
+switcher, the destinations, and the visit nav all stand in it, with the tab
+strip below. Three stacked strips before any content is what made the window
+read as a filing cabinet. In the body, a lone tab is not a choice and is not
+drawn as one — it stretches and reads as the title of what is on screen; the
+strip only appears once there is something to choose between.
 
 Corners, Depth and Separators in Settings scale the language rather than
 bolting a second one beside it, which only holds while radius, shadow and rule

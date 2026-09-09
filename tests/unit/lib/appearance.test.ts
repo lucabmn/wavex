@@ -13,6 +13,8 @@ import {
   ACCENT_HUE_DEFAULT,
   loadAccentHue,
   saveAccentHue,
+  loadProjectRailOpen,
+  saveProjectRailOpen,
   loadSeparators,
   saveSeparators,
   SEPARATORS_DEFAULT,
@@ -450,5 +452,20 @@ describe("separators setting", () => {
   it("falls back rather than trusting a stored value it does not know", () => {
     localStorage.setItem("wavex.separators", "invisible");
     expect(loadSeparators()).toBe(SEPARATORS_DEFAULT);
+  });
+});
+
+describe("project rail", () => {
+  beforeEach(mockLocalStorage);
+
+  it("is closed on a fresh install, so the window is two columns", () => {
+    expect(loadProjectRailOpen()).toBe(false);
+  });
+
+  it("remembers being opened", () => {
+    saveProjectRailOpen(true);
+    expect(loadProjectRailOpen()).toBe(true);
+    saveProjectRailOpen(false);
+    expect(loadProjectRailOpen()).toBe(false);
   });
 });

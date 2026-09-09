@@ -6,8 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Open in two columns rather than three. The project rail is closed by default
+  — the sidebar's header carries the project switcher and every destination it
+  held — and the sidebar itself has one header row instead of three. A lone
+  open tab reads as the title of what is on screen rather than as a chip in an
+  otherwise empty strip.
 - Redesign the whole interface. The project rail and the workspace panel are
-  now one sidebar with a single header band rather than two panels each with a
+  one sidebar with a single header band rather than two panels each with a
   header of its own; the window is nearly colourless, separated by planes and
   space instead of a rule around every box; tabs are flush and named by a rule
   under the live one; and the accent appears only on the icon of the selected
