@@ -22,7 +22,7 @@
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "transparent": true,
-        "backgroundColor": "#0c0c0e",
+        "backgroundColor": "#161618",
         "backgroundThrottling": "throttle",
         "shadow": true
       }

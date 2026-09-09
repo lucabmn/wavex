@@ -334,6 +334,16 @@ unchanged for the same reason — `DevModeSlot` is a `flex-1` spacer built for
 the rail, and in a full-width header it swallowed the row and pushed the tabs
 to the far edge.
 
+The toolbar holds one panel toggle, for the sidebar. Showing and hiding the
+projects column belongs to the sidebar's own header, in both of its variants:
+side by side in the toolbar the two drew the same glyph and read as one control
+duplicated.
+
+Every strip of tabs is a 40px band whose tabs are `h-full`, so the rule under
+the live one always lands on the bottom edge of the row it belongs to. A strip
+sized to its content instead — `h-7` in one place, `h-full` in another — puts
+two rules at two heights and the strips stop looking like the same control.
+
 A tab in the header is a chip, not an underlined tab: it sits in a toolbar
 rather than on top of the content it selects, so an underline has nothing to
 point at. The underline idiom (`ui-tab`) stays where it does point at

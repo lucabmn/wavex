@@ -5013,7 +5013,6 @@ export default function App({
         canGoForward={tabVisitNav.canForward}
         onGoBack={onRailBack}
         onGoForward={onRailForward}
-        onToggleProjectRail={onToggleProjectRail}
         projectRailOpen={projectRailOpen}
         onToggleSidebar={onToggleSidebar}
         onSelect={activateTab}
@@ -5037,6 +5036,7 @@ export default function App({
       />
       <div className="flex min-h-0 min-w-0 flex-1">
         <Sidebar
+          onToggleProjectRail={onToggleProjectRail}
           workMode={appMode === "work"}
           mode={appMode}
           onModeChange={setAppMode}

@@ -65,8 +65,8 @@
   --accent-saturation: 48%;
   --accent-lightness: 62%;
   --sidebar-opacity: 0.8;
-  --background-lightness: 5%;
-  --content-lightness: 97%;
+  --background-lightness: 9%;
+  --content-lightness: 96%;
 
   /*
    * Four planes. The steps are small and the ladder is shallow: a window that
@@ -74,28 +74,28 @@
    * sits on one plane and the step is spent where it matters — the sidebar
    * behind the work, a card above the page, an overlay above everything.
    */
-  --surface-0: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 2%));
+  --surface-0: hsl(
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 2.5%)
+  );
   --surface-1: hsl(var(--theme-hue) var(--theme-saturation) var(--background-lightness));
   --surface-2: hsl(
-    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 4.5%)
+    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 5.5%)
   );
-  --surface-3: hsl(
-    var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 7.5%)
-  );
+  --surface-3: hsl(var(--theme-hue) var(--theme-saturation) calc(var(--background-lightness) + 9%));
 
   /*
    * `--rule` is the strength of every hairline in the app, exposed as the
    * Separators setting. One number, because a hundred hand-picked border
    * opacities is how chrome turns into a wireframe of itself.
    */
-  --rule: 0.1;
+  --rule: 0.12;
   --edge: color-mix(in srgb, var(--color-content) calc(100% * var(--rule)), transparent);
   --edge-strong: color-mix(in srgb, var(--color-content) calc(180% * var(--rule)), transparent);
 
-  --hover: color-mix(in srgb, var(--color-content) 5%, transparent);
+  --hover: color-mix(in srgb, var(--color-content) 7%, transparent);
   /* Selection is a flat step, not a tint: the accent is busy meaning something
      else, and a coloured row is a decoration a list of forty cannot afford. */
-  --selected: color-mix(in srgb, var(--color-content) 9%, transparent);
+  --selected: color-mix(in srgb, var(--color-content) 12%, transparent);
 
   --elevation-1: 0 1px 2px rgb(0 0 0 / 0.2);
   --elevation-2: 0 4px 12px rgb(0 0 0 / 0.24);
@@ -1314,7 +1314,7 @@ header[data-tauri-drag-region] button {
  * live row in a list of forty without turning the list into a chart.
  */
 .ui-row {
-  color: color-mix(in srgb, var(--color-content) 62%, transparent);
+  color: color-mix(in srgb, var(--color-content) 72%, transparent);
 }
 
 .ui-row:hover {
@@ -1365,7 +1365,7 @@ header[data-tauri-drag-region] button {
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
-  color: color-mix(in srgb, var(--color-content) 45%, transparent);
+  color: color-mix(in srgb, var(--color-content) 55%, transparent);
 }
 
 /* Focus: a ring inset by a pixel so it lands inside the control's own bounds
@@ -1381,7 +1381,7 @@ header[data-tauri-drag-region] button {
  */
 .ui-tab {
   position: relative;
-  color: color-mix(in srgb, var(--color-content) 55%, transparent);
+  color: color-mix(in srgb, var(--color-content) 62%, transparent);
 }
 
 .ui-tab:hover {

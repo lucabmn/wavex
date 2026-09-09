@@ -818,7 +818,7 @@ export const SURFACE_RANGE: Record<
   ColorScheme,
   { background: [min: number, max: number, fallback: number]; content: [number, number, number] }
 > = {
-  dark: { background: [2, 22, 5], content: [70, 100, 97] },
+  dark: { background: [2, 22, 9], content: [70, 100, 96] },
   light: { background: [86, 100, 100], content: [0, 42, 12] },
 };
 
@@ -893,7 +893,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     themeHue: THEME_HUE_DEFAULT,
     themeSaturation: THEME_SATURATION_DEFAULT,
     accentHue: ACCENT_HUE_DEFAULT,
-    dark: { background: 5, content: 97 },
+    dark: { background: 9, content: 96 },
     light: { background: 100, content: 12 },
   },
   {

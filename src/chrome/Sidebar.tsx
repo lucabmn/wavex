@@ -9,6 +9,7 @@ import {
   Folder,
   Inbox,
   ListFilter,
+  PanelLeft,
   Pin,
   Plus,
   Search,
@@ -210,6 +211,7 @@ type Props = {
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
   projectRailOpen?: boolean;
+  onToggleProjectRail?: () => void;
   unseenFinishedIds?: Set<string>;
   /** Project-level diff stats shared by every session in this project. */
   gitState?: GitState | null;
@@ -291,6 +293,7 @@ function SidebarComponent({
   mode,
   onModeChange,
   projectRailOpen = true,
+  onToggleProjectRail,
   unseenFinishedIds: unseenFinishedIdsProp,
   gitState: gitStateProp,
   checkErrors = 0,
@@ -922,7 +925,12 @@ function SidebarComponent({
             {workspaceTabItems}
           </div>
           <div className="flex shrink-0 items-center">
-            <WorkspaceTitleActions onSearch={onGoToFile} onNew={onNew} />
+            <WorkspaceTitleActions
+              onSearch={onGoToFile}
+              onNew={onNew}
+              projectRailOpen={projectRailOpen}
+              onToggleProjectRail={onToggleProjectRail}
+            />
           </div>
         </div>
       ) : (
@@ -951,13 +959,14 @@ function SidebarComponent({
                 activityActive={activityActive}
                 automationsActive={automationsActive}
                 inboxUnseen={inboxUnseen}
+                onToggleProjectRail={onToggleProjectRail}
               />
             ) : null}
           </div>
           <div
             role="tablist"
             aria-label="Workspace"
-            className="ui-rule-b flex h-9 shrink-0 items-center gap-0.5 overflow-visible px-2"
+            className="ui-rule-b flex h-10 shrink-0 items-stretch gap-0.5 overflow-visible px-2"
             onKeyDown={onWorkspaceTabKeyDown}
           >
             {workspaceTabItems}
@@ -1355,6 +1364,7 @@ function SidebarComponent({
 export const Sidebar = memo(SidebarComponent);
 
 function SidebarProjectPicker({
+  onToggleProjectRail,
   cwd,
   recents,
   busy,
@@ -1391,6 +1401,7 @@ function SidebarProjectPicker({
   activityActive?: boolean;
   usageActive?: boolean;
   automationsActive?: boolean;
+  onToggleProjectRail?: () => void;
   inboxUnseen?: boolean;
 }) {
   const [groupLabels] = useState(loadTabGroupLabels);
@@ -1433,6 +1444,11 @@ function SidebarProjectPicker({
         <span className="min-w-0 truncate">{label}</span>
       </CwdPicker>
       <div className="flex shrink-0 items-center" data-tauri-drag-region="false">
+        {onToggleProjectRail ? (
+          <IconButton label="Toggle Projects" onClick={onToggleProjectRail}>
+            <PanelLeft className="size-3.5" strokeWidth={1.75} />
+          </IconButton>
+        ) : null}
         {onSearch ? (
           <IconButton label={`Search (${MOD}K)`} active={searchActive} onClick={onSearch}>
             <Search className="size-3.5" strokeWidth={1.75} />
@@ -1480,10 +1496,25 @@ function SidebarProjectPicker({
   );
 }
 
-function WorkspaceTitleActions({ onSearch, onNew }: { onSearch?: () => void; onNew?: () => void }) {
-  if (!onSearch && !onNew) return null;
+function WorkspaceTitleActions({
+  onSearch,
+  onNew,
+  projectRailOpen,
+  onToggleProjectRail,
+}: {
+  onSearch?: () => void;
+  onNew?: () => void;
+  projectRailOpen?: boolean;
+  onToggleProjectRail?: () => void;
+}) {
+  if (!onSearch && !onNew && !onToggleProjectRail) return null;
   return (
     <div className="flex shrink-0 items-center gap-0.5" data-tauri-drag-region="false">
+      {onToggleProjectRail ? (
+        <IconButton label="Toggle Projects" active={projectRailOpen} onClick={onToggleProjectRail}>
+          <PanelLeft className="size-3.5" strokeWidth={1.75} />
+        </IconButton>
+      ) : null}
       {onSearch ? (
         <IconButton label={`Go to File (${MOD}P)`} onClick={onSearch}>
           <Search className="size-3.5" strokeWidth={1.75} />

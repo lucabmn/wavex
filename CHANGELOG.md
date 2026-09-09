@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Lift the dark theme off near-black: the ladder had five percent of lightness
+  to work with and read as one flat sheet, so the ground, the planes, the rules
+  and the muted text all come up together.
 - Float the work as an inset, rounded sheet on the window's own ground, with
   the sidebar sitting directly on that ground rather than behind a rule.
 - Give the window one header instead of five. The title bar spans the whole

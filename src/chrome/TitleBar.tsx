@@ -82,7 +82,6 @@ type Props = {
   canGoForward?: boolean;
   onGoBack?: () => void;
   onGoForward?: () => void;
-  onToggleProjectRail?: () => void;
 };
 
 function sessionMeta(tab: TitleTab): string {
@@ -635,7 +634,6 @@ function TitleBarComponent({
   canGoForward = false,
   onGoBack,
   onGoForward,
-  onToggleProjectRail,
 }: Props) {
   const tabIds = tabs.map((tab) => tab.id);
   const sortable = useSortable(tabIds, onReorder);
@@ -786,8 +784,6 @@ function TitleBarComponent({
           canGoForward={canGoForward}
           onGoBack={onGoBack}
           onGoForward={onGoForward}
-          onTogglePanel={workMode ? undefined : onToggleProjectRail}
-          panelActive={projectRailOpen}
         />
         {workMode ? null : (
           <IconButton label={`Toggle Sidebar (${MOD}B)`} onClick={onToggleSidebar}>
@@ -796,7 +792,7 @@ function TitleBarComponent({
         )}
       </div>
       {railClosed && mode && onModeChange ? (
-        <div className="flex shrink-0 items-center px-2">
+        <div className="flex shrink-0 items-stretch px-2">
           <ModeSwitch mode={mode} onChange={onModeChange} />
         </div>
       ) : null}
