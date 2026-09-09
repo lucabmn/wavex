@@ -899,7 +899,7 @@ function SidebarComponent({
   const sidebarContent = (
     <aside
       ref={resize.setPaneRef}
-      className="sidebar-glass ui-rule-r relative flex h-full min-h-0 shrink-0 flex-col"
+      className="sidebar-glass relative flex h-full min-h-0 shrink-0 flex-col"
     >
       {railVisible ? (
         /*

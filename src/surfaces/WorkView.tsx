@@ -314,9 +314,7 @@ export function WorkView({
           The header repeats the rail's row exactly so switching modes does not
           move the traffic lights, the dev badge, or the nav icons. */}
       <aside
-        className={`sidebar-glass ${
-          listOpen ? "flex w-64" : "flex w-auto"
-        } shrink-0 flex-col border-r border-edge`}
+        className={`sidebar-glass ${listOpen ? "flex w-64" : "flex w-auto"} shrink-0 flex-col`}
       >
         {listOpen ? (
           <div className="flex shrink-0 flex-col gap-px px-2 pb-2 pt-0.5">
@@ -457,7 +455,7 @@ export function WorkView({
         ) : null}
       </aside>
 
-      <section className="body-glass flex min-h-0 min-w-0 flex-1 flex-col">
+      <section className="body-glass m-1.5 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-edge">
         <div className="ui-rule-b flex h-10 shrink-0 select-none items-center gap-2 px-3">
           {listOpen ? null : (
             <IconButton label="Toggle Chats" onClick={() => setListOpen(true)}>

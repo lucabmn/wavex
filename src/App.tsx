@@ -4994,7 +4994,7 @@ export default function App({
   return (
     <div
       className={`flex h-full flex-col text-content ${
-        HAS_NATIVE_GLASS ? "bg-background-base/40" : "bg-background-base"
+        HAS_NATIVE_GLASS ? "bg-surface-sunken/40" : "bg-surface-sunken"
       }`}
     >
       {/*
@@ -5119,7 +5119,11 @@ export default function App({
           streaming turns must not be torn down by a mode switch — but it is
           display:none and inert, not merely covered by a translucent panel. */}
         <div
-          className={workMode ? "hidden" : "body-glass flex min-h-0 min-w-0 flex-1 flex-col"}
+          className={
+            workMode
+              ? "hidden"
+              : "body-glass m-1.5 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-edge"
+          }
           inert={workMode || undefined}
         >
           <div

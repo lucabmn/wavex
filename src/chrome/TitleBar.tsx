@@ -288,10 +288,15 @@ function TitleTabItem({
           if (sortable.consumeClick()) return;
           onSelect(tab.id);
         }}
-        data-selected={active && !solo ? "true" : undefined}
-        className={`ui-focus relative flex h-full min-w-0 flex-1 cursor-default items-center gap-2 text-left ${
-          solo ? "px-4 text-content" : "ui-tab px-3"
-        } ${closable ? "pr-7" : solo ? "pr-4" : "pr-3"}`}
+        className={`ui-focus relative flex min-w-0 flex-1 cursor-default items-center gap-2 text-left ${
+          solo
+            ? "h-full px-4 text-content"
+            : `h-7 rounded-md border px-2.5 ${
+                active
+                  ? "border-edge bg-surface-raised text-content"
+                  : "border-transparent text-content/55 hover:bg-hover hover:text-content"
+              }`
+        } ${closable ? "pr-7" : solo ? "pr-4" : "pr-2.5"}`}
       >
         {tab.harnesses.length > 0 ? (
           <TabHarnesses
@@ -720,6 +725,9 @@ function TitleBarComponent({
   const showProjectButton = railClosed && Boolean(onSelectProject) && !showCurrentProject;
   const trailingControls = (
     <div className="flex h-full shrink-0 items-stretch">
+      <div className="flex shrink-0 items-center pr-1">
+        <DevModeLabel />
+      </div>
       <div className={`flex items-center gap-0.5 px-2 ${workMode ? "hidden" : ""}`}>
         {projectless && railClosed && onOpenInbox ? (
           <IconButton label="Inbox" onClick={onOpenInbox}>
@@ -787,12 +795,11 @@ function TitleBarComponent({
           </IconButton>
         )}
       </div>
-      {mode && onModeChange ? (
+      {railClosed && mode && onModeChange ? (
         <div className="flex shrink-0 items-center px-2">
           <ModeSwitch mode={mode} onChange={onModeChange} />
         </div>
       ) : null}
-      <DevModeSlot />
       {workMode ? null : showProjectButton && onSelectProject ? (
         <CwdPicker
           cwd={cwd}
@@ -832,7 +839,7 @@ function TitleBarComponent({
             ref={setTabStripRef}
             role="tablist"
             aria-label="Workspace tabs"
-            className="scrollbar-none flex h-full min-w-0 cursor-default items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-none px-1.5"
+            className="scrollbar-none flex h-full min-w-0 cursor-default items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-none px-2"
             onKeyDown={(event) => {
               const current = (event.target as HTMLElement).closest<HTMLButtonElement>(
                 '[role="tab"]',
@@ -857,7 +864,7 @@ function TitleBarComponent({
                  * that made every window look like a browser.
                  */
                 className={`relative flex h-full shrink cursor-default items-center ${
-                  tabs.length === 1 ? "min-w-0 flex-1" : "w-56 min-w-28"
+                  tabs.length === 1 ? "min-w-0 flex-1" : "w-44 min-w-24"
                 }`}
                 data-tauri-drag-region="false"
               >

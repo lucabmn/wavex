@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Float the work as an inset, rounded sheet on the window's own ground, with
+  the sidebar sitting directly on that ground rather than behind a rule.
 - Give the window one header instead of five. The title bar spans the whole
   window above both columns and is the only thing that holds the macOS traffic
   lights out of the way; the project rail, the workspace panel, Work's two

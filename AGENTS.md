@@ -327,10 +327,23 @@ the two Work draws — so the top of the window was a stack of headers rather
 than a place. Nothing below the header reserves the traffic lights or draws a
 back arrow again; a surface that wants a title draws a title.
 
-The sidebar keeps one row of its own, for the project switcher and the
-destinations, with the tab strip below it. In the body, a lone tab is not a
-choice and is not drawn as one — it stretches and reads as the title of what is
-on screen; the strip only appears once there is something to choose between.
+The mode switch belongs to the rail whenever the rail is open; the header
+carries it only for a collapsed rail. Rendering it in both put it on screen
+twice. Nothing that lays out in a narrow column may be dropped into the header
+unchanged for the same reason — `DevModeSlot` is a `flex-1` spacer built for
+the rail, and in a full-width header it swallowed the row and pushed the tabs
+to the far edge.
+
+A tab in the header is a chip, not an underlined tab: it sits in a toolbar
+rather than on top of the content it selects, so an underline has nothing to
+point at. The underline idiom (`ui-tab`) stays where it does point at
+something — the sidebar's own strip and the mode switch. A lone tab is not a
+choice at all and is not drawn as one; it stretches and reads as the title of
+what is open, and the strip returns once there is something to choose between.
+
+The window ground is the sunken plane. The sidebar sits directly on it and
+needs no rule of its own, and the work floats above it as an inset sheet with
+a radius and an edge — the gap is the separation.
 
 Corners, Depth and Separators in Settings scale the language rather than
 bolting a second one beside it, which only holds while radius, shadow and rule
