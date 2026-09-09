@@ -222,7 +222,6 @@ function TitleTabItem({
   onSelect,
   onClose,
   itemRef,
-  solo = false,
 }: {
   tab: TitleTab;
   index: number;
@@ -233,8 +232,6 @@ function TitleTabItem({
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   itemRef?: (el: HTMLDivElement | null) => void;
-  /** The only tab open: a title, not one of several choices. */
-  solo?: boolean;
 }) {
   const dragging = canDrag && sortable.draggingId === tab.id;
   const { headline, meta, tooltip } = tabCopy(tab);
@@ -287,15 +284,11 @@ function TitleTabItem({
           if (sortable.consumeClick()) return;
           onSelect(tab.id);
         }}
-        className={`ui-focus relative flex min-w-0 flex-1 cursor-default items-center gap-2 text-left ${
-          solo
-            ? "h-full px-4 text-content"
-            : `h-7 rounded-md border px-2.5 ${
-                active
-                  ? "border-edge bg-surface-raised text-content"
-                  : "border-transparent text-content/55 hover:bg-hover hover:text-content"
-              }`
-        } ${closable ? "pr-7" : solo ? "pr-4" : "pr-2.5"}`}
+        className={`ui-focus relative flex h-7 min-w-0 flex-1 cursor-default items-center gap-2 rounded-md border px-2.5 text-left ${
+          active
+            ? "border-edge bg-surface-raised text-content"
+            : "border-transparent text-content/62 hover:bg-hover hover:text-content"
+        } ${closable ? "pr-7" : "pr-2.5"}`}
       >
         {tab.harnesses.length > 0 ? (
           <TabHarnesses
@@ -317,11 +310,9 @@ function TitleTabItem({
           <span className="flex min-w-0 items-center gap-1">
             <span
               className={`min-w-0 truncate leading-none ${
-                solo
-                  ? "text-[14px] font-medium"
-                  : meta
-                    ? "text-[13.5px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
-                    : "text-[13.5px]"
+                meta
+                  ? "text-[13.5px] @min-[11rem]:text-[10px] @min-[11rem]:font-medium"
+                  : "text-[13.5px]"
               }`}
             >
               {headline}
@@ -854,21 +845,17 @@ function TitleBarComponent({
               <div
                 key={tab.id}
                 /*
-                 * A lone tab is not a choice, so it is not drawn as one: it
-                 * stretches and reads as the title of what is on screen. A
-                 * strip of one chip with empty space beside it is the shape
-                 * that made every window look like a browser.
+                 * Wider than the 11rem the container queries below switch on,
+                 * so a tab at its resting width never sits exactly on that
+                 * boundary and flips its meta line on sub-pixel rounding.
                  */
-                className={`relative flex h-full shrink cursor-default items-center ${
-                  tabs.length === 1 ? "min-w-0 flex-1" : "w-44 min-w-24"
-                }`}
+                className="relative flex h-full w-52 min-w-24 shrink cursor-default items-center"
                 data-tauri-drag-region="false"
               >
                 <TitleTabItem
                   tab={tab}
                   index={index}
                   active={tab.id === activeId}
-                  solo={tabs.length === 1}
                   closable={closable}
                   canDrag={canDrag}
                   sortable={sortable}

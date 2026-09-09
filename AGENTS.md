@@ -349,9 +349,14 @@ heights, and two strips side by side stop reading as one row.
 A tab in the header is a chip, not an underlined tab: it sits in a toolbar
 rather than on top of the content it selects, so an underline has nothing to
 point at. The underline idiom (`ui-tab`) stays where it does point at
-something — the sidebar's own strip and the mode switch. A lone tab is not a
-choice at all and is not drawn as one; it stretches and reads as the title of
-what is open, and the strip returns once there is something to choose between.
+something — the sidebar's own strip and the mode switch.
+
+One open session is still a session, and is drawn as the same chip at the same
+width as any other. Stretching a lone tab into a heading put two type sizes in
+a 40px band and read as a broken title rather than as a tab. The chip is also
+deliberately wider than the 11rem its container queries switch on, so a tab at
+rest never sits exactly on that boundary and flips its meta line on sub-pixel
+rounding.
 
 The window ground is the sunken plane. The sidebar sits directly on it and
 needs no rule of its own, and the work floats above it as an inset sheet with

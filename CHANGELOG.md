@@ -21,9 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   with, along with the back arrow and sidebar toggle each drew again.
 - Open in two columns rather than three. The project rail is closed by default
   — the sidebar's header carries the project switcher and every destination it
-  held — and the sidebar itself has one header row instead of three. A lone
-  open tab reads as the title of what is on screen rather than as a chip in an
-  otherwise empty strip.
+  held — and the sidebar itself has one header row instead of three.
 - Redesign the whole interface. The project rail and the workspace panel are
   one sidebar with a single header band rather than two panels each with a
   header of its own; the window is nearly colourless, separated by planes and
