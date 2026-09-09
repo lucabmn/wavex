@@ -235,8 +235,8 @@ export function RaceButton({ progress, disabled = false, onView, onStart, onClos
           racing ? "px-1.5" : "w-6.5 justify-center"
         } ${
           open || racing
-            ? "bg-content/20 text-content"
-            : "bg-content/10 text-faint hover:bg-hover hover:text-content"
+            ? "bg-selected text-content"
+            : "text-faint hover:bg-hover hover:text-content"
         }`}
         onClick={() => {
           if (racing) {

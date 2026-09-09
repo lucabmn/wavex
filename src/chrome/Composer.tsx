@@ -186,9 +186,7 @@ function ToolButton({
       disabled={disabled}
       onClick={onClick}
       className={`grid size-6.5 shrink-0 place-items-center rounded-md ${
-        active
-          ? "bg-content/20 text-content"
-          : "bg-content/10 text-faint hover:bg-hover hover:text-content"
+        active ? "bg-selected text-content" : "text-faint hover:bg-hover hover:text-content"
       } disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-faint`}
     >
       {children}

@@ -89,9 +89,7 @@ function ToggleSetting({
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => onChange(on ? "false" : "true")}
       className={`flex h-6.5 items-center gap-1 rounded-md px-1.5 ${
-        on
-          ? "bg-content/20 text-content"
-          : "bg-content/10 text-faint hover:bg-hover hover:text-content"
+        on ? "bg-selected text-content" : "text-faint hover:bg-hover hover:text-content"
       }`}
     >
       <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />
@@ -179,7 +177,7 @@ function SelectSetting({
           setOpen(true);
         }}
         className={`flex h-6.5 max-w-36 items-center gap-1 rounded-md px-1.5 ${
-          open ? "bg-selected text-content" : "bg-content/10 text-content hover:bg-hover"
+          open ? "bg-selected text-content" : "text-content hover:bg-hover"
         }`}
       >
         <Icon className="size-3.5 shrink-0" strokeWidth={1.75} />

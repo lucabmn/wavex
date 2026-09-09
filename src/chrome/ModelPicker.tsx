@@ -241,7 +241,7 @@ export function ModelPicker({
         }}
         className={`flex items-center rounded-md ${
           fill ? "h-8 w-full gap-2 px-2" : "h-6.5 max-w-52 gap-1 px-1.5"
-        } ${open ? "bg-selected text-content" : "bg-content/10 text-content hover:bg-hover"}`}
+        } ${open ? "bg-selected text-content" : "text-content hover:bg-hover"}`}
       >
         <HarnessIcon harness={current.harness} className="size-4 shrink-0" />
         <span className={`min-w-0 truncate ${fill ? "text-[13.5px]" : "text-[11.5px]"}`}>

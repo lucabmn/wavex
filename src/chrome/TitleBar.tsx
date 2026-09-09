@@ -286,7 +286,7 @@ function TitleTabItem({
         }}
         className={`ui-focus relative flex h-7 min-w-0 flex-1 cursor-default items-center gap-2 rounded-md border px-2.5 text-left ${
           active
-            ? "border-edge bg-surface-raised text-content"
+            ? "border-transparent bg-selected text-content"
             : "border-transparent text-muted hover:bg-hover hover:text-content"
         } ${closable ? "pr-7" : "pr-2.5"}`}
       >

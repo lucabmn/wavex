@@ -428,6 +428,19 @@ the only chrome painted solid. It also put the header's translucency out of
 reach of the opacity setting, which says it governs how much of the desktop
 shows through wavex.
 
+The live tab in the header takes a flat step and full-strength text, like a
+selected row — `bg-selected`, the same tone the sidebar spends on the row it has
+open. It carried a border and a two-rung plane step instead, which made it the
+one bordered thing in the top row and gave it a material the header it sits in
+does not have.
+
+The composer spends the same control vocabulary as the rest of the chrome: its
+model, effort and access triggers are ghost until hovered, and open is
+`bg-selected`. A permanent `bg-content/10` on every one of them is `bg-selected`
+always on, which spends selection's tone where nothing is selected and left the
+one row of the app that carries a fill on every control. The send button is the
+exception the language already allows — the one filled action a surface gets.
+
 Corners, Depth and Separators in Settings scale the language rather than
 bolting a second one beside it, which only holds while radius, shadow and rule
 strength each stay a single token.
