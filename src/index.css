@@ -324,16 +324,20 @@ html.reduce-motion *::after {
 }
 
 /*
- * The rail and the sidebar sit one rung below the body, so the working area
- * is the brightest plane on screen. That step is the whole separation — there
- * is no rule between them, because two planes that differ already read as two
- * planes and a line between them only adds a seam.
+ * The window's one chrome plane: the header, the ground the sidebar stands on,
+ * and the gap around the work sheet. It is painted once at the root rather
+ * than per column, because a column that paints its own ground is a rectangle
+ * the moment the surface behind it is translucent — the header was left at a
+ * fraction of the sidebar's glass and the step between them cut the window in
+ * half. The working area sits one rung above this, and that step is the whole
+ * separation: no rule between them, because two planes that differ already
+ * read as two planes and a line between them only adds a seam.
  */
-.sidebar-glass {
+.chrome-glass {
   background-color: var(--surface-0);
 }
 
-html.has-native-glass .sidebar-glass {
+html.has-native-glass .chrome-glass {
   background-color: color-mix(in srgb, var(--surface-0) calc(var(--glass) * 100%), transparent);
 }
 

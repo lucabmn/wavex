@@ -308,14 +308,12 @@ export function WorkView({
       className="flex h-full min-h-0 min-w-0 flex-1 text-content"
     >
       {/* Work replaces the project rail rather than sitting beside it, so this
-          column owns the traffic lights and carries the mode switch itself.
-          `sidebar-glass` is what makes it opaque — without it the window's
-          macOS vibrancy shows whatever is behind wavex.
+          column owns the traffic lights and carries the mode switch itself. It
+          draws no ground of its own: the window root paints the one chrome
+          plane the header and the sidebar also stand on.
           The header repeats the rail's row exactly so switching modes does not
           move the traffic lights, the dev badge, or the nav icons. */}
-      <aside
-        className={`sidebar-glass ${listOpen ? "flex w-64" : "flex w-auto"} shrink-0 flex-col`}
-      >
+      <aside className={`${listOpen ? "flex w-64" : "flex w-auto"} shrink-0 flex-col`}>
         {listOpen ? (
           <>
             {/* The same 40px band the workspace rail gives it, so switching

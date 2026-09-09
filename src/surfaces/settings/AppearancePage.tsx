@@ -662,7 +662,7 @@ export function AppearancePage({ appearance }: { appearance: AppearanceSettings 
         </Row>
         <Row
           label="Window opacity"
-          description="How much of the desktop shows through wavex. It applies to the sidebar and the project rail, and to the main pane as well when Main pane glass is on."
+          description="How much of the desktop shows through wavex. It applies to the whole chrome — the header, the sidebar, and the project rail — and to the main pane as well when Main pane glass is on."
         >
           <Slider
             label="Window opacity"

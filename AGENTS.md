@@ -400,6 +400,15 @@ The window ground is the sunken plane. The sidebar sits directly on it and
 needs no rule of its own, and the work floats above it as an inset sheet with
 a radius and an edge — the gap is the separation.
 
+That ground is painted once, by `chrome-glass` on the App root, and the header,
+the sidebar, the rail and Work's own column draw none of their own. A column
+that paints its own ground is a rectangle the moment the window is translucent:
+the root used to sit at a fraction of the sidebar's glass, so a 0.48 alpha step
+ran along the header's bottom edge across the whole window and the sidebar was
+the only chrome painted solid. It also put the header's translucency out of
+reach of the opacity setting, which says it governs how much of the desktop
+shows through wavex.
+
 Corners, Depth and Separators in Settings scale the language rather than
 bolting a second one beside it, which only holds while radius, shadow and rule
 strength each stay a single token.

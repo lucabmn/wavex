@@ -29,7 +29,7 @@ import {
   saveProjectRailOpen,
   type SidebarTabId,
 } from "./lib/appearance";
-import { HAS_NATIVE_GLASS, IS_MAC } from "./lib/platform";
+import { IS_MAC } from "./lib/platform";
 import {
   applyUiScale,
   loadUiScale,
@@ -4992,11 +4992,13 @@ export default function App({
     sessions.every((session) => isBlankSession(session));
 
   return (
-    <div
-      className={`flex h-full flex-col text-content ${
-        HAS_NATIVE_GLASS ? "bg-surface-sunken/40" : "bg-surface-sunken"
-      }`}
-    >
+    /* The header, the ground, and the sidebar are one plane, painted once
+       here. Painting the window at a fraction of the sidebar's own glass put a
+       0.48 alpha step along the header's bottom edge — a cut across the whole
+       window, with the sidebar reading as a rectangle laid on it because it
+       was the only chrome painted solid. It also pinned the header's
+       translucency where the opacity setting could not reach it. */
+    <div className="chrome-glass flex h-full flex-col text-content">
       {/*
         One header across the whole window. Every column used to open with a
         40px strip of its own — the rail's, the panel's, the body's, and the

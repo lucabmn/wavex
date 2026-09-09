@@ -900,10 +900,7 @@ function SidebarComponent({
   });
 
   const sidebarContent = (
-    <aside
-      ref={resize.setPaneRef}
-      className="sidebar-glass relative flex h-full min-h-0 shrink-0 flex-col"
-    >
+    <aside ref={resize.setPaneRef} className="relative flex h-full min-h-0 shrink-0 flex-col">
       {railVisible ? (
         /*
          * One band across the whole sidebar. The rail's own top row is the

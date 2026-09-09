@@ -413,7 +413,7 @@ export function ProjectRail({
     <nav
       ref={resize.setPaneRef}
       aria-label="Projects"
-      className="sidebar-glass ui-rule-r relative flex shrink-0 flex-col"
+      className="ui-rule-r relative flex shrink-0 flex-col"
     >
       {settingsOpen ? (
         <SettingsNav
