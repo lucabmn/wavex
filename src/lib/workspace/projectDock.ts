@@ -7,6 +7,7 @@ import {
   type FilePaneTab,
   type WorkspaceTab,
 } from "./layout";
+import { profileStorage } from "../profiles/profileStorage";
 import { normalizeProjectPath, sameProjectPath } from "../recents";
 import type { Session } from "../session";
 import { applyTerminalMeta, type TerminalMetaPatch } from "../terminal/terminalTab";
@@ -15,15 +16,22 @@ import { workspaceTabCwd } from "./workspaceTabGroups";
 export type DockSide = "top" | "bottom" | "left" | "right";
 
 /**
- * What the dock is showing. One dock per project holds all four, so switching
- * between them is a change of which one paints — never a teardown of the other
- * three, whose terminals, page, and scroll positions have to survive it.
+ * What the dock is showing. One dock per project holds them all, so switching
+ * between them is a change of which one paints — never a teardown of the rest,
+ * whose terminals, page, and scroll positions have to survive it.
  */
-export type DockSurface = "browser" | "terminal" | "files" | "review";
+export type DockSurface = "sessions" | "browser" | "terminal" | "files" | "review";
 
-export const DOCK_SURFACES: readonly DockSurface[] = ["browser", "terminal", "files", "review"];
+export const DOCK_SURFACES: readonly DockSurface[] = [
+  "sessions",
+  "browser",
+  "terminal",
+  "files",
+  "review",
+];
 
 export const DOCK_SURFACE_LABEL: Record<DockSurface, string> = {
+  sessions: "Sessions",
   browser: "Browser",
   terminal: "Terminal",
   files: "Files",
@@ -47,6 +55,8 @@ export const DOCK_SIZE_DEFAULT = {
   right: 360,
 } as const;
 
+const DOCK_SIDE_KEY = "wavex.panelSide";
+
 const VERTICAL_MIN = 88;
 const HORIZONTAL_MIN = 180;
 
@@ -59,15 +69,36 @@ export function isDockSurface(value: unknown): value is DockSurface {
 }
 
 /**
- * Where a surface wants to sit the first time a project opens the dock.
- *
- * A terminal is read in wide short bursts and has always docked to the bottom;
- * a page, a tree, and a diff are all read in tall narrow columns beside the
- * editor. After that the side is the user's, and switching surfaces leaves it
- * where they put it.
+ * Where the panel sits until somebody moves it. Every surface it holds — the
+ * session list, a page, a tree, a diff — is read in a tall narrow column beside
+ * the editor, so one side answers for the panel rather than for each surface:
+ * an edge that moved under the user whenever they switched surfaces would be a
+ * layout they never chose.
  */
-export function defaultDockSide(surface: DockSurface): DockSide {
-  return surface === "terminal" ? "bottom" : "right";
+export function defaultDockSide(): DockSide {
+  return "right";
+}
+
+/**
+ * The side the user last moved a panel to, which is where the next project's
+ * panel opens. Where the panel lives is one answer for the app, not one per
+ * checkout — a default kept per project would ask again for every new one.
+ */
+export function loadDockSide(): DockSide {
+  try {
+    const raw = profileStorage.getItem(DOCK_SIDE_KEY);
+    return isDockSide(raw) ? raw : defaultDockSide();
+  } catch {
+    return defaultDockSide();
+  }
+}
+
+export function saveDockSide(side: DockSide) {
+  try {
+    profileStorage.setItem(DOCK_SIDE_KEY, side);
+  } catch {
+    // private mode / quota
+  }
 }
 
 export function isVerticalDock(side: DockSide): boolean {
@@ -107,10 +138,10 @@ export function emptyDockPane(): EditorPane {
 
 export function createProjectDock(
   projectPath: string,
-  options: { file?: FilePaneTab; surface?: DockSurface } = {},
+  options: { file?: FilePaneTab; surface?: DockSurface; side?: DockSide } = {},
 ): ProjectDock {
-  const surface = options.surface ?? (options.file ? "terminal" : "browser");
-  const side = defaultDockSide(surface);
+  const surface = options.surface ?? (options.file ? "terminal" : "sessions");
+  const side = options.side ?? defaultDockSide();
   return {
     projectPath: normalizeProjectPath(projectPath),
     pane: options.file ? newEditorPane(options.file) : emptyDockPane(),

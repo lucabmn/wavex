@@ -50,6 +50,7 @@ export type CommandId =
   | "terminal.new"
   | "terminal.newTab"
   | "panel.toggle"
+  | "panel.showSessions"
   | "panel.showBrowser"
   | "panel.showTerminal"
   | "panel.showFiles"
@@ -160,6 +161,7 @@ export const APP_COMMANDS: AppCommand[] = [
   { id: "terminal.new", label: "Terminal: New", keys: `${MOD}\``, when: "Always" },
   { id: "terminal.newTab", label: "Terminal: New Tab", keys: `${MOD}${SHIFT}\``, when: "Always" },
   { id: "panel.toggle", label: "Panel: Toggle", keys: `${MOD}J`, when: "Always" },
+  { id: "panel.showSessions", label: "Panel: Show Sessions", when: "Always" },
   { id: "panel.showBrowser", label: "Panel: Show Browser", when: "Always" },
   { id: "panel.showTerminal", label: "Panel: Show Terminal", when: "Always" },
   { id: "panel.showFiles", label: "Panel: Show Files", when: "Always" },

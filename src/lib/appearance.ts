@@ -10,7 +10,6 @@ const BLUR_KEY = "wavex.sidebarBlur";
 const PROJECT_RAIL_OPEN_KEY = "wavex.projectRailOpen";
 const BODY_KEY = "wavex.bodyGlass";
 const SCHEME_KEY = "wavex.colorScheme";
-const SIDEBAR_TAB_ORDER_KEY = "wavex.sidebarTabOrder";
 const PROJECT_RAIL_WIDTH_KEY = "wavex.projectRailWidth";
 const TRANSCRIPT_LAYOUT_KEY = "wavex.transcriptLayout";
 const TRANSCRIPT_ANCHOR_KEY = "wavex.transcriptAnchor";
@@ -33,10 +32,6 @@ export const TRANSCRIPT_ANCHOR_CHANGE_EVENT = "wavex:transcriptanchorchange";
 
 /** Fired on `window` whenever the transcript layout flips (detail: TranscriptLayout). */
 export const TRANSCRIPT_LAYOUT_CHANGE_EVENT = "wavex:transcriptlayoutchange";
-
-export type SidebarTabId = "files" | "sessions" | "changes" | "inbox";
-
-const DEFAULT_SIDEBAR_TAB_ORDER: SidebarTabId[] = ["sessions", "inbox", "files", "changes"];
 
 export const THEME_HUE_MIN = 0;
 export const THEME_HUE_MAX = 360;
@@ -264,40 +259,12 @@ export function applyBodyGlass(value: boolean) {
   return value;
 }
 
-function isSidebarTabId(value: unknown): value is SidebarTabId {
-  return value === "files" || value === "sessions" || value === "changes" || value === "inbox";
-}
-
 export function loadProjectRailOpen(): boolean {
   return readFlag(PROJECT_RAIL_OPEN_KEY) ?? true;
 }
 
 export function saveProjectRailOpen(value: boolean) {
   writeFlag(PROJECT_RAIL_OPEN_KEY, value);
-}
-
-export function loadSidebarTabOrder(): SidebarTabId[] {
-  try {
-    const raw = profileStorage.getItem(SIDEBAR_TAB_ORDER_KEY);
-    if (!raw) return [...DEFAULT_SIDEBAR_TAB_ORDER];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [...DEFAULT_SIDEBAR_TAB_ORDER];
-    const next = parsed.filter(isSidebarTabId);
-    for (const id of DEFAULT_SIDEBAR_TAB_ORDER) {
-      if (!next.includes(id)) next.push(id);
-    }
-    return next.length === DEFAULT_SIDEBAR_TAB_ORDER.length ? next : [...DEFAULT_SIDEBAR_TAB_ORDER];
-  } catch {
-    return [...DEFAULT_SIDEBAR_TAB_ORDER];
-  }
-}
-
-export function saveSidebarTabOrder(order: SidebarTabId[]) {
-  try {
-    profileStorage.setItem(SIDEBAR_TAB_ORDER_KEY, JSON.stringify(order));
-  } catch {
-    // private mode / quota
-  }
 }
 
 export function loadProjectRailWidth(): number {

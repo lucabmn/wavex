@@ -6,6 +6,7 @@ import {
   Folder,
   GitCompare,
   Globe,
+  MessageMultiple,
   PanelBottom,
   PanelLeft,
   PanelRight,
@@ -24,6 +25,8 @@ import {
 } from "react";
 import { ExplorerMenu } from "../chrome/ExplorerMenu";
 import { FileTree } from "../chrome/FileTree";
+import { ProjectSearch } from "../chrome/ProjectSearch";
+import { SessionList, type SessionListProps } from "../chrome/SessionList";
 import { SourceControl } from "../chrome/SourceControl";
 import { SurfaceTabs } from "../chrome/SurfaceTabs";
 import { PlaceholderButton, SurfacePlaceholder } from "../chrome/SurfacePlaceholder";
@@ -50,6 +53,10 @@ import { TerminalView } from "./TerminalView";
 /** Everything the Files and Review surfaces need from the open project. */
 export type DockProject = {
   gitCwd: string;
+  /** Find in Project has taken over the Files surface. */
+  searchOpen: boolean;
+  searchFocusToken: number;
+  onSearchOpenChange: (open: boolean) => void;
   textHarness?: HarnessId;
   selectedDiffPath?: string;
   selectedCommitSha?: string;
@@ -68,6 +75,11 @@ type Props = {
   /** Whether this dock's project is the one the window is showing. */
   visible: boolean;
   project: DockProject;
+  /**
+   * Everything the Sessions surface needs. `active` is the panel's own, so the
+   * list is only clocked and polled while it is the surface on screen.
+   */
+  sessions?: Omit<SessionListProps, "active">;
   onFocus: () => void;
   onHide: () => void;
   onSideChange: (side: DockSide) => void;
@@ -93,6 +105,7 @@ const SURFACE_ICON: Record<
   DockSurface,
   ComponentType<{ className?: string; strokeWidth?: number }>
 > = {
+  sessions: MessageMultiple,
   browser: Globe,
   terminal: Terminal,
   files: Folder,
@@ -128,6 +141,7 @@ export function DockPanel({
   focused,
   visible,
   project,
+  sessions,
   onFocus,
   onHide,
   onSideChange,
@@ -286,6 +300,19 @@ export function DockPanel({
         </IconButton>
       </div>
       <div className="relative min-h-0 min-w-0 flex-1">
+        {/* The list belongs to the project on screen, so a dock whose project
+            is not the one showing holds no sessions to paint. */}
+        <Surface
+          show={dock.surface === "sessions"}
+          mounted={visible && opened.has("sessions") && Boolean(sessions)}
+        >
+          {sessions ? (
+            <SessionList
+              {...sessions}
+              active={visible && dock.open && dock.surface === "sessions"}
+            />
+          ) : null}
+        </Surface>
         <Surface show={dock.surface === "browser"} mounted={opened.has("browser")}>
           <DockBrowser
             browser={dock.browser}
@@ -349,17 +376,26 @@ export function DockPanel({
         </Surface>
         <Surface show={dock.surface === "files"} mounted={visible && opened.has("files")}>
           <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
-            <FileTree
-              cwd={project.gitCwd}
-              onOpenFile={project.onOpenFile}
-              onOpenTerminal={project.onOpenTerminal}
-              onFileMoved={project.onFileMoved}
-              onFileDeleted={project.onFileDeleted}
-              onSearch={project.onSearch}
-              gitStatuses={gitStatuses}
-              sourceControlActive={dock.surface === "review"}
-              onShowSourceControl={() => onSurfaceChange("review")}
-            />
+            {project.searchOpen ? (
+              <ProjectSearch
+                cwd={project.gitCwd}
+                focusToken={project.searchFocusToken}
+                onOpenFile={project.onOpenFile}
+                onClose={() => project.onSearchOpenChange(false)}
+              />
+            ) : (
+              <FileTree
+                cwd={project.gitCwd}
+                onOpenFile={project.onOpenFile}
+                onOpenTerminal={project.onOpenTerminal}
+                onFileMoved={project.onFileMoved}
+                onFileDeleted={project.onFileDeleted}
+                onSearch={project.onSearch}
+                gitStatuses={gitStatuses}
+                sourceControlActive={dock.surface === "review"}
+                onShowSourceControl={() => onSurfaceChange("review")}
+              />
+            )}
           </div>
         </Surface>
         <Surface show={dock.surface === "review"} mounted={visible && opened.has("review")}>
@@ -482,8 +518,12 @@ function DockSurfaceSwitch({
             onClick={() => onChange(value)}
           >
             <Icon className="size-3.5" strokeWidth={1.75} />
-            {/* The labels go when the panel is too narrow to hold four. */}
-            <span className="@max-[22rem]/dock:hidden">{DOCK_SURFACE_LABEL[value]}</span>
+            {/* Five labels need about 480px and the panel opens at 360, so a
+                narrow panel names only the surface it is showing — five bare
+                icons would leave the user counting positions to read the row. */}
+            <span className={selected ? "" : "@max-[30rem]/dock:hidden"}>
+              {DOCK_SURFACE_LABEL[value]}
+            </span>
           </button>
         );
       })}

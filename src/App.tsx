@@ -10,7 +10,8 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Sidebar } from "./chrome/Sidebar";
+import { ProjectRail } from "./chrome/ProjectRail";
+import type { SessionListProps } from "./chrome/SessionList";
 import { ApprovalToasts } from "./chrome/ApprovalToasts";
 import { WhatsNewDialog } from "./chrome/WhatsNewDialog";
 import { HostProjectDialog } from "./chrome/HostProjectDialog";
@@ -21,14 +22,10 @@ import { MenuBar } from "./chrome/MenuBar";
 import { FilePicker } from "./chrome/FilePicker";
 import { SymbolPicker } from "./chrome/SymbolPicker";
 import { UsageFooter } from "./chrome/UsageFooter";
+import { useInboxUnseen } from "./hooks/useInboxUnseen";
 import { useProjectBranches } from "./hooks/useProjectBranches";
 import { useProjectDiffStats } from "./hooks/useProjectDiffStats";
-import {
-  loadProjectRailOpen,
-  loadSidebarTabOrder,
-  saveProjectRailOpen,
-  type SidebarTabId,
-} from "./lib/appearance";
+import { loadProjectRailOpen, saveProjectRailOpen } from "./lib/appearance";
 import { HAS_NATIVE_GLASS, IS_MAC } from "./lib/platform";
 import {
   applyUiScale,
@@ -120,10 +117,12 @@ import {
   closeTerminalInDock,
   createProjectDock,
   findProjectDock,
+  loadDockSide,
   mapProjectDock,
   nextDockTerminalTitle,
   patchProjectDocks,
   reorderDockTerminals,
+  saveDockSide,
   selectDockTerminal,
   withDockBrowser,
   withDockOpen,
@@ -529,9 +528,6 @@ export default function App({
   const tabCloseScope = "project" as const;
   const currentProjectDock = findProjectDock(projectDocks, projectCwd);
   const dockVisible = !!currentProjectDock?.open;
-  const [sidebarTab, setSidebarTab] = useState<SidebarTabId>(
-    () => loadSidebarTabOrder()[0] ?? "sessions",
-  );
   const [filesSearchOpen, setFilesSearchOpen] = useState(false);
   const [searchFocusToken, setSearchFocusToken] = useState(0);
   const [searchViewOpen, setSearchViewOpen] = useState(false);
@@ -894,15 +890,9 @@ export default function App({
   const gitCwdRef = useRef(gitCwd);
   gitCwdRef.current = gitCwd;
   const projectBranches = useProjectBranches(sidebarCwd, Boolean(sidebarCwd) && sidebarCwd !== "~");
-  // One shared subscription: the tab strip and the sidebar both render this
-  // project's uncommitted state, and the hook caches per cwd.
+  // One shared subscription: the tab strip and the panel's session cards both
+  // render this project's uncommitted state, and the hook caches per cwd.
   const projectDiff = useProjectDiffStats(projectCwd, Boolean(projectCwd) && projectCwd !== "~");
-  const totalCheckErrors = useMemo(() => {
-    let total = 0;
-    for (const count of fileErrorCounts.values()) total += count;
-    return total;
-  }, [fileErrorCounts]);
-
   const nextBusySessionIds = useMemo(() => {
     const ids = new Set<string>();
     for (const session of sessions) {
@@ -1395,7 +1385,6 @@ export default function App({
     (item: InboxItem) => {
       const start = () => {
         closeSurfaces();
-        setSidebarTab("sessions");
         const cwd = item.projectPath || active?.cwd || sessionDefaults?.cwd || projectCwd;
         const ref = `#${item.number}`;
         const session = {
@@ -1426,7 +1415,6 @@ export default function App({
     (card: NoteComposerCard) => {
       if (!card.id) return;
       closeSurfaces();
-      setSidebarTab("sessions");
       const cwd =
         (card.sourceCwd && looksLikeProject(card.sourceCwd) ? card.sourceCwd : undefined) ||
         active?.cwd ||
@@ -1527,7 +1515,7 @@ export default function App({
           existing ? nextDockTerminalTitle(existing, workdir) : undefined,
         );
         if (!existing) {
-          return [...prev, createProjectDock(projectPath, { file })];
+          return [...prev, createProjectDock(projectPath, { file, side: loadDockSide() })];
         }
         return mapProjectDock(prev, projectPath, (dock) => addTerminalToDock(dock, file));
       });
@@ -1587,8 +1575,14 @@ export default function App({
   const onToggleProjectDock = useCallback(() => {
     if (!looksLikeProject(projectCwd)) return;
     const dock = findProjectDock(projectDocksRef.current, projectCwd);
+    // A project that has never opened the panel gets Sessions, which is what it
+    // is mostly opened for; after that it comes back on whatever it was left on.
     if (!dock) {
-      openProjectDock(active?.cwd ?? projectCwd);
+      setProjectDocks((prev) => [
+        ...prev,
+        createProjectDock(projectCwd, { surface: "sessions", side: loadDockSide() }),
+      ]);
+      focusProjectDock();
       return;
     }
     if (!dock.open && dock.surface === "terminal" && dock.pane.files.length === 0) {
@@ -1611,6 +1605,9 @@ export default function App({
   }, []);
 
   const onProjectDockSide = useCallback((side: DockSide) => {
+    // Where the panel belongs is a preference, not a fact about this checkout,
+    // so the next project's panel opens where this one was just put.
+    saveDockSide(side);
     setProjectDocks((prev) =>
       mapProjectDock(prev, projectCwdRef.current, (dock) =>
         withDockSide(dock, side, {
@@ -1635,7 +1632,7 @@ export default function App({
       }
       setProjectDocks((prev) => {
         if (!findProjectDock(prev, projectPath)) {
-          return [...prev, createProjectDock(projectPath, { surface })];
+          return [...prev, createProjectDock(projectPath, { surface, side: loadDockSide() })];
         }
         return mapProjectDock(prev, projectPath, (dock) =>
           withDockOpen(withDockSurface(dock, surface), true),
@@ -1645,6 +1642,19 @@ export default function App({
     },
     [focusProjectDock, openProjectDock],
   );
+
+  /**
+   * Point the panel at a surface without summoning it. Opening a diff moves the
+   * review list under it when the panel is already up; a panel that is away
+   * stays away, and keeps the surface it will come back on.
+   */
+  const onRevealDockSurface = useCallback((surface: DockSurface) => {
+    setProjectDocks((prev) =>
+      mapProjectDock(prev, projectCwdRef.current, (dock) =>
+        dock.open ? withDockSurface(dock, surface) : dock,
+      ),
+    );
+  }, []);
 
   const onDockSurfaceChange = useCallback((surface: DockSurface) => {
     setProjectDocks((prev) =>
@@ -2199,11 +2209,11 @@ export default function App({
             return openEditorTab(tab, newFileTab(resolved, sidebarCwdRef.current, true));
           }),
         );
-        setSidebarTab("changes");
+        onRevealDockSurface("review");
         setComposerFocused(false);
       })();
     },
-    [activeTabId],
+    [activeTabId, onRevealDockSurface],
   );
 
   const onOpenCommit = useCallback(
@@ -2225,8 +2235,8 @@ export default function App({
   );
 
   const onShowSourceControl = useCallback(() => {
-    setSidebarTab("changes");
-  }, []);
+    onShowDockSurface("review");
+  }, [onShowDockSurface]);
 
   const onToggleChanges = useCallback(() => {
     onShowSourceControl();
@@ -4161,10 +4171,10 @@ export default function App({
 
   const onFindInProject = useCallback(() => {
     closeSurfaces();
-    setSidebarTab("files");
+    onShowDockSurface("files");
     setFilesSearchOpen(true);
     setSearchFocusToken((token) => token + 1);
-  }, [closeSurfaces]);
+  }, [closeSurfaces, onShowDockSurface]);
 
   const onOpenSearch = useCallback(() => {
     setFilePickerOpen(false);
@@ -4394,10 +4404,6 @@ export default function App({
   }, [closeSurfaces, onVisitForward]);
 
   useEffect(() => {
-    if (sidebarTab === "inbox") setSidebarTab("sessions");
-  }, [sidebarTab]);
-
-  useEffect(() => {
     if (!dockVisible) setProjectDockFocused(false);
   }, [dockVisible]);
 
@@ -4583,6 +4589,8 @@ export default function App({
       "terminal.new": () => runInWorkspace("new-terminal", actions.current.onNewTerminal),
       "terminal.newTab": () => runInWorkspace("new-terminal-tab", actions.current.onNewTerminalTab),
       "panel.toggle": () => runInWorkspace("toggle-terminal", actions.current.onToggleProjectDock),
+      "panel.showSessions": () =>
+        runInWorkspace("panel-sessions", () => actions.current.onShowDockSurface("sessions")),
       "panel.showBrowser": () =>
         runInWorkspace("panel-browser", () => actions.current.onShowDockSurface("browser")),
       "panel.showTerminal": () =>
@@ -4889,9 +4897,18 @@ export default function App({
 
   const dockGridRef = useRef<HTMLDivElement>(null);
   const dockDragSize = useRef<number | null>(null);
+  const inboxUnseen = useInboxUnseen(recents, sidebarCwd);
+  // Settings hang their nav off the rail, so they keep it up even when the rail
+  // is collapsed — and Work brings its own left column, so the rail stands down
+  // for it unless Settings is the thing in front.
+  const railVisible = (projectRailOpen || settingsOpen) && !(appMode === "work" && !settingsOpen);
+
   const dockProject = useMemo<DockProject>(
     () => ({
       gitCwd,
+      searchOpen: filesSearchOpen,
+      searchFocusToken,
+      onSearchOpenChange: setFilesSearchOpen,
       textHarness: pickTextHarness(active?.harness),
       selectedDiffPath: activeTab ? selectedChangePath(activeTab, gitCwd) : undefined,
       selectedCommitSha: activeTab ? selectedCommitSha(activeTab) : undefined,
@@ -4906,6 +4923,7 @@ export default function App({
     [
       active?.harness,
       activeTab,
+      filesSearchOpen,
       gitCwd,
       onFileDeleted,
       onFileMoved,
@@ -4914,6 +4932,55 @@ export default function App({
       onOpenDiff,
       onOpenFile,
       onOpenTerminal,
+      searchFocusToken,
+    ],
+  );
+
+  /**
+   * The session list is a panel surface, so it is handed the same project view
+   * the sidebar used to draw. `active` belongs to the panel and is filled in
+   * there, per dock.
+   */
+  const dockSessions = useMemo<Omit<SessionListProps, "active">>(
+    () => ({
+      cwd: sidebarCwd,
+      gitCwd,
+      sessions: sidebarHistory,
+      openSessions: openProjectSessions,
+      busySessionIds,
+      approvalSessionIds,
+      activeSessionId: active?.id,
+      status: historyFailed ? "error" : "idle",
+      pending: historyPending,
+      unseenFinishedIds,
+      onRetrySessions: () => void refreshHistory(sidebarCwd),
+      onSelectSession: onSelectHistorySession,
+      onPlaceSessionOnPane,
+      onRenameSession: onRenameHistorySession,
+      onArchiveSession: onArchiveHistorySession,
+      onPinSession: onPinHistorySession,
+      onDeleteSession: onDeleteHistorySession,
+      onNew,
+    }),
+    [
+      active?.id,
+      approvalSessionIds,
+      busySessionIds,
+      gitCwd,
+      historyFailed,
+      historyPending,
+      onArchiveHistorySession,
+      onDeleteHistorySession,
+      onNew,
+      onPinHistorySession,
+      onPlaceSessionOnPane,
+      onRenameHistorySession,
+      onSelectHistorySession,
+      openProjectSessions,
+      refreshHistory,
+      sidebarCwd,
+      sidebarHistory,
+      unseenFinishedIds,
     ],
   );
 
@@ -4997,89 +5064,54 @@ export default function App({
         HAS_NATIVE_GLASS ? "bg-background-base/40" : "bg-background-base"
       }`}
     >
-      <Sidebar
-        workMode={appMode === "work"}
-        mode={appMode}
-        onModeChange={setAppMode}
-        cwd={sidebarCwd}
-        gitCwd={gitCwd}
-        open
-        tab={sidebarTab}
-        onTabChange={setSidebarTab}
-        filesSearchOpen={filesSearchOpen}
-        onFilesSearchOpenChange={setFilesSearchOpen}
-        onOpenFilesSearch={onFindInProject}
-        searchFocusToken={searchFocusToken}
-        sessions={sidebarHistory}
-        busySessionIds={busySessionIds}
-        approvalSessionIds={approvalSessionIds}
-        activeSessionId={active?.id}
-        checkErrors={totalCheckErrors}
-        status={historyFailed ? "error" : "idle"}
-        pending={historyPending}
-        onRetrySessions={() => void refreshHistory(sidebarCwd)}
-        onSelectSession={onSelectHistorySession}
-        onPlaceSessionOnPane={onPlaceSessionOnPane}
-        onRenameSession={onRenameHistorySession}
-        onArchiveSession={onArchiveHistorySession}
-        onPinSession={onPinHistorySession}
-        onDeleteSession={onDeleteHistorySession}
-        onOpenFile={onOpenFile}
-        onOpenTerminal={(cwd) => onOpenTerminal(cwd)}
-        onFileMoved={onFileMoved}
-        onFileDeleted={onFileDeleted}
-        canGoBack={tabVisitNav.canBack || surfaceOpen}
-        canGoForward={tabVisitNav.canForward}
-        onGoBack={onRailBack}
-        onGoForward={onRailForward}
-        onOpenDiff={onOpenDiff}
-        onOpenCommit={onOpenCommit}
-        onShowSourceControl={onToggleChanges}
-        selectedDiffPath={activeTab ? selectedChangePath(activeTab, gitCwd) : undefined}
-        selectedCommitSha={activeTab ? selectedCommitSha(activeTab) : undefined}
-        textHarness={pickTextHarness(active?.harness)}
-        recents={recents}
-        busyProjectPaths={sessions.flatMap((session) =>
-          session.busy && session.cwd ? [session.cwd] : [],
-        )}
-        liveAgents={liveAgents}
-        onSelectAgent={onSelectLiveAgent}
-        onSelectProject={onSelectProject}
-        onOpenProject={pickProject}
-        onRemoveProject={onRemoveProject}
-        onNew={onNew}
-        openSessions={openProjectSessions}
-        onNewTerminal={onNewTerminal}
-        onSearch={onOpenSearch}
-        onOpenInbox={onOpenInbox}
-        onOpenNotes={notesEnabled ? onOpenNotes : undefined}
-        onOpenUsage={onOpenUsage}
-        onOpenActivity={onOpenActivity}
-        onOpenAutomations={onOpenAutomations}
-        onGoToFile={onGoToFile}
-        searchActive={searchViewOpen}
-        inboxActive={inboxViewOpen}
-        notesActive={notesViewOpen}
-        usageActive={usageViewOpen}
-        activityActive={activityViewOpen}
-        automationsActive={automationsViewOpen}
-        notesEnabled={notesEnabled}
-        projectRailOpen={projectRailOpen}
-        onToggleProjectRail={onToggleProjectRail}
-        unseenFinishedIds={unseenFinishedIds}
-        settingsOpen={settingsOpen}
-        settingsSection={settingsSection}
-        onOpenSettings={onOpenSettings}
-        onSelectSettingsSection={onSelectSettingsSection}
-        onCloseSettings={onCloseSettings}
-        profileMenuOpen={profileMenuOpen}
-        onProfileMenuOpenChange={setProfileMenuOpen}
-        onSwitchProfile={onSwitchProfile}
-        onManageProfiles={onManageProfiles}
-        updateNotice={updateNotice}
-        onOpenWhatsNew={onOpenWhatsNew}
-        onDismissUpdate={() => setUpdateNotice(null)}
-      />
+      {railVisible ? (
+        <ProjectRail
+          cwd={sidebarCwd}
+          recents={recents}
+          inboxUnseen={inboxUnseen}
+          busyPaths={sessions.flatMap((session) =>
+            session.busy && session.cwd ? [session.cwd] : [],
+          )}
+          liveAgents={liveAgents}
+          activeSessionId={active?.id}
+          onSelectAgent={onSelectLiveAgent}
+          canGoBack={tabVisitNav.canBack || surfaceOpen}
+          canGoForward={tabVisitNav.canForward}
+          onGoBack={onRailBack}
+          onGoForward={onRailForward}
+          onSearch={onOpenSearch}
+          searchActive={searchViewOpen}
+          onOpenInbox={onOpenInbox}
+          inboxActive={inboxViewOpen}
+          notesEnabled={notesEnabled}
+          onOpenNotes={notesEnabled ? onOpenNotes : undefined}
+          notesActive={notesViewOpen}
+          onOpenUsage={onOpenUsage}
+          usageActive={usageViewOpen}
+          onOpenActivity={onOpenActivity}
+          activityActive={activityViewOpen}
+          onOpenAutomations={onOpenAutomations}
+          automationsActive={automationsViewOpen}
+          onTogglePanel={onToggleProjectRail}
+          mode={appMode}
+          onModeChange={setAppMode}
+          onSelectProject={onSelectProject}
+          onOpenProject={pickProject}
+          onRemoveProject={onRemoveProject}
+          settingsOpen={settingsOpen}
+          settingsSection={settingsSection}
+          onOpenSettings={onOpenSettings}
+          onSelectSettingsSection={onSelectSettingsSection}
+          onCloseSettings={onCloseSettings}
+          profileMenuOpen={profileMenuOpen}
+          onProfileMenuOpenChange={setProfileMenuOpen}
+          onSwitchProfile={onSwitchProfile}
+          onManageProfiles={onManageProfiles}
+          updateNotice={updateNotice}
+          onOpenWhatsNew={onOpenWhatsNew}
+          onDismissUpdate={() => setUpdateNotice(null)}
+        />
+      ) : null}
 
       {/* Workspace stays mounted while Chat is in front — terminals, editors, and
           streaming turns must not be torn down by a mode switch — but it is
@@ -5137,7 +5169,7 @@ export default function App({
             dockSurface={currentProjectDock?.surface ?? null}
             dockOpen={dockVisible}
             onShowDockSurface={onShowDockSurface}
-            onHideDock={onHideProjectDock}
+            onToggleDock={onToggleProjectDock}
             onOpenSettings={onOpenSettings}
             onOpenInbox={onOpenInbox}
             onOpenNotes={notesEnabled ? onOpenNotes : undefined}
@@ -5173,6 +5205,7 @@ export default function App({
                       focused={show && projectDockFocused}
                       visible={show}
                       project={dockProject}
+                      sessions={dockSessions}
                       onFocus={focusProjectDock}
                       onHide={onHideProjectDock}
                       onSideChange={onProjectDockSide}
