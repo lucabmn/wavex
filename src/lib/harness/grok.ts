@@ -1,3 +1,4 @@
+import { acpMcpServers } from "../mcp/session";
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { AcpClient, type AcpHandlers } from "./acp";
@@ -303,6 +304,14 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         });
     }
 
+    // The same list for a resumed session as for a fresh one: a session that
+    // came back with fewer tools than it started with is a bug nobody can see.
+    const mcpServers = await acpMcpServers({
+      cwd: resolved.path,
+      hostId,
+      initializeResult: init,
+    });
+
     let setup: unknown;
     let acpSessionId: string | undefined;
     let didLoad = false;
@@ -324,7 +333,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
             {
               sessionId: resume.acpSessionId,
               cwd: resolved.path,
-              mcpServers: [],
+              mcpServers,
             },
             SESSION_TIMEOUT_MS,
           );
@@ -341,14 +350,23 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     }
 
     if (!acpSessionId) {
-      try {
-        setup = await acp.request(
+      const start = (servers: unknown[]) =>
+        acp.request(
           "session/new",
-          grokSessionNewParams(resolved.path, input.runtimeMode),
+          grokSessionNewParams(resolved.path, input.runtimeMode, servers),
           SESSION_TIMEOUT_MS,
         );
+      try {
+        setup = await start(mcpServers);
       } catch (error) {
-        throw grokAuthError(error);
+        // An entry this build of the CLI will not take must not cost the user
+        // the session. Retry once with none, which is what it always got.
+        if (mcpServers.length === 0) throw grokAuthError(error);
+        try {
+          setup = await start([]);
+        } catch (retryError) {
+          throw grokAuthError(retryError);
+        }
       }
       acpSessionId = sessionIdFromResult(setup);
     }

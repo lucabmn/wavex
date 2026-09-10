@@ -5006,6 +5006,7 @@ dependencies = [
  "tauri-plugin-process",
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
+ "toml 0.9.12+spec-1.1.0",
  "ureq",
 ]
 

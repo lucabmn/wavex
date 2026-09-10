@@ -9,6 +9,7 @@ import {
   Palette,
   SlidersHorizontal,
   Users,
+  Wrench,
   type IconComponent,
 } from "./icons";
 import { useLockOverscroll } from "../hooks/useLockOverscroll";
@@ -23,6 +24,7 @@ const SECTION_ICONS: Record<SettingsSectionId, IconComponent> = {
   connections: Connection,
   skills: Cube,
   "language-servers": Code,
+  mcp: Wrench,
   archive: Archive,
 };
 

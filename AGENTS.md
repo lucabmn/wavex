@@ -51,6 +51,7 @@ stay at the root; cohesive machinery lives in a subdirectory:
 - `src/lib/editor/`: editor documents, git gutter, diagnostics, search, and
   the CodeMirror side of language server support
 - `src/lib/lsp/`: the language server protocol, its clients, and their lifecycle
+- `src/lib/mcp/`: MCP servers the agent CLIs define, and which wavex passes on
 - `src/lib/files/`: file index, tree, mentions, and watching
 - `src/lib/inbox/`: GitHub issues and pull requests
 - `src/lib/updates/`: updater and release notes
@@ -126,6 +127,34 @@ that language covers; the answer is remembered per profile and lives in
 Settings. Nothing about the editor changes until the answer is yes. Servers stop on profile switch,
 window close, and quit, like agents and terminals. A missing, crashed, or
 still-starting server leaves the editor exactly as it behaves without one.
+
+### MCP servers
+
+wavex owns no MCP registry and installs no server. Each agent CLI already keeps
+its own configuration — Claude in `~/.claude.json` and `.mcp.json`, Codex in
+`~/.codex/config.toml`, Cursor in `mcp.json` — and `src-tauri/src/mcp.rs` reads
+those files and never writes them, the way `skills.rs` reads a CLI's skill
+folders. Parsing is in Rust because one of those formats is TOML.
+
+`list_mcp_servers` returns names, not secrets: a definition routinely carries an
+API key in `env` or a header, and a settings page has no use for its value. The
+one command that does return them, `mcp_session_servers`, is narrow by
+construction — only servers the user switched on, only as a session starts — and
+is deliberately absent from `connect/dispatch.rs`, so a connected client never
+receives the host's keys and starts sessions with the empty list every client
+had before.
+
+Nothing is passed on until the user turns it on, per profile, because a server
+is an arbitrary program the agent would then run — the same reason a language
+server never starts just because a file was opened. The switch governs only
+Cursor, fx, and Grok Build, which take their servers in `session/new`; Claude
+Code and Codex read their own configuration and are handed nothing. A
+`session/new` that a CLI refuses is retried once with no servers, so a shape one
+build will not take can never cost the user the session, and a resumed session
+is given exactly what a fresh one was.
+
+Asking a server for its tools starts it, so it happens only on an explicit
+action and never on the way to drawing a list.
 
 ### Automations
 

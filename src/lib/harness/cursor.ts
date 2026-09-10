@@ -1,4 +1,5 @@
 import { projectKey, type HostId } from "../host";
+import { acpMcpServers } from "../mcp/session";
 import { nativeModelId } from "../models";
 import type { RuntimeMode } from "../session";
 import { promptBlocks } from "../attachments";
@@ -279,12 +280,20 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
   await spawnChild(input.sessionId, path, ["acp"], input.cwd, hostId);
 
   try {
-    await acp.request("initialize", {
+    const initializeResult = await acp.request("initialize", {
       protocolVersion: 1,
       clientCapabilities: CLIENT_CAPABILITIES,
       clientInfo: { name: "wavex", version: "0.1.0" },
     });
     await acp.request("authenticate", { methodId: "cursor_login" }).catch(() => undefined);
+
+    // The same list for a resumed session as for a fresh one: a session that
+    // came back with fewer tools than it started with is a bug nobody can see.
+    const mcpServers = await acpMcpServers({
+      cwd: resolved.path,
+      hostId,
+      initializeResult,
+    });
 
     let setup: SessionSetupResult | undefined;
     let acpSessionId: string | undefined;
@@ -296,7 +305,7 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
         setup = await acp.request<SessionSetupResult>("session/load", {
           sessionId: resume.acpSessionId,
           cwd: resolved.path,
-          mcpServers: [],
+          mcpServers,
         });
         acpSessionId = resume.acpSessionId;
         didLoad = true;
@@ -310,10 +319,19 @@ async function ensureLive(input: SendTurnInput): Promise<Live> {
     }
 
     if (!acpSessionId) {
-      setup = await acp.request<SessionSetupResult>("session/new", {
-        cwd: resolved.path,
-        mcpServers: [],
-      });
+      const start = (servers: unknown[]) =>
+        acp.request<SessionSetupResult>("session/new", {
+          cwd: resolved.path,
+          mcpServers: servers,
+        });
+      try {
+        setup = await start(mcpServers);
+      } catch (error) {
+        // An entry this build of the CLI will not take must not cost the user
+        // the session. Retry once with none, which is what it always got.
+        if (mcpServers.length === 0) throw error;
+        setup = await start([]);
+      }
       acpSessionId = setup.sessionId?.trim();
     }
     if (!acpSessionId) throw new Error("Cursor did not return a session id");

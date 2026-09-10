@@ -23,7 +23,9 @@ use crate::host_events::HostEventJournal;
 use crate::pty::PtyHost;
 use crate::session_store::SessionStore;
 use crate::{automations, checkpoint, cursor_store, fs, harness, host_events, notes, project_logo};
-use crate::{prompt_templates, pty, rate_limits, search, session_store, skills, usage, worktree};
+use crate::{
+    mcp, prompt_templates, pty, rate_limits, search, session_store, skills, usage, worktree,
+};
 
 /// Deserializes one command's arguments into a struct named for the call site.
 /// `rename_all` matches what the WebView sends, so the wire shape of a remote
@@ -121,6 +123,8 @@ commands![
     "write_generated_image",
     "read_text_file",
     "write_text_file",
+    "list_mcp_servers",
+    "probe_mcp_server",
     "list_skills",
     "list_skill_details",
     "set_skill_enabled",
@@ -484,6 +488,14 @@ fn call(app: &AppHandle, command: &str, args: Value) -> Result<Value, String> {
             done(wait(fs::write_text_file(a.path, a.content)))
         }
 
+        "list_mcp_servers" => {
+            let a = args!(args, { cwd: String });
+            done(mcp::list_mcp_servers(a.cwd))
+        }
+        "probe_mcp_server" => {
+            let a = args!(args, { cwd: String, source: String, scope: String, name: String });
+            done(mcp::probe_mcp_server(a.cwd, a.source, a.scope, a.name))
+        }
         "list_skills" => {
             let a = args!(args, { cwd: String });
             done(skills::list_skills(a.cwd))

@@ -34,6 +34,8 @@ rusqlite = { version = "0.40.2", features = ["bundled"], default-features = fals
 ureq = { version = "2.12.1", default-features = false, features = ["tls", "gzip"] }
 tauri-plugin-process = "2"
 sha1 = "0.11"
+# Codex keeps its MCP servers in TOML; already in the tree via tauri-build.
+toml = "0.9"
 httparse = "1"
 getrandom = "0.4"
 

@@ -14,6 +14,7 @@ mod inbox_media;
 mod lsp;
 #[cfg(target_os = "macos")]
 mod macos;
+mod mcp;
 mod menu;
 mod menu_bar;
 mod notes;
@@ -299,6 +300,9 @@ pub fn run(launch: headless::Launch) {
             fs::write_generated_image,
             fs::read_text_file,
             fs::write_text_file,
+            mcp::list_mcp_servers,
+            mcp::probe_mcp_server,
+            mcp::mcp_session_servers,
             skills::list_skills,
             skills::list_skill_details,
             skills::set_skill_enabled,
