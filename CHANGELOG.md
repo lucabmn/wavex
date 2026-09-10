@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] - 2026-09-10
+
+- Manage MCP servers for installed agent CLIs from Settings.
+- Organize sessions inside the project panel and keep project tabs in sync.
+- Expand prompt templates with `{{branch}}`, `{{file}}`, and `{{diff}}` variables.
+
 ## [0.13.0] - 2026-09-08
 
 - Schedule recurring agent tasks from the new Automations surface. Each run
