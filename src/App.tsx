@@ -244,6 +244,7 @@ import {
   planWorkspaceTabClose,
   workspaceTabCwd,
 } from "./lib/workspace/workspaceTabGroups";
+import { deckTabsForActive } from "./lib/workspace/projectDeck";
 import { planProjectSwitch } from "./lib/workspace/projectSwitch";
 import { runSessionRemoval } from "./lib/sessions/sessionRemoval";
 import {
@@ -881,6 +882,24 @@ export default function App({
     if (!activeSkillContext || !activeSkillCwd) return;
     warmPiSkills(activeSkillContext);
   }, [activeSkillCwd]);
+
+  // Memoized so the body below runs when the active tab's project changes,
+  // not on every streamed token that replaces the sessions array.
+  const activeTabCwd = useMemo(
+    () => (activeTab ? workspaceTabCwd(activeTab, sessions) : null),
+    [activeTab, sessions],
+  );
+
+  // The tab strip, the project dock, and the rail read `projectCwd`, while the
+  // sidebar follows the active tab. Focusing a session of another project —
+  // from the inbox, from search, from an approval — moves the tab and not the
+  // project, so the project is pulled back to whatever is on screen. Recents
+  // are left alone: this repairs a drift, it is not a project the user picked.
+  useEffect(() => {
+    if (!activeTabCwd || !looksLikeProject(activeTabCwd)) return;
+    const normalized = normalizeProjectPath(activeTabCwd);
+    setProjectCwd((current) => (sameProjectPath(current, normalized) ? current : normalized));
+  }, [activeTabCwd]);
 
   const sidebarCwd =
     active?.cwd ?? (activeTab ? focusedFileTab(activeTab)?.cwd : undefined) ?? projectCwd;
@@ -2121,13 +2140,10 @@ export default function App({
     ],
   );
 
-  const deckProjectTabs = useMemo(() => {
-    // A projectless session belongs to no project, so it stands on its own
-    // rather than trailing the last project's tabs.
-    const active = tabs.find((tab) => tab.id === activeTabId);
-    if (active && !workspaceTabCwd(active, sessions)) return [active];
-    return filterTabsForProject(tabs, sessions, projectCwd);
-  }, [activeTabId, tabs, sessions, projectCwd]);
+  const deckProjectTabs = useMemo(
+    () => deckTabsForActive({ tabs, sessions, activeTabId, projectCwd }),
+    [activeTabId, tabs, sessions, projectCwd],
+  );
 
   const onNext = useCallback(() => {
     const index = deckProjectTabs.findIndex((t) => t.id === activeTabId);
@@ -2748,8 +2764,10 @@ export default function App({
         return;
       }
 
-      setProjectCwd(normalized);
       setRecents(rememberProject(normalized));
+      // Both of these land on a tab, and the project follows the tab that is
+      // active. Moving the project first would only put the rail ahead of a
+      // conversation still being read from the store.
       if (plan.kind === "focusTab") {
         activateTab(plan.tabId);
         return;
@@ -2779,6 +2797,7 @@ export default function App({
         seed?.modelSettings,
       );
       const tab = newTab(session.id);
+      setProjectCwd(normalized);
       setSessions((prev) => [...prev, session]);
       appendTab(tab, normalized);
       setActiveTabId(tab.id);
