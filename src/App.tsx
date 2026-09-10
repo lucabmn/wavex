@@ -241,10 +241,10 @@ import {
 import {
   applyPlaceSessionOnPane,
   filterTabsForProject,
-  findTabForProject,
   planWorkspaceTabClose,
   workspaceTabCwd,
 } from "./lib/workspace/workspaceTabGroups";
+import { planProjectSwitch } from "./lib/workspace/projectSwitch";
 import { runSessionRemoval } from "./lib/sessions/sessionRemoval";
 import {
   HARNESS_LABEL,
@@ -613,6 +613,8 @@ export default function App({
   );
   const loadedProjectsRef = useRef(loadedProjects);
   loadedProjectsRef.current = loadedProjects;
+  const historyRef = useRef(history);
+  historyRef.current = history;
   /** Project whose listing failed, so the error cannot leak to another one. */
   const [historyErrorCwd, setHistoryErrorCwd] = useState<string | null>(null);
 
@@ -2353,16 +2355,18 @@ export default function App({
     [refreshHistory, sidebarCwd],
   );
 
+  /** Resolves false when the row cannot be loaded, so a caller can fall back. */
   const onSelectHistorySession = useCallback(
-    async (sessionId: string, hostId?: HostId) => {
-      if (focusOpenSession(sessionId)) return;
+    async (sessionId: string, hostId?: HostId): Promise<boolean> => {
+      if (focusOpenSession(sessionId)) return true;
       const session = await ensureOpenSession(sessionId, hostId);
-      if (!session) return;
-      if (replaceBlankPaneWithSession(session)) return;
+      if (!session) return false;
+      if (replaceBlankPaneWithSession(session)) return true;
       const tab = newTab(session.id);
       appendTab(tab, session.cwd);
       setActiveTabId(tab.id);
       setComposerFocused(true);
+      return true;
     },
     [appendTab, ensureOpenSession, focusOpenSession, replaceBlankPaneWithSession],
   );
@@ -2633,6 +2637,32 @@ export default function App({
     );
   }, []);
 
+  /**
+   * A group only holds tabs that share one project, so a tab whose focused
+   * pane just moved to another project drops out of the group it was in.
+   */
+  const dropTabFromForeignGroup = useCallback(
+    (sessionId: string, cwd: string) => {
+      setTabs((prev) => {
+        const tab = prev.find((t) => leafIds(t.layout).includes(sessionId));
+        // The tab's visible project follows its focused pane; a background
+        // pane changing project doesn't change what the group check should see.
+        if (!tab?.groupId || tab.focusedId !== sessionId) return prev;
+        const newProject = projectName(cwd);
+        const othersProject = tabGroupProject(
+          prev.filter((t) => t.id !== tab.id),
+          tab.groupId,
+          projectOfTab,
+        );
+        if (othersProject && newProject && othersProject !== newProject) {
+          return removeTabFromGroup(prev, tab.id);
+        }
+        return prev;
+      });
+    },
+    [projectOfTab],
+  );
+
   const onCwdChange = useCallback(
     (sessionId: string, cwd: string) => {
       const normalized = normalizeProjectPath(cwd);
@@ -2675,27 +2705,11 @@ export default function App({
             : s,
         ),
       );
-      // The session's project just moved in place; a group only holds tabs that
-      // share one project, so drop this tab out if it no longer matches.
-      setTabs((prev) => {
-        const tab = prev.find((t) => leafIds(t.layout).includes(sessionId));
-        // The tab's visible project follows its focused pane; a background
-        // pane changing project doesn't change what the group check should see.
-        if (!tab?.groupId || tab.focusedId !== sessionId) return prev;
-        const newProject = projectName(normalized);
-        const othersProject = tabGroupProject(
-          prev.filter((t) => t.id !== tab.id),
-          tab.groupId,
-          projectOfTab,
-        );
-        if (othersProject && newProject && othersProject !== newProject) {
-          return removeTabFromGroup(prev, tab.id);
-        }
-        return prev;
-      });
+      // The session's project just moved in place.
+      dropTabFromForeignGroup(sessionId, normalized);
       notifyReviewChanged(sessionId);
     },
-    [appendTab, projectOfTab],
+    [appendTab, dropTabFromForeignGroup],
   );
 
   const onBranchChange = useCallback(
@@ -2719,34 +2733,44 @@ export default function App({
     [persistSession],
   );
 
-  const onSelectProject = useCallback(
-    (path: string) => {
-      closeSurfaces();
-      const normalized = normalizeProjectPath(path);
-      if (!looksLikeProject(normalized)) return;
+  const applyProjectSwitch = useCallback(
+    (normalized: string, rows: SessionSummary[]) => {
+      const plan = planProjectSwitch({
+        tabs: tabsRef.current,
+        sessions: sessionsRef.current,
+        activeTabId: activeTabIdRef.current,
+        rows,
+        path: normalized,
+      });
+      if (plan.kind === "stay") return;
+      if (plan.kind === "retargetBlank") {
+        onCwdChange(plan.sessionId, normalized);
+        return;
+      }
+
+      setProjectCwd(normalized);
+      setRecents(rememberProject(normalized));
+      if (plan.kind === "focusTab") {
+        activateTab(plan.tabId);
+        return;
+      }
+      if (plan.kind === "openSession") {
+        void onSelectHistorySession(plan.sessionId, plan.hostId).then((opened) => {
+          // The conversation may have landed in a blank pane of a tab that
+          // still belongs to the project being left.
+          if (opened) dropTabFromForeignGroup(plan.sessionId, normalized);
+          // A row the store cannot load leaves the switch with nothing to
+          // show, so fall back to the project's empty state.
+          else applyProjectSwitchRef.current(normalized, []);
+        });
+        return;
+      }
 
       const activeWorkspace = tabsRef.current.find((entry) => entry.id === activeTabIdRef.current);
-      const current = activeWorkspace
-        ? sessionsRef.current.find((session) => session.id === activeWorkspace.focusedId)
-        : undefined;
-      const currentCwd =
-        current?.cwd ?? (activeWorkspace ? focusedFileTab(activeWorkspace)?.cwd : undefined);
-      if (currentCwd && sameProjectPath(currentCwd, normalized)) return;
-
-      if (current && isBlankSession(current)) {
-        onCwdChange(current.id, normalized);
-        return;
-      }
-
-      const match = findTabForProject(tabsRef.current, sessionsRef.current, normalized);
-      if (match) {
-        setProjectCwd(normalized);
-        setRecents(rememberProject(normalized));
-        activateTab(match.id);
-        return;
-      }
-
-      const seed = current ?? sessionsRef.current[0];
+      const seed =
+        (activeWorkspace
+          ? sessionsRef.current.find((session) => session.id === activeWorkspace.focusedId)
+          : undefined) ?? sessionsRef.current[0];
       const session = newSession(
         seed?.harness ?? "claude",
         normalized,
@@ -2755,14 +2779,54 @@ export default function App({
         seed?.modelSettings,
       );
       const tab = newTab(session.id);
-      setProjectCwd(normalized);
-      setRecents(rememberProject(normalized));
       setSessions((prev) => [...prev, session]);
       appendTab(tab, normalized);
       setActiveTabId(tab.id);
       setComposerFocused(true);
     },
-    [activateTab, appendTab, onCwdChange],
+    [activateTab, appendTab, dropTabFromForeignGroup, onCwdChange, onSelectHistorySession],
+  );
+  const applyProjectSwitchRef = useRef(applyProjectSwitch);
+  applyProjectSwitchRef.current = applyProjectSwitch;
+
+  /**
+   * Only the newest switch may land. Listing a project's sessions can take a
+   * moment, and a second click while the first is in flight would otherwise
+   * open the project the user already moved on from.
+   */
+  const projectSwitchToken = useRef(0);
+
+  const onSelectProject = useCallback(
+    (path: string) => {
+      closeSurfaces();
+      const normalized = normalizeProjectPath(path);
+      if (!looksLikeProject(normalized)) return;
+
+      const cached = historyRef.current.filter((entry) => sameProjectPath(entry.cwd, normalized));
+      if (cached.length > 0 || loadedProjectsRef.current.has(normalized)) {
+        applyProjectSwitch(normalized, cached);
+        return;
+      }
+
+      // A project opened for the first time this run has no cached rows yet,
+      // and deciding without them would make a new session for a project that
+      // is full of conversations.
+      const token = (projectSwitchToken.current += 1);
+      void listSessionsByProject(normalized)
+        .then((rows) => {
+          if (token !== projectSwitchToken.current) return;
+          setHistory((current) => replaceProjectHistory(current, normalized, rows));
+          setLoadedProjects((prev) =>
+            prev.has(normalized) ? prev : new Set(prev).add(normalized),
+          );
+          applyProjectSwitch(normalized, rows);
+        })
+        .catch(() => {
+          if (token !== projectSwitchToken.current) return;
+          applyProjectSwitch(normalized, []);
+        });
+    },
+    [applyProjectSwitch],
   );
 
   const pickLocalProject = useCallback(async () => {
